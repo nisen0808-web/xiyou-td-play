@@ -2862,7 +2862,7 @@ XY.TRAITS = {
     },
     // 过关时：把 G 的成长拍成快照，写进 entry[n+1]
     snap: function (G) {
-      var prev = JR.entryFor(G.levelId), s = { from: G.levelId, level: G.level, xp: G.xp, points: G.points, pointsTotal: G.pointsTotal, autoPoints: !!G.autoPoints, upg: copy(G.upg), heroes: {}, sp: prev && prev.sp ? copy(prev.sp) : {}, runCards: copy(G.runCards), activeCard: G.activeCard || null, at: Date.now() };
+      var prev = JR.entryFor(G.levelId), s = { fb: G.fb && XY.fabao ? XY.fabao.snapshot(G) : null, from: G.levelId, level: G.level, xp: G.xp, points: G.points, pointsTotal: G.pointsTotal, autoPoints: !!G.autoPoints, upg: copy(G.upg), heroes: {}, sp: prev && prev.sp ? copy(prev.sp) : {}, runCards: copy(G.runCards), activeCard: G.activeCard || null, at: Date.now() };
       G.heroes.forEach(function (h) {
         if (h.sp) s.sp[h.id] = { sk: copy(h.sk) };            // 特殊角色：按角色 id 分开存，换人以后各用各的进度
         else s.heroes[h.id] = { sk: copy(h.sk) };
@@ -2888,6 +2888,7 @@ XY.TRAITS = {
         if (r && r.sk) h.sk = copy(r.sk);
       });
       if (s.runCards) { G.runCards = copy(s.runCards); if (s.activeCard && (G.runCards[s.activeCard] || G.deckIds.indexOf(s.activeCard) >= 0)) G.activeCard = s.activeCard; }
+      if (G.fb && s.fb) XY.fabao.restore(G, s.fb);
       var dropped = XY.cards.sanitizeCarry ? XY.cards.sanitizeCarry(G) : [];      // 法宝和当前卡组冲突 / 失效的丢掉，不报错、不锁卡组
       XY.cards.recalc(G);
       G.inhMul = 1 + C.INH_K * Math.max(0, (s.level || 1) - 1);
@@ -8061,7 +8062,7 @@ XY.TRAITS = {
       drawHero(c, G, order[i], rt); XY.R4.heroOver(c, G, order[i], rt);
     }
     if (gh) XY.guest.drawTag(c, G);
-    drawFx(c, G); if (XY.animItems) XY.animItems(c, G);
+    drawFx(c, G); if (G.fb && XY.fabao.draw) XY.fabao.draw(c, G); if (XY.animItems) XY.animItems(c, G);
     XY.R4.over(c, G, XY.app || {}, rt);
     // 飘字
     for (i = 0; i < G.texts.length; i++) {
@@ -8086,6 +8087,7 @@ XY.TRAITS = {
 
   /* ---------- 右侧：本局法宝 + 羁绊 ---------- */
   function drawCardsHUD(c, G, app, y0) {
+    if (G.fb && XY.fabaoui) return XY.fabaoui.hud(c, G, app, y0);
     var W = app.lw, pw = 232, x = W - pw - 12, ids = {}, id, list = [], tip = null, i;
     G.deckIds.forEach(function (k) { ids[k] = 1; }); for (id in G.runCards) ids[id] = 1;
     for (id in ids) list.push(XY.CARD_BY[id]);
@@ -10597,6 +10599,796 @@ XY.CHIBI={"tang":{"w":532,"h":254,"fr":[[1,1,77,121,33,121],[134,1,70,121,24,121
 
 </script>
 <script>
+/* ---- js/fabao.js ---- */
+/* ============================================================
+ * fabao.js —— v0.7 法宝系统重做（docs/fabao-proposal-v1.md）· 数据 + 规则
+ *   开关 C.FABAO_V2：关 = 旧规则（cards.js / cardrule.js 不动）；开 = 本文件接管
+ *   · 4 法宝格 + 3 灵物格，全队共用；法宝 Lv1–5、灵物 Lv1–3；满级法宝 + 指定另一件 → 炼化成超级法宝（8 条配方）
+ *   · 来源：宝箱 ×4 / 夜潮备战 ×3 / 洞府首杀（该洞专属法宝）/ 任务奖励；取消小怪掉卡
+ *   · 三选一：必有 1 项升级、盯配方偏向、重抽（1 免费 + 金币递增）、封印、放弃换金币；全满则只给金币 / 回血（不弹窗）
+ *   · 法宝出手（行为）在 fabao2.js，界面在 fabaoui.js；所有数值是占位，用探针调
+ * ============================================================ */
+(function () {
+  'use strict';
+  var XY = window.XY, C = XY.C, K = XY.cards, rand = XY.rand;
+  C.FABAO_V2 = false;
+  C.FB = { SLOT_F: 4, SLOT_L: 3, KG: 0.08, RR_COST: 40, SKIP_COINS: 40, ELITE_COINS: 12, PIN_W: 2, CHESTS: 4, OPTS: 3, LVMUL: 0.3 };
+  var FB = XY.fabao = {};
+  FB.on = function () { return !!C.FABAO_V2; };
+
+  /* ---------- 门派（沿用旧 4 套的羁绊数值：≥2 = 旧 t3，≥4 = 旧 t5）---------- */
+  // 数据：id, 名, 种类(f 法宝 / l 灵物), 五行, 出处(sui 随身 / team 全队 / guard 守护), 门派, 起手可用, 一句话作用, Lv3 升级点, Lv5 满级
+  var L = [
+    ['jingubang', '金箍棒', 'f', 'metal', 'sui', 'qitian', 1, '每 3 秒向前横扫一棒（扇形清群）', '冷却 −15%', '扇形 150°，命中破甲 10%'],
+    ['jiuchi', '九齿钉耙', 'f', 'earth', 'sui', 'hufa', 1, '每 4 秒砸地一圈：伤害 + 短晕', '范围 +25%', '晕 1 秒，砸两下'],
+    ['xiangyao', '降妖宝杖', 'f', 'water', 'sui', 'hufa', 1, '月牙铲绕英雄转，挡近身杂兵', '2 片', '3 片，转速 +20%'],
+    ['jingangzhuo', '金刚琢', 'f', 'metal', 'sui', 'tianting', 0, '抛出圈再飞回来，穿透一排', '穿 5 只', '去回各打一次，对精英 +30%'],
+    ['hulu', '紫金红葫芦', 'f', 'wood', 'sui', 'tianting', 0, '每 8 秒吸入范围内最强的非 BOSS 怪', '冷却 −20%', '一次吸 2 只，BOSS 吃 3% 血量'],
+    ['huangjin', '幌金绳', 'f', 'earth', 'sui', 'tianting', 0, '捆住最多 4 只 2.5 秒', '捆 4 只', '被捆的怪受伤 +20%'],
+    ['bajiaoshan', '芭蕉扇', 'f', 'wood', 'sui', 'hufa', 0, '向前扇出风：推开怪、吹散弓箭', '范围 +25%', '风幕持续 1.5 秒'],
+    ['zhaoyao', '照妖镜', 'f', 'metal', 'sui', 'tianting', 0, '每 10 秒显形一片，6 秒内受伤 +25%', '半径 +25%', '受伤 +40%，显出隐藏怪'],
+    ['liuli', '琉璃盏', 'f', 'fire', 'sui', 'tianting', 1, '沿英雄走过的路留下火径', '持续 5 秒', '火径变宽，灼烧更强'],
+    ['sanmei', '三昧火种', 'f', 'fire', 'sui', 'hufa', 0, '每 5 秒射出追踪火球，落点爆炸', '2 颗', '3 颗，爆炸带灼烧'],
+    ['pantao', '蟠桃', 'f', 'wood', 'team', 'qitian', 1, '每 12 秒结一枚桃在残血队友旁，走过去吃', '回 25%', '回 35%，同时 +10% 移速 3 秒'],
+    ['bishui', '避水珠', 'f', 'water', 'team', 'hufa', 1, '每 20 秒给没护盾的英雄一层水幕，吸收一击（不给唐僧）', '冷却 −20%', '2 位英雄同时'],
+    ['jingping', '玉净瓶', 'f', 'water', 'guard', 'fomen', 0, '营地周围洒甘露：圈内怪减速', '半径 +30%', '减速 35%，圈内英雄回血'],
+    ['jiasha', '锦襴袈裟', 'f', 'earth', 'guard', 'fomen', 0, '唐僧周围护体圈：圈内怪伤害 −，营地回血', '半径 +30%', '唐僧遇袭时额外短暂减伤'],
+    ['chanzhang', '九环锡杖', 'f', 'earth', 'guard', 'fomen', 0, '每 7 秒从唐僧处震一圈：晕', '半径 +30%', '晕 1.2 秒，推开精英'],
+    // 灵物（被动，Lv1–3）
+    ['jindouyun', '筋斗云', 'l', null, 'team', 'qitian', 1, '移速 +6% / 级', '', '闪避冷却 −20%（占位：移速再 +4%）'],
+    ['huoyan', '火眼金睛', 'l', null, 'team', 'qitian', 1, '暴击 +5% / 级', '', '精英护盾更容易打破（对护盾伤害 +33%）'],
+    ['qishier', '七十二变', 'l', null, 'team', 'qitian', 0, '法宝冷却 −6% / 级', '', '每 60 秒随机 1 件法宝 5 秒内出手速度翻倍'],
+    ['jinguzhou', '紧箍咒', 'l', null, 'team', 'qitian', 0, '大招冷却 −8% / 级', '', '大招冷却再 −4%（占位）'],
+    ['renshen', '人参果', 'l', null, 'team', 'hufa', 1, '全队每秒回血 +0.4 / 级', '', '营地回血 +3'],
+    ['qiankun', '乾坤袋', 'l', null, 'team', 'tianting', 0, '重抽 +1、封印 +1（每级）', '', '三选一变成四选一'],
+    ['nianzhu', '菩提念珠', 'l', null, 'guard', 'fomen', 0, '营地血量 +200、营地回血 +1（每级）', '', '营地回血再 +2（占位）']
+  ];
+  FB.ITEMS = []; FB.BY = {};
+  L.forEach(function (a) { var it = { id: a[0], name: a[1], kind: a[2], el: a[3], src: a[4], set: a[5], starter: !!a[6], d: a[7], u3: a[8], u5: a[9] }; FB.ITEMS.push(it); FB.BY[it.id] = it; });
+  FB.maxLv = function (id) { var it = FB.BY[id]; return it && it.kind === 'l' ? 3 : 5; };
+  FB.EL_NAME = { metal: '金', wood: '木', water: '水', fire: '火', earth: '土' };
+
+  // 8 条配方：A（满级法宝）+ B（拥有即可）→ 超级法宝（占 A 的格；B 消失）
+  FB.RECIPES = [
+    { id: 'r1', a: 'jingubang', b: 'jindouyun', sup: 'wanzhang', name: '万丈金箍棒', d: '每 4 秒向怪最密处落一根巨棒：大范围伤害 + 晕 1 秒（英雄不用靠近）', lore: '一个筋斗十万八千里，棒子变得顶天立地' },
+    { id: 'r2', a: 'jiuchi', b: 'xiangyao', sup: 'tianhe', name: '天河镇岳', d: '砸地掀起水浪：圈内怪持续减速；环绕月牙铲伤害 ×2，且一件占 1 格', lore: '八戒、沙僧本是天河水神，合力镇山' },
+    { id: 'r3', a: 'bajiaoshan', b: 'liuli', sup: 'liefeng', name: '火焰山烈风', d: '扇出一道火墙：推开怪并点燃，持续 3 秒', lore: '火焰山：扇一扇，火越旺' },
+    { id: 'r4', a: 'hulu', b: 'huoyan', sup: 'shouhun', name: '照妖收魂葫', d: '每 20 秒喊一声：屏幕里的小怪同时被收；精英 / BOSS 受 8% 最大生命（有上限）', lore: '你应了就被收进去，火眼金睛识破真身' },
+    { id: 'r5', a: 'jingangzhuo', b: 'sanmei', sup: 'huolun', name: '乾坤火轮', d: '燃烧的圈飞出去穿透一排；回来时再爆一次', lore: '金刚琢碰上三昧真火' },
+    { id: 'r6', a: 'pantao', b: 'renshen', sup: 'panhui', name: '蟠桃盛会', d: '每 15 秒全队回 35% 生命 + 5 秒加速（不是复活）', lore: '王母蟠桃配五庄观人参果' },
+    { id: 'r7', a: 'jiasha', b: 'nianzhu', sup: 'jinchan', name: '金蝉法衣', d: '唐僧周围佛光结界：圈内怪每秒受伤并减速 40%，圈内英雄减伤', lore: '金蝉子转世，法衣加持' },
+    { id: 'r8', a: 'bishui', b: 'jingping', sup: 'dinghai', name: '定海神珠', d: '每 20 秒全队英雄一层护盾（不含唐僧）+ 营地水域减速', lore: '观音净瓶与龙宫之宝，镇海定波' }
+  ];
+  FB.SUP = {}; FB.RECIPES.forEach(function (r) { var a = FB.BY[r.a]; FB.SUP[r.sup] = { id: r.sup, name: r.name, kind: 'f', set: a.set, el: a.el, src: a.src, sup: true, d: r.d, rid: r.id }; });
+  FB.recipe = function (rid) { return FB.RECIPES.filter(function (r) { return r.id === rid; })[0]; };
+  FB.info = function (id) { return FB.BY[id] || FB.SUP[id] || null; };
+  FB.SET_NAME = { qitian: '齐天', hufa: '护法', fomen: '佛门', tianting: '天庭' };
+
+  // 洞府首杀 → 该洞专属法宝（永久解锁）；通关奖励解锁灵物
+  FB.DEN_ITEM = { heifeng: 'jiasha', baihu: 'zhaoyao', lianhua: 'hulu', huoyun: 'sanmei', huangfeng: 'chanzhang', bajiao: 'bajiaoshan', cuiyun: 'jingping', moyun: 'jingangzhuo', huoyan: 'huangjin' };
+  FB.DEN_NAME = { heifeng: '黑风洞 黑熊精', baihu: '白虎岭 白骨精', lianhua: '莲花洞 金角银角', huoyun: '火云洞 红孩儿', huangfeng: '黄风洞 黄风怪', bajiao: '芭蕉洞 铁扇公主', cuiyun: '翠云洞 玉面公主', moyun: '摩云洞 牛魔王', huoyan: '火焰洞 赤炎' };
+  FB.CLEAR_ITEM = { 1: ['qishier', 'jinguzhou'], 2: ['qiankun', 'nianzhu'] };
+  FB.whereText = function (id) {
+    var it = FB.BY[id], k; if (!it || it.starter) return '起手可用';
+    for (k in FB.DEN_ITEM) if (FB.DEN_ITEM[k] === id) return '击败 ' + (FB.DEN_NAME[k] || k);
+    for (k in FB.CLEAR_ITEM) if (FB.CLEAR_ITEM[k].indexOf(id) >= 0) return '通关第 ' + k + ' 关';
+    return '';
+  };
+
+  /* ---------- 存档：data.fb = {unl:{id:1}, made:{rid:次数}}；旧存档：已拥有的新池内卡视为已解锁 ---------- */
+  FB.sv = function () {
+    var d = XY.save.data;
+    if (!d.fb || typeof d.fb !== 'object') d.fb = { unl: {}, made: {}, mig: 0 };
+    var f = d.fb; if (!f.unl) f.unl = {}; if (!f.made) f.made = {};
+    if (!f.mig) { f.mig = 1; for (var id in (d.cards || {})) if (FB.BY[id]) f.unl[id] = 1; }
+    return f;
+  };
+  FB.unlocked = function (id) { var it = FB.BY[id]; return !!it && (it.starter || !!FB.sv().unl[id]); };
+  FB.unlock = function (id) { var f = FB.sv(); if (!FB.BY[id] || FB.unlocked(id)) return false; f.unl[id] = 1; XY.save.touch(); return true; };
+  FB.kg = function (id) { var c = XY.save.data.cards[id]; return c ? Math.min(3, Math.max(0, (c.lv || 1) - 1)) : 0; };    // 开光：旧 Lv1→0 … Lv4/5→3，每级 +8%
+  FB.kgMul = function (id) { return 1 + C.FB.KG * FB.kg(id); };
+  FB.retired = function () { return XY.CARDS.filter(function (c) { return !FB.BY[c.id]; }); };     // 典藏：通关文牒、舍利子、紫金钵盂、莲花宝座
+
+  /* ---------- 局内状态 ---------- */
+  FB.state = function (G) { return G.fb; };
+  FB.held = function (G, id) { var f = G.fb, i; if (!f) return null; for (i = 0; i < f.w.length; i++) if (f.w[i].id === id) return f.w[i]; for (i = 0; i < f.s.length; i++) if (f.s[i].id === id) return f.s[i]; return null; };
+  FB.all = function (G) { return G.fb ? G.fb.w.concat(G.fb.s) : []; };
+  FB.lvOf = function (G, id) { var h = FB.held(G, id); return h ? h.lv : 0; };
+  FB.full = function (G, kind) { return kind === 'l' ? G.fb.s.length >= C.FB.SLOT_L : G.fb.w.length >= C.FB.SLOT_F; };
+  function mkSlot(id, lv) { return { id: id, lv: lv || 1, sup: !!FB.SUP[id], t: 0, a: 0 }; }
+  FB.addItem = function (G, id, lv) {
+    var it = FB.info(id); if (!it || FB.held(G, id)) return null;
+    var s = mkSlot(id, lv); (it.kind === 'l' ? G.fb.s : G.fb.w).push(s); return s;
+  };
+  FB.init = function (G) {
+    C.CHEST_TIMES = FB.on() ? [100, 220, 340, 460].slice(0, C.FB.CHESTS) : [100, 220, 340, 460, 580, 700];
+    G.fb = null; if (!FB.on()) return;
+    G.fb = { w: [], s: [], pin: null, sealed: {}, rrFree: 1, sealN: 1, offers: 0, log: [], made: [], fx: [], proj: [], patches: [], peaches: [], walls: [], hits: 0, firstMade: 0, fullAt: 0, rrPaid: 0, coinsRr: 0, auto: 0 };
+    G.deckIds = []; G.runCards = {}; G.activeCard = null; G.cardLog = G.cardLog || [];
+    var sv = XY.save, n = 0;
+    sv.data.deck.forEach(function (id) { var it = FB.BY[id]; if (!it || !FB.unlocked(id) || FB.held(G, id) || FB.full(G, it.kind)) return; FB.addItem(G, id, 1); n++; });
+    if (!G.fb.w.length && !G.fb.s.length) FB.addItem(G, 'jingubang', 1);
+    FB.recalc(G);
+  };
+
+  /* ---------- 重算：灵物属性 + 门派羁绊 → G.cm（recalcParty 读它）---------- */
+  FB.recalc = function (G) {
+    var f = G.fb, cm = {}, cnt = {}, combos = [], i, k;
+    f.cdr = 0; f.shMul = 1; f.opts = C.FB.OPTS; f.rrMax = 1; f.sealMax = 1;
+    function add(k, v) { cm[k] = (cm[k] || 0) + v; }
+    FB.all(G).forEach(function (s) {
+      var it = FB.info(s.id), kg = it.sup ? 1 : FB.kgMul(s.id), lv = s.lv;
+      cnt[it.set] = (cnt[it.set] || 0) + 1;
+      if (it.kind !== 'l') return;
+      switch (s.id) {
+        case 'jindouyun': add('move', 0.06 * lv * kg + (lv >= 3 ? 0.04 : 0)); break;
+        case 'huoyan': add('crit', 0.05 * lv * kg); if (lv >= 3) f.shMul = 1.33; break;
+        case 'qishier': f.cdr += 0.06 * lv * kg; break;
+        case 'jinguzhou': add('ultCd', 0.08 * lv * kg + (lv >= 3 ? 0.04 : 0)); break;
+        case 'renshen': add('regen', 0.4 * lv * kg); if (lv >= 3) add('campRegen', 3); break;
+        case 'qiankun': f.rrMax += lv; f.sealMax += lv; if (lv >= 3) f.opts = C.FB.OPTS + 1; break;
+        case 'nianzhu': add('camp', 200 * lv * kg); add('campRegen', lv * kg + (lv >= 3 ? 2 : 0)); break;
+      }
+    });
+    f.cdr = Math.min(0.5, f.cdr);
+    XY.SET_ORDER.forEach(function (sid) {
+      var n = cnt[sid] || 0, tier = n >= 4 ? 2 : (n >= 2 ? 1 : 0), s = XY.CARD_SETS[sid];
+      for (var t = 0; t < tier; t++) { var fx = (t === 0 ? s.t3 : s.t5).fx; for (k in fx) add(k, fx[k]); }
+      if (n > 0) combos.push({ set: sid, n: n, tier: tier });
+    });
+    G.cm = cm; G.combos = combos; G.deckIds = G.deckIds || [];
+  };
+  FB.refresh = function (G) { var oc = G.camp.maxHp; FB.recalc(G); XY.recalcAll(G); if (G.camp.maxHp > oc) G.camp.hp = Math.min(G.camp.maxHp, G.camp.hp + (G.camp.maxHp - oc)); };
+
+  /* ---------- 配方状态 ---------- */
+  // 'ready' 可炼化 · 'prog' 进行中 · 'missB' 缺 B · 'locked' 未解锁 · 'done' 已炼成（本趟）
+  FB.recipeState = function (G, r) {
+    var a = FB.held(G, r.a), b = FB.held(G, r.b), made = G.fb && G.fb.made.indexOf(r.id) >= 0;
+    if (made) return { st: 'done', a: a, b: b };
+    if (a && a.lv >= 5 && b) return { st: 'ready', a: a, b: b };
+    if (!FB.unlocked(r.a) || !FB.unlocked(r.b)) return { st: 'locked', a: a, b: b };
+    return { st: a ? (b ? 'prog' : 'missB') : 'prog', a: a, b: b };
+  };
+  FB.ready = function (G) { return FB.RECIPES.filter(function (r) { return FB.recipeState(G, r).st === 'ready'; }); };
+  FB.fuse = function (G, rid) {
+    var r = FB.recipe(rid), st = r && FB.recipeState(G, r); if (!st || st.st !== 'ready') return false;
+    var f = G.fb, a = st.a, bi = f.s.indexOf(st.b); if (bi < 0) bi = f.w.indexOf(st.b);
+    var home = f.w.indexOf(a), sup = mkSlot(r.sup, 1);
+    f.w[home] = sup; if (f.s.indexOf(st.b) >= 0) f.s.splice(f.s.indexOf(st.b), 1); else f.w.splice(f.w.indexOf(st.b), 1);
+    f.made.push(rid); if (f.pin === rid) f.pin = null; if (!f.firstMade) f.firstMade = G.t;
+    var sv = FB.sv(); sv.made[rid] = (sv.made[rid] || 0) + 1; XY.save.touch();
+    G.stats.fused = (G.stats.fused || 0) + 1;
+    FB.refresh(G);
+    f.fuseAnim = { rid: rid, t: 0, max: 1.4 }; XY.banner(G, '炼成：' + r.name + '！', 3);
+    return true;
+  };
+
+  /* ---------- 三选一 ---------- */
+  function wOf(G, id, isUp) {
+    var f = G.fb, w = 1, r = f.pin && FB.recipe(f.pin);
+    if (r && (id === r.a || id === r.b)) w *= C.FB.PIN_W;
+    return w;
+  }
+  function pickW(arr, getW) { var tot = 0, i; arr.forEach(function (x) { tot += getW(x); }); var r = Math.random() * tot; for (i = 0; i < arr.length; i++) { r -= getW(arr[i]); if (r <= 0) return arr[i]; } return arr[arr.length - 1]; }
+  // 候选池：已解锁、没封印、没带满；升级 = 带着且没满级
+  FB.pool = function (G) {
+    var f = G.fb, up = [], nw = [];
+    FB.all(G).forEach(function (s) { if (!s.sup && s.lv < FB.maxLv(s.id) && !f.sealed[s.id]) up.push({ k: 'up', id: s.id, from: s.lv, to: s.lv + 1 }); });
+    FB.ITEMS.forEach(function (it) { if (FB.unlocked(it.id) && !FB.held(G, it.id) && !f.sealed[it.id] && !FB.full(G, it.kind)) nw.push({ k: 'new', id: it.id, to: 1 }); });
+    return { up: up, nw: nw };
+  };
+  FB.cards = function (G, n, excl, skip) {
+    var f = G.fb, P = FB.pool(G), out = [], used = {}, c;
+    function take(c) { if (c && !used[c.id]) { out.push(c); used[c.id] = 1; return true; } return false; }
+    skip = skip || {};
+    var up = P.up.filter(function (x) { return !skip[x.id]; }), nw = P.nw.filter(function (x) { return !skip[x.id]; });
+    if (excl) { var e = up.concat(nw).filter(function (x) { return x.id === excl; })[0]; if (e) take(e); }
+    if (up.length && out.length < n && !out.some(function (x) { return x.k === 'up'; })) take(pickW(up.filter(function (x) { return !used[x.id]; }), function (x) { return wOf(G, x.id, true); }));      // 必有 1 项升级
+    var rest = up.concat(nw).filter(function (x) { return !used[x.id]; });
+    while (out.length < n && rest.length) { c = pickW(rest, function (x) { return wOf(G, x.id, x.k === 'up'); }); take(c); rest = rest.filter(function (x) { return !used[x.id]; }); }
+    return out;
+  };
+  FB.offer = function (G, opts) {
+    opts = opts || {}; var f = G.fb; if (!f) return null;
+    f.offers++; G.stats.offers = (G.stats.offers || 0) + 1;
+    if (opts.excl && FB.unlock(opts.excl)) { XY.toast(G, '永久解锁：' + FB.BY[opts.excl].name); G.stats.fbUnl = (G.stats.fbUnl || 0) + 1; }
+    var cards = FB.cards(G, f.opts, opts.excl); FB.ready(G).forEach(function (r) { cards.push({ k: 'fuse', id: r.sup, rid: r.id, from: r.a }); });
+    if (!cards.length) {                                         // 全满：只给金币 / 回血，不弹窗
+      G.coins += 60; G.heroes.forEach(function (h) { if (!h.down) XY.core.healHero(G, h, h.maxHp * 0.15, false); });
+      XY.toast(G, '法宝都已满级：化作 60 金币 + 全队回血'); f.fullAt = f.fullAt || G.t; return 'full';
+    }
+    if (window.XY_AUTO_CARDS && !(opts && opts.manual)) { FB.autoPick(G, cards, opts); return 'auto'; }
+    if (G.cardOffer) { G.cardOfferQ = G.cardOfferQ || []; G.cardOfferQ.push({ opts: opts }); return 'queued'; }
+    G.cardOffer = { v2: true, cards: cards, opts: opts, t: 0, rr: 0, ids: [] }; G.mode = 'cards';
+    return 'open';
+  };
+  // 机器人 / 测试的自动选择：炼化 > 配方相关的升级 / 新件 > 其他升级 > 新件（有盯就偏盯）
+  FB.autoPick = function (G, cards, opts) {
+    var f = G.fb; f.auto++;
+    function score(c) {
+      if (c.k === 'fuse') return 100;
+      var s = c.k === 'up' ? 3 : 2, id = c.id;
+      FB.RECIPES.forEach(function (r) { if (r.a === id || r.b === id) s += (f.pin === r.id ? 6 : 3); });
+      var h = FB.held(G, id); if (h && h.lv >= FB.maxLv(id) - 1) s += 1;
+      return s + Math.random();
+    }
+    cards.sort(function (a, b) { return score(b) - score(a); });
+    FB.take(G, cards[0], opts);
+  };
+  FB.take = function (G, c, opts) {
+    var f = G.fb, it;
+    if (c.k === 'fuse') return FB.fuse(G, c.rid);
+    if (c.k === 'up') { var h = FB.held(G, c.id); if (!h) return false; h.lv = Math.min(FB.maxLv(c.id), h.lv + 1); }
+    else if (!FB.addItem(G, c.id, 1)) return false;
+    it = FB.BY[c.id]; XY.save.addCard(c.id);        // 图鉴 / 收藏照旧计数
+    f.log.push({ id: c.id, k: c.k, t: G.t, lv: FB.lvOf(G, c.id) }); G.cardLog.push({ id: c.id, t: G.t });
+    FB.refresh(G); G.cardFlash = { id: c.id, t: 2.2 };
+    f.gain = { id: c.id, t: 0, max: 2.4, up: c.k === 'up' };
+    XY.toast(G, (c.k === 'up' ? '升级：' : '获得：') + it.name + ' Lv' + FB.lvOf(G, c.id));
+    if (!f.slotFullAt && f.w.length >= C.FB.SLOT_F && f.s.length >= C.FB.SLOT_L) f.slotFullAt = G.t;
+    return true;
+  };
+  FB.rrCost = function (G) { var o = G.cardOffer, f = G.fb; return f.rrFree > 0 ? 0 : C.FB.RR_COST * (o ? o.rr + 1 : 1); };
+  FB.reroll = function (G) {
+    var o = G.cardOffer, f = G.fb; if (!o || !o.v2) return false;
+    var cost = FB.rrCost(G); if (cost > G.coins) { XY.toast(G, '金币不够：重抽要 ' + cost); return false; }
+    if (f.rrFree > 0) f.rrFree--; else { G.coins -= cost; o.rr++; f.coinsRr += cost; }
+    var keep = o.cards.filter(function (c) { return c.pinned; }), n = f.opts, skip = {};
+    keep.forEach(function (c) { skip[c.id] = 1; });
+    var fresh = FB.cards(G, n - keep.length, o.opts.excl, skip), fz = o.cards.filter(function (c) { return c.k === 'fuse'; });
+    o.cards = keep.concat(fresh).concat(fz.length ? [] : FB.ready(G).map(function (r) { return { k: 'fuse', id: r.sup, rid: r.id, from: r.a }; })).concat(fz); G.stats.rerolls = (G.stats.rerolls || 0) + 1;
+    return true;
+  };
+  FB.seal = function (G, k) {
+    var o = G.cardOffer, f = G.fb; if (!o || !o.v2 || !o.cards[k] || o.cards[k].k === 'fuse') return false;
+    if (f.sealN <= 0) { XY.toast(G, '本关封印次数用完了'); return false; }
+    var c = o.cards[k]; f.sealN--; f.sealed[c.id] = 1; var used = {}; o.cards.forEach(function (x) { used[x.id] = 1; });
+    var fresh = FB.cards(G, 1, null, used);
+    if (fresh.length) o.cards[k] = fresh[0]; else o.cards.splice(k, 1);
+    if (!o.cards.length) { FB.choose(G, -1); return true; }
+    XY.toast(G, '封印了「' + FB.info(c.id).name + '」：本关不会再出现'); return true;
+  };
+  FB.choose = function (G, k) {
+    var o = G.cardOffer; if (!o || !o.v2) return false;
+    if (k === -1) { G.coins += C.FB.SKIP_COINS; XY.toast(G, '放弃了选择，换成 ' + C.FB.SKIP_COINS + ' 金币'); G.stats.skips = (G.stats.skips || 0) + 1; }
+    else if (o.cards[k]) FB.take(G, o.cards[k], o.opts); else return false;
+    G.cardOffer = null; FB.nextOffer(G); return true;
+  };
+  FB.nextOffer = function (G) {
+    while (G.cardOfferQ && G.cardOfferQ.length) {
+      var n = G.cardOfferQ.shift(), cards = FB.cards(G, G.fb.opts, n.opts && n.opts.excl); FB.ready(G).forEach(function (r) { cards.push({ k: 'fuse', id: r.sup, rid: r.id, from: r.a }); });
+      if (!cards.length) { G.coins += 60; continue; }
+      G.cardOffer = { v2: true, cards: cards, opts: n.opts || {}, t: 0, rr: 0, ids: [] }; return;
+    }
+    if (G.mode === 'cards') G.mode = 'play';
+  };
+  FB.pin = function (G, rid) { var f = G.fb; if (!f) return; f.pin = f.pin === rid ? null : rid; };
+
+  /* ---------- 来源 ---------- */
+  FB.onPrep = function (G) { if (G.fb) FB.offer(G, { src: 'prep' }); };
+  FB.onClear = function (levelId) { (FB.CLEAR_ITEM[levelId] || []).forEach(function (id) { FB.unlock(id); }); };
+
+  /* ---------- 覆盖旧入口（只在 V2 下生效；V2 关时一律走旧函数）---------- */
+  function wrap(name, fn) { var old = K[name]; K[name] = function () { return FB.on() && arguments[0] && arguments[0].fb ? fn.apply(K, arguments) : (old ? old.apply(K, arguments) : undefined); }; K[name].old = old; }
+  var oldInit = K.initRun;
+  K.initRun = function (G) { oldInit(G); FB.init(G); };
+  wrap('recalc', function (G) { FB.recalc(G); });
+  wrap('carried', function (G) { return FB.all(G).filter(function (s) { return !s.sup; }).map(function (s) { return s.id; }); });
+  wrap('copies', function () { return 1; });
+  wrap('setActive', function () { return { ok: false, reason: '新规则下所有法宝同时生效' }; });
+  wrap('allowed', function (G, id) { return !!FB.BY[id]; });
+  wrap('sanitizeCarry', function () { return []; });
+  wrap('applyStart', function () { });
+  wrap('update', function (G, dt) { K.update.old(G, dt); FB.update(G, dt); });
+  wrap('openChest', function (G, ch) { if (XY.v07b && XY.v07b.onChest) XY.v07b.onChest(G); G.coins += 25; if (XY.soldierCardDrop && Math.random() < 0.4) XY.soldierCardDrop(G, ch.x, ch.y, 'chest'); if (XY.specials) XY.specials.maybeDrop(G, 'chest'); FB.offer(G, { src: 'chest' }); });
+  wrap('give', function (G, id, opts) { if (G.mode === 'play' || G.mode === 'cards') FB.offer(G, { src: (opts && (opts.quest ? 'quest' : opts.table)) || 'drop' }); return null; });
+  wrap('offer', function (G, id0, table, opts) { return FB.offer(G, { src: table || 'drop' }); });
+  wrap('choose', function (G, k) { return FB.choose(G, k); });
+  wrap('nextOffer', function (G) { FB.nextOffer(G); });
+  wrap('spawnChest', function (G) { var ct = (G.fbChest = (G.fbChest || 0) + 1); if (ct > C.FB.CHESTS) return; K.spawnChest.old(G); });
+  wrap('onKill', function (G, e) {
+    var d = e.def;
+    if (!G.seenRun[e.type]) { G.seenRun[e.type] = true; if (XY.save.markSeen(e.type)) G.dexQ.push('图鉴：发现新妖怪「' + d.name + '」'); }
+    if (d.boss) {
+      var dn = e.den !== undefined && G.dens ? G.dens[e.den] : null, ex = dn ? FB.DEN_ITEM[dn.id] : null;
+      FB.offer(G, { src: 'den', excl: ex });
+      if (e.type === 'boss') FB.offer(G, { src: 'boss' });      // 牛魔王：多一次
+      return;
+    }
+    if (d.elite) G.coins += C.FB.ELITE_COINS;                   // 精英不再掉卡，改为多掉金币
+  });
+  // 取经之旅：快照里存 fb（只存带着的件和等级）
+  FB.snapshot = function (G) { return G.fb ? { w: G.fb.w.map(function (s) { return { id: s.id, lv: s.lv }; }), s: G.fb.s.map(function (s) { return { id: s.id, lv: s.lv }; }), made: G.fb.made.slice() } : null; };
+  FB.restore = function (G, sn) {
+    if (!G.fb || !sn) return;
+    G.fb.w = []; G.fb.s = []; G.fb.made = (sn.made || []).slice();
+    (sn.w || []).concat(sn.s || []).forEach(function (x) { if (FB.info(x.id) && !FB.held(G, x.id) && !FB.full(G, FB.info(x.id).kind)) FB.addItem(G, x.id, Math.max(1, Math.min(FB.SUP[x.id] ? 1 : FB.maxLv(x.id), +x.lv || 1))); });
+    FB.recalc(G);
+  };
+  // 局外卡组：V2 下不再有“同一套”限制
+  var oldToggle = XY.save.toggleDeck;
+  XY.save.toggleDeck = function (id) {
+    if (!FB.on()) return oldToggle(id);
+    var S = XY.save, d = S.data.deck, i = d.indexOf(id);
+    if (i >= 0) { d.splice(i, 1); S.touch(); return { ok: true, reason: '已取下' }; }
+    if (!FB.BY[id]) return { ok: false, reason: '这件是典藏，不能带进局内' };
+    if (!FB.unlocked(id)) return { ok: false, reason: '还没解锁：' + FB.whereText(id) };
+    if (d.length >= S.deckSlots()) return { ok: false, reason: '起手携带满了（' + S.deckSlots() + ' 件）' };
+    d.push(id); S.touch(); return { ok: true, reason: '已加入起手携带' };
+  };
+  var oldClear = XY.save.recordClear;
+  XY.save.recordClear = function (id) { var r = oldClear.apply(XY.save, arguments); FB.onClear(id); return r; };
+  // 火眼金睛 Lv3：对精英护盾的伤害更高
+  var oldShield = XY.shieldHit;
+  if (oldShield) XY.shieldHit = function (G, e, dmg, em, el) { return oldShield(G, e, dmg * ((G.fb && G.fb.shMul) || 1), em, el); };
+  FB.update = function () { };       // fabao2.js 里替换
+})();
+
+</script>
+<script>
+/* ---- js/fabao2.js ---- */
+/* ============================================================
+ * fabao2.js —— 法宝出手（15 件法宝 + 8 件超级法宝的行为 + 画面）
+ *   所有伤害：type 'magic'、五行取该法宝的、aoe:true（范围伤害，不被盾兵格挡）；src = 当前操控的英雄（守护类 = 唐僧）
+ *   数值是占位（探针调）：基础伤害 × 等级倍数（Lv2 / Lv4 各 +30%）× 开光 × 全队伤害 ×（1 + 5% × 队伍等级 − 5%）
+ *   特效：尖碎片 / 斩痕 / 多边形，不用圆圈；同屏特效有上限（LOD）
+ * ============================================================ */
+(function () {
+  'use strict';
+  var XY = window.XY, C = XY.C, FB = XY.fabao, cos = Math.cos, sin = Math.sin, PI = Math.PI, PI2 = PI * 2;
+  var LVD = [0, 1, 1.3, 1.3, 1.6, 1.6];
+  var COL = { metal: '#e0a415', wood: '#3f9e5a', water: '#3a9bd0', fire: '#e8602c', earth: '#a8782f' };
+  function K() { return XY.core; }
+  function caster(G) { var h = G.heroes[G.ctrl]; if (h && !h.down) return h; for (var i = 1; i < G.heroes.length; i++) if (!G.heroes[i].down) return G.heroes[i]; return G.heroes[0]; }
+  function tang(G) { return G.heroes[0]; }
+  function lvOf(s) { return Math.max(1, Math.min(5, s.lv)); }
+  function dmgOf(G, s, base) { return base * LVD[lvOf(s)] * (s.sup ? 1 : FB.kgMul(s.id)) * (G.P.dmg || 1) * (1 + 0.04 * Math.min(30, Math.max(0, (G.level || 1) - 1))); }
+  function rngOf(s, r) { return r * (lvOf(s) >= 4 ? 1.15 : 1); }
+  function face(G, h, r) { var t = G.grid.nearest(h.x, h.y, r || 420); return t ? Math.atan2(t.y - h.y, t.x - h.x) : null; }
+  function hit(G, s, h, e, d, o) {
+    if (e.dead || e.hidden) return;
+    var it = FB.info(s.id), op = { src: h, type: 'magic', elem: it.el || null, aoe: true, kb: 0, fx: h.x, fy: h.y }; for (var k in o) op[k] = o[k];
+    K().hurtEnemy(G, e, d, op); G.fb.hits++;
+  }
+  function fx(G, o) { var f = G.fb; if (f.fx.length > 70) return; o.t = 0; f.fx.push(o); }
+  // 冷却：七十二变减冷却，Lv3 的“出手翻倍”窗口内冷却走得更快
+  function ready(G, s, dt, cd) {
+    var f = G.fb; if (s.init === undefined) { s.init = 1; s.t = cd * 0.4; }
+    var sp = 1 / Math.max(0.5, 1 - f.cdr) * (f.dbl && f.dbl.id === s.id && f.dbl.t > 0 ? 2 : 1);
+    if (s.t > 0) s.t -= dt * sp;
+    return s.t <= 0;
+  }
+  function fired(s, cd) { s.t = cd; }
+  function later(G, d, fn) { G.fb.q.push({ t: d, fn: fn }); }
+  function inCone(e, h, a, span, r) { var dx = e.x - h.x, dy = e.y - h.y, d = Math.sqrt(dx * dx + dy * dy); if (d > r + e.r) return false; var da = Math.abs(((Math.atan2(dy, dx) - a + PI * 3) % PI2) - PI); return d < 30 || da <= span / 2; }
+  function dist(a, b) { return XY.dist(a.x, a.y, b.x, b.y); }
+
+  /* ================= 15 件法宝 ================= */
+  var B = {};
+  B.jingubang = function (G, s, dt) {
+    var lv = lvOf(s), cd = lv >= 3 ? 2.55 : 3; if (!ready(G, s, dt, cd)) return;
+    var h = caster(G), a = face(G, h, 320); if (a === null) return;
+    var span = lv >= 5 ? 2.62 : 1.57, r = rngOf(s, 150), d = dmgOf(G, s, 38);
+    G.grid.query(h.x, h.y, r + 30, function (e) { if (inCone(e, h, a, span, r)) { hit(G, s, h, e, d, { kb: 70 }); if (lv >= 5) { e.vulnUntil = Math.max(e.vulnUntil || 0, G.t + 4); e.vulnM = Math.max(e.vulnM || 0, 0.1); } } });
+    fx(G, { k: 'slash', x: h.x, y: h.y, a: a, span: span, r: r, max: 0.3, col: COL.metal }); fired(s, cd);
+  };
+  function slam(G, s, h, r, d, stun, col) {
+    var any = 0; G.grid.query(h.x, h.y, r, function (e) { any++; hit(G, s, h, e, d, { kb: 60, stun: stun }); });
+    fx(G, { k: 'crack', x: h.x, y: h.y, r: r, max: 0.45, col: col }); G.shake = Math.max(G.shake, 2.5); return any;
+  }
+  B.jiuchi = function (G, s, dt) {
+    var lv = lvOf(s), cd = 4; if (!ready(G, s, dt, cd)) return;
+    var h = caster(G), r = rngOf(s, 95) * (lv >= 3 ? 1.25 : 1), n = 0; G.grid.query(h.x, h.y, r * 1.2, function () { n++; }); if (!n) return;
+    var d = dmgOf(G, s, 32), st = lv >= 5 ? 1 : 0.5; slam(G, s, h, r, d, st, COL.earth);
+    if (lv >= 5) later(G, 0.45, function () { if (!h.down) slam(G, s, h, r, d, st, COL.earth); });
+    fired(s, cd);
+  };
+  function orbit(G, s, dt, n, spd, mulD) {
+    var h = caster(G); s.ang = (s.ang || 0) + dt * spd; s.tk = (s.tk || 0) - dt; s.n = n; s.cx = h.x; s.cy = h.y;
+    if (s.tk > 0) return; s.tk = 0.2;
+    var d = dmgOf(G, s, 10) * (mulD || 1);
+    for (var i = 0; i < n; i++) { var a = s.ang + i * PI2 / n, bx = h.x + cos(a) * 74, by = h.y + sin(a) * 74; G.grid.query(bx, by, 26, function (e) { hit(G, s, h, e, d, { kb: 40 }); }); }
+  }
+  B.xiangyao = function (G, s, dt) { var lv = lvOf(s); orbit(G, s, dt, lv >= 5 ? 3 : (lv >= 3 ? 2 : 1), 3 * (lv >= 5 ? 1.2 : 1), 1); };
+  // 抛出的圈：飞出去再飞回来
+  function ringProj(G, s, h, a, o) {
+    var f = G.fb; if (f.proj.length > 14) return;
+    var p = { k: 'ring', s: s, h: h, x: h.x, y: h.y, a: a, sp: o.sp, range: o.range, out: true, hits: {}, hits2: {}, pn: 0, dmg: o.dmg, pierce: o.pierce, fire: !!o.fire, both: !!o.both, elite: o.elite || 1, life: 0, boom: o.boom || 0, col: o.col };
+    f.proj.push(p);
+  }
+  B.jingangzhuo = function (G, s, dt) {
+    var lv = lvOf(s), cd = 4.2; if (!ready(G, s, dt, cd)) return;
+    var h = caster(G), a = face(G, h, 360); if (a === null) return;
+    ringProj(G, s, h, a, { sp: 520, range: rngOf(s, 270), dmg: dmgOf(G, s, 28), pierce: lv >= 3 ? 5 : 3, both: lv >= 5, elite: lv >= 5 ? 1.3 : 1, col: COL.metal }); fired(s, cd);
+  };
+  B.hulu = function (G, s, dt) {
+    var lv = lvOf(s), cd = 8 * (lv >= 3 ? 0.8 : 1); if (!ready(G, s, dt, cd)) return;
+    var h = caster(G), cand = [], boss = null; G.grid.query(h.x, h.y, 420, function (e) { if (e.def.boss) boss = e; else if (!e.def.etower) cand.push(e); });
+    if (!cand.length && !(boss && lv >= 5)) return;
+    cand.sort(function (x, y) { return y.hp - x.hp; });
+    cand.slice(0, lv >= 5 ? 2 : 1).forEach(function (e) { e.shield = 0; fx(G, { k: 'bolt', x: h.x, y: h.y, x2: e.x, y2: e.y, max: 0.35, col: COL.wood }); hit(G, s, h, e, e.hp + 9999, {}); });
+    if (boss && lv >= 5) { fx(G, { k: 'bolt', x: h.x, y: h.y, x2: boss.x, y2: boss.y, max: 0.35, col: COL.wood }); hit(G, s, h, boss, boss.maxHp * 0.03, {}); }
+    fired(s, cd);
+  };
+  B.huangjin = function (G, s, dt) {
+    var lv = lvOf(s), cd = 9; if (!ready(G, s, dt, cd)) return;
+    var h = caster(G), cand = []; G.grid.query(h.x, h.y, 320, function (e, d2) { if (!e.def.etower) cand.push({ e: e, d: d2 }); });
+    if (!cand.length) return; cand.sort(function (x, y) { return x.d - y.d; });
+    cand.slice(0, lv >= 3 ? 4 : 2).forEach(function (c) { var e = c.e; e.stunT = Math.max(e.stunT || 0, e.def.boss ? 1.2 : 2.5); if (lv >= 5) { e.vulnUntil = Math.max(e.vulnUntil || 0, G.t + 2.5); e.vulnM = Math.max(e.vulnM || 0, 0.2); } fx(G, { k: 'bolt', x: h.x, y: h.y, x2: e.x, y2: e.y, max: 0.6, col: COL.earth, rope: 1 }); });
+    fired(s, cd);
+  };
+  B.bajiaoshan = function (G, s, dt) {
+    var lv = lvOf(s), cd = 6; if (s.wind) { s.wind.t -= dt; s.wind.k -= dt; if (s.wind.k <= 0) { s.wind.k = 0.25; gust(G, s, s.wind.h, s.wind.a, 0.4); } if (s.wind.t <= 0) s.wind = null; }
+    if (!ready(G, s, dt, cd)) return;
+    var h = caster(G), a = face(G, h, 400); if (a === null) return;
+    gust(G, s, h, a, 1); if (lv >= 5) s.wind = { t: 1.5, k: 0.25, h: h, a: a }; fired(s, cd);
+  };
+  function gust(G, s, h, a, m) {
+    var lv = lvOf(s), r = rngOf(s, 210) * (lv >= 3 ? 1.25 : 1), d = dmgOf(G, s, 12) * m;
+    G.grid.query(h.x, h.y, r + 30, function (e) { if (inCone(e, h, a, 1.4, r)) hit(G, s, h, e, d, { kb: 90 * m }); });
+    for (var i = 0; i < G.eprojs.length; i++) { var q = G.eprojs[i]; if (inCone({ x: q.x, y: q.y, r: 4 }, h, a, 1.4, r)) q.life = 0; }
+    fx(G, { k: 'wind', x: h.x, y: h.y, a: a, r: r, max: 0.45, col: COL.wood });
+  }
+  B.zhaoyao = function (G, s, dt) {
+    var lv = lvOf(s), cd = 10; if (!ready(G, s, dt, cd)) return;
+    var h = caster(G), r = 200 * (lv >= 3 ? 1.25 : 1), n = 0, vm = lv >= 5 ? 0.4 : 0.25;
+    G.grid.query(h.x, h.y, r, function (e) { n++; e.vulnUntil = Math.max(e.vulnUntil || 0, G.t + 6); e.vulnM = Math.max(e.vulnM || 0, vm); if (lv >= 5 && e.hidden) e.hidden = false; });
+    if (!n) return; fx(G, { k: 'scan', x: h.x, y: h.y, r: r, max: 0.8, col: COL.metal }); fired(s, cd);
+  };
+  B.liuli = function (G, s, dt) {
+    var lv = lvOf(s), h = caster(G), f = G.fb; s.acc = (s.acc || 0) + dt;
+    if (s.lx === undefined) { s.lx = h.x; s.ly = h.y; }
+    if (XY.dist(h.x, h.y, s.lx, s.ly) > 34 && s.acc > 0.15) {
+      s.acc = 0; s.lx = h.x; s.ly = h.y; if (f.patches.length >= 40) f.patches.shift();
+      f.patches.push({ x: h.x, y: h.y, r: 34 * (lv >= 5 ? 1.4 : 1), life: lv >= 3 ? 5 : 3, max: lv >= 3 ? 5 : 3, tk: 0, s: s, h: h, col: COL.fire });
+    }
+  };
+  B.sanmei = function (G, s, dt) {
+    var lv = lvOf(s), cd = 5; if (!ready(G, s, dt, cd)) return;
+    var h = caster(G), cand = []; G.grid.query(h.x, h.y, 520, function (e, d2) { if (!e.def.etower || true) cand.push({ e: e, d: d2 }); });
+    if (!cand.length) return; cand.sort(function (x, y) { return x.d - y.d; });
+    var n = lv >= 5 ? 3 : (lv >= 3 ? 2 : 1), f = G.fb;
+    cand.slice(0, n).forEach(function (c, i) { if (f.proj.length > 14) return; var a = Math.atan2(c.e.y - h.y, c.e.x - h.x) + (i - (n - 1) / 2) * 0.5; f.proj.push({ k: 'fire', s: s, h: h, x: h.x, y: h.y, a: a, tg: c.e, sp: 380, dmg: dmgOf(G, s, 40), r: lv >= 3 ? 70 : 62, burn: lv >= 5, life: 0, col: COL.fire }); });
+    fired(s, cd);
+  };
+  B.pantao = function (G, s, dt) {
+    var lv = lvOf(s), cd = 12, f = G.fb; if (f.peaches.length) return; if (!ready(G, s, dt, cd)) return;
+    var low = null; G.heroes.forEach(function (h) { if (!h.down && h.id !== 'tang' && h.hp < h.maxHp * 0.85 && (!low || h.hp / h.maxHp < low.hp / low.maxHp)) low = h; });
+    if (!low) return; var a = XY.rand(0, PI2);
+    f.peaches.push({ x: low.x + cos(a) * 120, y: low.y + sin(a) * 120, hero: low, ripe: 0.5, life: 20, frac: [0, 0.15, 0.15, 0.25, 0.25, 0.35][lv], haste: lv >= 5, bob: 0 }); fired(s, cd);
+  };
+  B.bishui = function (G, s, dt) {
+    var lv = lvOf(s), cd = 20 * (lv >= 3 ? 0.8 : 1); if (!ready(G, s, dt, cd)) return;
+    var c = []; G.heroes.forEach(function (h) { if (!h.down && h.id !== 'tang' && !(h.absorb > 0)) c.push(h); });
+    if (!c.length) return; c.sort(function (a, b) { return a.hp / a.maxHp - b.hp / b.maxHp; });
+    c.slice(0, lv >= 5 ? 2 : 1).forEach(function (h) { h.absorb = h.maxHp * 0.3; fx(G, { k: 'shield', x: h.x, y: h.y, max: 0.7, col: COL.water, h: h }); }); fired(s, cd);
+  };
+  function anchor(G) { return G.camp.active ? G.camp : tang(G); }
+  function field(G, s, dt, r, slowF, healLv5, tag) {
+    s.fk = (s.fk || 0) - dt; if (s.fk > 0) return; s.fk = 0.3; var a = anchor(G);
+    G.grid.query(a.x, a.y, r, function (e) { e.slowT = Math.max(e.slowT || 0, 0.6); e.slowF = Math.max(e.slowF || 0, slowF * (e.def.boss ? 0.5 : 1)); });
+    if (healLv5) G.heroes.forEach(function (h) { if (!h.down && XY.dist(h.x, h.y, a.x, a.y) < r) K().healHero(G, h, 0.3, false); });
+    s.fa = { x: a.x, y: a.y, r: r };
+  }
+  B.jingping = function (G, s, dt) { var lv = lvOf(s); field(G, s, dt, 170 * (lv >= 3 ? 1.3 : 1), lv >= 5 ? 0.35 : 0.2, lv >= 5); };
+  function weakAura(G, s, dt, r, mul) {
+    var f = G.fb; s.fk = (s.fk || 0) - dt; if (s.fk > 0) return; s.fk = 0.3; var t = tang(G), inside = [];
+    f.jsh = f.jsh || [];
+    G.grid.query(t.x, t.y, r, function (e) { if (!e._jsh) { e._jsh = mul; e.dmg *= mul; f.jsh.push(e); } });
+    f.jsh = f.jsh.filter(function (e) { if (e.dead) return false; if (XY.dist(e.x, e.y, t.x, t.y) > r + 30) { e.dmg /= e._jsh; e._jsh = 0; return false; } return true; });
+    s.fa = { x: t.x, y: t.y, r: r };
+  }
+  B.jiasha = function (G, s, dt) {
+    var lv = lvOf(s); weakAura(G, s, dt, 140 * (lv >= 3 ? 1.3 : 1), 0.9);
+    if (G.camp.active && G.camp.hp < G.camp.maxHp) G.camp.hp = Math.min(G.camp.maxHp, G.camp.hp + 2 * lv * dt);
+  };
+  B.chanzhang = function (G, s, dt) {
+    var lv = lvOf(s), cd = 7; if (!ready(G, s, dt, cd)) return;
+    var t = tang(G), r = 150 * (lv >= 3 ? 1.3 : 1), n = 0; G.grid.query(t.x, t.y, r, function () { n++; }); if (!n) return;
+    var d = dmgOf(G, s, 8);
+    G.grid.query(t.x, t.y, r, function (e) { hit(G, s, t, e, d, { stun: e.def.boss ? 0 : (lv >= 5 ? 1.2 : 0.8), kb: lv >= 5 && e.def.elite ? 140 : 40 }); });
+    fx(G, { k: 'crack', x: t.x, y: t.y, r: r, max: 0.5, col: COL.earth }); fired(s, cd);
+  };
+
+  /* ================= 8 件超级法宝 ================= */
+  B.wanzhang = function (G, s, dt) {
+    var cd = 4; if (!ready(G, s, dt, cd)) return; var h = caster(G), best = null, bn = 0;
+    var pool = []; G.grid.query(h.x, h.y, 650, function (e) { if (pool.length < 14) pool.push(e); });
+    pool.forEach(function (e) { var n = 0; G.grid.query(e.x, e.y, 130, function () { n++; }); if (n > bn) { bn = n; best = e; } });
+    if (!best) return; var x = best.x, y = best.y, d = dmgOf(G, s, 150);
+    fx(G, { k: 'warn', x: x, y: y, r: 150, max: 0.55, col: COL.metal });
+    later(G, 0.55, function () { G.grid.query(x, y, 150, function (e) { hit(G, s, h, e, d, { kb: 120, stun: 1, fx: x, fy: y }); }); fx(G, { k: 'bar', x: x, y: y, r: 150, max: 0.5, col: COL.metal }); K().ring(G, x, y, 150, COL.metal, 0.5, true); G.shake = Math.max(G.shake, 6); });
+    fired(s, cd);
+  };
+  B.tianhe = function (G, s, dt) {
+    orbit(G, s, dt, 3, 3.4, 2);
+    var cd = 3.5; if (!ready(G, s, dt, cd)) return; var h = caster(G), n = 0; G.grid.query(h.x, h.y, 150, function () { n++; }); if (!n) return;
+    slam(G, s, h, 130, dmgOf(G, s, 70), 0.3, COL.water);
+    G.grid.query(h.x, h.y, 260, function (e) { e.slowT = Math.max(e.slowT || 0, 3); e.slowF = Math.max(e.slowF || 0, 0.5 * (e.def.boss ? 0.5 : 1)); });
+    fx(G, { k: 'wind', x: h.x, y: h.y, a: 0, r: 260, max: 0.6, col: COL.water, all: 1 }); fired(s, cd);
+  };
+  B.liefeng = function (G, s, dt) {
+    var f = G.fb, cd = 5; if (!ready(G, s, dt, cd)) return; var h = caster(G), a = face(G, h, 400); if (a === null) return;
+    f.walls.push({ x: h.x + cos(a) * 60, y: h.y + sin(a) * 60, a: a, life: 3, max: 3, tk: 0, s: s, h: h, len: 150 }); fired(s, cd);
+  };
+  B.shouhun = function (G, s, dt) {
+    var cd = 20; if (!ready(G, s, dt, cd)) return; var h = caster(G), cnt = 0, vw = G.view.w / 2 + 60, vh = G.view.h / 2 + 60;
+    G.grid.query(G.cam.x, G.cam.y, Math.max(vw, vh) * 1.2, function (e) {
+      if (Math.abs(e.x - G.cam.x) > vw || Math.abs(e.y - G.cam.y) > vh || e.hidden) return; cnt++;
+      if (e.def.boss || e.def.elite || e.def.etower) hit(G, s, h, e, Math.min(e.maxHp * 0.08, 600), {}); else { e.shield = 0; if (cnt < 90) hit(G, s, h, e, e.hp + 9999, {}); }
+    });
+    if (!cnt) { s.t = 1; return; }
+    fx(G, { k: 'scan', x: G.cam.x, y: G.cam.y, r: 620, max: 0.9, col: COL.wood }); fired(s, cd);
+  };
+  B.huolun = function (G, s, dt) {
+    var cd = 4; if (!ready(G, s, dt, cd)) return; var h = caster(G), a = face(G, h, 420); if (a === null) return;
+    ringProj(G, s, h, a, { sp: 600, range: 360, dmg: dmgOf(G, s, 60), pierce: 99, both: true, fire: true, boom: dmgOf(G, s, 80), col: COL.fire }); fired(s, cd);
+  };
+  B.panhui = function (G, s, dt) {
+    var cd = 15; if (!ready(G, s, dt, cd)) return; var any = false;
+    G.heroes.forEach(function (h) { if (!h.down && h.id !== 'tang') { any = true; K().healHero(G, h, h.maxHp * 0.35, true); h.boostT = Math.max(h.boostT || 0, 5); fx(G, { k: 'petals', x: h.x, y: h.y, max: 1, col: '#f08aa0' }); } });
+    if (any) fired(s, cd); else s.t = 1;
+  };
+  B.jinchan = function (G, s, dt) {
+    s.fk = (s.fk || 0) - dt; if (s.fk > 0) return; s.fk = 0.5; var t = tang(G), r = 200, d = dmgOf(G, s, 14), h = caster(G);
+    G.grid.query(t.x, t.y, r, function (e) { hit(G, s, t, e, d, { dot: true }); e.slowT = Math.max(e.slowT || 0, 0.8); e.slowF = Math.max(e.slowF || 0, 0.4 * (e.def.boss ? 0.5 : 1)); });
+    G.heroes.forEach(function (x) { if (!x.down && x.id !== 'tang' && XY.dist(x.x, x.y, t.x, t.y) < r) x.shield = Math.max(x.shield || 0, 0.7); });
+    s.fa = { x: t.x, y: t.y, r: r };
+  };
+  B.dinghai = function (G, s, dt) {
+    field(G, s, dt, 220, 0.35, false);
+    var cd = 20; if (!ready(G, s, dt, cd)) return; var any = false;
+    G.heroes.forEach(function (h) { if (!h.down && h.id !== 'tang') { any = true; h.absorb = Math.max(h.absorb || 0, h.maxHp * 0.3); fx(G, { k: 'shield', x: h.x, y: h.y, max: 0.7, col: COL.water, h: h }); } });
+    if (any) fired(s, cd); else s.t = 1;
+  };
+
+  /* ================= 每步更新 ================= */
+  FB.update = function (G, dt) {
+    var f = G.fb; if (!f || G.mode !== 'play') return;
+    f.q = f.q || [];
+    var i, q;
+    if (f.dbl) { f.dbl.t -= dt; if (f.dbl.t <= 0) f.dbl = null; }
+    var qs = FB.held(G, 'qishier');
+    if (qs && qs.lv >= 3) { qs.cyc = (qs.cyc || 0) + dt; if (qs.cyc >= 60) { qs.cyc = 0; var ws = f.w.filter(function (s) { return !s.sup; }); if (ws.length) { f.dbl = { id: ws[Math.floor(Math.random() * ws.length)].id, t: 5 }; XY.toast(G, '七十二变：' + FB.BY[f.dbl.id].name + ' 出手翻倍 5 秒'); } } }
+    for (i = f.q.length - 1; i >= 0; i--) { q = f.q[i]; q.t -= dt; if (q.t <= 0) { f.q.splice(i, 1); q.fn(); } }
+    for (i = 0; i < f.w.length; i++) { var s = f.w[i]; if (B[s.id]) B[s.id](G, s, dt); }
+    for (i = 0; i < f.s.length; i++) { if (B[f.s[i].id]) B[f.s[i].id](G, f.s[i], dt); }
+    updProj(G, f, dt); updPatches(G, f, dt); updPeaches(G, f, dt); updWalls(G, f, dt);
+    for (i = f.fx.length - 1; i >= 0; i--) { f.fx[i].t += dt; if (f.fx[i].t >= f.fx[i].max) f.fx.splice(i, 1); }
+    if (f.gain && (f.gain.t += dt) >= f.gain.max) f.gain = null;
+    if (f.fuseAnim && (f.fuseAnim.t += dt) >= f.fuseAnim.max) f.fuseAnim = null;
+  };
+  function updProj(G, f, dt) {
+    for (var i = f.proj.length - 1; i >= 0; i--) {
+      var p = f.proj[i], h = p.h; p.life += dt; var done = false;
+      if (p.k === 'ring') {
+        if (p.out) { p.x += cos(p.a) * p.sp * dt; p.y += sin(p.a) * p.sp * dt; p.d = (p.d || 0) + p.sp * dt; if (p.d >= p.range) { p.out = false; p.pn = 0; if (p.boom) { boom(G, p, p.x, p.y); } } }
+        else { var dx = h.x - p.x, dy = h.y - p.y, dd = Math.sqrt(dx * dx + dy * dy) || 1; p.x += dx / dd * p.sp * 1.1 * dt; p.y += dy / dd * p.sp * 1.1 * dt; if (dd < 26) { if (p.boom) boom(G, p, p.x, p.y); done = true; } }
+        if (p.life > 3.5) done = true;
+        var set = p.out ? p.hits : p.hits2, cnt = 0;
+        if (!p.out && !p.both) { /* 单程：回程不再伤害 */ } else G.grid.query(p.x, p.y, 24, function (e) {
+          if (set[e.id]) return; if (p.pn >= p.pierce) return; p.pn++;
+          set[e.id] = 1; hit(G, p.s, h, e, p.dmg * (e.def.elite ? p.elite : 1), { kb: 30, fx: p.x - cos(p.a) * 20, fy: p.y - sin(p.a) * 20 });
+          if (p.fire) { e.burnT = Math.max(e.burnT || 0, 3); e.burnDps = Math.max(e.burnDps || 0, p.dmg * 0.12); }
+        });
+      } else if (p.k === 'fire') {
+        var tg = p.tg; if (!tg || tg.dead) { var nn = G.grid.nearest(p.x, p.y, 420); if (nn) p.tg = tg = nn; }
+        if (tg) { var ta = Math.atan2(tg.y - p.y, tg.x - p.x), da = ((ta - p.a + PI * 3) % PI2) - PI; p.a += Math.max(-6 * dt, Math.min(6 * dt, da)); }
+        p.x += cos(p.a) * p.sp * dt; p.y += sin(p.a) * p.sp * dt;
+        var hitIt = false; G.grid.query(p.x, p.y, 16, function () { hitIt = true; });
+        if (hitIt || p.life > 2.2) { done = true; if (hitIt || p.life > 2.2) { G.grid.query(p.x, p.y, p.r, function (e) { hit(G, p.s, h, e, p.dmg, { kb: 50, fx: p.x, fy: p.y }); if (p.burn) { e.burnT = Math.max(e.burnT || 0, 3); e.burnDps = Math.max(e.burnDps || 0, p.dmg * 0.15); } }); K().ring(G, p.x, p.y, p.r, COL.fire, 0.35, true); } }
+      }
+      if (done) f.proj.splice(i, 1);
+    }
+  }
+  function boom(G, p, x, y) { G.grid.query(x, y, 100, function (e) { hit(G, p.s, p.h, e, p.boom, { kb: 80, fx: x, fy: y }); }); K().ring(G, x, y, 100, COL.fire, 0.4, true); }
+  function updPatches(G, f, dt) {
+    for (var i = f.patches.length - 1; i >= 0; i--) {
+      var p = f.patches[i]; p.life -= dt; p.tk -= dt;
+      if (p.tk <= 0) { p.tk = 0.5; var d = dmgOf(G, p.s, 9); G.grid.query(p.x, p.y, p.r, function (e) { hit(G, p.s, p.h, e, d, { dot: true }); e.burnT = Math.max(e.burnT || 0, 1.5); e.burnDps = Math.max(e.burnDps || 0, d * 0.5); }); }
+      if (p.life <= 0) f.patches.splice(i, 1);
+    }
+  }
+  function updPeaches(G, f, dt) {
+    for (var i = f.peaches.length - 1; i >= 0; i--) {
+      var p = f.peaches[i]; p.life -= dt; p.bob += dt * 4; var eaten = false;
+      if (p.ripe > 0) p.ripe -= dt;                                   // 先挂 0.5 秒再滚向残血队友；谁碰到谁吃
+      else if (p.hero && !p.hero.down) { var dx = p.hero.x - p.x, dy = p.hero.y - p.y, dd = Math.sqrt(dx * dx + dy * dy) || 1, st = Math.min(dd, 150 * dt); p.x += dx / dd * st; p.y += dy / dd * st; }
+      for (var j = 0; j < G.heroes.length && !eaten; j++) { var h = G.heroes[j]; if (h.down || h.id === 'tang' || h.hp >= h.maxHp) continue; if (XY.dist(h.x, h.y, p.x, p.y) < 30 + h.def.r) { K().healHero(G, h, h.maxHp * p.frac, true); if (p.haste) h.boostT = Math.max(h.boostT || 0, 3); eaten = true; fx(G, { k: 'petals', x: p.x, y: p.y, max: 0.8, col: '#f08aa0' }); } }
+      if (eaten || p.life <= 0) f.peaches.splice(i, 1);
+    }
+  }
+  function updWalls(G, f, dt) {
+    for (var i = f.walls.length - 1; i >= 0; i--) {
+      var w = f.walls[i]; w.life -= dt; w.tk -= dt; w.x += cos(w.a) * 130 * dt; w.y += sin(w.a) * 130 * dt;
+      if (w.tk <= 0) {
+        w.tk = 0.25; var d = dmgOf(G, w.s, 16), px = -sin(w.a), py = cos(w.a);
+        G.grid.query(w.x, w.y, w.len + 30, function (e) {
+          var rx = e.x - w.x, ry = e.y - w.y, along = rx * px + ry * py, perp = Math.abs(rx * cos(w.a) + ry * sin(w.a));
+          if (Math.abs(along) <= w.len && perp < 40) { hit(G, w.s, w.h, e, d, { kb: 50, fx: w.x - cos(w.a) * 30, fy: w.y - sin(w.a) * 30, dot: false }); e.burnT = Math.max(e.burnT || 0, 2); e.burnDps = Math.max(e.burnDps || 0, d * 0.3); }
+        });
+      }
+      if (w.life <= 0) f.walls.splice(i, 1);
+    }
+  }
+  var oldInit = FB.init;
+  FB.init = function (G) { oldInit(G); if (G.fb) { G.fb.q = []; } };
+
+  /* ================= 画面 ================= */
+  function poly(c, pts) { c.beginPath(); pts.forEach(function (p, i) { if (i) c.lineTo(p[0], p[1]); else c.moveTo(p[0], p[1]); }); c.closePath(); }
+  function star(c, x, y, r, n, inner, rot) { c.beginPath(); for (var i = 0; i < n * 2; i++) { var a = rot + i / (n * 2) * PI2, rr = i % 2 ? r * inner : r; if (i) c.lineTo(x + cos(a) * rr, y + sin(a) * rr); else c.moveTo(x + cos(a) * rr, y + sin(a) * rr); } c.closePath(); }
+  function ngon(c, x, y, r, n, rot) { c.beginPath(); for (var i = 0; i < n; i++) { var a = rot + i / n * PI2; if (i) c.lineTo(x + cos(a) * r, y + sin(a) * r); else c.moveTo(x + cos(a) * r, y + sin(a) * r); } c.closePath(); }
+  function dark(col) { return 'rgba(60,40,20,0.55)'; }
+  function drawFx(c, f) {
+    var k = f.t / f.max, a = 1 - k, i;
+    c.lineJoin = 'round';
+    switch (f.k) {
+      case 'slash': {          // 一道弯月形的刀光
+        var r = f.r * (0.6 + 0.4 * Math.min(1, k * 2.5)), a0 = f.a - f.span / 2, a1 = f.a + f.span / 2, n = 10, pts = [];
+        for (i = 0; i <= n; i++) { var an = a0 + (a1 - a0) * i / n; pts.push([f.x + cos(an) * r, f.y + sin(an) * r]); }
+        for (i = n; i >= 0; i--) { var an2 = a0 + (a1 - a0) * i / n, w = Math.sin(i / n * PI) * r * 0.22; pts.push([f.x + cos(an2) * (r - w), f.y + sin(an2) * (r - w)]); }
+        poly(c, pts); c.globalAlpha = a * 0.5; c.fillStyle = f.col; c.fill(); c.globalAlpha = a * 0.9; c.strokeStyle = '#fff'; c.lineWidth = 3; c.stroke(); c.globalAlpha = a * 0.6; c.strokeStyle = dark(); c.lineWidth = 1.5; c.stroke(); break;
+      }
+      case 'crack': {          // 地面裂纹：放射状尖三角
+        var rr = f.r * (0.4 + 0.6 * Math.min(1, k * 3)); c.globalAlpha = a * 0.85; c.fillStyle = f.col;
+        for (i = 0; i < 9; i++) { var an3 = i / 9 * PI2 + f.x * 0.01, l = rr * (i % 2 ? 0.7 : 1); poly(c, [[f.x + cos(an3 - 0.1) * rr * 0.3, f.y + sin(an3 - 0.1) * rr * 0.3], [f.x + cos(an3) * l, f.y + sin(an3) * l], [f.x + cos(an3 + 0.1) * rr * 0.3, f.y + sin(an3 + 0.1) * rr * 0.3]]); c.fill(); }
+        c.globalAlpha = a * 0.5; c.strokeStyle = dark(); c.lineWidth = 2; star(c, f.x, f.y, rr * 0.55, 9, 0.5, f.x * 0.01); c.stroke(); break;
+      }
+      case 'bolt': {           // 线：闪电 / 绳
+        c.globalAlpha = a; c.strokeStyle = dark(); c.lineWidth = 6; c.lineCap = 'round'; c.beginPath(); c.moveTo(f.x, f.y);
+        var seg = 6; for (i = 1; i < seg; i++) { var tt = i / seg; c.lineTo(f.x + (f.x2 - f.x) * tt + (f.rope ? 0 : Math.sin(i * 7 + f.t * 30) * 8), f.y + (f.y2 - f.y) * tt + (f.rope ? Math.sin(i * 2 + f.t * 8) * 6 : Math.cos(i * 5) * 8)); } c.lineTo(f.x2, f.y2); c.stroke();
+        c.strokeStyle = f.col; c.lineWidth = 3; c.stroke(); c.lineCap = 'butt'; break;
+      }
+      case 'wind': {           // 风：几道弧形条纹
+        var ln = f.r * (0.4 + 0.6 * Math.min(1, k * 2.5)); c.globalAlpha = a * 0.8; c.strokeStyle = f.col; c.lineWidth = 3; c.lineCap = 'round';
+        var nn = f.all ? 8 : 5; for (i = 0; i < nn; i++) { var an4 = f.all ? i / nn * PI2 : f.a + (i - 2) * 0.28; c.beginPath(); c.moveTo(f.x + cos(an4) * ln * 0.35, f.y + sin(an4) * ln * 0.35); c.lineTo(f.x + cos(an4 + 0.12) * ln, f.y + sin(an4 + 0.12) * ln); c.stroke(); } c.lineCap = 'butt'; break;
+      }
+      case 'scan': {           // 照妖：八角形扩散 + 十字
+        var sr = f.r * (0.3 + 0.7 * Math.min(1, k * 2)); c.globalAlpha = a * 0.25; c.fillStyle = f.col; ngon(c, f.x, f.y, sr, 8, 0.39); c.fill(); c.globalAlpha = a * 0.9; c.strokeStyle = f.col; c.lineWidth = 3; c.stroke();
+        c.beginPath(); c.moveTo(f.x - sr, f.y); c.lineTo(f.x + sr, f.y); c.moveTo(f.x, f.y - sr); c.lineTo(f.x, f.y + sr); c.globalAlpha = a * 0.5; c.stroke(); break;
+      }
+      case 'warn': {           // 巨棒落点：斜纹危险区 + 顺时针填满
+        c.globalAlpha = 0.18; c.fillStyle = f.col; ngon(c, f.x, f.y, f.r, 10, 0.2); c.fill(); c.save(); ngon(c, f.x, f.y, f.r, 10, 0.2); c.clip(); c.strokeStyle = 'rgba(160,100,10,0.4)'; c.lineWidth = 5;
+        for (var hx = -f.r * 2; hx < f.r * 2; hx += 20) { c.beginPath(); c.moveTo(f.x + hx, f.y + f.r); c.lineTo(f.x + hx + f.r, f.y - f.r); c.stroke(); } c.globalAlpha = 0.3 + 0.3 * k; c.fillStyle = f.col; c.beginPath(); c.moveTo(f.x, f.y); c.arc(f.x, f.y, f.r * 1.1, -PI / 2, -PI / 2 + PI2 * k); c.closePath(); c.fill(); c.restore();
+        c.globalAlpha = 1; c.strokeStyle = '#a06a10'; c.lineWidth = 4; ngon(c, f.x, f.y, f.r, 10, 0.2); c.stroke(); break;
+      }
+      case 'bar': {            // 落下的巨棒：一根竖条砸下，尖碎片爆开
+        var bh = 360 * Math.max(0, 1 - k * 3); c.globalAlpha = a; c.fillStyle = '#c9871a'; c.strokeStyle = '#6b4a14'; c.lineWidth = 3; c.fillRect(f.x - 26, f.y - bh - 10, 52, bh + 10); c.strokeRect(f.x - 26, f.y - bh - 10, 52, bh + 10);
+        c.fillStyle = '#e8c25a'; c.fillRect(f.x - 26, f.y - bh - 10, 52, 16); break;
+      }
+      case 'shield': {         // 水幕：菱形
+        var hh = f.h; if (hh) { f.x = hh.x; f.y = hh.y; } c.globalAlpha = a * 0.7; c.strokeStyle = f.col; c.lineWidth = 4; ngon(c, f.x, f.y, 30 + 8 * k, 4, 0.785); c.stroke(); break;
+      }
+      case 'petals': {         // 花瓣 / 桃瓣
+        c.globalAlpha = a; c.fillStyle = f.col; for (i = 0; i < 8; i++) { var an5 = i / 8 * PI2 + k * 2, d5 = 14 + 40 * k; c.save(); c.translate(f.x + cos(an5) * d5, f.y + sin(an5) * d5 - 20 * k); c.rotate(an5); c.fillRect(-4, -2, 8, 4); c.restore(); } break;
+      }
+    }
+    c.globalAlpha = 1;
+  }
+  FB.draw = function (c, G) {
+    var f = G.fb; if (!f) return; var i, t = (G.t || 0);
+    // 常驻圈：玉净瓶 / 锦襴袈裟 / 金蝉法衣 / 定海神珠（区域型：虚线八边形 + 很淡的底）
+    FB.all(G).forEach(function (s) {
+      if (s.fa) { c.globalAlpha = 0.1; c.fillStyle = s.sup ? '#e8c25a' : '#6fb7d6'; ngon(c, s.fa.x, s.fa.y, s.fa.r, 10, t * 0.2); c.fill(); c.globalAlpha = 0.55; c.strokeStyle = s.sup ? '#c9871a' : '#3a8aa8'; c.lineWidth = 2; c.setLineDash([10, 8]); c.stroke(); c.setLineDash([]); c.globalAlpha = 1; }
+      if (s.id === 'xiangyao' || s.id === 'tianhe') {            // 月牙铲
+        var h = s.cx !== undefined ? s : null; if (!h) return;
+        for (i = 0; i < s.n; i++) { var a = s.ang + i * PI2 / s.n, bx = s.cx + cos(a) * 74, by = s.cy + sin(a) * 74; c.save(); c.translate(bx, by); c.rotate(a + PI / 2); c.fillStyle = s.sup ? '#6fb7d6' : '#7fb0d8'; c.strokeStyle = '#2b5f86'; c.lineWidth = 2;
+          c.beginPath(); c.moveTo(-14, 6); c.lineTo(0, -16); c.lineTo(14, 6); c.lineTo(0, 0); c.closePath(); c.fill(); c.stroke(); c.restore(); }
+      }
+    });
+    for (i = 0; i < f.patches.length; i++) { var p = f.patches[i], k = p.life / p.max, fl = 0.55 + 0.45 * Math.sin(t * 9 + i); c.globalAlpha = Math.min(1, k * 1.5) * 0.7; c.fillStyle = '#ff8a2a'; star(c, p.x, p.y, p.r * (0.8 + 0.2 * fl), 5, 0.5, i); c.fill(); c.fillStyle = '#ffd24a'; star(c, p.x, p.y, p.r * 0.5 * fl, 4, 0.5, i + 1); c.fill(); }
+    for (i = 0; i < f.walls.length; i++) { var w = f.walls[i], px = -sin(w.a), py = cos(w.a), kk = Math.min(1, w.life / 0.5); c.globalAlpha = 0.9 * kk; c.fillStyle = '#ff8a2a'; c.strokeStyle = '#7a2a08'; c.lineWidth = 2;
+      c.beginPath(); for (var j = -6; j <= 6; j++) { var tt = j / 6 * w.len, hgt = (j % 2 ? 40 : 62) + Math.sin(t * 12 + j) * 8; c.lineTo(w.x + px * tt + cos(w.a) * hgt * 0.4, w.y + py * tt + sin(w.a) * hgt * 0.4); } for (j = 6; j >= -6; j--) c.lineTo(w.x + px * (j / 6 * w.len) - cos(w.a) * 12, w.y + py * (j / 6 * w.len) - sin(w.a) * 12); c.closePath(); c.fill(); c.stroke(); }
+    for (i = 0; i < f.proj.length; i++) { var q = f.proj[i]; c.save(); c.translate(q.x, q.y);
+      if (q.k === 'ring') { c.rotate(t * 14); c.fillStyle = q.fire ? '#ff8a2a' : '#e0a415'; c.strokeStyle = '#6b4a14'; c.lineWidth = 2; star(c, 0, 0, 20, 6, 0.55, 0); c.fill(); c.stroke(); if (q.fire) { c.fillStyle = '#ffe08a'; ngon(c, 0, 0, 7, 4, 0.785); c.fill(); } }
+      else { c.rotate(q.a); c.fillStyle = '#ff6a1a'; c.strokeStyle = '#7a2a08'; c.lineWidth = 2; c.beginPath(); c.moveTo(16, 0); c.lineTo(-10, 9); c.lineTo(-4, 0); c.lineTo(-10, -9); c.closePath(); c.fill(); c.stroke(); c.fillStyle = '#ffd24a'; ngon(c, 2, 0, 5, 4, 0.785); c.fill(); }
+      c.restore(); }
+    for (i = 0; i < f.peaches.length; i++) { var pc = f.peaches[i], by = Math.sin(pc.bob) * 3; c.fillStyle = '#ff9aa8'; c.strokeStyle = '#a8344e'; c.lineWidth = 2; c.beginPath(); c.moveTo(pc.x, pc.y - 14 + by); c.lineTo(pc.x + 13, pc.y - 2 + by); c.lineTo(pc.x + 8, pc.y + 12 + by); c.lineTo(pc.x - 8, pc.y + 12 + by); c.lineTo(pc.x - 13, pc.y - 2 + by); c.closePath(); c.fill(); c.stroke(); c.fillStyle = '#3f9e5a'; c.fillRect(pc.x - 2, pc.y - 18 + by, 8, 5); }
+    for (i = 0; i < f.fx.length; i++) drawFx(c, f.fx[i]);
+    c.globalAlpha = 1;
+  };
+})();
+
+</script>
+<script>
+/* ---- js/fabaoui.js ---- */
+/* ============================================================
+ * fabaoui.js —— 法宝新规则的界面：三选一面板、右侧法宝栏（4 法宝 + 3 灵物）、炼化动画
+ *   全部用圆角矩形 / 小方块，不画圆点；点击与键盘都走 XY.fabao 的规则函数
+ * ============================================================ */
+(function () {
+  'use strict';
+  var XY = window.XY, C = XY.C, FB = XY.fabao, UI = XY.fabaoui = {};
+  var EC = { metal: '#d9a21c', wood: '#3f9e5a', water: '#3a9bd0', fire: '#e8602c', earth: '#a8782f' };
+  var SC = { qitian: '#d9a21c', hufa: '#6a8f3a', fomen: '#c97a2a', tianting: '#4a7fc0' };
+  UI.col = function (it) { return it.el ? EC[it.el] : '#7a8a9a'; };
+  function R() { return XY.R; }
+  function up(it, to) {
+    if (to === 2 || to === 4) return '伤害 +30%' + (to === 4 && it.kind === 'f' ? '，范围 +15%' : '');
+    if (it.kind === 'l') return it.d.replace('/ 级', '每级');
+    return to === 3 ? it.u3 : it.u5 + '（满级金边）';
+  }
+  UI.upText = function (id, to) { var it = FB.BY[id]; return it.kind === 'l' ? '再 +1 级：' + it.d.replace('/ 级', '').replace(/\s+/g, '') : up(it, to); };
+  function pips(c, x, y, lv, mx, col) { for (var i = 0; i < mx; i++) { c.fillStyle = i < lv ? col : '#e3dccb'; c.fillRect(x + i * 11, y, 8, 8); c.strokeStyle = '#8a7a5a'; c.lineWidth = 1; c.strokeRect(x + i * 11 + 0.5, y + 0.5, 7, 7); } }
+  function recipeNote(id) { var out = []; FB.RECIPES.forEach(function (r) { if (r.a === id) out.push('满级 + ' + FB.BY[r.b].name + ' → ' + r.name); else if (r.b === id) out.push('配 ' + FB.BY[r.a].name + ' → ' + r.name); }); return out[0] || ''; }
+
+  UI.drawOffer = function (c, G, app) {
+    var Rr = R(), o = G.cardOffer, ui = XY.ui, f = G.fb; if (!o) return;
+    var W = app.lw, H = app.lh, n = o.cards.length, cw = Math.min(232, Math.floor((W - 90 - (n - 1) * 14) / n)), gap = 14, tw = n * cw + (n - 1) * gap, x0 = W / 2 - tw / 2, y0 = Math.max(10, H / 2 - 215), ch = 318;
+    ui.hits.length = 0; c.fillStyle = 'rgba(40,32,20,0.45)'; c.fillRect(0, 0, W, H);
+    Rr.panel(c, x0 - 24, y0 - 20, tw + 48, ch + 130, 16);
+    Rr.txt(c, '选一件：新法宝，或给带着的升级', W / 2, y0 + 8, 24, Rr.T.ink, 'center', true);
+    var srcT = { chest: '宝箱', prep: '夜潮前的备战', den: '洞府首杀', boss: '牛魔王', quest: '任务奖励' }[o.opts && o.opts.src] || '';
+    Rr.txt(c, (srcT ? srcT + ' · ' : '') + '法宝 ' + f.w.length + ' / ' + C.FB.SLOT_F + '，灵物 ' + f.s.length + ' / ' + C.FB.SLOT_L + ' · 点卡牌或按 1–' + n + '，Shift+数字 = 封印', W / 2, y0 + 36, 13.5, Rr.T.inkSoft, 'center', false);
+    o.cards.forEach(function (cd, k) {
+      var it = FB.info(cd.id), x = x0 + k * (cw + gap), y = y0 + 56, hov = app.mouse && app.mouse.x >= x && app.mouse.x < x + cw && app.mouse.y >= y && app.mouse.y < y + ch;
+      var col = it.sup ? '#c9871a' : UI.col(it), isF = cd.k === 'fuse';
+      Rr.rrect(c, x, y, cw, ch, 14); c.fillStyle = isF ? '#fff0c4' : (hov ? '#fff6dc' : '#fffdf6'); c.fill(); c.lineWidth = hov ? 5 : (isF ? 5 : 3); c.strokeStyle = isF ? '#c9871a' : col; c.stroke();
+      c.fillStyle = col; c.fillRect(x + 14, y + 14, 16, 16);
+      var tag = isF ? '炼化' : (cd.k === 'up' ? '升级' : '新').toString();
+      Rr.txt(c, tag + ' · ' + (it.kind === 'l' ? '灵物' : (it.sup ? '超级法宝' : '法宝')) + (it.set ? ' · ' + FB.SET_NAME[it.set] : ''), x + 38, y + 23, 12.5, Rr.T.inkSoft, 'left', true);
+      Rr.txt(c, String(k + 1), x + cw - 20, y + 23, 18, Rr.T.inkSoft, 'center', true);
+      Rr.txt(c, it.name, x + cw / 2, y + 58, 25, Rr.T.ink, 'center', true);
+      if (isF) { var r = FB.recipe(cd.rid); Rr.txt(c, FB.BY[r.a].name + ' + ' + FB.BY[r.b].name, x + cw / 2, y + 86, 13, '#9a6b10', 'center', true); Rr.wrap(c, it.d, x + cw / 2, y + 112, cw - 28, 14, 19, Rr.T.ink, 5); Rr.wrap(c, '「' + r.lore + '」', x + cw / 2, y + 232, cw - 28, 12.5, 17, Rr.T.inkSoft, 2); Rr.txt(c, '占「' + FB.BY[r.a].name + '」的格，' + FB.BY[r.b].name + '消失', x + cw / 2, y + 290, 12, '#b8300f', 'center', true); }
+      else {
+        var h = FB.held(G, cd.id), mx = FB.maxLv(cd.id);
+        if (cd.k === 'up') { Rr.txt(c, 'Lv' + cd.from + ' → Lv' + cd.to, x + cw / 2, y + 86, 17, '#b8300f', 'center', true); pips(c, x + cw / 2 - mx * 5.5, y + 100, cd.to, mx, col); }
+        else { Rr.txt(c, '新：Lv1', x + cw / 2, y + 86, 16, '#2f7d3b', 'center', true); pips(c, x + cw / 2 - mx * 5.5, y + 100, 1, mx, col); }
+        Rr.wrap(c, it.d, x + cw / 2, y + 126, cw - 28, 14.5, 19, Rr.T.ink, 3);
+        if (cd.k === 'up') Rr.wrap(c, it.kind === 'l' ? '升到 Lv' + cd.to + '：效果再叠一级' : '升到 Lv' + cd.to + '：' + UI.upText(cd.id, cd.to), x + cw / 2, y + 196, cw - 28, 14, 18, '#b8300f', 3);
+        var rn = recipeNote(cd.id); if (rn) Rr.wrap(c, '配方：' + rn, x + cw / 2, y + 258, cw - 28, 12, 16, '#9a6b10', 2);
+        var wh = FB.whereText(cd.id); if (cd.k === 'new' && wh && wh !== '起手可用') Rr.txt(c, wh, x + cw / 2, y + 298, 11, Rr.T.inkSoft, 'center', false);
+        // 封印：小方块按钮
+        var bx = x + cw - 54, by = y + ch - 30; Rr.rrect(c, bx, by, 46, 22, 6); c.fillStyle = f.sealN > 0 ? '#efe6cf' : '#e6e2d6'; c.fill(); c.lineWidth = 2; c.strokeStyle = '#a89a78'; c.stroke(); Rr.txt(c, '封印', bx + 23, by + 12, 12, f.sealN > 0 ? Rr.T.ink : '#999', 'center', true);
+        ui.hits.push({ x: bx, y: by, w: 46, h: 22, act: 'offerSeal', k: k });
+      }
+      ui.hits.push({ x: x, y: y, w: cw, h: ch - (isF ? 0 : 34), act: 'offerPick', k: k });
+    });
+    var by2 = y0 + 56 + ch + 14, cost = FB.rrCost(G), can = cost <= G.coins;
+    Rr.rrect(c, W / 2 - 250, by2, 200, 42, 10); c.fillStyle = can ? '#e7f1df' : '#eee9de'; c.fill(); c.lineWidth = 2; c.strokeStyle = '#7aa05a'; c.stroke();
+    Rr.txt(c, cost ? '重抽 · ' + cost + ' 金币' : '重抽 · 免费 ' + f.rrFree + ' 次（R）', W / 2 - 150, by2 + 22, 15, can ? Rr.T.ink : '#999', 'center', true); ui.hits.push({ x: W / 2 - 250, y: by2, w: 200, h: 42, act: 'offerReroll' });
+    Rr.rrect(c, W / 2 + 50, by2, 200, 42, 10); c.fillStyle = '#f1eee6'; c.fill(); c.lineWidth = 2; c.strokeStyle = '#a89a78'; c.stroke();
+    Rr.txt(c, '都不要，换 ' + C.FB.SKIP_COINS + ' 金币（Esc）', W / 2 + 150, by2 + 22, 14, Rr.T.ink, 'center', true); ui.hits.push({ x: W / 2 + 50, y: by2, w: 200, h: 42, act: 'offerPick', k: -1 });
+    Rr.txt(c, '封印 ' + f.sealN + ' 次可用 · 金币 ' + Math.floor(G.coins), W / 2, by2 + 62, 12.5, Rr.T.inkSoft, 'center', false);
+  };
+  var oldDraw = XY.drawCardOffer;
+  XY.drawCardOffer = function (c, G, app) { if (G.cardOffer && G.cardOffer.v2) return UI.drawOffer(c, G, app); return oldDraw(c, G, app); };
+  UI.key = function (G, k, shift) {
+    var o = G.cardOffer; if (!o) return;
+    var m = { Digit1: 0, Digit2: 1, Digit3: 2, Digit4: 3, Digit5: 4, Numpad1: 0, Numpad2: 1, Numpad3: 2, Numpad4: 3, Numpad5: 4 }[k];
+    if (m !== undefined) { if (shift) FB.seal(G, m); else FB.choose(G, m); }
+    else if (k === 'KeyR') FB.reroll(G); else if (k === 'Escape') FB.choose(G, -1);
+  };
+
+  /* ---------- 右侧栏 ---------- */
+  UI.hud = function (c, G, app, y0) {
+    var Rr = R(), ui = XY.ui, f = G.fb, W = app.lw, pw = 232, x = W - pw - 12, rows = f.w.length + f.s.length, rdy = FB.ready(G), cmb = G.combos.filter(function (b) { return b.n > 0; });
+    var ph = 32 + Math.max(1, rows) * 24 + (cmb.length ? 8 + cmb.length * 17 : 0) + rdy.length * 28 + 6;
+    Rr.panel(c, x, y0, pw, ph, 10); ui.cardPanel = { x: x, y: y0, w: pw, h: ph };
+    Rr.txt(c, '法宝 ' + f.w.length + '/' + C.FB.SLOT_F + ' · 灵物 ' + f.s.length + '/' + C.FB.SLOT_L, x + 10, y0 + 15, 14, Rr.T.ink, 'left', true);
+    var flash = f.gain ? 0.5 + 0.5 * Math.sin(app.rt * 14) : 0, y = y0 + 30;
+    FB.all(G).forEach(function (s) {
+      var it = FB.info(s.id), col = it.sup ? '#c9871a' : UI.col(it), mx = it.sup ? 1 : FB.maxLv(s.id), isG = f.gain && f.gain.id === s.id;
+      Rr.rrect(c, x + 8, y, pw - 16, 22, 6); c.fillStyle = isG && flash > 0.5 ? '#fff0c0' : '#fffdf6'; c.fill(); c.lineWidth = it.sup || s.lv >= mx ? 3 : 2; c.strokeStyle = it.sup || s.lv >= mx ? '#d9a21c' : '#b9a982'; c.stroke();
+      c.fillStyle = col; c.fillRect(x + 13, y + 5, 12, 12);
+      Rr.txt(c, it.name, x + 31, y + 12, 13, Rr.T.ink, 'left', true);
+      if (it.sup) Rr.txt(c, '超级', x + pw - 14, y + 12, 12, '#c9871a', 'right', true); else pips(c, x + pw - 14 - mx * 11, y + 7, s.lv, mx, col);
+      if (it.kind === 'l' && !it.sup) c.strokeStyle = '#7a8a9a';
+      y += 24;
+    });
+    if (!rows) Rr.txt(c, '打开宝箱、夜潮备战、首杀洞主来获得', x + 10, y + 10, 12, Rr.T.inkSoft, 'left', false);
+    if (cmb.length) { y += 4; cmb.forEach(function (b) { Rr.txt(c, FB.SET_NAME[b.set] + '门派 ×' + b.n + (b.tier ? (b.tier >= 2 ? ' · 大加成' : ' · 小加成') : ' · 再 ' + (2 - b.n) + ' 件有加成'), x + 10, y + 8, 12, b.tier ? '#b8300f' : Rr.T.inkSoft, 'left', b.tier > 0); y += 17; }); }
+    rdy.forEach(function (r) { var by = y + 4, pulse = 0.5 + 0.5 * Math.sin(app.rt * 8); Rr.rrect(c, x + 8, by, pw - 16, 24, 7); c.fillStyle = pulse > 0.5 ? '#ffe39a' : '#ffd36a'; c.fill(); c.lineWidth = 2; c.strokeStyle = '#a06a10'; c.stroke(); Rr.txt(c, '可炼化：' + r.name, x + pw / 2, by + 13, 13, '#5a3a05', 'center', true); ui.hits.push({ x: x + 8, y: by, w: pw - 16, h: 24, act: 'fuse', rid: r.id }); y += 28; });
+    // 炼成动画：屏幕中央一块金色横幅 + 尖碎片
+    var fa = f.fuseAnim; if (fa) { var k = fa.t / fa.max, a = 1 - k; c.save(); c.globalAlpha = Math.min(1, a * 2); var r = FB.recipe(fa.rid), cx = app.lw / 2, cy = app.lh * 0.32;
+      c.fillStyle = 'rgba(255,225,130,0.9)'; Rr.rrect(c, cx - 190, cy - 34, 380, 68, 12); c.fill(); c.strokeStyle = '#a06a10'; c.lineWidth = 4; c.stroke();
+      Rr.txt(c, '炼成', cx, cy - 12, 16, '#7a4a05', 'center', true); Rr.txt(c, r.name, cx, cy + 14, 28, '#5a3205', 'center', true);
+      c.fillStyle = '#ffd24a'; for (var i = 0; i < 12; i++) { var an = i / 12 * 6.283, dd = 80 + 220 * k; c.save(); c.translate(cx + Math.cos(an) * dd, cy + Math.sin(an) * dd * 0.5); c.rotate(an); c.fillRect(-9, -2, 18, 4); c.restore(); } c.restore(); }
+  };
+})();
+
+</script>
+<script>
 /* ---- js/screens.js ---- */
 /* ============================================================
  * screens.js —— 局外界面：主菜单、卡牌 / 组牌、图鉴、解锁 / 皮肤、清空存档确认
@@ -11377,6 +12169,7 @@ XY.CHIBI={"tang":{"w":532,"h":254,"fr":[[1,1,77,121,33,121],[134,1,70,121,24,121
     }
     // —— 游戏中 ——
     if (k === 'F9' && e.shiftKey) { app.debugOn = !app.debugOn; app.showFps = app.debugOn; XY.toast(G, app.debugOn ? '调试键：已打开' : '调试键：已关闭'); return; }
+    if (G.mode === 'cards' && G.fb && XY.fabaoui) { XY.fabaoui.key(G, k, e.shiftKey); return; }
     if (G.mode === 'cards') {                         // 法宝三选一：1 2 3 选，Esc 放弃
       var cn = { Digit1: 0, Digit2: 1, Digit3: 2, Numpad1: 0, Numpad2: 1, Numpad3: 2 }[k];
       if (cn !== undefined) XY.cards.choose(G, cn); else if (k === 'Escape') XY.cards.choose(G, -1);
@@ -11523,6 +12316,9 @@ XY.CHIBI={"tang":{"w":532,"h":254,"fr":[[1,1,77,121,33,121],[134,1,70,121,24,121
         case 'trait': XY.useTrait(G, h.i); break;
         case 'cardActive': XY.cards.setActive(G, h.id); break;
         case 'offerPick': XY.cards.choose(G, h.k); break;
+        case 'offerReroll': XY.fabao.reroll(G); break;
+        case 'offerSeal': XY.fabao.seal(G, h.k); break;
+        case 'fuse': if (G.fb) XY.fabao.fuse(G, h.rid); break;
         case 'ride': XY.rideCycle(G); break;
         case 'xform': XY.phyrexXform(G); break;
         case 'guest': XY.guest.summon(G); break;
