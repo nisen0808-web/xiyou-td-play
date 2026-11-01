@@ -2574,7 +2574,7 @@ XY.TRAITS = {
       else if (k === 'hpAdd') out.push('最大生命 +' + v);
       else if (k === 'regen') out.push('每秒回血 +' + v);
       else if (k === 'capAdd') out.push(L[k] + ' +' + v);
-      else if (k === 'solSky') out.push(L[k] + ' +' + (v * 2));      // 每关仍只能降临一次，这条是每次多 2 名天兵
+      else if (k === 'solSky') out.push('召唤的特殊人物停留 +' + (v * 1.5) + ' 秒');      // v0.7：「天兵降临」换成了「召唤特殊人物」，这条改成延长停留时间
       else if (k === 'chain') out.push('闪电链多弹跳 ' + v + ' 次');
       else out.push(L[k] + ' +' + Math.round(v * 100) + '%');
     });
@@ -2697,7 +2697,7 @@ XY.TRAITS = {
     { id: 'p_pick',  name: '全队·磁石',   max: 4, eff: function (l) { return '捡宝石和金币的范围 +' + 35 * l + '%'; } },
     { id: 'p_camp',  name: '营地·加固',   max: 3, eff: function (l) { return '营地血量上限 +' + 300 * l + '（学的时候修好 300）'; } },
     { id: 'p_tower', name: '营地·塔强化', max: 3, eff: function (l) { return '所有防御塔伤害 +' + 25 * l + '%'; } },
-    { id: 'p_sky',   name: '天兵·增援',   max: 2, cost: [2, 3], eff: function (l) { return '呼唤天兵：' + [5, 7, 9][l] + ' 名、' + [20, 24, 28][l] + ' 秒、伤害 +' + [0, 25, 50][l] + '%'; } }
+    { id: 'p_sky',   name: '召唤·增援',   max: 2, cost: [2, 3], eff: function (l) { return '召唤特殊人物的冷却 −' + 10 * l + ' 秒（现在 ' + (60 - 10 * l) + ' 秒）'; } }
   ];
   XY.PARTY_NODES.forEach(function (n) { n.kind = 'party'; if (!n.cost) n.cost = PC.slice(0, n.max); n.req = []; n.excl = []; });
   XY.PARTY_BY = {}; XY.PARTY_NODES.forEach(function (n) { XY.PARTY_BY[n.id] = n; });
@@ -2930,7 +2930,7 @@ XY.TRAITS = {
  *   etowers   拆掉 N 座妖塔  { n }
  *   keep_all  通关时没有徒弟阵亡（通关时判定）
  *   camp_hp   营地血量全程不低于 N%（通关时判定）    { pct }
- *   tower3_sky 养出一名 Lv3 护法天兵 且 降下天兵 N 次  { n }
+ *   tower3_sky 养出一名 Lv3 护法天兵 且 召唤特殊人物 N 次（G.sky.uses）  { n }
  *   kills     累计击杀                        { n }
  * reward: { card: 'R'|'SR'|'SSR'|卡牌id, lingshi: n, shard: n }
  * ============================================================ */
@@ -2994,7 +2994,7 @@ XY.TRAITS = {
       sides: [
         { type: 'kill_den', den: 2, text: '击退牛魔王（摩云洞）', short: '击退牛魔王', reward: { card: 'SR', lingshi: 70, shard: 1 } },
         { type: 'camp_hp', pct: 40, text: '营地血量全程不低于 40%（通关时判定）', short: '营地不失守', reward: { lingshi: 50, shard: 1 } },
-        { type: 'tower3_sky', n: 1, text: '养出一名 Lv3 护法天兵，并降下天兵一次', short: '满级天兵 + 降临', reward: { card: 'R', lingshi: 50 } }
+        { type: 'tower3_sky', n: 1, text: '养出一名 Lv3 护法天兵，并召唤特殊人物一次', short: '满级天兵 + 召唤', reward: { card: 'R', lingshi: 50 } }
       ]
     }
   ];
@@ -3067,7 +3067,7 @@ XY.TRAITS = {
         var t3 = G.towers.some(function (t) { return Math.max(t.lv || 1, t.cl || 1) >= 3; }) || S.tower3;
         if (t3) S.tower3 = true;
         q.pv = (t3 ? 1 : 0) + Math.min(G.sky.uses, d.n); q.pmax = 1 + d.n;
-        q.prog = '塔' + (t3 ? '✔' : '✘') + ' 天兵 ' + Math.min(G.sky.uses, d.n) + '/' + d.n;
+        q.prog = '塔' + (t3 ? '✔' : '✘') + ' 召唤 ' + Math.min(G.sky.uses, d.n) + '/' + d.n;
         if (t3 && G.sky.uses >= d.n) q.done = true; break;
       case 'keep_all':
         if (S.discDeaths > 0) { q.failed = true; q.prog = '有人阵亡'; } else q.prog = '进行中';
@@ -3313,6 +3313,7 @@ XY.TRAITS = {
   }
   // 技能树学习后的即时效果（skills.js 调用）
   // 法宝变化后重算全队 + 每个英雄
+  XY.recalcHeroOne = recalcHero;
   XY.recalcAll = function (G) { recalcParty(G); G.heroes.forEach(function (x) { recalcHero(G, x); }); };
   XY.onHeroLearn = function (G, h, id) { recalcHero(G, h); ring(G, h.x, h.y, 44, h.def.color, 0.4, true); };
   XY.onPartyLearn = function (G, id) {
@@ -3667,6 +3668,7 @@ XY.TRAITS = {
     XY.quests.update(G, dt);
     XY.updateGate(G, dt);
     XY.v07b.update(G, dt); XY.v07b.evoUpdate(G, dt);
+    XY.guest.update(G, dt);                                                     // 召唤特殊人物：冷却 / 停留计时
     updateFx(G, dt);
 
     // 营地受伤的闪烁、提示计时
@@ -7171,9 +7173,9 @@ XY.TRAITS = {
       allow: function (h) { return h.act === 'tower'; },
       wait: function (G, tt) { return G.towers.length > tt.n0; },
       back: function (G, tt) { var a = app(); return !(a && a.build) && G.towers.length <= tt.n0 && tt.t > 0.6; } },
-    { id: 'sky', title: '天兵降临：救急大招',
-      text: function () { return '右边这块「天兵降临」每关免费用一次：「点地降临」选个地方落下一队天兵，「就地降临」直接落在你身边。\n留着救急用，现在先别点。'; },
-      target: function () { return hitsWhere(function (h) { return h.act === 'sky' || h.act === 'skyFollow'; }); } },
+    { id: 'sky', title: '召唤特殊人物：救急大招',
+      text: function () { return '右边这块「召唤特殊人物」冷却 60 秒、能反复用：点一下，随机召来一位特殊角色（不会是你这局选的那位），TA 一到场就放出大招，几秒后离开。' + (touchUI() ? '' : '（快捷键 G）') + '\n留着救急用，现在先别点。'; },
+      target: function () { return hitsWhere(function (h) { return h.act === 'guest'; }); } },
     { id: 'camp', title: '唐僧休息和营地',
       text: function () { return '唐僧走到路上的「休息点」会停下来休息 5 分钟，这时左边的「经书营地」生效：给周围的人回血、减伤。\n但休息时妖怪也越来越多——要守好营地，也别光守着，要派人出击去清理洞府。'; },
       target: function () { return { x: CAMP.x, y: CAMP.y, w: CAMP.w, h: REST.y + REST.h - CAMP.y }; }, pos: midIfNarrow },
@@ -8044,9 +8046,14 @@ XY.TRAITS = {
     }
     for (i = 0; i < G.projs.length; i++) if (inView(G, G.projs[i].x, G.projs[i].y, 20)) drawProj(c, G.projs[i]);
     // 英雄：按 y 排序，靠下的盖在上面
-    var order = G.heroes.slice().sort(function (a, b) { return a.y - b.y; });
+    var order = G.heroes.slice(), gh = G.guest && G.guest.h; if (gh) order.push(gh);                // 召唤来的特殊人物（临时，不在 G.heroes 里）
+    order.sort(function (a, b) { return a.y - b.y; });
     XY.R4.allies(c, G, rt);
-    for (i = 0; i < order.length; i++) { drawHero(c, G, order[i], rt); XY.R4.heroOver(c, G, order[i], rt); }
+    for (i = 0; i < order.length; i++) {
+      if (order[i] === gh) { c.save(); c.globalAlpha = XY.guest.alpha(G); drawHero(c, G, gh, rt); c.restore(); continue; }
+      drawHero(c, G, order[i], rt); XY.R4.heroOver(c, G, order[i], rt);
+    }
+    if (gh) XY.guest.drawTag(c, G);
     drawFx(c, G); if (XY.animItems) XY.animItems(c, G);
     XY.R4.over(c, G, XY.app || {}, rt);
     // 飘字
@@ -9213,22 +9220,26 @@ XY.TRAITS = {
     }
   }
 
+  // v0.7：「召唤特殊人物」面板（替换原来的「天兵降临」）：一个大按钮，显示就绪 / 冷却进度 / 在场剩余秒数
   function drawSky(c, G, app) {
-    var T = R(), W = app.lw, H = app.lh, pw = 240, px = W - pw - 12, py = H - 104 - 8 - 76 - (W < 1000 ? 196 : 0), cd = G.sky.cd, ready = G.sky.left > 0, ok = true, info = XY.skyInfo(G);
-    T.panel(c, px, py, pw, 76, 12, undefined, app.summon ? '#e8892b' : undefined);
-    T.txt(c, '天兵降临 · 每关一次', px + 10, py + 13, 13, T.T.ink, 'left', true);
-    T.txt(c, info.n + ' 名 · ' + info.life + ' 秒', px + pw - 10, py + 14, 11, T.T.inkSoft, 'right', false);
-    var bw = 108, y = py + 26;
-    function sb(x, label, act) {
-      var en = ready && ok, hv = mouseIn(app, x, y, bw, 40);
-      T.rrect(c, x, y, bw, 40, 9); c.fillStyle = en ? (hv ? '#ffd993' : '#ffe6b0') : '#eceae4'; c.fill(); c.lineWidth = act === 'sky' && app.summon ? 3 : 1.8; c.strokeStyle = en ? '#c78a1e' : '#c8c8c8'; c.stroke();
-      
-      T.txt(c, label, x + bw / 2, y + 16, 14, en ? T.T.ink : '#999', 'center', true);
-      T.txt(c, !ready ? '本关已用' : '免费', x + bw / 2, y + 31, 11, en ? '#7a5a10' : '#999', 'center', false);
-      XY.ui.hits.push({ x: x, y: y, w: bw, h: 40, act: act });
+    var T = R(), W = app.lw, pw = 240, px = W - pw - 12, py = H0(app) - 104 - 8 - 76 - (W < 1000 ? 196 : 0), s = XY.guest.state(G), cdMax = XY.guest.cdMax(G), pool = XY.guest.pool(G);
+    var busy = !!s.h, ready = !busy && s.cd <= 0 && pool.length > 0, bx = px + 8, by = py + 26, bw = pw - 16, bh = 44, hv = mouseIn(app, bx, by, bw, bh);
+    T.panel(c, px, py, pw, 76, 12);
+    T.txt(c, '召唤特殊人物', px + 10, py + 13, 13, T.T.ink, 'left', true);
+    T.txt(c, '冷却 ' + cdMax + ' 秒', px + pw - 10, py + 14, 11, T.T.inkSoft, 'right', false);
+    T.rrect(c, bx, by, bw, bh, 9); c.fillStyle = ready ? (hv ? '#ffd993' : '#ffe6b0') : '#eceae4'; c.fill();
+    if (!ready && !busy && s.cd > 0) {                                    // 冷却进度：从左往右慢慢填满
+      c.save(); T.rrect(c, bx, by, bw, bh, 9); c.clip(); c.fillStyle = 'rgba(214,168,80,0.30)'; c.fillRect(bx, by, bw * (1 - s.cd / cdMax), bh); c.restore();
     }
-    sb(px + 8, '点地降临', 'sky'); sb(px + 124, '就地降临', 'skyFollow');
+    c.lineWidth = 1.8; c.strokeStyle = ready ? '#c78a1e' : '#c8c8c8'; T.rrect(c, bx, by, bw, bh, 9); c.stroke();
+    if (busy) { T.txt(c, s.h.def.name + ' 在场 · 大招！', bx + bw / 2, by + 16, 14, T.T.ink, 'center', true); T.txt(c, '还剩 ' + Math.max(0, Math.ceil(s.max - s.t)) + ' 秒离开', bx + bw / 2, by + 33, 11.5, '#7a5a10', 'center', false); }
+    else if (ready) { T.txt(c, '召唤 · 随机一位', bx + bw / 2, by + 16, 15, T.T.ink, 'center', true); T.txt(c, '到场立刻放大招 · 可以用', bx + bw / 2, by + 33, 11.5, '#7a5a10', 'center', false); }
+    else if (!pool.length) T.txt(c, '没有可召唤的人物', bx + bw / 2, by + 23, 14, '#999', 'center', true);
+    else { T.txt(c, '冷却中 ' + Math.ceil(s.cd) + ' 秒', bx + bw / 2, by + 16, 15, '#8a7d63', 'center', true); T.txt(c, '再等一下就能再召唤', bx + bw / 2, by + 33, 11.5, '#999', 'center', false); }
+    XY.ui.hits.push({ x: bx, y: by, w: bw, h: bh, act: 'guest' });
+    if (hv) app._tip = { x: px + pw / 2, y: py - 6, text: '随机召来 1 位特殊人物（不含本局选的那位），立刻放出 TA 的大招，停留 ' + C.GUEST.STAY + ' 秒后离开；冷却 ' + cdMax + ' 秒（快捷键 G）' };
   }
+  function H0(app) { return app.lh; }
 
   function drawHeroCards(c, G, app) {
     var T = R(), W = app.lw, H = app.lh, rt = app.rt, n = G.heroes.length, i, q;
@@ -9594,8 +9605,8 @@ XY.TRAITS = {
     if (helpShow) { c.globalAlpha = 0.95;
     var hy0 = H - 122 - (W < 1000 ? 196 + 84 : 0);
     T.panel(c, W - 252, hy0, 240, 110, 12);
-    var lines = ['WASD 或鼠标 都能走（按住左键跟随）', '单击地面设目的地 · 右键也行', '1-6 换人 · Shift+1-6 命令', 'Z X C V B 请天兵 · 点天兵升级', '白龙马：点“骑乘”选一位伙伴驮着跑', '法宝三选一 · 最多带 3 件同套', 'Tab 技能树 · 点特性按钮 · P 暂停'];
-    if (app.touchUI) lines = ['按住空地拖动 = 摇杆走路', '轻点空地 = 走到那里', '点头像换人 · 点小按钮下命令', '点天兵按钮，再轻点路上空地', '白龙马：点“骑乘”选一位伙伴驮着跑', '法宝三选一 · 最多带 3 件同套', '右上「暂停」「技能树」· 点特性按钮'];
+    var lines = ['WASD 或鼠标 都能走（按住左键跟随）', '单击地面设目的地 · 右键也行', '1-6 换人 · Shift+1-6 命令', 'Z X C V B 请天兵 · 点天兵升级', '白龙马：点“骑乘”选一位伙伴驮着跑', '法宝三选一 · 最多带 3 件同套', 'Tab 技能树 · G 召唤特殊人物 · P 暂停'];
+    if (app.touchUI) lines = ['按住空地拖动 = 摇杆走路', '轻点空地 = 走到那里', '点头像换人 · 点小按钮下命令', '点天兵按钮，再轻点路上空地', '白龙马：点“骑乘”选一位伙伴驮着跑', '法宝三选一 · 最多带 3 件同套', '右上「暂停」「技能树」· 右侧「召唤」'];
     for (i = 0; i < lines.length; i++) T.txt(c, lines[i], W - 242, hy0 + 12 + i * 16, 12, T.T.ink, 'left', false);
     c.globalAlpha = 1; }
     drawTowerBar(c, G, app);
@@ -10480,6 +10491,79 @@ XY.CHIBI={"tang":{"w":532,"h":254,"fr":[[1,1,77,121,33,121],[134,1,70,121,24,121
 
 </script>
 <script>
+/* ---- js/guest.js ---- */
+/* ============================================================
+ * guest.js —— v0.7：「召唤特殊人物」（替换原来的「天兵降临」）
+ *   · 从 9 位可见的特殊角色里随机召来 1 位：不是本局选择 / 携带的那一位；隐藏角色永远不在池里
+ *   · 召来的那一刻立刻放出 TA 的清屏大招（sp12 / phyrex 里的原版大招 + 全部特效），停留 STAY 秒后离开
+ *   · 冷却 CD 秒（技能树「召唤·增援」每级 −10 秒，最低 30 秒）；开局就能用
+ *   · 客人不在 G.heroes 里：不参与选人 / 命令 / 受伤，只是一个挂在 G.guest.h 的临时角色
+ * ============================================================ */
+(function () {
+  'use strict';
+  var XY = window.XY, C = XY.C, K = function () { return XY.core; }, cos = Math.cos, sin = Math.sin;
+  C.GUEST = { CD: 60, STAY: 4, LV: 5, CD_PER_LV: 10, CD_MIN: 30 };
+  var Gs = XY.guest = {};
+
+  Gs.state = function (G) { return G.guest || (G.guest = { cd: 0, h: null, t: 0, max: 0, uses: 0, last: null }); };
+  Gs.cdMax = function (G) { return Math.max(C.GUEST.CD_MIN, C.GUEST.CD - C.GUEST.CD_PER_LV * Math.min(2, (G.upg && G.upg.p_sky) || 0)); };
+  // 可以被召来的人：9 位可见角色，去掉本局选择 / 携带的那一位
+  Gs.pool = function (G) {
+    var cur = XY.save.carryId && XY.save.carryId(), sp = G.special;
+    return XY.SPECIALS.filter(function (d) { return d.id !== cur && d.id !== sp && !XY.isHidden(d.id); }).map(function (d) { return d.id; });
+  };
+  function mk(G, id, x, y) {
+    var def = XY.specialDef(id, C.GUEST.LV);
+    var h = { i: -1, id: id, def: def, sp: true, guest: true, x: x, y: y, hp: def.hp, maxHp: def.hp, down: false, inv: 99, order: 'guard', sk: {}, mod: null, ultCd: 0, atkT: 9, atkMax: 1,
+      face: 0, wlv: 1, dmgMul: 1, crit: 0, dr: 0, tgt: null, retreat: false, rtT: 0, atkSpd: 1, hurtT: 0, contactT: 0, orbit: 0, pend: [], dash: null, auraT: 0, regenAcc: 0,
+      moving: false, auraHeal: 3, bob: 0, scd: {}, traitCd: 0, taunt: 0, boostT: 0, pulseT: 0, beadOn: 3.5, beadRest: 0, dr2: 0, spT: 0, ringT: 0, shieldT: 0 };
+    XY.recalcHeroOne(G, h, true);
+    return h;
+  }
+  // 召唤：id 不给就随机。返回 {ok, id, reason}
+  Gs.summon = function (G, id) {
+    var s = Gs.state(G);
+    if (G.mode !== 'play' || G.ending) return { ok: false, reason: 'mode' };
+    if (s.h) { XY.toast(G, '特殊人物还在场，等 TA 离开'); return { ok: false, reason: 'busy' }; }
+    if (s.cd > 0) { XY.toast(G, '召唤冷却中：还要 ' + Math.ceil(s.cd) + ' 秒'); return { ok: false, reason: 'cd' }; }
+    var pool = Gs.pool(G); if (!pool.length) { XY.toast(G, '没有可以召唤的特殊人物'); return { ok: false, reason: 'none' }; }
+    if (!id || pool.indexOf(id) < 0) id = pool[Math.floor(Math.random() * pool.length)];
+    var c = G.heroes[G.ctrl]; if (c.down) c = G.heroes[0];
+    var a = XY.rand(-0.9, 0.9) + (Math.random() < 0.5 ? 0 : Math.PI);
+    var x = XY.clamp(c.x + cos(a) * 96, 60, C.WORLD_W - 60), y = XY.clamp(c.y + sin(a) * 64 - 10, 60, C.WORLD_H - 60);
+    var h = mk(G, id, x, y), tg = G.grid.nearest(x, y, 600); h.face = tg ? Math.atan2(tg.y - y, tg.x - x) : 0;
+    s.h = h; s.t = 0; s.max = C.GUEST.STAY + 1.5 * ((XY.solMods ? XY.solMods(G).sky : 0) || 0); s.cd = Gs.cdMax(G); s.uses++; s.last = id; s.ult = h.def.ult;
+    G.sky.uses++; G.stats.guests = (G.stats.guests || 0) + 1;
+    if (XY.anim) XY.anim.sky(G, x, y, 0);
+    K().ring(G, x, y, 90, h.def.color, 0.6, true); K().ring(G, x, y, 160, '#ffffff', 0.8, false); G.shake = Math.max(G.shake, 4);
+    XY.specialUlt(G, h);                                           // 一到场就放大招（原版清屏大招 + 全部特效）
+    XY.banner(G, '召唤：' + h.def.name + ' 驾到！' + h.def.ult, 2.4);
+    return { ok: true, id: id, h: h };
+  };
+  Gs.update = function (G, dt) {
+    var s = G.guest; if (!s) return;
+    if (s.cd > 0) s.cd = Math.max(0, s.cd - dt);
+    if (!s.h) return;
+    s.t += dt;
+    if (s.t >= s.max) {
+      K().ring(G, s.h.x, s.h.y, 60, s.h.def.color, 0.5, true); if (XY.anim) XY.anim.sky(G, s.h.x, s.h.y, 1);
+      s.h = null;
+    }
+  };
+  Gs.alpha = function (G) { var s = G.guest; if (!s || !s.h) return 1; return Math.max(0, Math.min(1, s.t / 0.25, (s.max - s.t) / 0.5)); };
+  // 头上的名牌：「特邀 · 名字 · 剩余秒数」
+  Gs.drawTag = function (c, G) {
+    var s = G.guest; if (!s || !s.h) return; var h = s.h, R = XY.R, txt = R.txt;
+    var w = 118, x = h.x - w / 2, y = h.y - h.def.r - 46;
+    c.save(); c.globalAlpha = Gs.alpha(G);
+    R.rrect(c, x, y, w, 20, 6); c.fillStyle = 'rgba(255,253,246,0.96)'; c.fill(); c.lineWidth = 1.6; c.strokeStyle = h.def.color; c.stroke();
+    txt(c, '特邀 · ' + h.def.name + ' ' + Math.max(0, Math.ceil(s.max - s.t)) + 's', h.x, y + 11, 11.5, R.T.ink, 'center', true);
+    c.restore();
+  };
+})();
+
+</script>
+<script>
 /* ---- js/screens.js ---- */
 /* ============================================================
  * screens.js —— 局外界面：主菜单、卡牌 / 组牌、图鉴、解锁 / 皮肤、清空存档确认
@@ -11277,6 +11361,7 @@ XY.CHIBI={"tang":{"w":532,"h":254,"fr":[[1,1,77,121,33,121],[134,1,70,121,24,121
     else if (dg !== undefined) { if (e.shiftKey) XY.cycleOrder(G, dg); else XY.switchHero(G, dg); }
     else if (k === 'Escape' && (app.build || app.selTower || app.summon)) { app.build = null; app.selTower = null; app.summon = null; }   // 先取消造塔/选塔
     else if (k === 'Escape' || k === 'KeyP') pause();
+    else if (k === 'KeyG') XY.guest.summon(G);                                 // 召唤特殊人物
     else if (k === 'KeyH') app.helpOn = !app.helpOn;                           // 操作说明面板：开局 40 秒自动显示，之后按 H 开 / 关
     // —— 调试键（默认关闭）——
     else if (!app.debugOn) { /* 调试键没打开，忽略 */ }
@@ -11406,12 +11491,7 @@ XY.CHIBI={"tang":{"w":532,"h":254,"fr":[[1,1,77,121,33,121],[134,1,70,121,24,121
         case 'offerPick': XY.cards.choose(G, h.k); break;
         case 'ride': XY.rideCycle(G); break;
         case 'xform': XY.phyrexXform(G); break;
-        case 'sky':
-          if (app.summon) app.summon = null;
-          else if (G.sky.left <= 0) XY.toast(G, '天兵降临每关只有一次，这关已经用掉了');
-          else { app.summon = { mode: 'station' }; app.build = null; app.selTower = null; XY.toast(G, '点地面选择降临位置（右键 / Esc 取消）'); }
-          break;
-        case 'skyFollow': XY.summonSky(G, 'follow'); app.summon = null; break;
+        case 'guest': XY.guest.summon(G); break;
         case 'levelSel': if (XY.save.levelUnlocked(h.n)) app.levelId = h.n; else msg('先通关上一关', true); break;
         case 'levelGo': startGame(h.n); break;
         case 'menuLevels': app.screen = 'levels'; break;
