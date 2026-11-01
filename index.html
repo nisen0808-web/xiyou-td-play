@@ -3214,7 +3214,9 @@ XY.TRAITS = {
     // v0.5：开局自带两名弓天兵，跟在唐僧身后
     XY.initSoldiers(G);
     var tutd = XY.save.data && XY.save.data.tutorial;
-    G.tut = tutd && !tutd.done ? { i: 0, t: 0 } : null;         // 最小新手教程：只在第一次玩时出现，可跳过
+    G.tut = null;
+    if (!window.XY_NO_TUTORIAL && XY.tutStart && (XY.tutForce || (tutd && !tutd.done))) XY.tutStart(G);     // 新手教程：第一次玩自动出现，可跳过；主菜单可重看
+    XY.tutForce = false;
     // 洞府 + 洞府 BOSS（BOSS 一开局就站在洞口）
     LV.dens.forEach(function (dd, i) {
       var den = { i: i, id: dd.id, elem: XY.ENEMIES[dd.boss].elem, name: dd.name, bossType: dd.boss, bossName: XY.ENEMIES[dd.boss].name, x: dd.x, y: dd.y, r: 64, alive: true, boss: null,
@@ -3371,7 +3373,7 @@ XY.TRAITS = {
   // 伤害敌人。o: {src,kb,fx,fy,stun,crit,dot,boom}
   function hurtEnemy(G, e, dmg, o) {
     if (e.dead) return;
-    if (e.retreatT > 0) { if (!o || !o.dot) { e.flash = 0.1; if (Math.random() < 0.3) text(G, e.x, e.y - e.r - 4, '败退中', 'resist'); } return; }   // 败退中的洞主：无敌，不吃伤害
+    if (e.hidden) { if (!o || !o.dot) { e.flash = 0.1; if (Math.random() < 0.3) text(G, e.x, e.y - e.r - 4, '躲在洞里', 'resist'); } return; }   // 已经躲进洞里养伤的洞主：打不到；路上逃跑（还没进洞）时可以被打死
     o = o || {};
     if (e.def.boss && G.P.boss) dmg *= 1 + G.P.boss;          // 照妖镜：对洞府 BOSS 伤害更高
     // 伤害类型 + 元素：物理 / 法术各吃对应防御，五行相克
@@ -3403,7 +3405,7 @@ XY.TRAITS = {
       e.kx += dx / d * s; e.ky += dy / d * s;
     }
     if (o.stun && !e.def.boss) e.stunT = Math.max(e.stunT, o.stun * (1 - e.def.knockRes * 0.6));
-    if (e.hp <= 0) { if (e.def.denBoss) bossRetreat(G, e, o); else killEnemy(G, e, o); }
+    if (e.hp <= 0) { if (e.def.denBoss) { if (e.retreatT > 0) bossSlain(G, e, o); else bossRetreat(G, e, o); } else killEnemy(G, e, o); }
   }
 
   function killEnemy(G, e, o) {
@@ -3438,7 +3440,7 @@ XY.TRAITS = {
      第一次败退才发奖励（角色卡概率、宝石、任务宝物），之后只掉少量宝石，所以反复击退刷不了卡。 */
   function bossRetreat(G, e, o) {
     var dn = G.dens[e.den], first = !dn.beaten;
-    e.hp = Math.max(1, e.maxHp * 0.02); e.retreatT = C.RETREAT_T; e.engaged = false; e.raid = 0; e.bstate = 'idle'; e.stunT = 0; e.kx = 0; e.ky = 0; e.burnT = 0;
+    e.hp = Math.max(1, e.maxHp * 0.02); e.retreatT = C.RETREAT_T; e.hidden = false; e.engaged = false; e.raid = 0; e.bstate = 'idle'; e.stunT = 0; e.kx = 0; e.ky = 0; e.burnT = 0;
     dn.defeats++; dn.closedT = C.DEN_CLOSE; dn.beaten = true; if (first) { dn.deadT = G.t; G.stats.denKills++; }
     G.stats.retreats = (G.stats.retreats || 0) + 1;
     if (XY.sfx) XY.sfx('boss'); if (XY.hitstop) XY.hitstop(G, 0.07);
@@ -3453,6 +3455,17 @@ XY.TRAITS = {
     banner(G, dn.bossName + ' 败退回洞！' + dn.name + ' 暂时闭门 ' + C.DEN_CLOSE + ' 秒' + (first ? '' : '（再次击退，只掉少量宝石）'), 4);
     var mq = G.lv.main;
     if (first && mq.type === 'item' && mq.den === e.den) G.items.push({ kind: mq.item, name: XY.ITEM_NAME[mq.item], x: e.x, y: e.y, t: 0 });
+  }
+  /* 洞主在“逃跑回洞”的路上被打死 = 真的死了：不再躲洞、不再回来，洞府永久闭门（首次败退的奖励早在败退那一刻发过了）。 */
+  function bossSlain(G, e, o) {
+    var dn = G.dens[e.den]; e.retreatT = 0; e.hidden = false;
+    dn.alive = false; dn.slain = true; dn.closedT = 1e9; dn.beaten = true;
+    G.stats.denSlain = (G.stats.denSlain || 0) + 1;
+    G.enemies.forEach(function (t) { if (!t.dead && t !== e && t.den === e.den && !t.def.etower) { t.dead = true; spark(G, t.x, t.y, t.def.color, 3); } });
+    killEnemy(G, e, o);
+    for (var i = 0; i < 8; i++) G.gems.push({ x: e.x + rand(-60, 60), y: e.y + rand(-60, 60), v: 20, big: true, mag: null });
+    ring(G, e.x, e.y, 240, '#ffd24a', 0.9, true); G.shake = Math.max(G.shake, 12);
+    banner(G, '追杀成功！' + dn.bossName + ' 死在了逃跑的路上，' + dn.name + ' 彻底安静了', 4);
   }
   XY.ITEM_NAME = { fan: '芭蕉扇' };
 
@@ -3596,7 +3609,7 @@ XY.TRAITS = {
     // v0.5 顿帧：暂停战斗模拟（画面 / 输入照常），恢复时不补跑；预算每秒回复 HITSTOP_BUDGET
     G.hsBud = Math.min(C.HITSTOP_BUDGET, (G.hsBud === undefined ? C.HITSTOP_BUDGET : G.hsBud) + C.HITSTOP_BUDGET * dt);
     if (G.hitstopT > 0) { G.hitstopT -= dt; G.hsFrames = (G.hsFrames || 0) + 1; if (G.flash > 0) G.flash = Math.max(0, G.flash - dt * 0.5); return; }
-    G.t += dt;
+    if (!G.tut) G.t += dt;                 // 新手教程期间时间停住
 
     // 事件（宝箱）与洞府出怪（敌人只来自洞府）
     while (G.eventIdx < G.events.length && G.events[G.eventIdx].t <= G.t) runEvent(G, G.events[G.eventIdx++]);
@@ -3761,7 +3774,7 @@ XY.TRAITS = {
   function pickHuntTarget(G, h) {
     var best = null, bs = Infinity, E = G.enemies, i, cnt;
     for (i = 0; i < G.dens.length; i++) {
-      var dn = G.dens[i]; if (!dn.boss || dn.boss.dead || dn.boss.retreatT > 0) continue;
+      var dn = G.dens[i]; if (!dn.boss || dn.boss.dead || dn.boss.hidden) continue;
       var bd = XY.dist(h.x, h.y, dn.boss.x, dn.boss.y); if (bd < 700 && bd < bs) { bs = bd; best = dn.boss; }
     }
     if (best) return best;
@@ -3783,7 +3796,7 @@ XY.TRAITS = {
   // 出击没有目标时：奔向最近的、还活着的洞府
   function nearestDen(G, h) {
     var best = null, bs = Infinity;
-    G.dens.forEach(function (dn) { if (dn.beaten && dn.closedT > 0) return; var d = XY.dist(h.x, h.y, dn.x, dn.y); if (d < bs) { bs = d; best = dn; } });
+    G.dens.forEach(function (dn) { if (dn.slain || (dn.beaten && dn.closedT > 0)) return; var d = XY.dist(h.x, h.y, dn.x, dn.y); if (d < bs) { bs = d; best = dn; } });
     return best;
   }
 
@@ -3791,6 +3804,7 @@ XY.TRAITS = {
   function updateTang(G, h, dt) {
     var T = G.tang, R = G.rt, sp = T.speed, ph = T.phase;
     h.moving = false;
+    if (G.tut) return;                     // 新手教程期间唐僧站着不动
     if (ph === 'walk') {
       T.s = Math.min(R.restS, T.s + sp * dt); h.moving = true;
       if (T.s >= R.restS) { T.phase = 'rest'; T.restT = 0; T.rests++; G.camp.active = true; banner(G, '到了休息点！唐僧要在这里休息 ' + Math.round(T.restMax / 60) + ' 分钟——营地生效，妖怪越来越多', 5); ring(G, G.camp.x, G.camp.y, 200, '#f2c14e', 0.8, true); }
@@ -4309,8 +4323,9 @@ XY.TRAITS = {
     var hd = XY.dist(e.x, e.y, e.home.x, e.home.y);
     if (e.retreatT > 0) {                               // 败退：无敌，朝洞口跑，到洞口后继续养伤，时间到恢复血量再出来
       e.retreatT -= dt; e.engaged = false; e.bstate = 'idle'; e.stunT = 0;
+      if (hd <= 12) e.hidden = true;                    // 跑到洞口 = 躲进洞里，这时才打不到
       if (hd > 12) { var rx0 = (e.home.x - e.x) / hd, ry0 = (e.home.y - e.y) / hd; e.x += rx0 * e.speed * 2.2 * dt; e.y += ry0 * e.speed * 2.2 * dt; }
-      if (e.retreatT <= 0) { e.hp = Math.max(e.hp, e.maxHp * C.RETREAT_HEAL); text(G, e.x, e.y - e.r - 20, '养好伤了', 'heal'); }
+      if (e.retreatT <= 0) { e.hidden = false; e.hp = Math.max(e.hp, e.maxHp * C.RETREAT_HEAL); text(G, e.x, e.y - e.r - 20, '养好伤了', 'heal'); }
       return;
     }
     if (!e.engaged) {
@@ -4428,6 +4443,7 @@ XY.TRAITS = {
       if (t.hurtT > 0) t.hurtT -= dt;
       if (t.upT > 0) t.upT -= dt;
       if (t.bornT > 0) t.bornT -= dt;
+      if (t.atkT > 0) t.atkT -= dt;                    // 出手动作计时（画面用）
       t.cd -= dt;
       if (t.cd > 0) continue;
       if (t.type === 'heal') {                         // 佛光塔：每 1.5 秒脉冲一次，给范围内的徒弟 / 营地 / 友塔回血
@@ -4442,7 +4458,7 @@ XY.TRAITS = {
           var mh = XY.towerMaxHp(o);
           if (o.hp < mh && XY.dist(o.x, o.y, t.x, t.y) <= s.range) { o.hp = Math.min(mh, o.hp + mh * 0.1); healed = true; }
         }
-        if (healed) { t.pulse = 0.5; ring(G, t.x, t.y, s.range, '#f2c14e', 0.5); }
+        if (healed) { t.pulse = 0.5; t.atkT = 0.3; ring(G, t.x, t.y, s.range, '#f2c14e', 0.5); }
         continue;
       }
       if (t.type === 'frost') {
@@ -4451,7 +4467,7 @@ XY.TRAITS = {
           any = true; e.slowT = Math.max(e.slowT, 0.9); e.slowF = Math.max(e.slowF, d.slow * (e.def.boss ? 0.5 : 1));
           hurtEnemy(G, e, s.dmg, { dot: true, type: 'magic', elem: 'water' });
         });
-        if (any) t.pulse = 0.4;
+        if (any) { t.pulse = 0.4; t.atkT = 0.3; }
         continue;
       }
       var tgt = null;
@@ -4462,7 +4478,7 @@ XY.TRAITS = {
       if (!tgt) tgt = (G.threat && !G.threat.dead && XY.dist(G.threat.x, G.threat.y, t.x, t.y) <= s.range && XY.dist(G.threat.x, G.threat.y, G.heroes[0].x, G.heroes[0].y) < C.CAMP_ZONE_R + 40) ? G.threat : G.grid.nearest(t.x, t.y, s.range);   // 营地圈里的妖怪优先
       if (!tgt) { t.cd = 0.1; continue; }
       var a = atan2(tgt.y - t.y, tgt.x - t.x);
-      t.ang = a;
+      t.ang = a; t.atkT = 0.3;
       if (t.type === 'arrow') {
         G.projs.push({ x: t.x, y: t.y - 14, vx: cos(a) * 560, vy: sin(a) * 560, dmg: s.dmg, r: 5, life: 0.9, pierce: 0, hits: [], kind: 'arrow', src: null });
       } else if (t.type === 'siege') {
@@ -5354,6 +5370,8 @@ XY.TRAITS = {
     var tg0 = G.heroes[0];
     G.dens.forEach(function (den) {
       if (den.closedT > 0) { den.closedT -= dt; return; }                 // 洞主败退后：暂时闭门
+      var hb = den.boss;                                                    // 洞主躲在洞里（败退过、还活着、没出来）：洞府不出怪，等英雄靠近把他引出来
+      if (den.beaten && hb && !hb.dead && (hb.hidden || hb.retreatT > 0 || (!hb.engaged && hb.home && dist(hb.x, hb.y, hb.home.x, hb.home.y) < 60))) return;
       if (dist(den.x, den.y, tg0.x, tg0.y) > C.DEN_ACTIVE) return;        // 唐僧走远了：洞府安静下来
       if (G.noSpawn) return;
       var bs = den.boss;                                                    // 引出洞主：BOSS 已被引到离洞口 DEN_DRAW_R 以外 → 洞里暂停一切刷怪，让你在外面单挑
@@ -6846,23 +6864,209 @@ XY.TRAITS = {
     }
     G.towers.length = w;
   };
+})();
 
-  /* ---------- 最小新手教程（第一次玩才有；5 条提示，每条 9 秒，可跳过） ---------- */
+</script>
+<script>
+/* ---- js/tutorial.js ---- */
+(function () {
+  'use strict';
+  var XY = window.XY;
+  /* ============ v0.6.3 新手教程（第一次玩自动出现；可跳过；主菜单可重看） ============
+     一步一步、要玩家真的点一下才往下走；亮起真实的界面元素。
+     教程期间：不刷怪、英雄无敌、时间和唐僧都停住（只是学操作，不会输），结束 / 跳过后全部还原。 */
+
+  function app() { return XY.app || (window.__xy && window.__xy.app); }
+  function touchUI() { var a = app(); return !!(a && (a.touchUI || a.touched)); }
+  function alive(G, i) { var h = G.heroes[i]; return h && !h.down; }
+  function firstAlive(G, list, notI) { for (var k = 0; k < list.length; k++) if (alive(G, list[k]) && list[k] !== notI) return list[k]; for (k = 1; k < G.heroes.length; k++) if (alive(G, k) && k !== notI) return k; return 1; }
+  function pickIdx(G, tt) { if (tt.pick == null) tt.pick = firstAlive(G, [2, 3, 4, 1], G.ctrl); return tt.pick; }
+  function cmdIdx(G, tt) { if (tt.cmd == null) tt.cmd = firstAlive(G, [3, 4, 1, 2], G.ctrl); return tt.cmd; }
+  function nm(G, i) { var h = G.heroes[i]; return h ? h.def.name : '徒弟'; }
+  function union(rs) {
+    var u = null;
+    rs.forEach(function (r) {
+      if (!r) return;
+      if (!u) u = { x: r.x, y: r.y, w: r.w, h: r.h };
+      else { var x2 = Math.max(u.x + u.w, r.x + r.w), y2 = Math.max(u.y + u.h, r.y + r.h); u.x = Math.min(u.x, r.x); u.y = Math.min(u.y, r.y); u.w = x2 - u.x; u.h = y2 - u.y; }
+    });
+    return u;
+  }
+  function hitsWhere(pred) { return union(XY.ui.hits.filter(pred)); }
+  var CAMP = { x: 12, y: 26, w: 214, h: 78 }, TANG = { x: 12, y: 110, w: 214, h: 50 }, REST = { x: 12, y: 166, w: 214, h: 44 };
+  function midIfNarrow(G, a) { return a.lw < 1000 ? 'mid' : 'top'; }
+  function cmdStep(order, title, text) {
+    return {
+      id: 'cmd_' + order, title: title,
+      text: function (G, a, tt) { var i = cmdIdx(G, tt); return text.replace('{N}', nm(G, i)); },
+      target: function (G, a, tt) { var i = cmdIdx(G, tt); return hitsWhere(function (h) { return h.act === 'order' && h.i === i && h.order === order; }); },
+      allow: function (h, G, tt) { return h.act === 'order' && h.i === cmdIdx(G, tt) && h.order === order; },
+      wait: function (G, tt) { var h = G.heroes[cmdIdx(G, tt)]; return !!h && h.order === order; }
+    };
+  }
+
   XY.TUT_STEPS = [
-    '唐僧会自己向西走，谁也拦不住他、你也控制不了他——你的任务是保护他（他只有 1 点血）',
-    '用 WASD 或鼠标点地面移动当前徒弟；技能全自动释放，升级后按 Tab 点技能树加点',
-    '金币可以造护法天兵：点下方天兵按钮，再点西行路上的空地；放在唐僧前面的会原地驻守，他走过后就跟上',
-    '走到休息点唐僧会歇 5 分钟，营地生效（回血、减伤），但怪也会越来越多——守住营地',
-    '打退 Boss 算完成主线，但别忘了：唐僧自己走到西行关口，才算通关'
+    { id: 'welcome', title: '欢迎取经！',
+      text: function () { return '这位白衣和尚是唐僧师傅。他会自己一路向西走，你指挥不了他。他只有 1 点血，被妖怪一碰就输——你和徒弟们要一路护着他。\n（教程里时间是停的，也不会来怪，放心慢慢点。）'; },
+      target: function () { return hitsWhere(function (h) { return h.act === 'hero' && h.i === 0; }); } },
+    { id: 'choose', title: '第一步：选角色',
+      text: function (G, a, tt) { var i = pickIdx(G, tt); return '下面这排卡片是你的队伍。点一下「' + nm(G, i) + '」的卡片，就能亲自操控他（被你操控的卡片会抬高、边框变粗）。' + (touchUI() ? '' : '\n键盘：数字键 1~6 也能换人。'); },
+      target: function (G, a, tt) { var i = pickIdx(G, tt); return hitsWhere(function (h) { return h.act === 'hero' && h.i === i; }); },
+      allow: function (h, G, tt) { return h.act === 'hero' && h.i === pickIdx(G, tt); },
+      wait: function (G, tt) { return G.ctrl === pickIdx(G, tt); } },
+    { id: 'move', title: '第二步：走一走',
+      text: function () { return touchUI() ? '手指按住空白地面，往想去的方向拖，像摇杆一样；松手就停。轻点一下空地，他会自己走过去。试着走几步。' : '按 W A S D 走路，或者用鼠标点一下地面，他会自己走过去。试着走几步。'; },
+      target: function (G, a) { var h = G.heroes[G.ctrl]; if (!h) return null; var x = h.x - G.cam.x + G.view.w / 2, y = h.y - G.cam.y + G.view.h / 2; return { x: x - 46, y: y - 56, w: 92, h: 100 }; },
+      enter: function (G, tt) { var h = G.heroes[G.ctrl]; tt.x0 = h ? h.x : 0; tt.y0 = h ? h.y : 0; },
+      wait: function (G, tt) { var h = G.heroes[G.ctrl]; return !!h && XY.dist(h.x, h.y, tt.x0, tt.y0) >= 130; } },
+    { id: 'orders', title: '其他徒弟：下命令',
+      text: function () { return '你同一时间只能亲自操控一位，这叫「手动」。其他徒弟会按「命令」自动行动。\n命令就是每张卡片下面这 4 个小按钮：跟随、驻守、出击、守护。下面我们一个一个试。'; },
+      target: function () { return hitsWhere(function (h) { return h.act === 'order'; }); } },
+    cmdStep('follow', '命令①：跟随', '「跟随」：他会跟着你操控的人一起走、一起打，适合大家一起转移阵地。\n请点「{N}」卡片上的「跟随」。'),
+    cmdStep('station', '命令②：驻守', '「驻守」：他会回到经书营地，只在营地周围打怪，不乱跑——专门看家。\n请点「{N}」卡片上的「驻守」。'),
+    cmdStep('attack', '命令③：出击', '「出击」：他会主动去找怪堆、精英和洞府里的 BOSS 打，血太低会自己撤回。想赢就要多出击，光守着不动一定会输！\n请点「{N}」卡片上的「出击」。'),
+    cmdStep('guard', '命令④：守护', '「守护」：他守在唐僧身边，替师傅挡妖怪和弹幕。没下过命令的徒弟默认就是守护。\n请点「{N}」卡片上的「守护」，让他回到师傅身边。'),
+    { id: 'build', title: '天兵：造一个',
+      text: function () { return '金币可以请「护法天兵」——披甲拿兵器的天兵会站在路边帮你打妖怪（弓手、炮手、寒冰兵、破阵弩兵、佛光兵，价格不同）。我们先给你补了点金币。\n请点左下角的一个天兵按钮。'; },
+      target: function () { return hitsWhere(function (h) { return h.act === 'tower'; }); },
+      enter: function (G, tt) {
+        G.coins = Math.max(G.coins, 400);
+        var cap = XY.soldierCap ? XY.soldierCap(G) : 99; while (G.towers.length >= cap) G.towers.shift();
+      },
+      allow: function (h) { return h.act === 'tower'; },
+      wait: function (G, tt) { var a = app(); return !!(a && a.build) || G.towers.length > (tt.n0 == null ? 1e9 : tt.n0); } },
+    { id: 'place', title: '天兵：放下去',
+      text: function () { return (touchUI() ? '再轻点一下西行路（土路）上的空地，天兵就落在那里。' : '再点一下西行路（土路）上的空地，天兵就落在那里（右键 / Esc 取消）。') + '\n天兵会持枪站岗、有妖怪进射程就出手；放在唐僧前面的会原地驻守，唐僧走过之后它就跟上。'; },
+      target: function () { return hitsWhere(function (h) { return h.act === 'tower'; }); },
+      enter: function (G, tt) { tt.n0 = G.towers.length; },
+      allow: function (h) { return h.act === 'tower'; },
+      wait: function (G, tt) { return G.towers.length > tt.n0; },
+      back: function (G, tt) { var a = app(); return !(a && a.build) && G.towers.length <= tt.n0 && tt.t > 0.6; } },
+    { id: 'sky', title: '天兵降临：救急大招',
+      text: function () { return '右边这块「天兵降临」每关免费用一次：「点地降临」选个地方落下一队天兵，「就地降临」直接落在你身边。\n留着救急用，现在先别点。'; },
+      target: function () { return hitsWhere(function (h) { return h.act === 'sky' || h.act === 'skyFollow'; }); } },
+    { id: 'camp', title: '唐僧休息和营地',
+      text: function () { return '唐僧走到路上的「休息点」会停下来休息 5 分钟，这时左边的「经书营地」生效：给周围的人回血、减伤。\n但休息时妖怪也越来越多——要守好营地，也别光守着，要派人出击去清理洞府。'; },
+      target: function () { return { x: CAMP.x, y: CAMP.y, w: CAMP.w, h: REST.y + REST.h - CAMP.y }; }, pos: midIfNarrow },
+    { id: 'lose', title: '怎么输、怎么赢',
+      text: function () { return '有两种输法：\n① 唐僧被妖怪碰到或打中（他只有 1 点血）；\n② 经书营地的血被打光。\n想赢：打退洞府 BOSS 完成主线，再让唐僧自己走到最西边的关口。'; },
+      target: function () { return { x: CAMP.x, y: CAMP.y, w: CAMP.w, h: TANG.y + TANG.h - CAMP.y }; }, pos: midIfNarrow },
+    { id: 'buttons', title: '右上角的按钮',
+      text: function () { return touchUI() ? '「暂停」：暂停游戏；造天兵选点的时候，它就是“取消”。\n「技能树」：升级后给徒弟加点，再点一次关闭。' : '「Esc / 暂停」：暂停游戏，造天兵选点时是“取消”。\n「Tab / 技能树」：升级后给徒弟加点，再按一次关闭。右上的按钮也能直接点。'; },
+      target: function () { return hitsWhere(function (h) { return h.act === 'skills' || h.act === 'esc'; }); }, pos: midIfNarrow },
+    { id: 'done', title: '教程完成！', last: true,
+      text: function () { return '你已经学会了：选角色、下命令、请天兵、看营地和输赢。\n祝取经顺利！以后想再看一遍，在主菜单点「新手教程」。'; },
+      target: function () { return null; } }
   ];
-  XY.tutTick = function (G, dt) {
-    var T = G.tut; if (!T) return;
-    T.t += dt;
-    if (T.t >= 9) { T.t = 0; T.i++; if (T.i >= XY.TUT_STEPS.length) XY.tutFinish(G); }
+
+  /* ---------- 状态 ---------- */
+  XY.tutStart = function (G) {
+    if (!G) return;
+    G.tut = { i: 0, t: 0, entered: -1, ok: 0 };
+    G.tutSave = { noSpawn: G.noSpawn, god: G.godMode };
+    G.noSpawn = true; G.godMode = true;
   };
-  XY.tutFinish = function (G) {
+  XY.tutFinish = function (G, skipped) {
+    if (!G || !G.tut) { if (XY.save.data.tutorial) { XY.save.data.tutorial.done = true; XY.save.touch(); } return; }
     G.tut = null;
+    if (G.tutSave) { G.noSpawn = G.tutSave.noSpawn; G.godMode = G.tutSave.god; G.tutSave = null; }
+    G.heroes.forEach(function (h, i) { if (i > 0 && h.order !== 'guard') { h.order = 'guard'; h.retreat = false; h.tgt = null; } });
+    var a = app(); if (a) { a.build = null; a.summon = null; a.selTower = null; }
     if (XY.save.data.tutorial) { XY.save.data.tutorial.done = true; XY.save.touch(); }
+    XY.toast(G, skipped ? '已跳过教程（主菜单可以重看）' : '教程完成，开始取经！');
+  };
+  XY.tutNext = function (G) {
+    var tt = G && G.tut; if (!tt) return;
+    var st = XY.TUT_STEPS[tt.i];
+    if (!st || st.last || tt.i >= XY.TUT_STEPS.length - 1) { XY.tutFinish(G, false); return; }
+    tt.i++; tt.entered = -1; tt.ok = 0; tt.t = 0;
+  };
+  XY.tutTick = function (G, dt) {
+    var tt = G.tut; if (!tt) return;
+    var st = XY.TUT_STEPS[tt.i]; if (!st) { XY.tutFinish(G, false); return; }
+    if (tt.entered !== tt.i) { tt.entered = tt.i; tt.t = 0; tt.ok = 0; tt.done = false; if (st.enter) st.enter(G, tt); }
+    tt.t += dt;
+    if (st.wait) {
+      if (tt.done || st.wait(G, tt)) { tt.done = true; tt.ok += dt; if (tt.ok >= 0.7) XY.tutNext(G); }
+      else if (st.back && st.back(G, tt)) { tt.i = Math.max(0, tt.i - 1); tt.entered = -1; }
+    }
+  };
+  XY.tutBlocks = function (G, h) {
+    var tt = G.tut; if (!tt) return false;
+    if (h.act === 'tutNext' || h.act === 'tutSkip' || h.act === 'esc' || h.act === 'ui') return false;
+    var st = XY.TUT_STEPS[tt.i];
+    if (st && st.allow && st.allow(h, G, tt)) return false;
+    var a = app(); if (a && (!tt.nag || a.rt - tt.nag > 2)) { tt.nag = a.rt; XY.toast(G, st && st.wait ? '先照提示点亮着的地方哦' : '点「下一步」继续，或者先看看亮着的地方'); }
+    return true;
+  };
+
+  /* ---------- 画面 ---------- */
+  function wrapLines(c, text, sz, maxW) {
+    var R = XY.R, out = [], paras = text.split('\n'), noStart = '，。、！？：；）」』”…,.!?:;)';
+    c.font = R.font(sz, false);
+    paras.forEach(function (p) {
+      var line = '';
+      for (var k = 0; k < p.length; k++) {
+        var ch = p.charAt(k), w = c.measureText(line + ch).width;
+        if (w > maxW && line && noStart.indexOf(ch) < 0) { out.push(line); line = ch; } else line += ch;
+      }
+      out.push(line);
+    });
+    return out;
+  }
+  // 在 drawHUD 靠前的位置调用：算出提示卡的位置和大小，并告诉横幅 / 红条往下让
+  XY.tutLayout = function (c, G, app, ctx) {
+    var tt = G.tut; if (!tt) return;
+    var W = app.lw, H = app.lh, st = XY.TUT_STEPS[tt.i] || XY.TUT_STEPS[0];
+    var cw = Math.min(W - 24, 620), tsz = W < 1000 ? 21 : 19, lines = wrapLines(c, st.text(G, app, tt), tsz, cw - 40);
+    var ch = 18 + 32 + lines.length * (tsz + 9) + 12 + 56 + 10;
+    var pos = st.pos ? st.pos(G, app) : 'top';
+    var y = pos === 'top' ? ctx.denBottom + 6 : Math.max(ctx.denBottom + 6, Math.round(H * 0.42 - ch / 2));
+    tt.lay = { x: Math.round(W / 2 - cw / 2), y: y, w: cw, h: ch, lines: lines, tsz: tsz, pos: pos };
+    ctx.tutBottom = pos === 'top' ? y + ch : ctx.denBottom + 6;
+  };
+  function holePath(c, r, pad) {
+    var x = r.x - pad, y = r.y - pad, w = r.w + pad * 2, h = r.h + pad * 2, rad = 12;
+    c.moveTo(x + rad, y); c.arcTo(x + w, y, x + w, y + h, rad); c.arcTo(x + w, y + h, x, y + h, rad); c.arcTo(x, y + h, x, y, rad); c.arcTo(x, y, x + w, y, rad); c.closePath();
+  }
+  // 在 drawHUD 最后调用（这时所有真实按钮的位置都已经登记好了）
+  XY.tutDraw = function (c, G, app) {
+    var tt = G.tut; if (!tt || !tt.lay) return;
+    var R = XY.R, T = R.T, W = app.lw, H = app.lh, st = XY.TUT_STEPS[tt.i] || XY.TUT_STEPS[0], L = tt.lay, rt = app.rt;
+    var tr = st.target ? st.target(G, app, tt) : null, pad = 7;
+    // 变暗，只留亮着的那一块
+    c.save();
+    c.fillStyle = 'rgba(70,56,24,0.34)'; c.beginPath(); c.rect(0, 0, W, H);
+    if (tr) holePath(c, tr, pad);
+    c.fill('evenodd');
+    if (tr) {
+      var pu = 0.5 + 0.5 * Math.sin(rt * 5);
+      c.beginPath(); holePath(c, tr, pad + pu * 2); c.lineWidth = 4; c.strokeStyle = 'rgba(240,160,20,' + (0.65 + 0.35 * pu) + ')'; c.stroke();
+      var cx = tr.x + tr.w / 2, below = tr.y + tr.h / 2 < H / 2, ay = below ? tr.y + tr.h + pad + 8 + pu * 6 : tr.y - pad - 8 - pu * 6, dir = below ? -1 : 1;
+      if (!(L.pos === 'top' && ay > L.y && ay < L.y + L.h) && cx > 0 && cx < W) {
+        c.fillStyle = '#e8892b'; c.strokeStyle = '#fff'; c.lineWidth = 2.5; c.beginPath(); c.moveTo(cx, ay); c.lineTo(cx - 13, ay - dir * 20); c.lineTo(cx + 13, ay - dir * 20); c.closePath(); c.stroke(); c.fill();
+      }
+    }
+    c.restore();
+    // 提示卡
+    R.panel(c, L.x, L.y, L.w, L.h, 16, 'rgba(255,251,236,0.98)', '#e0a415');
+    var n = XY.TUT_STEPS.length;
+    R.txt(c, '新手教程 ' + (tt.i + 1) + '/' + n, L.x + 20, L.y + 18, 12, '#a8700a', 'left', true);
+    R.txt(c, st.title, L.x + 20, L.y + 44, L.tsz + 4, '#3a2c10', 'left', true);
+    for (var k = 0; k < L.lines.length; k++) R.txt(c, L.lines[k], L.x + 20, L.y + 78 + k * (L.tsz + 9), L.tsz, '#4a3a1a', 'left', false);
+    XY.ui.hits.push({ x: L.x, y: L.y, w: L.w, h: L.h, act: 'ui' });      // 点到卡片本身不要穿透到地面（先登记，按钮在它上面）
+    var by = L.y + L.h - 56, bh = 44;
+    // 左：跳过教程
+    var sw = 118, sx = L.x + 16;
+    R.rrect(c, sx, by, sw, bh, 12); c.fillStyle = '#fff3d6'; c.fill(); c.lineWidth = 1.6; c.strokeStyle = '#c9a24a'; c.stroke();
+    R.txt(c, '跳过教程', sx + sw / 2, by + bh / 2 + 1, 16, '#4a3a1a', 'center', true);
+    XY.ui.hits.push({ x: sx, y: by, w: sw, h: bh, act: 'tutSkip' });
+    // 右：下一步 / 开始游戏 / 跳过这一步
+    var waitStep = !!st.wait, nw = waitStep ? 130 : 150, nx = L.x + L.w - 16 - nw;
+    R.rrect(c, nx, by, nw, bh, 12); c.fillStyle = waitStep ? '#f3efe4' : '#ffcf5a'; c.fill(); c.lineWidth = waitStep ? 1.6 : 2.4; c.strokeStyle = waitStep ? '#b9a77a' : '#c78a1e'; c.stroke();
+    R.txt(c, st.last ? '开始游戏 ▶' : (waitStep ? '跳过这一步' : '下一步 ▶'), nx + nw / 2, by + bh / 2 + 1, 17, '#3a2c10', 'center', true);
+    XY.ui.hits.push({ x: nx, y: by, w: nw, h: bh, act: 'tutNext' });
+    if (waitStep) R.txt(c, tt.done ? '✔ 做对了！' : '👉 请照提示操作', nx - 10, by + bh / 2 + 1, 15, tt.done ? '#2f7d3b' : '#a8700a', 'right', true);
   };
 })();
 
@@ -7205,30 +7409,8 @@ XY.TRAITS = {
     otxt(c, '经书营地', x, y + 66, 13, T.ink, 'center', true);
   }
 
-  function drawTower(c, G, t, rt) {
-    return XY.R4.tower(c, G, t, rt);
-  }
-  function drawTowerOld(c, G, t, rt) {
-    var d = XY.TOWERS[t.type], x = t.x, y = t.y, s = XY.towerStat(G, t), h = G.heroes[G.ctrl];
-    if (XY.dist(h.x, h.y, x, y) < 110) {                       // 英雄靠近时显示射程
-      c.setLineDash([6, 6]); c.lineWidth = 1.5; c.strokeStyle = 'rgba(100,80,40,0.45)'; c.beginPath(); c.arc(x, y, s.range, 0, PI2); c.stroke(); c.setLineDash([]);
-    }
-    c.fillStyle = 'rgba(80,60,30,0.18)'; c.beginPath(); c.ellipse(x, y + 14, 20, 7, 0, 0, PI2); c.fill();
-    if (t.type === 'arrow') {
-      c.fillStyle = '#c9a56e'; c.strokeStyle = '#7a5a30'; c.lineWidth = 2; rrect(c, x - 13, y - 8, 26, 22, 3); c.fill(); c.stroke();
-      c.fillStyle = '#d96a4a'; c.beginPath(); c.moveTo(x - 18, y - 8); c.lineTo(x, y - 26); c.lineTo(x + 18, y - 8); c.closePath(); c.fill(); c.stroke();
-      c.strokeStyle = '#5a3b1a'; c.lineWidth = 2.5; c.beginPath(); c.moveTo(x, y - 10); c.lineTo(x + Math.cos(t.ang) * 14, y - 10 + Math.sin(t.ang) * 14); c.stroke();
-    } else if (t.type === 'cannon') {
-      c.fillStyle = '#9aa7b3'; c.strokeStyle = '#5b6874'; c.lineWidth = 2; rrect(c, x - 15, y - 6, 30, 20, 4); c.fill(); c.stroke();
-      c.save(); c.translate(x, y - 8); c.rotate(t.ang); c.fillStyle = '#5b6874'; rrect(c, -4, -6, 26, 12, 3); c.fill(); c.restore();
-      c.fillStyle = '#6f7f8f'; c.beginPath(); c.arc(x, y - 8, 9, 0, PI2); c.fill(); c.stroke();
-    } else {
-      if (t.pulse > 0) { c.strokeStyle = 'rgba(80,160,230,' + (t.pulse * 1.5) + ')'; c.lineWidth = 3; c.beginPath(); c.arc(x, y, s.range * (1 - t.pulse), 0, PI2); c.stroke(); }
-      c.fillStyle = '#bfe3fa'; c.strokeStyle = '#4a90d9'; c.lineWidth = 2;
-      c.beginPath(); c.moveTo(x, y - 28); c.lineTo(x + 13, y - 4); c.lineTo(x, y + 12); c.lineTo(x - 13, y - 4); c.closePath(); c.fill(); c.stroke();
-      c.beginPath(); c.moveTo(x, y - 28); c.lineTo(x, y + 12); c.stroke();
-    }
-    for (var i = 0; i < t.lv; i++) { c.fillStyle = '#f0b429'; c.beginPath(); c.arc(x - (t.lv - 1) * 5 + i * 10, y + 22, 3.5, 0, PI2); c.fill(); }
+  function drawTower(c, G, t, rt) {          // 名字沿用旧的，画的是天兵（人形士兵），不再是塔
+    return XY.R4.soldier(c, G, t, rt);
   }
 
   /* ---------- 敌人 ---------- */
@@ -8255,62 +8437,110 @@ XY.TRAITS = {
     if (XY.drawSpZones) XY.drawSpZones(c, G, rt);
   };
 
-  /* ================= 塔：五种造型 + 三级外观 + 血条 + 升级闪光 ================= */
-  R4.tower = function (c, G, t, rt) {
-    var T = R(), d = XY.TOWERS[t.type], x = t.x, y = t.y, s = XY.towerStat(G, t), h = G.heroes[G.ctrl], lv = t.lv, sc = 1 + 0.13 * (lv - 1);
+  /* ================= 天兵：人形士兵（五种：弓 / 炮 / 寒冰 / 破阵 / 佛光）+ 三级铠甲 + 待机晃动 + 出手动作 + 血条 ================= */
+  // 造型：头盔 + 红缨、铠甲、肩甲、腿；每种拿不同的兵器（弓背长矛 / 手炮 + 戟 / 冰刃戟 / 大弩 / 佛光禅杖）
+  // 动画：站着轻轻起伏；走路（跟随）时上下蹦；出手时（t.atkT 0.3 秒）朝目标前冲一下、兵器前刺 / 开火闪光
+  R4.soldier = function (c, G, t, rt) {
+    var T = R(), d = XY.TOWERS[t.type], x = t.x, y = t.y, s = XY.towerStat(G, t), h = G.heroes[G.ctrl], lv = t.lv || 1, sc = 1 + 0.1 * (lv - 1);
     if (!inV(G, x, y, 80)) return;
+    R4.soldierDraws = (R4.soldierDraws || 0) + 1;     // 测试用：确认画的是天兵，不是塔
     if (XY.dist(h.x, h.y, x, y) < 110) { c.setLineDash([6, 6]); c.lineWidth = 1.5; c.strokeStyle = 'rgba(100,80,40,0.45)'; c.beginPath(); c.arc(x, y, s.range, 0, PI2); c.stroke(); c.setLineDash([]); }
-    // 三级光效
-    if (lv >= 2) { var gg = c.createRadialGradient(x, y - 6, 4, x, y - 6, 38 * sc); var gc = lv >= 3 ? '255,210,80' : '170,200,235'; gg.addColorStop(0, 'rgba(' + gc + ',' + (lv >= 3 ? 0.5 : 0.3) + ')'); gg.addColorStop(1, 'rgba(' + gc + ',0)'); c.fillStyle = gg; c.beginPath(); c.arc(x, y - 6, 38 * sc, 0, PI2); c.fill(); }
-    c.fillStyle = 'rgba(80,60,30,0.2)'; c.beginPath(); c.ellipse(x, y + 15, 22 * sc, 7, 0, 0, PI2); c.fill();
-    c.save(); c.translate(x, y + 12); c.scale(sc, sc); c.translate(-x, -(y + 12));
-    c.lineJoin = 'round'; c.lineWidth = 2;
-    var base = lv >= 3 ? '#e8d28a' : (lv >= 2 ? '#c9d2da' : '#c9a56e'), edge = lv >= 3 ? '#a8821a' : (lv >= 2 ? '#6b7a88' : '#7a5a30');
-    c.fillStyle = base; c.strokeStyle = edge;
-    if (t.type === 'arrow') {
-      T.rrect(c, x - 13, y - 8, 26, 22, 3); c.fill(); c.stroke();
-      c.fillStyle = lv >= 3 ? '#f0b429' : '#d96a4a'; c.beginPath(); c.moveTo(x - 18, y - 8); c.lineTo(x, y - 26); c.lineTo(x + 18, y - 8); c.closePath(); c.fill(); c.stroke();
-      c.strokeStyle = '#5a3b1a'; c.lineWidth = 2.5; c.beginPath(); c.moveTo(x, y - 10); c.lineTo(x + Math.cos(t.ang) * 14, y - 10 + Math.sin(t.ang) * 14); c.stroke();
-    } else if (t.type === 'cannon') {
-      c.fillStyle = lv >= 3 ? '#d8c48a' : '#9aa7b3'; c.strokeStyle = '#5b6874'; T.rrect(c, x - 15, y - 6, 30, 20, 4); c.fill(); c.stroke();
-      c.save(); c.translate(x, y - 8); c.rotate(t.ang); c.fillStyle = lv >= 3 ? '#8a6a1a' : '#5b6874'; T.rrect(c, -4, -6, 26 + (lv - 1) * 3, 12 + (lv - 1), 3); c.fill(); c.restore();
-      c.fillStyle = '#6f7f8f'; c.beginPath(); c.arc(x, y - 8, 9, 0, PI2); c.fill(); c.stroke();
-    } else if (t.type === 'frost') {
-      if (t.pulse > 0) { c.strokeStyle = 'rgba(80,160,230,' + (t.pulse * 1.5) + ')'; c.lineWidth = 3; c.beginPath(); c.arc(x, y, s.range * (1 - t.pulse), 0, PI2); c.stroke(); }
-      c.fillStyle = '#bfe3fa'; c.strokeStyle = '#4a90d9'; c.lineWidth = 2;
-      c.beginPath(); c.moveTo(x, y - 28); c.lineTo(x + 13, y - 4); c.lineTo(x, y + 12); c.lineTo(x - 13, y - 4); c.closePath(); c.fill(); c.stroke();
-      c.beginPath(); c.moveTo(x, y - 28); c.lineTo(x, y + 12); c.stroke();
-    } else if (t.type === 'siege') {                   // 破阵弩：木架 + 大弩
-      c.fillStyle = '#9a6b3a'; c.strokeStyle = '#4a2a10'; T.rrect(c, x - 16, y - 2, 32, 16, 3); c.fill(); c.stroke();
-      c.beginPath(); c.moveTo(x - 14, y + 14); c.lineTo(x - 8, y - 12); c.moveTo(x + 14, y + 14); c.lineTo(x + 8, y - 12); c.stroke();
-      c.save(); c.translate(x, y - 10); c.rotate(t.ang); c.strokeStyle = '#4a2a10'; c.lineWidth = 3.5; c.beginPath(); c.moveTo(-4, -14); c.quadraticCurveTo(10, 0, -4, 14); c.stroke();
-      c.lineWidth = 2.5; c.beginPath(); c.moveTo(-6, 0); c.lineTo(30, 0); c.stroke(); c.fillStyle = '#c04030'; c.beginPath(); c.moveTo(30, 0); c.lineTo(22, -4); c.lineTo(22, 4); c.fill(); c.restore();
-    } else {                                           // 佛光塔：小宝塔 + 光环
-      var hp = 0.5 + 0.5 * Math.sin(rt * 3 + x);
-      c.strokeStyle = 'rgba(229,185,60,' + (0.4 + 0.3 * hp) + ')'; c.lineWidth = 2; c.beginPath(); c.arc(x, y - 6, 26 + hp * 3, 0, PI2); c.stroke();
-      c.fillStyle = '#fff2b5'; c.strokeStyle = '#b8860b'; c.lineWidth = 2;
-      T.rrect(c, x - 11, y - 4, 22, 18, 3); c.fill(); c.stroke();
-      c.fillStyle = '#e5b93c'; c.beginPath(); c.moveTo(x - 16, y - 4); c.lineTo(x, y - 14); c.lineTo(x + 16, y - 4); c.closePath(); c.fill(); c.stroke();
-      c.beginPath(); c.moveTo(x - 11, y - 14); c.lineTo(x, y - 26); c.lineTo(x + 11, y - 14); c.closePath(); c.fill(); c.stroke();
+    if (lv >= 2) { var gg = c.createRadialGradient(x, y - 6, 4, x, y - 6, 38 * sc); var gc = lv >= 3 ? '255,210,80' : '170,200,235'; gg.addColorStop(0, 'rgba(' + gc + ',' + (lv >= 3 ? 0.45 : 0.28) + ')'); gg.addColorStop(1, 'rgba(' + gc + ',0)'); c.fillStyle = gg; c.beginPath(); c.arc(x, y - 6, 38 * sc, 0, PI2); c.fill(); }
+    // 朝向 / 走动：出手时朝目标；否则朝移动方向
+    var lx = t._lx == null ? x : t._lx; t._lx = x;
+    var mv = Math.abs(x - lx) > 0.15 || (t._ly != null && Math.abs(y - t._ly) > 0.15); t._ly = y;
+    var atk = t.atkT > 0 ? Math.min(1, t.atkT / 0.3) : 0, aimed = t.type !== 'frost' && t.type !== 'heal', ang = t.ang || 0;
+    if (atk > 0 && aimed) t._face = Math.cos(ang) >= 0 ? 1 : -1; else if (x - lx > 0.15) t._face = 1; else if (x - lx < -0.15) t._face = -1;
+    var f = t._face || 1; if (!aimed) ang = f > 0 ? 0 : Math.PI;
+    if (t.sd == null) t.sd = Math.random() * 6.28;
+    var ph = rt * 3 + t.sd;
+    var bob = mv ? -Math.abs(Math.sin(rt * 11 + t.sd)) * 3.2 : Math.sin(ph) * 1.3, lunge = atk * 6 * f;
+    var gy = y + 13;                                                        // 脚底
+    c.fillStyle = 'rgba(80,60,30,0.22)'; c.beginPath(); c.ellipse(x, gy + 2, 15 * sc, 5, 0, 0, PI2); c.fill();
+    c.save(); c.translate(x, gy); c.scale(sc, sc); c.translate(-x, -gy);
+    c.lineJoin = 'round'; c.lineCap = 'round'; c.lineWidth = 1.8;
+    var tier = lv >= 3 ? 2 : (lv >= 2 ? 1 : 0), TY = t.type;
+    var armor = [['#b98a52', '#c8d0d8', '#f0cf6a'], ['#7e8a96', '#cfd8e0', '#f2d675'], ['#5aa0d6', '#cfe6f6', '#f2d675'], ['#8a5a3a', '#b9a07c', '#f2d675'], ['#f4e3a0', '#fff6cf', '#fff0a8']][['arrow', 'cannon', 'frost', 'siege', 'heal'].indexOf(TY)][tier];
+    var edge = tier === 2 ? '#a8821a' : (TY === 'frost' ? '#2f6aa8' : '#5a4528'), plume = { arrow: '#d9503c', cannon: '#d9503c', frost: '#3d8ad9', siege: '#c04030', heal: '#e0a415' }[TY];
+    var bx = x + lunge * 0.8, by = bob;
+    // 背后的长矛（弓天兵）/ 光环（佛光）
+    if (TY === 'arrow') { c.strokeStyle = '#6a4a22'; c.lineWidth = 2.4; c.beginPath(); c.moveTo(bx - f * 9, gy - 2 + by); c.lineTo(bx - f * 5, gy - 50 + by); c.stroke();
+      c.fillStyle = '#dfe5ea'; c.strokeStyle = '#6b7a88'; c.lineWidth = 1.2; c.beginPath(); c.moveTo(bx - f * 5, gy - 58 + by); c.lineTo(bx - f * 8, gy - 49 + by); c.lineTo(bx - f * 2, gy - 49 + by); c.closePath(); c.fill(); c.stroke();
+      c.fillStyle = '#d9503c'; c.beginPath(); c.arc(bx - f * 5, gy - 47 + by, 2.4, 0, PI2); c.fill(); }
+    if (TY === 'heal') { var hp = 0.5 + 0.5 * Math.sin(rt * 3 + x); c.strokeStyle = 'rgba(229,185,60,' + (0.45 + 0.3 * hp) + ')'; c.lineWidth = 2.2; c.beginPath(); c.ellipse(bx, gy - 42 + by, 11, 4, 0, 0, PI2); c.stroke(); }
+    // 腿 + 靴
+    c.lineWidth = 1.8; c.strokeStyle = edge; c.fillStyle = '#5a4a38';
+    var sw = mv ? Math.sin(rt * 11 + t.sd) * 3 : 0;
+    T.rrect(c, bx - 7 + sw, gy - 9 + by * 0.3, 6, 10, 2); c.fill(); c.stroke(); T.rrect(c, bx + 1 - sw, gy - 9 + by * 0.3, 6, 10, 2); c.fill(); c.stroke();
+    // 身体铠甲（佛光天兵是长袍）
+    c.fillStyle = armor; c.strokeStyle = edge;
+    if (TY === 'heal') { c.beginPath(); c.moveTo(bx - 9, gy - 26 + by); c.lineTo(bx + 9, gy - 26 + by); c.lineTo(bx + 12, gy - 4 + by); c.lineTo(bx - 12, gy - 4 + by); c.closePath(); c.fill(); c.stroke(); c.strokeStyle = '#e0a415'; c.lineWidth = 2; c.beginPath(); c.moveTo(bx - 9, gy - 26 + by); c.lineTo(bx + 4, gy - 8 + by); c.stroke(); }
+    else { T.rrect(c, bx - 9, gy - 26 + by, 18, 18, 4); c.fill(); c.stroke();
+      c.strokeStyle = tier === 2 ? '#e0a415' : edge; c.lineWidth = 2; c.beginPath(); c.moveTo(bx - 9, gy - 15 + by); c.lineTo(bx + 9, gy - 15 + by); c.stroke();           // 腰带
+      c.fillStyle = tier === 2 ? '#f0cf6a' : '#e8e0c8'; c.lineWidth = 1.2; c.strokeStyle = edge; c.beginPath(); c.arc(bx, gy - 20 + by, 3.2, 0, PI2); c.fill(); c.stroke(); }          // 护心镜
+    // 肩甲
+    c.fillStyle = tier === 2 ? '#f0cf6a' : '#d8d2c0'; c.strokeStyle = edge; c.lineWidth = 1.4;
+    c.beginPath(); c.arc(bx - 10, gy - 25 + by, 4.6, 0, PI2); c.fill(); c.stroke(); c.beginPath(); c.arc(bx + 10, gy - 25 + by, 4.6, 0, PI2); c.fill(); c.stroke();
+    // 头 + 头盔 + 红缨
+    var hy = gy - 33 + by;
+    c.fillStyle = '#f6d3a8'; c.strokeStyle = '#8a5a30'; c.lineWidth = 1.5; c.beginPath(); c.arc(bx, hy, 6.6, 0, PI2); c.fill(); c.stroke();
+    c.fillStyle = '#3a2c1a'; c.beginPath(); c.arc(bx + f * 2.2 - 2.2, hy + 0.5, 1, 0, PI2); c.arc(bx + f * 2.2 + 2.2, hy + 0.5, 1, 0, PI2); c.fill();
+    c.fillStyle = TY === 'heal' ? '#fff0a8' : (tier === 2 ? '#f0cf6a' : (TY === 'frost' ? '#bcdcf2' : '#b8c0c8')); c.strokeStyle = edge; c.lineWidth = 1.6;
+    c.beginPath(); c.arc(bx, hy - 1, 7.6, Math.PI, 0); c.lineTo(bx + 7.6, hy - 1); c.lineTo(bx - 7.6, hy - 1); c.closePath(); c.fill(); c.stroke();
+    c.fillStyle = plume; c.beginPath(); c.moveTo(bx, hy - 8); c.quadraticCurveTo(bx - f * 9, hy - 16 + Math.sin(ph) * 1.5, bx - f * 12, hy - 7); c.quadraticCurveTo(bx - f * 5, hy - 9, bx, hy - 5); c.closePath(); c.fill();
+    // 兵器（手在身体前侧；出手时朝目标，平时竖着轻晃）
+    var hx = bx + f * 8, hyy = gy - 19 + by, wa = atk > 0 ? ang : (-Math.PI / 2 + f * (0.12 + Math.sin(ph) * 0.05));
+    c.save(); c.translate(hx, hyy); c.rotate(wa);
+    var thrust = atk * 8;
+    if (TY === 'arrow') {                                    // 弓：满弓 → 放箭
+      var pull = atk > 0 ? 7 * (1 - atk) : 2;
+      c.strokeStyle = '#6a4a22'; c.lineWidth = 2.6; c.beginPath(); c.arc(6, 0, 13, -1.15, 1.15); c.stroke();
+      c.strokeStyle = '#f4efe0'; c.lineWidth = 1; c.beginPath(); c.moveTo(6 + Math.cos(-1.15) * 13, Math.sin(-1.15) * 13); c.lineTo(6 - pull, 0); c.lineTo(6 + Math.cos(1.15) * 13, Math.sin(1.15) * 13); c.stroke();
+      if (atk < 0.5 || atk === 0) { c.strokeStyle = '#5a3b1a'; c.lineWidth = 1.8; c.beginPath(); c.moveTo(6 - pull, 0); c.lineTo(22, 0); c.stroke(); c.fillStyle = '#b8c0c8'; c.beginPath(); c.moveTo(25, 0); c.lineTo(20, -2.6); c.lineTo(20, 2.6); c.fill(); }
+    } else if (TY === 'cannon') {                            // 手炮：粗铜管 + 开火闪光；另一手扛着戟
+      c.fillStyle = '#6a5a3c'; c.strokeStyle = '#3a2c18'; c.lineWidth = 1.6; T.rrect(c, 2 - atk * 3, -4.5, 24, 9, 3); c.fill(); c.stroke();
+      c.fillStyle = '#d6a43c'; c.fillRect(8 - atk * 3, -4.5, 3, 9); c.fillRect(17 - atk * 3, -4.5, 3, 9);
+      if (atk > 0.35) { c.fillStyle = 'rgba(255,170,50,' + atk + ')'; c.beginPath(); c.arc(30, 0, 5 + atk * 9, 0, PI2); c.fill(); c.fillStyle = 'rgba(255,240,170,' + atk + ')'; c.beginPath(); c.arc(30, 0, 3 + atk * 4, 0, PI2); c.fill(); }
+    } else if (TY === 'frost') {                             // 冰刃戟：长杆 + 冰晶刃 + 月牙；出手时前刺
+      c.strokeStyle = '#4a6a8a'; c.lineWidth = 2.6; c.beginPath(); c.moveTo(-12 + thrust, 0); c.lineTo(30 + thrust, 0); c.stroke();
+      c.fillStyle = '#cfeaff'; c.strokeStyle = '#4a90d9'; c.lineWidth = 1.4; c.beginPath(); c.moveTo(42 + thrust, 0); c.lineTo(30 + thrust, -5); c.lineTo(30 + thrust, 5); c.closePath(); c.fill(); c.stroke();
+      c.beginPath(); c.arc(28 + thrust, 0, 7, -1.9, -0.2); c.stroke(); c.beginPath(); c.arc(28 + thrust, 0, 7, 0.2, 1.9); c.stroke();
+      c.fillStyle = '#4a90d9'; c.beginPath(); c.arc(-12 + thrust, 0, 2.4, 0, PI2); c.fill();
+    } else if (TY === 'siege') {                             // 大弩：弩臂 + 弩机 + 红头弩箭
+      c.strokeStyle = '#4a2a10'; c.lineWidth = 3; c.beginPath(); c.moveTo(-4 - atk * 3, 0); c.lineTo(22, 0); c.stroke();
+      c.lineWidth = 3.2; c.beginPath(); c.moveTo(14, -13); c.quadraticCurveTo(22 + atk * 6, 0, 14, 13); c.stroke();
+      c.strokeStyle = '#f4efe0'; c.lineWidth = 1; c.beginPath(); c.moveTo(14, -13); c.lineTo(12 - (atk > 0 ? 0 : 5), 0); c.lineTo(14, 13); c.stroke();
+      if (atk < 0.5 || atk === 0) { c.strokeStyle = '#5a3b1a'; c.lineWidth = 2; c.beginPath(); c.moveTo(12 - (atk > 0 ? 0 : 5), 0); c.lineTo(34, 0); c.stroke(); c.fillStyle = '#c04030'; c.beginPath(); c.moveTo(38, 0); c.lineTo(31, -3.4); c.lineTo(31, 3.4); c.fill(); }
+    } else {                                                 // 佛光禅杖：莲花头；出手 = 光脉冲
+      c.strokeStyle = '#8a6a1a'; c.lineWidth = 2.6; c.beginPath(); c.moveTo(-10, 0); c.lineTo(30, 0); c.stroke();
+      c.fillStyle = '#ffd1dc'; c.strokeStyle = '#d27a96'; c.lineWidth = 1.2; for (var q = -1; q <= 1; q++) { c.beginPath(); c.ellipse(33, q * 4.2, 6, 3, q * 0.5, 0, PI2); c.fill(); c.stroke(); }
+      c.fillStyle = '#fff3a0'; c.beginPath(); c.arc(33, 0, 3, 0, PI2); c.fill();
     }
-    if (lv >= 2) {                                      // 2 级起插一面小旗
-      c.strokeStyle = '#5a3b1a'; c.lineWidth = 2; c.beginPath(); c.moveTo(x + 14, y - 8); c.lineTo(x + 14, y - 30); c.stroke();
-      c.fillStyle = lv >= 3 ? '#e0a415' : '#4a90d9'; c.beginPath(); c.moveTo(x + 14, y - 30); c.lineTo(x + 28, y - 25); c.lineTo(x + 14, y - 20); c.closePath(); c.fill();
+    c.restore();
+    // 戟（炮天兵另一手）：竖在身后
+    if (TY === 'cannon') { c.strokeStyle = '#5a4528'; c.lineWidth = 2.4; c.beginPath(); c.moveTo(bx - f * 11, gy - 1 + by); c.lineTo(bx - f * 11, gy - 52 + by); c.stroke();
+      c.fillStyle = '#dfe5ea'; c.strokeStyle = '#6b7a88'; c.lineWidth = 1.2; c.beginPath(); c.moveTo(bx - f * 11, gy - 60 + by); c.lineTo(bx - f * 14, gy - 51 + by); c.lineTo(bx - f * 8, gy - 51 + by); c.closePath(); c.fill(); c.stroke();
+      c.beginPath(); c.arc(bx - f * 11, gy - 47 + by, 6, f > 0 ? Math.PI * 0.6 : -Math.PI * 0.6 - 0.0, f > 0 ? Math.PI * 1.4 : Math.PI * 0.6 + Math.PI * 0.0, f < 0); c.stroke(); }
+    // 出手的劈 / 冲击弧（近战感）：朝目标一道亮弧
+    if (atk > 0 && (TY === 'frost' || TY === 'heal')) {
+      c.strokeStyle = (TY === 'frost' ? 'rgba(120,190,245,' : 'rgba(255,215,90,') + atk + ')'; c.lineWidth = 3; c.beginPath(); c.arc(hx, hyy, 26 + (1 - atk) * 12, ang - 0.7, ang + 0.7); c.stroke();
     }
     c.restore();
     // 等级星
-    var cl0 = t.cl || 1; for (var i = 0; i < cl0; i++) { c.fillStyle = '#f0b429'; c.strokeStyle = '#a8700a'; c.lineWidth = 1; c.beginPath(); c.arc(x - (cl0 - 1) * 5 + i * 10, y + 25, 3.6, 0, PI2); c.fill(); c.stroke(); }
+    var cl0 = t.cl || 1, i; for (i = 0; i < cl0; i++) { c.fillStyle = '#f0b429'; c.strokeStyle = '#a8700a'; c.lineWidth = 1; c.beginPath(); c.arc(x - (cl0 - 1) * 5 + i * 10, y + 25, 3.6, 0, PI2); c.fill(); c.stroke(); }
+    // 寒冰 / 佛光脉冲环
+    if (t.pulse > 0 && TY === 'frost') { c.strokeStyle = 'rgba(80,160,230,' + (t.pulse * 1.5) + ')'; c.lineWidth = 3; c.beginPath(); c.arc(x, y, s.range * (1 - t.pulse), 0, PI2); c.stroke(); }
     // 血条（受伤才显示）
     var mh = XY.towerMaxHp ? XY.towerMaxHp(t) : t.maxHp;
     if (t.hp < mh - 0.5) T.bar(c, x - 20, y + 31, 40, 5, t.hp / mh, '#e0533d', 'rgba(255,255,255,0.85)');
     if (t.maxLife) { T.bar(c, x - 20, y + 37, 40, 3, Math.max(0, t.life / t.maxLife), '#6bb7e8', 'rgba(255,255,255,0.7)'); }
-    if (t.mode === 'garrison') T.otxt(c, '驻守', x, y - 36, 10.5, '#a8700a', 'center', true);
+    if (t.mode === 'garrison') T.otxt(c, '驻守', x, y - 52, 10.5, '#a8700a', 'center', true);
     // 升级闪光（t.upT 倒计时）
     if (t.upT > 0) {
       var u = 1 - t.upT / 1.2; u = Math.max(0, Math.min(1, u));
       c.strokeStyle = 'rgba(255,200,60,' + (1 - u) + ')'; c.lineWidth = 5; c.beginPath(); c.arc(x, y - 4, 20 + u * 60, 0, PI2); c.stroke();
       c.strokeStyle = 'rgba(255,255,255,' + (1 - u) + ')'; c.lineWidth = 2.5; c.beginPath(); c.arc(x, y - 4, 10 + u * 40, 0, PI2); c.stroke();
-      T.otxt(c, '升级！Lv' + lv, x, y - 46 - u * 24, 17, '#d98a00', 'center', true);
+      T.otxt(c, '升级！Lv' + lv, x, y - 62 - u * 24, 17, '#d98a00', 'center', true);
       for (i = 0; i < 6; i++) { var a = i * PI2 / 6 + u * 2; c.fillStyle = 'rgba(255,215,80,' + (1 - u) + ')'; c.beginPath(); c.arc(x + Math.cos(a) * (14 + u * 40), y - 4 + Math.sin(a) * (14 + u * 40), 3, 0, PI2); c.fill(); }
     }
   };
@@ -8529,7 +8759,7 @@ XY.TRAITS = {
   }
 
   function drawTowerBar(c, G, app) {
-    var T = R(), H = app.lh, bx = 12, bw = 214, bh = 100, by = H - bh - 12, tk = ['arrow', 'cannon', 'frost', 'siege', 'heal'], i;
+    var T = R(), H = app.lh, bx = 12, bw = 214, bh = 100, by = H - bh - 12 - (app.lw < 1000 ? 196 : 0), tk = ['arrow', 'cannon', 'frost', 'siege', 'heal'], i;
     T.panel(c, bx, by, bw, bh, 12);
     T.txt(c, '护法天兵', bx + 10, by + 13, 13, T.T.ink, 'left', true);
     var scap = XY.soldierCap(G), sfull = G.towers.length >= scap;
@@ -8547,7 +8777,7 @@ XY.TRAITS = {
   }
 
   function drawSky(c, G, app) {
-    var T = R(), W = app.lw, H = app.lh, pw = 240, px = W - pw - 12, py = H - 104 - 8 - 76, cd = G.sky.cd, ready = G.sky.left > 0, ok = true, info = XY.skyInfo(G);
+    var T = R(), W = app.lw, H = app.lh, pw = 240, px = W - pw - 12, py = H - 104 - 8 - 76 - (W < 1000 ? 196 : 0), cd = G.sky.cd, ready = G.sky.left > 0, ok = true, info = XY.skyInfo(G);
     T.panel(c, px, py, pw, 76, 12, undefined, app.summon ? '#e8892b' : undefined);
     T.txt(c, '天兵降临 · 每关一次', px + 10, py + 13, 13, T.T.ink, 'left', true);
     T.txt(c, info.n + ' 名 · ' + info.life + ' 秒', px + pw - 10, py + 14, 11, T.T.inkSoft, 'right', false);
@@ -8894,42 +9124,42 @@ XY.TRAITS = {
     c.fillStyle = 'rgba(80,70,40,0.5)'; c.fillRect(0, 18, W, 1.5);
     T.otxt(c, '等级 ' + G.level + '    经验 ' + Math.floor(G.xp) + ' / ' + need, W / 2, 9.5, 12, T.T.ink, 'center', true);
     drawTop(c, G, app, ctx);
-    if (G.tut) {                                                       // 最小教程：顶部条提示，右下角“跳过”
-      var tw0 = Math.min(560, W - 460), tx0 = W / 2 - tw0 / 2, ty0 = ctx.denBottom + 6; ctx.tutBottom = ty0 + 56;
-      var tl = XY.TUT_STEPS[G.tut.i] || '';
-      T.panel(c, tx0, ty0, tw0, 56, 12, 'rgba(255,250,228,0.97)', '#e0a415');
-      T.txt(c, '新手提示 ' + (G.tut.i + 1) + '/' + XY.TUT_STEPS.length, tx0 + 14, ty0 + 14, 11.5, '#a8700a', 'left', true);
-      var tl1 = tl.length > 30 ? tl.slice(0, Math.ceil(tl.length / 2)) : tl, tl2 = tl.length > 30 ? tl.slice(Math.ceil(tl.length / 2)) : '';
-      T.txt(c, tl1, tx0 + 14, ty0 + 30, 13, T.T.ink, 'left', true); if (tl2) T.txt(c, tl2, tx0 + 14, ty0 + 47, 13, T.T.ink, 'left', true);
-      var skx = tx0 + tw0 - 70, sky = ty0 + 6, skh = mouseIn(app, skx, sky, 62, 20);
-      T.rrect(c, skx, sky, 62, 20, 8); c.fillStyle = skh ? '#ffe2a8' : '#fff3d6'; c.fill(); c.lineWidth = 1.4; c.strokeStyle = '#c9a24a'; c.stroke();
-      T.txt(c, '跳过教程', skx + 31, sky + 11, 11, T.T.ink, 'center', true); XY.ui.hits.push({ x: skx, y: sky, w: 62, h: 20, act: 'tutSkip' });
-    }
+    if (G.tut) XY.tutLayout(c, G, app, ctx);                           // 新手教程：提示卡的位置（卡本身最后画，盖在所有按钮上面）
     var left = drawLeft(c, G, app);
     // 右上
     var rx = W - 12;
-    T.txt(c, 'Esc 暂停 · M ' + (XY.audio && XY.audio.mute ? '开声' : '静音') + ' · H 说明', rx, 36, 12, T.T.inkSoft, 'right', false);
+    var tch = !!app.touchUI;
+    T.txt(c, tch ? ((XY.audio && XY.audio.mute ? '声音已关' : '') + '') : 'Esc 暂停 · M ' + (XY.audio && XY.audio.mute ? '开声' : '静音') + ' · H 说明', rx, 36, 12, T.T.inkSoft, 'right', false);
     var sb = { x: W - 176, y: 44, w: 164, h: 38 }, shov = mouseIn(app, sb.x, sb.y, sb.w, sb.h), hasPts = G.points > 0, sp2 = 0.5 + 0.5 * Math.sin(rt * 6);
     T.rrect(c, sb.x, sb.y, sb.w, sb.h, 12); c.fillStyle = hasPts ? (shov ? '#ffcf5a' : 'rgba(255,214,110,' + (0.85 + 0.15 * sp2) + ')') : (shov ? '#fff3d6' : 'rgba(255,255,255,0.94)'); c.fill();
     c.lineWidth = 2.5; c.strokeStyle = hasPts ? '#c78a1e' : '#b9a77a'; c.stroke();
-    T.txt(c, '技能树 (Tab)', sb.x + 14, sb.y + sb.h / 2 + 1, 16, T.T.ink, 'left', true);
+    T.txt(c, tch ? '技能树' : '技能树 (Tab)', sb.x + 14, sb.y + sb.h / 2 + 1, 16, T.T.ink, 'left', true);
     if (hasPts) { c.fillStyle = '#e0533d'; c.beginPath(); c.arc(sb.x + sb.w - 20, sb.y + sb.h / 2, 13 + sp2, 0, 6.3); c.fill(); T.txt(c, String(G.points), sb.x + sb.w - 20, sb.y + sb.h / 2 + 1, 15, '#fff', 'center', true); }
     XY.ui.hits.push({ x: sb.x, y: sb.y, w: sb.w, h: sb.h, act: 'skills' });
+    if (tch) {                                                                   // 触屏没有 Esc / Tab：左边放一个“暂停 / 取消”按钮（技能树按钮就是 Tab）
+      var eb = { x: sb.x - 8 - 104, y: sb.y, w: 104, h: sb.h }, cancel = !!(app.build || app.selTower || app.summon), ehov = mouseIn(app, eb.x, eb.y, eb.w, eb.h);
+      T.rrect(c, eb.x, eb.y, eb.w, eb.h, 12); c.fillStyle = cancel ? (ehov ? '#ffd0c0' : '#ffe1d6') : (ehov ? '#fff3d6' : 'rgba(255,255,255,0.94)'); c.fill();
+      c.lineWidth = 2.5; c.strokeStyle = cancel ? '#d9503c' : '#b9a77a'; c.stroke();
+      T.txt(c, cancel ? '✕ 取消' : '⏸ 暂停', eb.x + eb.w / 2, eb.y + eb.h / 2 + 1, 16, T.T.ink, 'center', true);
+      XY.ui.hits.push({ x: eb.x, y: eb.y, w: eb.w, h: eb.h, act: 'esc' });
+    }
     if (hasPts) T.txt(c, '有 ' + G.points + ' 点技能点没用！', rx, 94, 12, '#b8300f', 'right', true);
     var dy0 = hasPts ? 112 : 96;
     if (app.debugOn) { T.txt(c, '调试键：已开（Shift+F9 关）', rx, dy0, 12, '#c0392b', 'right', true); dy0 += 18; }
     if (G.speed !== 1) { T.txt(c, '调试：速度 ×' + G.speed, rx, dy0, 13, '#c0392b', 'right', true); dy0 += 18; }
-    if (G.godMode) { T.txt(c, '调试：无敌', rx, dy0, 13, '#c0392b', 'right', true); dy0 += 18; }
+    if (G.godMode && !G.tut) { T.txt(c, '调试：无敌', rx, dy0, 13, '#c0392b', 'right', true); dy0 += 18; }
     if (app.showFps) T.txt(c, Math.round(app.fps) + ' FPS · 敌人 ' + G.enemies.length, rx, dy0, 12, T.T.inkSoft, 'right', false);
     XY.ui.banner = null;
     T.drawCardsHUD(c, G, app, Math.max(150, dy0 + 22));
     drawSky(c, G, app);
     // 提示：右下
-    var helpShow = G.t < 40 || app.helpOn;                                      // v0.5 第 4 批：操作说明只在开局 40 秒显示，之后按 H 开 / 关
+    var helpShow = !G.tut && (G.t < 40 || app.helpOn);                                      // v0.5 第 4 批：操作说明只在开局 40 秒显示，之后按 H 开 / 关
     if (helpShow) { c.globalAlpha = 0.95;
-    T.panel(c, W - 252, H - 122, 240, 110, 12);
-    var lines = ['WASD 或鼠标 都能走（按住左键跟随）', '单击地面设目的地 · 右键也行', '1-6 换人 · Shift+1-6 命令', 'Z X C V B 造塔 · 点塔升级', '白龙马：点“骑乘”选一位伙伴驮着跑', '法宝三选一 · 最多带 3 件同套', 'Tab 技能树 · 点特性按钮 · P 暂停'];
-    for (i = 0; i < lines.length; i++) T.txt(c, lines[i], W - 242, H - 110 + i * 16, 12, T.T.ink, 'left', false);
+    var hy0 = H - 122 - (W < 1000 ? 196 + 84 : 0);
+    T.panel(c, W - 252, hy0, 240, 110, 12);
+    var lines = ['WASD 或鼠标 都能走（按住左键跟随）', '单击地面设目的地 · 右键也行', '1-6 换人 · Shift+1-6 命令', 'Z X C V B 请天兵 · 点天兵升级', '白龙马：点“骑乘”选一位伙伴驮着跑', '法宝三选一 · 最多带 3 件同套', 'Tab 技能树 · 点特性按钮 · P 暂停'];
+    if (app.touchUI) lines = ['按住空地拖动 = 摇杆走路', '轻点空地 = 走到那里', '点头像换人 · 点小按钮下命令', '点天兵按钮，再轻点路上空地', '白龙马：点“骑乘”选一位伙伴驮着跑', '法宝三选一 · 最多带 3 件同套', '右上「暂停」「技能树」· 点特性按钮'];
+    for (i = 0; i < lines.length; i++) T.txt(c, lines[i], W - 242, hy0 + 12 + i * 16, 12, T.T.ink, 'left', false);
     c.globalAlpha = 1; }
     drawTowerBar(c, G, app);
     var tip = drawHeroCards(c, G, app);
@@ -8993,6 +9223,7 @@ XY.TRAITS = {
     if (!tg.down) edge(tg.x, tg.y, (G.breach || G.tdanger) ? '师傅危险！' : '师傅', '#e2a63a', G.breach || G.tdanger);
     edge(G.gate.x, G.gate.y, G.gate.sealed ? '关口（主线未完成）' : '关口：师父走到就通关', G.gate.sealed ? '#a39a8a' : '#e0a415', false);
     drawTip(c, app, tip || app._tip);
+    if (G.tut) XY.tutDraw(c, G, app);
   };
 })();
 
@@ -9135,6 +9366,7 @@ XY.TRAITS = {
     rrect(c, W / 2 - 210, py + 540, 420, 40, 12); c.fillStyle = '#ece8dd'; c.fill(); c.lineWidth = 2; c.strokeStyle = '#cfc8b4'; c.stroke();
     txt(c, '副本模式（多人联机 · 开发中，暂不可用）', W / 2, py + 561, 15, '#a49d8a', 'center', true);
     sbtn(c, app, px + pw - 170, py + 543, 140, 34, '重置存档', 'menuReset', null, { danger: true, size: 14 });
+    sbtn(c, app, px + pw - 170 - 150, py + 543, 140, 34, '新手教程', 'menuTutorial', null, { size: 14 });
     XY.R4.verBtn(c, app, px + 30, py + 532, 200, 52);
     msgLine(c, app, W / 2, py + 596, 'center');
     var st = S.data.stats;
@@ -9653,6 +9885,7 @@ XY.TRAITS = {
     // 调试键默认关闭：网址加 ?debug=1 打开，或者游戏里按 Shift+F9 切换
     debugOn: /[?&]debug(=1|=true)?(&|#|$)/.test(location.search),
     skillTab: 1, skillMsg: null, build: null, selTower: null,
+    touchUI: !!(window.XY_TOUCH_UI || ('ontouchstart' in window) || (navigator.maxTouchPoints > 0)),      // 触屏设备：显示屏幕上的“暂停 / Esc”按钮
     confirm: null, deckSel: null, dexTab: 'enemy', dexSel: null, menuMsg: null
   };
   app.showFps = app.debugOn;
@@ -9791,6 +10024,18 @@ XY.TRAITS = {
     updateMove();
   });
   window.addEventListener('keyup', function (e) { keys[e.code] = false; if (G) updateMove(); });
+  // 屏幕上的“暂停 / 取消”按钮 = 键盘 Esc：先取消选点，再关面板，最后才暂停
+  function doEsc() {
+    if (!G) return;
+    var s = app.screen;
+    if (s === 'pause') { resume(); return; }
+    if (s !== 'play') return;
+    if (G.mode === 'cards') { XY.cards.choose(G, -1); return; }
+    if (G.mode === 'skills') { XY.toggleSkills(G, false); return; }
+    if (app.build || app.selTower || app.summon) { app.build = null; app.selTower = null; app.summon = null; return; }
+    pause();
+  }
+  XY.doEsc = doEsc;
   function toggleBuild(type) {
     if (app.build === type) app.build = null;
     else if (G.coins < XY.TOWERS[type].cost) XY.toast(G, '金币不够：' + XY.TOWERS[type].name + '要 ' + XY.TOWERS[type].cost + ' 金币');
@@ -9840,6 +10085,7 @@ XY.TRAITS = {
     for (var i = hits.length - 1; i >= 0; i--) {
       var h = hits[i];
       if (p.x < h.x || p.x > h.x + h.w || p.y < h.y || p.y > h.y + h.h) continue;
+      if (G && G.tut && app.screen === 'play' && XY.tutBlocks(G, h)) return;      // 新手教程：只有教程要你点的那个按钮能点
       switch (h.act) {
         case 'start': startGame(); break;
         case 'menuDeck': app.screen = 'deck'; app.deckSel = app.deckSel || XY.save.data.deck[0] || null; break;
@@ -9861,7 +10107,10 @@ XY.TRAITS = {
         case 'dexSel': app.dexSel = h.id; break;
         case 'skinSet': var sr = XY.save.setSkin(h.hero, h.skin); if (!sr.ok) msg(sr.reason, true); break;
         case 'variantSet': var vr = XY.save.setHorseForm(h.form); if (!vr.ok) msg(vr.reason, true); break;
-        case 'tutSkip': XY.tutFinish(G); break;
+        case 'tutSkip': XY.tutFinish(G, true); break;
+        case 'tutNext': XY.tutNext(G); break;
+        case 'esc': doEsc(); break;
+        case 'menuTutorial': XY.tutForce = true; startGame(1); break;
         case 'restart': startGame(); break;
         case 'home': goHome(); break;
         case 'resume': resume(); break;
