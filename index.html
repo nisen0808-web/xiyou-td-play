@@ -3191,7 +3191,7 @@ XY.TRAITS = {
       var h = {
         i: i, id: def.id, def: def, sp: !!def.special,
         x: cx + cos(a) * 90, y: cy + 150 + sin(a) * 60,
-        hp: def.hp, maxHp: def.hp, down: false, inv: 0, order: order, sk: {}, mod: null, ultCd: 0, atkT: rand(0, 0.5), atkMax: 1,
+        hp: def.hp, maxHp: def.hp, down: false, inv: 0, order: order, dflt: true, sk: {}, mod: null, ultCd: 0, atkT: rand(0, 0.5), atkMax: 1,
         face: 0, wlv: 1, dmgMul: 1, crit: 0, dr: def.id === 'wujing' ? 0.15 : 0, tgt: null, retreat: false, rtT: 0,
         atkSpd: 1, hurtT: 0, contactT: 0, orbit: rand(0, 6), pend: [], dash: null, auraT: 0, regenAcc: 0,
         moving: false, auraHeal: 3, bob: rand(0, 6),
@@ -3686,6 +3686,8 @@ XY.TRAITS = {
     var tang = G.heroes[0], camp = G.camp.active ? G.camp : tang, order = h.order, i, near, dx, dy, dl;   // 营地只在休息时有意义；平时“驻守”= 守在唐僧身边
     if (order === 'guard' && (h.id === 'tang' || tang.down)) order = 'follow';   // 唐僧不能守护自己
     var stand = STAND[h.id];
+    // 唐僧在营地休息的这 5 分钟，只有唐僧一个人休息：徒弟 / 特殊角色的默认“守护”（玩家没下过命令的）在师父身边没有威胁时不许干站着，照样出去打（固守一定会输）；一有妖怪逼近师父 / 营地，立刻回去守
+    if (h.id !== 'tang' && order === 'guard' && h.dflt && G.tang.phase === 'rest' && !tang.down && !G.threat && !G.pthreat) order = 'attack';   // 只管“没人下过命令的默认守护”；玩家亲手点的命令（含驻守）照办
 
     if (order === 'station') {                                  // —— 驻守营地 ——
       var a = h.i * PI2 / 6 + 0.6, R = 98;
@@ -4101,7 +4103,7 @@ XY.TRAITS = {
     if (i === 0) { toast(G, '唐僧自己赶路，不接受命令'); return false; }
     if (h.down) { toast(G, h.def.name + ' 已阵亡，不能再下命令'); return false; }
     if (order === 'guard' && h.id === 'tang') { toast(G, '唐僧不能守护自己，请选别的命令'); return false; }
-    h.order = order; h.retreat = false; h.tgt = null;
+    h.order = order; h.dflt = false; h.retreat = false; h.tgt = null;   // dflt：默认命令（没人下过令）；玩家点过命令就是显式命令
     toast(G, h.def.name + '：' + XY.ORDER_NAME[order] + (G.ctrl === i ? '（你正在操控他，松手后生效）' : ''));
     return true;
   };
@@ -9910,7 +9912,7 @@ XY.TRAITS = {
     if (app.screen === 'play' && G.mode === 'play') {
       var wo = worldOf(p), wx = wo.x, wy = wo.y;
       if (app.build) {
-        if (XY.placeTower(G, app.build, wx, wy) && G.coins < XY.TOWERS[app.build].cost) app.build = null;
+        if (XY.placeTower(G, app.build, wx, wy) && (touch || G.coins < XY.TOWERS[app.build].cost)) app.build = null;   // 触屏没有右键 / Esc：放下一个就退出选点模式
       } else if (app.summon) {
         var sr = XY.summonSky(G, app.summon.mode, wx, wy); if (sr.ok || sr.reason !== 'mode') app.summon = null;
       } else if (app.selTower) app.selTower = null;                      // 选着塔时再点一下只是取消选中，不走路
@@ -9929,17 +9931,19 @@ XY.TRAITS = {
   function tpos(t) { var r = canvas.getBoundingClientRect(); return { x: (t.clientX - r.left) / app.zoom, y: (t.clientY - r.top) / app.zoom }; }
   function joyEnd(t, cancel) {
     var j = app.joy; if (!j || j.id !== t.identifier) return;
-    if (!j.moved && !cancel && G && app.screen === 'play' && G.mode === 'play' && app.rt - j.t0 < 0.45) press(j.p0, 0, true);   // 没拖动：当作轻点
+    var armed = !!(app.build || app.summon || app.selTower);      // 正在选点（造天兵 / 降临 / 选中天兵）：没拖动的松手一律算“点这里”，慢一点也行
+    if (!j.moved && !cancel && G && app.screen === 'play' && G.mode === 'play' && (armed || app.rt - j.t0 < 0.45)) press(j.p0, 0, true);   // 没拖动：当作轻点
     app.joy = null; updateMove();
   }
   canvas.addEventListener('touchstart', function (e) {
     e.preventDefault(); if (!G) return;
     if (introEl && !(app.intro && app.intro.playing)) introEnd('input');
+    if (app.joy) { var alive = false; for (var k = 0; k < e.touches.length; k++) if (e.touches[k].identifier === app.joy.id) alive = true; if (!alive) app.joy = null; }   // 保险：摇杆手指早就不在屏幕上了（touchend 丢了）→ 释放，别让摇杆卡死
     for (var i = 0; i < e.changedTouches.length; i++) {
       var t = e.changedTouches[i], p = tpos(t); app.touched = app.rt;
       if (XY.audio) XY.audio.init();
       var playing = app.screen === 'play' && G.mode === 'play';
-      if (!playing || hitUI(p) || app.build || app.summon || app.selTower || app.joy) { press(p, 0, true); continue; }     // 按钮 / 菜单 / 造塔选点：立刻点按
+      if (!playing || hitUI(p) || app.joy) { press(p, 0, true); continue; }     // 按钮 / 菜单：立刻点按。空地永远先当“摇杆手指”：造天兵 / 降临 / 选塔的选点模式也一样（修了：点了“造天兵”后整个屏幕都变成“放兵”，再也拖不动人）
       app.joy = { id: t.identifier, p0: p, x: p.x, y: p.y, ux: 0, uy: 0, k: 0, moved: false, t0: app.rt };
     }
   }, { passive: false });
@@ -9949,7 +9953,7 @@ XY.TRAITS = {
       var t = e.changedTouches[i], j = app.joy; if (!j || j.id !== t.identifier) continue;
       var p = tpos(t), dx = p.x - j.p0.x, dy = p.y - j.p0.y, d = Math.sqrt(dx * dx + dy * dy);
       j.x = p.x; j.y = p.y;
-      if (d > JOY_DEAD) { j.moved = true; j.ux = dx / d; j.uy = dy / d; j.k = Math.min(1, d / JOY_MAX); } else if (j.moved) { j.ux = 0; j.uy = 0; j.k = 0; }
+      if (d > JOY_DEAD) { if (!j.moved && (app.build || app.summon || app.selTower)) { app.build = null; app.summon = null; app.selTower = null; XY.toast(G, '已取消选点：拖动 = 走路'); } j.moved = true; j.ux = dx / d; j.uy = dy / d; j.k = Math.min(1, d / JOY_MAX); } else if (j.moved) { j.ux = 0; j.uy = 0; j.k = 0; }
     }
     updateMove();
   }, { passive: false });
