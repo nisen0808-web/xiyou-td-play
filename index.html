@@ -4679,7 +4679,7 @@ XY.TRAITS = {
 
   function explode(G, p) {
     ring(G, p.x, p.y, p.splash, '#ff9a3c', 0.3, true);
-    G.grid.query(p.x, p.y, p.splash, function (e) { hurtEnemy(G, e, p.dmg, { kb: 160, fx: p.x, fy: p.y }); });
+    G.grid.query(p.x, p.y, p.splash, function (e) { hurtEnemy(G, e, p.dmg, { kb: 160, fx: p.x, fy: p.y, aoe: true }); });
   }
 
   /* ================= 地面区域（流沙河） ================= */
@@ -5016,6 +5016,8 @@ XY.TRAITS = {
     if (A.lod(G) >= 1 && !crit) return;                                  // 精简档只给暴击
     add(G, 'hit', e.x + (Math.random() - 0.5) * e.r, e.y - e.r * 0.2 + (Math.random() - 0.5) * e.r * 0.6, { max: crit ? 0.26 : 0.17, crit: !!crit, ang: Math.random() * 3.14 - 1.57, color: e.def.boss || e.def.elite ? '#fff3c4' : '#ffffff', big: e.r });
   };
+  // v0.7：冲击波不画圆——锯齿星形（尖角向外）
+  function star(c, x, y, r, n, inner, rot) { c.beginPath(); for (var i = 0; i < n * 2; i++) { var a = rot + i / (n * 2) * PI2, rr = i % 2 ? r * inner : r; if (i) c.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); else c.moveTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); } c.closePath(); }
   A.ripple = function (G, x, y, color) {                                 // 清屏：三圈错开的涟漪，大到盖满视口
     var R = Math.max(G.view ? G.view.w : 1280, 900) * 0.62;
     for (var i = 0; i < 3; i++) add(G, 'ripple', x, y, { max: 0.9 + i * 0.12, d: i * 0.14, R: R * (0.7 + i * 0.15), color: color || '#ffd24a' });
@@ -5081,7 +5083,7 @@ XY.TRAITS = {
         c.lineCap = 'butt'; c.globalAlpha = 1; break;
       case 'ripple':
         if (t < f.d) break; var kk = (t - f.d) / (f.max - f.d); if (kk >= 1) break;
-        c.globalAlpha = (1 - kk) * 0.55; c.strokeStyle = f.color; c.lineWidth = 7 * (1 - kk) + 2; c.beginPath(); c.arc(f.x, f.y, f.R * (0.1 + 0.9 * Math.min(1, kk * 1.2)), 0, PI2); c.stroke(); c.globalAlpha = 1; break;
+        c.globalAlpha = (1 - kk) * 0.55; c.strokeStyle = f.color; c.lineWidth = 7 * (1 - kk) + 2; star(c, f.x, f.y, f.R * (0.1 + 0.9 * Math.min(1, kk * 1.2)), 14, 0.9, kk * 0.8); c.stroke(); c.globalAlpha = 1; break;
       case 'levelup': {
         var up = Math.min(1, k * 2.2), fade = k < 0.6 ? 1 : (1 - (k - 0.6) / 0.4), H = 230 * up, w = 34 * (1 - 0.4 * k);
         if (f.lod < 2) { var g = c.createLinearGradient(0, y - H, 0, y + 16); g.addColorStop(0, 'rgba(255,230,120,0)'); g.addColorStop(1, 'rgba(255,214,80,' + 0.75 * fade + ')'); c.fillStyle = g; c.fillRect(x - w / 2, y - H, w, H + 16); }
@@ -5091,13 +5093,13 @@ XY.TRAITS = {
         c.globalAlpha = fade; otxt(c, '升级！', x, y - 66 - 40 * up, 20, '#d98a00', 'center', true); c.globalAlpha = 1; break; }
       case 'maxlv': {
         var fa = k < 0.7 ? 1 : (1 - (k - 0.7) / 0.3); c.globalAlpha = fa;
-        c.strokeStyle = '#ffcf33'; c.lineWidth = 6 * (1 - k) + 2; c.beginPath(); c.arc(x, y, 30 + 160 * Math.min(1, k * 1.4), 0, PI2); c.stroke();
-        c.lineWidth = 3; c.beginPath(); c.arc(x, y, 18 + 100 * Math.min(1, k * 1.2), 0, PI2); c.stroke();
+        c.strokeStyle = '#ffcf33'; c.lineWidth = 6 * (1 - k) + 2; star(c, x, y, 30 + 160 * Math.min(1, k * 1.4), 10, 0.78, k * 2); c.stroke();
+        c.lineWidth = 3; star(c, x, y, 18 + 100 * Math.min(1, k * 1.2), 8, 0.7, -k * 2); c.stroke();
         c.fillStyle = 'rgba(255,224,110,0.8)'; var nR = f.lod < 2 ? 12 : 6; for (var j = 0; j < nR; j++) { var aa = j / nR * PI2 + t * 1.5, rr = 40 + 150 * Math.min(1, k * 1.3); star(c, x + cos(aa) * rr, y + sin(aa) * rr, 9 * (1 - k * 0.5), aa); }
         otxt(c, '满级！', x, y - 70 - 30 * Math.min(1, k * 2), 30, '#d98a00', 'center', true); c.globalAlpha = 1; break; }
       case 'xform': {
         var fx2 = 1 - k; c.globalAlpha = fx2 * 0.9;
-        for (var r2 = 0; r2 < (f.lod < 2 ? 3 : 1); r2++) { var kr = Math.max(0, Math.min(1, k * 1.5 - r2 * 0.18)); c.strokeStyle = r2 % 2 ? '#fff3b0' : '#f0b429'; c.lineWidth = 8 * (1 - kr) + 2; c.beginPath(); c.arc(x, y, 40 + 280 * kr, 0, PI2); c.stroke(); }
+        for (var r2 = 0; r2 < (f.lod < 2 ? 3 : 1); r2++) { var kr = Math.max(0, Math.min(1, k * 1.5 - r2 * 0.18)); c.strokeStyle = r2 % 2 ? '#fff3b0' : '#f0b429'; c.lineWidth = 8 * (1 - kr) + 2; star(c, x, y, 40 + 280 * kr, 12, 0.85, r2 * 0.4 + kr); c.stroke(); }
         c.strokeStyle = '#ffe9a0'; c.lineWidth = 4; c.lineCap = 'round'; var nr = f.lod < 2 ? 14 : 7;
         for (var q = 0; q < nr; q++) { var qa = q / nr * PI2 + 0.3, q0 = 50 + 60 * k, q1 = q0 + 90 + 120 * (1 - k); c.beginPath(); c.moveTo(x + cos(qa) * q0, y + sin(qa) * q0); c.lineTo(x + cos(qa) * q1, y + sin(qa) * q1); c.stroke(); }
         c.lineCap = 'butt'; c.globalAlpha = 1; break; }
@@ -5111,7 +5113,7 @@ XY.TRAITS = {
       case 'dust':
         c.globalAlpha = (1 - k) * 0.55; c.fillStyle = '#d8c7a0'; c.beginPath(); c.arc(x + f.dir * 18 * k, y - 10 * k, f.r * (0.6 + 1.2 * k), 0, PI2); c.fill(); c.globalAlpha = 1; break;
       case 'pickup':
-        c.globalAlpha = (1 - k) * 0.8; c.strokeStyle = '#ffe58a'; c.lineWidth = 3 * (1 - k) + 1; c.beginPath(); c.arc(x, y, 14 + 26 * k, 0, PI2); c.stroke(); c.globalAlpha = 1; break;
+        c.globalAlpha = (1 - k) * 0.8; c.strokeStyle = '#ffe58a'; c.lineWidth = 3 * (1 - k) + 1; star(c, x, y, 14 + 26 * k, 4, 0.5, k); c.stroke(); c.globalAlpha = 1; break;
       case 'bossin': {                                                   // 世界部分：洞主脚下的裂纹光环
         var e = f.e, bx = e ? e.x : f.x, by = e ? e.y : f.y; c.globalAlpha = (1 - k) * 0.8; c.strokeStyle = f.color; c.lineWidth = 6 * (1 - k) + 2;
         c.beginPath(); c.ellipse(bx, by + 20, 60 + 200 * Math.min(1, k * 1.5), 24 + 80 * Math.min(1, k * 1.5), 0, 0, PI2); c.stroke(); c.globalAlpha = 1; break; }
@@ -5443,9 +5445,9 @@ XY.TRAITS = {
         var a = WV ? (Math.random() < 0.85 ? WV.a + rand(-0.55, 0.55) : rand(0, PI2)) : ((q0 === 0 && Math.random() < 0.6) ? fa + rand(-1.1, 1.1) : rand(0, PI2)), r = rand(R * 0.78, R * 1.08);
         var x = clamp(F.x + cos(a) * r, 40, C.WORLD_W - 40), y = clamp(F.y + sin(a) * r * 0.75, 40, C.WORLD_H - 40);
         var q = Math.random(), type = q < 0.80 ? 'small' : (q < 0.93 ? 'ranged' : 'tank');
-        if (WV) { var u = j / n; type = u < WV.comp[0] / WV.n ? 'small' : (u < (WV.comp[0] + WV.comp[1]) / WV.n ? 'ranged' : 'tank'); }
+        if (WV) { var u = j / n; type = u < WV.comp[0] / WV.n ? 'small' : (u < (WV.comp[0] + WV.comp[1]) / WV.n ? 'ranged' : 'tank'); if (type === 'tank' && WV.sh > 0 && WV.comp[2] > 0 && (u - (WV.comp[0] + WV.comp[1]) / WV.n) / (WV.comp[2] / WV.n) < WV.sh / WV.comp[2]) type = 'shield'; }      // v0.7：盾兵数量在排日程时就定好（预告能照实写）
         if (G.t < 45 && type === 'tank') type = 'small';
-        if (type === 'tank' && G.t >= 100 && Math.random() < 0.5) type = 'shield';        // v0.7b：盾兵混进波里的坦克位
+        if (type === 'tank' && !WV && G.t >= 100 && Math.random() < 0.5) type = 'shield';        // v0.7b：盾兵混进波里的坦克位
         var en = K.makeEnemy(G, type, x, y, null); en.road = true; en.flow = true; en.xpM = C.FLOW_XP; en.coinM = C.FLOW_COIN; if (rest) en.toCamp = true;
       }
       if (WV && q0 === 0) for (var ek = 0; ek < WV.elite; ek++) {                                  // 大潮：牛头卫护送
@@ -5457,6 +5459,11 @@ XY.TRAITS = {
     else     if (surge) XY.banner(G, rest ? '妖潮来袭！' : '前方妖群涌来！', 2);
   }
   function rest0(G) { return G.tang.phase === 'rest'; }
+  // 妖潮预告用：实际刷出量 = 预告数 × 狂暴倍率 ×（操控英雄离唐僧太远时多出的第二焦点 0.8）；预告按这个倍率显示，免得少报
+  XY.waveMulInfo = function (G) {
+    var tg = G.heroes[0], ctrl = G.heroes[G.ctrl] || tg, em = XY.enrageSpawnMul(G), far = !ctrl.down && ctrl !== tg && XY.dist(ctrl.x, ctrl.y, tg.x, tg.y) > C.FLOW_R * 0.8;
+    return { m: em * (far ? 1.8 : 1), enr: em > 1, far: far };
+  };
 
   XY.updateDens = function (G, dt) {
     var i, e, cnt = G.denCnt, min = G.t / 60, em = XY.enrageSpawnMul(G);       // em：有 BOSS 狂暴时小怪出量 ×2
@@ -6004,7 +6011,7 @@ XY.TRAITS = {
     var n = Math.round(want * rand(C.SURGE_K0, C.SURGE_K1) * K.nMul * kRest * (big ? C.WAVE_BIG_K : 1));
     var comp = [Math.round(n * K.mix[0]), Math.round(n * K.mix[1]), 0]; comp[2] = Math.max(0, n - comp[0] - comp[1]);
     W.seq++; W.last = kind;
-    return { at: at, a: a, dir: XY.waveDirName(a), fwd: fwd, kind: kind, name: big ? '大潮' : K.name, big: !!big, n: n, comp: comp, elite: big ? C.WAVE_BIG_ELITE : 0, warned: false, em0: 1 };
+    return { at: at, a: a, dir: XY.waveDirName(a), fwd: fwd, kind: kind, name: big ? '大潮' : K.name, big: !!big, n: n, comp: comp, sh: at >= 100 ? Math.round(comp[2] * 0.5) : 0, elite: big ? C.WAVE_BIG_ELITE : 0, warned: false, em0: 1 };
   }
 
   // 每个刷怪节拍调用一次（abilities.updateFlow 在 0.45 秒节拍里调）。到点了返回要刷的那一波，否则返回 null；没排日程就先排好。
@@ -6129,12 +6136,12 @@ XY.TRAITS = {
     var ox = caster.x, oy = caster.y, killed = 0, ringMax = Math.hypot(R.x1 - R.x0, R.y1 - R.y0);
     function smite(e, dmgMul) {
       if (e.dead) return;
-      var h0 = e.hp; K().hurtEnemy(G, e, (e.hp * 6 + 20) * (dmgMul || 1), { src: caster, type: o.dtype || 'magic', elem: o.elem !== undefined ? o.elem : null, kb: 160, fx: ox, fy: oy, dot: true });
+      var h0 = e.hp; K().hurtEnemy(G, e, (e.hp * 6 + 20) * (dmgMul || 1), { src: caster, type: o.dtype || 'magic', elem: o.elem !== undefined ? o.elem : null, kb: 160, fx: ox, fy: oy, dot: true, aoe: true });
       if (e.dead) killed++;
     }
     function bossHit(e) {
       var d = o.bossDmg === undefined ? 90 : o.bossDmg;
-      K().hurtEnemy(G, e, K().heroDmg(G, caster, d * (caster.def.statMul || 1) * (caster.mod.ultPow || 1)), { src: caster, type: o.dtype || 'magic', elem: o.elem !== undefined ? o.elem : null, stun: o.stun === undefined ? 1.5 : o.stun, kb: 60, fx: ox, fy: oy, crit: false });
+      K().hurtEnemy(G, e, K().heroDmg(G, caster, d * (caster.def.statMul || 1) * (caster.mod.ultPow || 1)), { src: caster, type: o.dtype || 'magic', elem: o.elem !== undefined ? o.elem : null, stun: o.stun === undefined ? 1.5 : o.stun, kb: 60, fx: ox, fy: oy, crit: false, aoe: true });
     }
     others.forEach(bossHit);
     var shape = o.shape || 'screen', T = o.ringT || 0.4, resT = 0, W = Math.max(1, R.x1 - R.x0);
@@ -7926,7 +7933,7 @@ XY.TRAITS = {
         c.globalAlpha = (1 - k) * 0.28; c.fillStyle = f.color; c.beginPath(); c.arc(f.x, f.y, eb * 0.8, 0, PI2); c.fill();
         c.globalAlpha = Math.min(1, (1 - k) * 1.6); otxt(c, f.glyph, f.x, f.y - 4 - k * 14, 26 + 16 * (1 - k), f.color, 'center', true); c.globalAlpha = 1;
       } else if (f.type === 'ring') {
-        if (XY.vfx && f.st) { XY.vfx.drawRing(c, f, k); continue; }                 // v0.7：分层冲击波
+        if (XY.vfx) { XY.vfx.drawRing(c, f, k); continue; }                 // v0.7：分层冲击波
         var r = f.r * (0.25 + 0.75 * Math.min(1, k * 1.6));
         c.globalAlpha = (1 - k) * (f.fill ? 0.35 : 0.8);
         if (f.fill) { c.fillStyle = f.color; c.beginPath(); c.arc(f.x, f.y, r, 0, PI2); c.fill(); }
@@ -9071,11 +9078,13 @@ XY.TRAITS = {
     c.save(); c.translate(x, y); c.rotate(a); c.fillStyle = fill; c.strokeStyle = '#fff'; c.lineWidth = 2;
     c.beginPath(); c.moveTo(s, 0); c.lineTo(-s * 0.7, -s * 0.8); c.lineTo(-s * 0.35, 0); c.lineTo(-s * 0.7, s * 0.8); c.closePath(); c.fill(); c.stroke(); c.restore();
   }
-  function waveCompTxt(w) {
-    var E = XY.ENEMIES, t = [];
-    if (w.comp[0] > 0) t.push(E.small.name + '×' + w.comp[0]); if (w.comp[1] > 0) t.push(E.ranged.name + '×' + w.comp[1]); if (w.comp[2] > 0) t.push(E.tank.name + '×' + w.comp[2]);
+  function waveCompTxt(w, G) {
+    var E = XY.ENEMIES, t = [], mi = XY.waveMulInfo ? XY.waveMulInfo(G) : { m: 1 }, m = mi.m, sh = w.sh || 0, cap = C.MAX_ENEMIES - 30, tot = w.comp[0] + w.comp[1] + w.comp[2], k = Math.min(m, tot * m > cap ? cap / tot : m);
+    function n(x) { return Math.round(x * k); }
+    if (w.comp[0] > 0) t.push(E.small.name + '×' + n(w.comp[0])); if (w.comp[1] > 0) t.push(E.ranged.name + '×' + n(w.comp[1])); if (w.comp[2] - sh > 0) t.push(E.tank.name + '×' + n(w.comp[2] - sh)); if (sh > 0) t.push(E.shield.name + '×' + n(sh));
     if (w.elite > 0) t.push(E.elite.name + '×' + w.elite + '护送');
-    return t.join(' ');
+    var s = t.join(' '); if (mi.enr) s += '（狂暴 ×2）'; if (mi.far) s += '（分两路）';
+    return s;
   }
   function drawWaveChip(c, G, app, W, y) {
     var F = XY.waveForecast(G); if (!F) return y;
@@ -9091,7 +9100,7 @@ XY.TRAITS = {
     } else if (F.next) {
       T.txt(c, '下一波 ' + XY.fmtTime(Math.ceil(F.next.left)) + ' · ' + F.next.w.dir, x + w - 36, y + 13, 14, near ? '#b8680a' : T.T.ink, 'right', true); waveTri(c, x + w - 18, y + 13, F.next.w.a, 8, near ? '#e08a0b' : '#c9a24a');
     }
-    if (W0) T.txt(c, W0.name + (W0.big ? '！' : '') + ' · ' + waveCompTxt(W0), x + 12, y + 33, 12.5, W0.big ? '#b8300f' : T.T.ink, 'left', W0.big);
+    if (W0) T.txt(c, W0.name + (W0.big ? '！' : '') + ' · ' + waveCompTxt(W0, G), x + 12, y + 33, 12.5, W0.big ? '#b8300f' : T.T.ink, 'left', W0.big);
     return y + h + 6;
   }
   // 屏幕里的方向提示：从唐僧朝来袭方向射到可玩区域边缘，画一个脉动的箭头 + “妖潮”小字（只在最后 WAVE_LEAD 秒和刚来袭时画）
@@ -10118,26 +10127,33 @@ XY.CHIBI={"tang":{"w":532,"h":254,"fr":[[1,1,77,121,33,121],[134,1,70,121,24,121
     for (var i = 0; i <= sides; i++) { var a = rot + i / sides * PI2, rr = r + (jag ? (rnd() - 0.5) * jag : 0); if (i === 0) c.moveTo(x + cos(a) * rr, y + sin(a) * rr); else c.lineTo(x + cos(a) * rr, y + sin(a) * rr); }
     c.closePath();
   }
+  // v0.7：不再画同心圆。冲击 = 一圈向外飞的尖碎片（shards）+ 几道穿过中心的斩痕（slashes）；雷 = 锯齿多边形，金 = 六边形，火 = 更长的火舌，水 = 溅开的水滴菱形
+  function shards(c, x, y, r, n, L, rot, wide) {
+    c.beginPath();
+    for (var i = 0; i < n; i++) {
+      var an = rot + i / n * PI2, l = L * (i % 2 ? 0.62 : 1), hw = wide * (PI2 / n) * 0.5, rb = r - l * 0.6, rt = r + l * 0.5;
+      c.moveTo(x + cos(an - hw) * rb, y + sin(an - hw) * rb); c.lineTo(x + cos(an) * rt, y + sin(an) * rt); c.lineTo(x + cos(an + hw) * rb, y + sin(an + hw) * rb); c.closePath();
+    }
+  }
   V.drawRing = function (c, f, k) {
     var r = f.r * (0.25 + 0.75 * Math.min(1, k * 1.6)), a = 1 - k, st = f.st || 'default', col = f.main || f.color, lite = f.lite || '#fff', dk = f.dk || col;
-    if (f.fill) { c.globalAlpha = a * 0.2; c.fillStyle = col; c.beginPath(); c.arc(f.x, f.y, r, 0, PI2); c.fill(); c.globalAlpha = a * 0.16; c.fillStyle = lite; c.beginPath(); c.arc(f.x, f.y, r * 0.62, 0, PI2); c.fill(); }
-    var lw = 2 + 5 * a;
+    var n = Math.max(8, Math.min(24, Math.round(f.r / 8))), rot = ((f.x * 0.013 + f.y * 0.007) % 6.28) + k * 0.5, L = Math.max(9, r * 0.34) * (st === 'fire' ? 1.5 : 1), lw = 2 + 4 * a;
     c.lineJoin = 'round';
-    c.globalAlpha = a * 0.5; c.strokeStyle = dk; c.lineWidth = lw + 3;                    // 深色底边：浅背景上才有对比
-    if (st === 'thunder') polyRing(c, f.x, f.y, r, 22, 0, 10); else if (st === 'gold') polyRing(c, f.x, f.y, r, 6, 0.5 + k * 1.2, 0); else { c.beginPath(); c.arc(f.x, f.y, r, 0, PI2); }
-    c.stroke();
-    c.globalAlpha = a * 0.95; c.strokeStyle = col; c.lineWidth = lw;
-    if (st === 'thunder') polyRing(c, f.x, f.y, r, 22, 0, 10); else if (st === 'gold') polyRing(c, f.x, f.y, r, 6, 0.5 + k * 1.2, 0); else { c.beginPath(); c.arc(f.x, f.y, r, 0, PI2); }
-    c.stroke();
-    c.globalAlpha = a * 0.9; c.strokeStyle = lite; c.lineWidth = Math.max(1, lw * 0.35); c.beginPath(); c.arc(f.x, f.y, r * 0.97, 0, PI2); c.stroke();
-    if (f.r >= 60) {                                                                     // 第二层尾波
-      c.globalAlpha = a * 0.55; c.strokeStyle = col; c.lineWidth = Math.max(1, lw * 0.5); c.beginPath(); c.arc(f.x, f.y, r * 0.72, 0, PI2); c.stroke();
-      if (st === 'wave') { c.globalAlpha = a * 0.5; c.beginPath(); c.arc(f.x, f.y, r * 0.5, 0, PI2); c.stroke(); c.beginPath(); c.arc(f.x, f.y, r * 0.86, 0, PI2); c.stroke(); }
+    if (f.fill) { c.globalAlpha = a * 0.2; c.fillStyle = col; polyRing(c, f.x, f.y, r * 0.78, 11, rot, r * 0.18); c.fill(); }
+    if (st === 'thunder') { c.globalAlpha = a * 0.5; c.strokeStyle = dk; c.lineWidth = lw + 3; polyRing(c, f.x, f.y, r, 22, 0, 10); c.stroke(); c.globalAlpha = a * 0.95; c.strokeStyle = col; c.lineWidth = lw; polyRing(c, f.x, f.y, r, 22, 0, 10); c.stroke(); }
+    else if (st === 'gold') { c.globalAlpha = a * 0.5; c.strokeStyle = dk; c.lineWidth = lw + 3; polyRing(c, f.x, f.y, r, 6, 0.5 + k * 1.2, 0); c.stroke(); c.globalAlpha = a * 0.95; c.strokeStyle = col; c.lineWidth = lw; polyRing(c, f.x, f.y, r, 6, 0.5 + k * 1.2, 0); c.stroke(); }
+    else {
+      shards(c, f.x, f.y, r, n, L, rot, st === 'wave' ? 0.9 : 0.55);
+      c.globalAlpha = a * 0.55; c.strokeStyle = dk; c.lineWidth = 3; c.stroke();                       // 深色描边：浅背景上才有对比
+      c.globalAlpha = a * 0.92; c.fillStyle = (st === 'fire') ? '#ffb02a' : col; c.fill();
+      if (f.r >= 60) { shards(c, f.x, f.y, r * 0.62, Math.max(6, n >> 1), L * 0.6, -rot, 0.5); c.globalAlpha = a * 0.8; c.fillStyle = lite; c.fill(); }
     }
-    if (st === 'fire' && f.r >= 60) {                                                    // 火焰舌：环上一圈尖角
-      c.globalAlpha = a * 0.8; c.fillStyle = '#ffb02a'; c.strokeStyle = dk; c.lineWidth = 1.2;
-      var m = Math.min(22, Math.round(f.r / 9));
-      for (var i = 0; i < m; i++) { var an = i / m * PI2 + k * 1.5, hh = 10 + 14 * a + (i % 2) * 8; c.beginPath(); c.moveTo(f.x + cos(an - 0.06) * r, f.y + sin(an - 0.06) * r); c.lineTo(f.x + cos(an) * (r + hh), f.y + sin(an) * (r + hh)); c.lineTo(f.x + cos(an + 0.06) * r, f.y + sin(an + 0.06) * r); c.closePath(); c.fill(); c.stroke(); }
+    if (f.r >= 50) {                                                                    // 斩痕：几道穿过中心的长斜线
+      c.lineCap = 'round'; var sn = f.r >= 140 ? 4 : 3;
+      for (var i = 0; i < sn; i++) { var an = rot * 0.7 + i / sn * Math.PI, ln = r * (1.05 - 0.15 * (i % 2)), dx = cos(an) * ln, dy = sin(an) * ln * 0.8;
+        c.globalAlpha = a * 0.5; c.strokeStyle = dk; c.lineWidth = lw * 0.9 + 2; c.beginPath(); c.moveTo(f.x - dx, f.y - dy); c.lineTo(f.x + dx, f.y + dy); c.stroke();
+        c.globalAlpha = a * 0.95; c.strokeStyle = i % 2 ? col : lite; c.lineWidth = Math.max(1.2, lw * 0.5); c.beginPath(); c.moveTo(f.x - dx, f.y - dy); c.lineTo(f.x + dx, f.y + dy); c.stroke(); }
+      c.lineCap = 'butt';
     }
     c.globalAlpha = 1;
   };
@@ -10214,8 +10230,8 @@ XY.CHIBI={"tang":{"w":532,"h":254,"fr":[[1,1,77,121,33,121],[134,1,70,121,24,121
     if (f.type === 'vglyph') {                                                         // 地面符阵：双圈 + 旋转放射线
       var r = f.r * (0.6 + 0.5 * Math.min(1, k * 2));
       c.save(); c.translate(f.x, f.y); c.scale(1, 0.55);
-      c.globalAlpha = a * 0.5; c.strokeStyle = f.dk; c.lineWidth = 5; c.beginPath(); c.arc(0, 0, r, 0, PI2); c.stroke();
-      c.globalAlpha = a * 0.95; c.strokeStyle = f.main; c.lineWidth = 3; c.beginPath(); c.arc(0, 0, r, 0, PI2); c.stroke(); c.beginPath(); c.arc(0, 0, r * 0.68, 0, PI2); c.stroke();
+      c.globalAlpha = a * 0.5; c.strokeStyle = f.dk; c.lineWidth = 5; polyRing(c, 0, 0, r, 8, 0.39, 0); c.stroke();
+      c.globalAlpha = a * 0.95; c.strokeStyle = f.main; c.lineWidth = 3; polyRing(c, 0, 0, r, 8, 0.39, 0); c.stroke(); polyRing(c, 0, 0, r * 0.68, 4, 0.785, 0); c.stroke();
       c.globalAlpha = a * 0.7; c.lineWidth = 2;
       var m = f.st === 'gold' ? 6 : 8; c.rotate(k * 2.4);
       for (var i = 0; i < m; i++) { var an = i / m * PI2; c.beginPath(); c.moveTo(cos(an) * r * 0.68, sin(an) * r * 0.68); c.lineTo(cos(an) * r, sin(an) * r); c.stroke(); }
@@ -10265,12 +10281,12 @@ XY.CHIBI={"tang":{"w":532,"h":254,"fr":[[1,1,77,121,33,121],[134,1,70,121,24,121
       switch (p.kind) {
         case 'flash':                                                                   // 命中闪光：彩色光晕 + 白芯 + 十字芒
           var fr = p.r * (0.5 + 0.8 * k);
-          c.globalAlpha = a * 0.5; c.fillStyle = p.col; c.beginPath(); c.arc(p.x, p.y, fr, 0, PI2); c.fill();
-          c.globalAlpha = a * 0.9; c.fillStyle = p.col2 || '#fff'; c.beginPath(); c.arc(p.x, p.y, fr * 0.5, 0, PI2); c.fill();
+          c.globalAlpha = a * 0.55; c.fillStyle = p.col; shards(c, p.x, p.y, fr * 0.7, 8, fr * 0.7, p.t * 2, 0.45); c.fill();
+          c.globalAlpha = a * 0.9; c.fillStyle = p.col2 || '#fff'; polyRing(c, p.x, p.y, fr * 0.42, 4, 0.785 + p.t * 3, 0); c.fill();
           c.globalAlpha = a; c.strokeStyle = '#fff'; c.lineWidth = 2; c.beginPath(); c.moveTo(p.x - fr * 1.3, p.y); c.lineTo(p.x + fr * 1.3, p.y); c.moveTo(p.x, p.y - fr * 1.3); c.lineTo(p.x, p.y + fr * 1.3); c.stroke();
           break;
         case 'ringp':
-          c.globalAlpha = a * 0.8; c.strokeStyle = p.col; c.lineWidth = 3 * a + 1; c.beginPath(); c.arc(p.x, p.y, p.r * (0.3 + k * 0.9), 0, PI2); c.stroke(); break;
+          c.globalAlpha = a * 0.85; c.strokeStyle = p.col; c.lineWidth = 3 * a + 1; c.lineCap = 'round'; var rp = p.r * (0.3 + k * 0.9); for (var q4 = 0; q4 < 4; q4++) { var a4 = q4 * 1.5708 + 0.785; c.beginPath(); c.moveTo(p.x + cos(a4) * rp * 0.62, p.y + sin(a4) * rp * 0.62); c.lineTo(p.x + cos(a4) * rp, p.y + sin(a4) * rp); c.stroke(); } c.lineCap = 'butt'; break;
         case 'streak':
           var sp = Math.sqrt(p.vx * p.vx + p.vy * p.vy) || 1, ux = p.vx / sp, uy = p.vy / sp, L = p.len * (0.6 + 0.4 * a);
           c.lineCap = 'round'; c.globalAlpha = a * 0.55; c.strokeStyle = p.col; c.lineWidth = p.w + 2;
@@ -10283,7 +10299,7 @@ XY.CHIBI={"tang":{"w":532,"h":254,"fr":[[1,1,77,121,33,121],[134,1,70,121,24,121
           c.globalAlpha = a; c.strokeStyle = p.col2 || '#fff'; c.lineWidth = p.w * 0.6;
           c.beginPath(); c.moveTo(p.pts[0], p.pts[1]); for (j = 2; j < p.pts.length; j += 2) c.lineTo(p.pts[j], p.pts[j + 1]); c.stroke(); break;
         case 'glow':
-          c.globalAlpha = a * 0.35; c.fillStyle = p.col; c.beginPath(); c.arc(p.x, p.y, p.r * (1.5 - k * 0.5), 0, PI2); c.fill();
+          c.globalAlpha = a * 0.35; c.fillStyle = p.col; polyRing(c, p.x, p.y, p.r * (1.5 - k * 0.5), 4, 0.785, 0); c.fill();
           c.globalAlpha = a * 0.7; c.fillStyle = p.col2 || '#fff'; c.beginPath(); c.arc(p.x, p.y, p.r * 0.55 * (1 - k * 0.4), 0, PI2); c.fill(); break;
         case 'ember':
           c.globalAlpha = a * 0.9; c.fillStyle = k < 0.4 ? '#ffd24a' : p.col; c.beginPath(); c.arc(p.x, p.y, p.r * (1 - k * 0.7), 0, PI2); c.fill();
@@ -10352,7 +10368,7 @@ XY.CHIBI={"tang":{"w":532,"h":254,"fr":[[1,1,77,121,33,121],[134,1,70,121,24,121
   var XY = window.XY, C = XY.C, PI2 = Math.PI * 2, cos = Math.cos, sin = Math.sin;
   var B = XY.v07b = {};
   C.V07B = {
-    GUARD_MUL: 0.2, GUARD_BACK: 1.15, GUARD_TAN: 2.6,                         // 盾兵：正面伤害倍率；背后倍率；正面锥角（|dy| < |dx|×2.6 ≈ ±69°）
+    GUARD_MUL: 0.33, GUARD_TOWER: 0.5, GUARD_BACK: 1.15, GUARD_TAN: 2.6,                         // 盾兵：正面伤害倍率；背后倍率；正面锥角（|dy| < |dx|×2.6 ≈ ±69°）
     ROCK_CD: 9, ROCK_CD2: 6.5, ROCK_N: 3, ROCK_N2: 5, ROCK_R: 92, ROCK_T: 1.1, ROCK_DMG: 24, ROCK_TOWER: 45,
     EVO_ON: false, EVO_WLV: 4, EVO_NEED: 3, EVO_FALLBACK: 30, EVO_RANGE: 1.25, EVO_SLOW: 0.4, EVO_SLOW_T: 2.2, EVO_BURN_T: 3, EVO_BURN_K: 0.3
   };
@@ -10362,7 +10378,7 @@ XY.CHIBI={"tang":{"w":532,"h":254,"fr":[[1,1,77,121,33,121],[134,1,70,121,24,121
   B.faceOf = function (G, e) { var th = e.toCamp || !e.th ? (G.camp.active ? G.camp : G.heroes[0]) : e.th; return th.x > e.x ? 1 : -1; };   // 营地没开时怪追着唐僧走（updateEnemies 的 cgoal），盾也朝唐僧
   // 返回处理后的伤害；o 里没有攻击者位置（范围爆炸 / 持续伤害 / 天兵）时不挡
   B.guardHit = function (G, e, dmg, o, el) {
-    if (o.dot) return dmg;
+    if (o.dot || o.aoe) return dmg;                                          // 持续伤害 / 范围爆炸 / 大招范围：不挡
     var ax, ay;
     if (o.fx !== undefined && o.fx !== null) { ax = o.fx; ay = o.fy; } else if (o.src && o.src.x !== undefined) { ax = o.src.x; ay = o.src.y; } else return dmg;
     var dx = ax - e.x, dy = ay - e.y, look = B.faceOf(G, e);
@@ -10374,7 +10390,7 @@ XY.CHIBI={"tang":{"w":532,"h":254,"fr":[[1,1,77,121,33,121],[134,1,70,121,24,121
       if (XY.core.spark) XY.core.spark(G, e.x + look * e.r * 0.8, e.y, '#e8d9a0', 3);
       if (Math.random() < 0.5) XY.core.text(G, e.x + look * e.r, e.y - e.r - 12, '挡', 'resist');
       G.stats.guardBlocks = (G.stats.guardBlocks || 0) + 1;
-      return dmg * V.GUARD_MUL;
+      return dmg * (o.src === null ? 1 - (1 - V.GUARD_MUL) * V.GUARD_TOWER : V.GUARD_MUL);     // 塔的弹丸（src 为空）只挡一半
     }
     if (dx * look >= 0 || Math.abs(dy) >= Math.abs(dx) * V.GUARD_TAN) return dmg;        // 侧面：不挡也没加成
     G.stats.guardBacks = (G.stats.guardBacks || 0) + 1;
@@ -10419,6 +10435,17 @@ XY.CHIBI={"tang":{"w":532,"h":254,"fr":[[1,1,77,121,33,121],[134,1,70,121,24,121
   B.update = function (G, dt) {
     var ws = G.warns; if (!ws || !ws.length) return;
     var w = 0, i, j;
+    for (i = 0; i < ws.length; i++) {                                             // AI 队友（没被操控的徒弟 / 特殊角色）看见红圈就往圈外挪一步；唐僧不动（他本来就不受伤）
+      var wf = ws[i]; if (wf.kind !== 'rock' || wf.t >= wf.max || wf.t < -0.3) continue;
+      for (j = 1; j < G.heroes.length; j++) {
+        var ah = G.heroes[j]; if (ah.down || j === G.ctrl) continue;
+        var ddx = ah.x - wf.x, ddy = ah.y - wf.y, dd = Math.sqrt(ddx * ddx + ddy * ddy), lim = wf.r + ah.def.r + 8;
+        if (dd >= lim) continue;
+        if (dd < 1) { ddx = 1; ddy = 0; dd = 1; }
+        var st = Math.min(lim - dd + 2, Math.max(ah.speed || 190, 190) * 1.4 * dt);
+        ah.x = Math.max(40, Math.min(C.WORLD_W - 40, ah.x + ddx / dd * st)); ah.y = Math.max(40, Math.min(C.WORLD_H - 40, ah.y + ddy / dd * st));
+      }
+    }
     for (i = 0; i < ws.length; i++) {
       var f = ws[i], ow = f.owner;
       if (ow && (ow.dead || ow.retreatT > 0 || ow.hidden)) continue;           // 洞主倒下 / 败退：红圈消失
@@ -10443,10 +10470,13 @@ XY.CHIBI={"tang":{"w":532,"h":254,"fr":[[1,1,77,121,33,121],[134,1,70,121,24,121
       var f = ws[i]; if (f.t < 0) continue; var k = Math.min(1, f.t / f.max), pul = 0.5 + 0.5 * Math.sin(rt * 14);
       if (XY.inView && !XY.inView(G, f.x, f.y, f.r + 40)) continue;
       c.save();
-      c.fillStyle = 'rgba(214,52,36,' + (0.10 + 0.10 * pul) + ')'; c.beginPath(); c.arc(f.x, f.y, f.r, 0, PI2); c.fill();        // 底：淡红
-      c.fillStyle = 'rgba(214,52,36,' + (0.20 + 0.18 * k) + ')'; c.beginPath(); c.arc(f.x, f.y, f.r * k, 0, PI2); c.fill();        // 越来越满 = 倒计时
-      c.strokeStyle = 'rgba(190,30,20,0.95)'; c.lineWidth = 3.5; c.setLineDash([12, 8]); c.lineDashOffset = -rt * 40; c.beginPath(); c.arc(f.x, f.y, f.r, 0, PI2); c.stroke(); c.setLineDash([]);
-      c.strokeStyle = 'rgba(255,255,255,0.9)'; c.lineWidth = 1.5; c.beginPath(); c.arc(f.x, f.y, f.r + 3, 0, PI2); c.stroke();
+      // 落点是“必须看清的区域”：淡红底 + 斜纹警示（一看就是危险区）+ 倒计时填充 + 粗实线边
+      c.fillStyle = 'rgba(214,52,36,' + (0.14 + 0.10 * pul) + ')'; c.beginPath(); c.arc(f.x, f.y, f.r, 0, PI2); c.fill();
+      c.save(); c.beginPath(); c.arc(f.x, f.y, f.r, 0, PI2); c.clip(); c.strokeStyle = 'rgba(170,20,10,0.38)'; c.lineWidth = 6;
+      for (var hx = -f.r * 2; hx < f.r * 2; hx += 22) { c.beginPath(); c.moveTo(f.x + hx, f.y + f.r); c.lineTo(f.x + hx + f.r * 1.4, f.y - f.r); c.stroke(); }
+      c.fillStyle = 'rgba(214,52,36,' + (0.20 + 0.26 * k) + ')'; c.beginPath(); c.moveTo(f.x, f.y); c.arc(f.x, f.y, f.r * 1.05, -1.5708, -1.5708 + PI2 * k); c.closePath(); c.fill();   // 扇形倒计时：顺时针扫满
+      c.restore();
+      c.strokeStyle = 'rgba(160,20,10,1)'; c.lineWidth = 4.5; c.beginPath(); c.arc(f.x, f.y, f.r, 0, PI2); c.stroke();
       // 山石正在落下（越到最后越近，也越大）
       var fy = f.y - (1 - k) * (1 - k) * 260 - 6, s = 14 + 12 * k;
       c.fillStyle = '#8a6a52'; c.strokeStyle = '#3e2a1c'; c.lineWidth = 2.4; c.beginPath(); c.moveTo(f.x - s, fy + s * 0.5); c.lineTo(f.x - s * 0.8, fy - s * 0.4); c.lineTo(f.x - s * 0.1, fy - s * 0.9); c.lineTo(f.x + s * 0.7, fy - s * 0.5); c.lineTo(f.x + s, fy + s * 0.4); c.lineTo(f.x + s * 0.2, fy + s * 0.8); c.closePath(); c.fill(); c.stroke();
