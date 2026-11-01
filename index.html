@@ -3191,7 +3191,7 @@ XY.TRAITS = {
       var h = {
         i: i, id: def.id, def: def, sp: !!def.special,
         x: cx + cos(a) * 90, y: cy + 150 + sin(a) * 60,
-        hp: def.hp, maxHp: def.hp, down: false, inv: 0, order: order, dflt: true, sk: {}, mod: null, ultCd: 0, atkT: rand(0, 0.5), atkMax: 1,
+        hp: def.hp, maxHp: def.hp, down: false, inv: 0, order: order, sk: {}, mod: null, ultCd: 0, atkT: rand(0, 0.5), atkMax: 1,
         face: 0, wlv: 1, dmgMul: 1, crit: 0, dr: def.id === 'wujing' ? 0.15 : 0, tgt: null, retreat: false, rtT: 0,
         atkSpd: 1, hurtT: 0, contactT: 0, orbit: rand(0, 6), pend: [], dash: null, auraT: 0, regenAcc: 0,
         moving: false, auraHeal: 3, bob: rand(0, 6),
@@ -3686,8 +3686,6 @@ XY.TRAITS = {
     var tang = G.heroes[0], camp = G.camp.active ? G.camp : tang, order = h.order, i, near, dx, dy, dl;   // 营地只在休息时有意义；平时“驻守”= 守在唐僧身边
     if (order === 'guard' && (h.id === 'tang' || tang.down)) order = 'follow';   // 唐僧不能守护自己
     var stand = STAND[h.id];
-    // 唐僧在营地休息的这 5 分钟，只有唐僧一个人休息：徒弟 / 特殊角色的默认“守护”（玩家没下过命令的）在师父身边没有威胁时不许干站着，照样出去打（固守一定会输）；一有妖怪逼近师父 / 营地，立刻回去守
-    if (h.id !== 'tang' && order === 'guard' && h.dflt && G.tang.phase === 'rest' && !tang.down && !G.threat && !G.pthreat) order = 'attack';   // 只管“没人下过命令的默认守护”；玩家亲手点的命令（含驻守）照办
 
     if (order === 'station') {                                  // —— 驻守营地 ——
       var a = h.i * PI2 / 6 + 0.6, R = 98;
@@ -4103,7 +4101,7 @@ XY.TRAITS = {
     if (i === 0) { toast(G, '唐僧自己赶路，不接受命令'); return false; }
     if (h.down) { toast(G, h.def.name + ' 已阵亡，不能再下命令'); return false; }
     if (order === 'guard' && h.id === 'tang') { toast(G, '唐僧不能守护自己，请选别的命令'); return false; }
-    h.order = order; h.dflt = false; h.retreat = false; h.tgt = null;   // dflt：默认命令（没人下过令）；玩家点过命令就是显式命令
+    h.order = order; h.retreat = false; h.tgt = null;
     toast(G, h.def.name + '：' + XY.ORDER_NAME[order] + (G.ctrl === i ? '（你正在操控他，松手后生效）' : ''));
     return true;
   };
