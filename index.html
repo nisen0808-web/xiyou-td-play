@@ -118,6 +118,8 @@ XY.C = {
   DEN_SWARM_EVERY: 50,     // 洞府倾巢而出的间隔（秒）（v0.5：75→50）
   DEN_RATE_MUL: 2.4, SWARM_MUL: 1.6,       // v0.5 爽快样板：洞府稳定出怪速率 ×2.4、倾巢规模 ×1.6，同时单个小妖更脆（见 small.hp / xp）
   FLOW_WALK: 55, FLOW_REST: 100, FLOW_XP: 0.1, FLOW_COIN: 0.2, FLOW_R: 760, FLOW_BATCH: 9, SURGE_FIRST: 25, SURGE_EVERY: 45, SURGE_K0: 1.5, SURGE_K1: 2.0,   // v0.5 密度控制器：行军目标同屏 ~42、守营 ~95；每 ~45 秒一波浪潮（峰值 ×1.6–2.4）
+  WAVE_PLAN: true, WAVE_LEAD: 20, WAVE_BIG_EVERY: 4, WAVE_BIG_K: 1.5, WAVE_BIG_ELITE: 3, WAVE_REST_K: 1.3,   // v0.7 妖潮预告：提前 20 秒预告；行军每 4 波一个大潮；大潮数量 ×1.5 + 3 只牛头卫；休息点的潮 ×1.3
+  REST_SEG: 100, REST_PREP: 20, REST_WRAP: 20, REST_WAVES: [22, 55], REST_MUL_PREP: 0.5, REST_MUL_TIDE: 1.15, REST_MUL_WRAP: 0.55,   // 休息点 300 秒 = 3 个夜潮 × 100 秒（备战 20 + 来潮 60 + 收尾 20）；每夜潮 2 波，分别在 22 秒 / 55 秒；平时刷怪密度倍率：备战 ×0.5 / 来潮 ×1.15 / 收尾 ×0.55
   ROAD_EVERY: 15, ROAD_N0: 8, ROAD_N1: 14, ROAD_AHEAD0: 600, ROAD_AHEAD1: 900,   // 路边刷怪点：唐僧前方 600–900 路程处，每 ~15 秒 8–14 只（洞府离路远，光靠洞府怪太少）
   DROP_LIFE: 31, DROP_FADE: 4, DROP_CAP_GEM: 320, DROP_CAP_COIN: 200,   // v0.6：地上的经验 / 金币 31 秒后消失（比 Phyrex 的 30 秒全图收集长，最后 4 秒闪烁变淡）；数量上限，超了先没最老的
   PICK_R: 110, MAGNET_T: 0.9,             // 拾取半径 110（原 70）；清屏后吸附全屏掉落约 0.9 秒汇入
@@ -1164,7 +1166,7 @@ XY.TRAITS = {
      },
      {
       "name": "矿机",
-      "effect": "在脚下放一台矿机,不断向附近敌人砸下 BTC,同时给附近护法天兵 +攻速",
+      "effect": "在脚下放一台矿机,不断向附近敌人砸下金元宝,同时给附近护法天兵 +攻速",
       "cd": "CD 14s"
      },
      {
@@ -2060,7 +2062,7 @@ XY.TRAITS = {
         var f = F(l); ring(G, h.x, h.y, 240, '#7fd0ee', 0.5);
         addZone(G, { kind: 'rig', x: h.x, y: h.y, r: 240, t: 8, max: 8, every: 0.5, color: '#e5c24a', fn: function (G2, z) {
           var e = G2.grid.nearest(z.x, z.y, z.r);
-          if (e) { G2.fx.push({ type: 'coinDrop', x: e.x, y: e.y, t: 0, max: 0.35 }); hurt(G2, h, e, sd(G2, h, 16 * f), { elem: 'metal' }); }
+          if (e) { G2.fx.push({ type: 'coinDrop', x: e.x, y: e.y, t: 0, max: 0.35, ingot: true }); hurt(G2, h, e, sd(G2, h, 16 * f), { elem: 'metal' }); }
           G2.allies.forEach(function (a) { if (!a.dead && dist(a.x, a.y, z.x, z.y) < z.r) a.hasteUntil = G2.t + 1.5; });
         } }); } },
       { short: '冷', cd: CD(18, 16, 14), cond: function (G, h) { return cnt(G, h.x, h.y, 450) >= 3; }, fire: function (G, h, l) {
@@ -5389,20 +5391,28 @@ XY.TRAITS = {
     }
     var st = G.stats; st.visSum = (st.visSum || 0) + vis; st.visCnt = (st.visCnt || 0) + 1; if (vis > (st.visMax || 0)) st.visMax = vis;
     if (G.noSpawn) return;
-    var want = Math.round(XY.densityTarget(G) * XY.enrageSpawnMul(G)), surge = false;
-    if (G.surgeT <= 0) { G.surgeT = C.SURGE_EVERY * rand(0.8, 1.2) * (rest ? 0.75 : 1); surge = true; st.surges = (st.surges || 0) + 1; }
+    var wantBase = XY.densityTarget(G), em = XY.enrageSpawnMul(G), sg = XY.waveSeg(G), surge = false, WV = null;
+    var want = Math.round(wantBase * em * (sg ? sg.mul : 1));       // v0.7：休息点备战 / 收尾时怪少，来潮时多一点
     var fp = XY.routeAt(G.rt, Math.min(G.rt.total, G.tang.s + 500)), fa = Math.atan2(fp.y - tg.y, fp.x - tg.x);
+    if (C.WAVE_PLAN) { WV = XY.waveTick(G, wantBase, fa); surge = !!WV; if (surge) st.surges = (st.surges || 0) + 1; }      // v0.7：妖潮先排日程、先预告，到点按预告的方向 / 怪种 / 数量来
+    else if (G.surgeT <= 0) { G.surgeT = C.SURGE_EVERY * rand(0.8, 1.2) * (rest ? 0.75 : 1); surge = true; st.surges = (st.surges || 0) + 1; }
     for (var q0 = 0; q0 < foci.length; q0++) {
-      var F = foci[q0], n = surge ? Math.round(want * F.k * rand(C.SURGE_K0, C.SURGE_K1)) : Math.min(C.FLOW_BATCH, Math.ceil((want * F.k - F.near) * 0.35));
+      var F = foci[q0], n = WV ? Math.round(WV.n * F.k * em) : (surge ? Math.round(want * F.k * rand(C.SURGE_K0, C.SURGE_K1)) : Math.min(C.FLOW_BATCH, Math.ceil((want * F.k - F.near) * 0.35)));
       for (var j = 0; j < n && G.enemies.length < C.MAX_ENEMIES - 30; j++) {
-        var a = (q0 === 0 && Math.random() < 0.6) ? fa + rand(-1.1, 1.1) : rand(0, PI2), r = rand(R * 0.78, R * 1.08);
+        var a = WV ? (Math.random() < 0.85 ? WV.a + rand(-0.55, 0.55) : rand(0, PI2)) : ((q0 === 0 && Math.random() < 0.6) ? fa + rand(-1.1, 1.1) : rand(0, PI2)), r = rand(R * 0.78, R * 1.08);
         var x = clamp(F.x + cos(a) * r, 40, C.WORLD_W - 40), y = clamp(F.y + sin(a) * r * 0.75, 40, C.WORLD_H - 40);
         var q = Math.random(), type = q < 0.80 ? 'small' : (q < 0.93 ? 'ranged' : 'tank');
+        if (WV) { var u = j / n; type = u < WV.comp[0] / WV.n ? 'small' : (u < (WV.comp[0] + WV.comp[1]) / WV.n ? 'ranged' : 'tank'); }
         if (G.t < 45 && type === 'tank') type = 'small';
         var en = K.makeEnemy(G, type, x, y, null); en.road = true; en.flow = true; en.xpM = C.FLOW_XP; en.coinM = C.FLOW_COIN; if (rest) en.toCamp = true;
       }
+      if (WV && q0 === 0) for (var ek = 0; ek < WV.elite; ek++) {                                  // 大潮：牛头卫护送
+        var ea = WV.a + rand(-0.3, 0.3), er = rand(R * 0.85, R * 1.05);
+        var ee = K.makeEnemy(G, 'elite', clamp(F.x + cos(ea) * er, 40, C.WORLD_W - 40), clamp(F.y + sin(ea) * er * 0.75, 40, C.WORLD_H - 40), null); ee.road = true; if (rest) ee.toCamp = true;
+      }
     }
-    if (surge) XY.banner(G, rest ? '妖潮来袭！' : '前方妖群涌来！', 2);
+    if (WV) { XY.banner(G, WV.name + '来袭！（' + WV.dir + '）', 2.5); if (XY.sfx) XY.sfx('wave'); }
+    else     if (surge) XY.banner(G, rest ? '妖潮来袭！' : '前方妖群涌来！', 2);
   }
   function rest0(G) { return G.tang.phase === 'rest'; }
 
@@ -5892,6 +5902,114 @@ XY.TRAITS = {
 
 </script>
 <script>
+/* ---- js/waves.js ---- */
+/* ============================================================
+ * waves.js —— v0.7 妖潮预告 + 休息点三夜潮
+ *   · 每一波“妖潮”都先排好日程：几时来 / 从哪个方向 / 什么怪 / 多少只，提前 WAVE_LEAD 秒在屏幕上预告，到点按预告的来
+ *   · 休息点 300 秒（总时长不变）拆成 3 个夜潮，每个 100 秒：备战 20 秒（怪少）+ 来潮 60 秒（两波预告过的妖潮）+ 收尾 20 秒（怪少，歇口气）；第 3 夜潮的第二波是“大潮”（更多 + 牛头卫护送）
+ *   · 行军阶段保留原来的涌浪节奏（首次 SURGE_FIRST，之后约 SURGE_EVERY 一次），只是同样先预告；每第 4 波是大潮
+ *   · C.WAVE_PLAN = false 时回到 v0.6 的老规则（用于旧新对照，见 test/probe.js）
+ * 逻辑在 abilities.js 的 updateFlow 里调用 XY.waveTick / XY.waveSeg；画面在 render4.js（预告条 + 屏幕边缘箭头）。
+ * ============================================================ */
+(function () {
+  var XY = window.XY, C = XY.C, rand = XY.rand, PI2 = Math.PI * 2;
+
+  // 潮的种类：[小妖, 弓箭妖, 石头怪] 的占比 + 数量倍率
+  XY.WAVE_KINDS = {
+    swarm:  { name: '小妖潮',   mix: [0.92, 0.05, 0.03], nMul: 1.25 },
+    archer: { name: '弓箭潮',   mix: [0.45, 0.45, 0.10], nMul: 1.0 },
+    rock:   { name: '石头潮',   mix: [0.50, 0.10, 0.40], nMul: 0.8 },
+    mix:    { name: '混合潮',   mix: [0.80, 0.13, 0.07], nMul: 1.0 }
+  };
+  var KIND_IDS = ['swarm', 'archer', 'rock', 'mix'];
+  var DIRS = ['东', '东南', '南', '西南', '西', '西北', '北', '东北'];
+  XY.waveDirName = function (a) { var i = Math.round(((a % PI2) + PI2) % PI2 / (PI2 / 8)) % 8; return DIRS[i] + '方'; };   // 屏幕坐标：x 向右，y 向下
+
+  XY.waveState = function (G) { return G.wave || (G.wave = { next: null, seq: 0, last: null, rest: null, segKey: '', fired: 0, big: 0 }); };
+
+  // 休息阶段的第几夜潮 / 哪一段（备战 prep / 来潮 tide / 收尾 wrap）/ 这一段还剩几秒 / 这一段的刷怪密度倍率
+  XY.waveSeg = function (G) {
+    var T = G.tang; if (!C.WAVE_PLAN || T.phase !== 'rest') return null;
+    var seg = Math.max(1, C.REST_SEG), i = Math.min(2, Math.floor(T.restT / seg)), u = T.restT - i * seg, ph, left;
+    if (u < C.REST_PREP) { ph = 'prep'; left = C.REST_PREP - u; }
+    else if (u < seg - C.REST_WRAP) { ph = 'tide'; left = seg - C.REST_WRAP - u; }
+    else { ph = 'wrap'; left = seg - u; }
+    return { i: i, n: 3, ph: ph, left: left, mul: ph === 'prep' ? C.REST_MUL_PREP : (ph === 'tide' ? C.REST_MUL_TIDE : C.REST_MUL_WRAP) };
+  };
+
+  function pickKind(W) {
+    if (W.seq === 0) return 'swarm';
+    var k, tries = 0; do { k = KIND_IDS[Math.floor(Math.random() * KIND_IDS.length)]; } while (k === W.last && ++tries < 8);
+    return k;
+  }
+  function plan(G, at, want, rest, forward, big) {
+    var W = XY.waveState(G), kind = pickKind(W), K = XY.WAVE_KINDS[kind];
+    var fwd = !rest && Math.random() < 0.6;
+    var a = fwd ? forward + rand(-0.5, 0.5) : rand(0, PI2);
+    var kRest = rest ? C.WAVE_REST_K : 1;
+    var n = Math.round(want * rand(C.SURGE_K0, C.SURGE_K1) * K.nMul * kRest * (big ? C.WAVE_BIG_K : 1));
+    var comp = [Math.round(n * K.mix[0]), Math.round(n * K.mix[1]), 0]; comp[2] = Math.max(0, n - comp[0] - comp[1]);
+    W.seq++; W.last = kind;
+    return { at: at, a: a, dir: XY.waveDirName(a), fwd: fwd, kind: kind, name: big ? '大潮' : K.name, big: !!big, n: n, comp: comp, elite: big ? C.WAVE_BIG_ELITE : 0, warned: false, em0: 1 };
+  }
+
+  // 每个刷怪节拍调用一次（abilities.updateFlow 在 0.45 秒节拍里调）。到点了返回要刷的那一波，否则返回 null；没排日程就先排好。
+  XY.waveTick = function (G, want, forward) {
+    var W = XY.waveState(G), T = G.tang, rest = T.phase === 'rest', now = G.t, i;
+    if (rest) {
+      if (!W.rest) {                                         // 刚进休息点：一次排好 6 波（每夜潮 2 波），按休息计时换算成游戏时间
+        W.rest = []; W.next = null;
+        for (i = 0; i < 3; i++) C.REST_WAVES.forEach(function (u, j) {
+          var big = i === 2 && j === C.REST_WAVES.length - 1;
+          W.rest.push({ rt: i * C.REST_SEG + u, big: big });
+        });
+        W.restDone = 0;
+      }
+      var segN = XY.waveSeg(G);
+      var key = segN ? segN.i + segN.ph : '';
+      if (key !== W.segKey) {
+        W.segKey = key;
+        if (segN && T.restT > 0.1) {
+          if (segN.ph === 'prep') XY.banner(G, '夜潮 ' + (segN.i + 1) + '/3：备战 ' + C.REST_PREP + ' 秒', 2.5);
+          else if (segN.ph === 'wrap') XY.banner(G, '鸡鸣妖退，歇一口气', 2.5);
+        }
+      }
+      if (!W.next && W.restDone < W.rest.length) {
+        var r = W.rest[W.restDone];
+        if (T.restT <= r.rt + 0.5) { W.next = plan(G, now + Math.max(0, r.rt - T.restT), want, true, forward, r.big); W.next.restIdx = W.restDone; }
+        else W.restDone++;                                    // 错过了（暂停 / 调试跳时间）：直接跳过
+      }
+    } else {
+      if (W.rest) { W.rest = null; W.next = null; W.segKey = ''; }
+      if (!W.next) {
+        var first = W.fired === 0 && W.seq === 0;
+        var at = first ? C.SURGE_FIRST : now + C.SURGE_EVERY * rand(0.8, 1.2);
+        if (first && at < now) at = now + 5;
+        W.next = plan(G, at, want, false, forward, (W.fired + 1) % C.WAVE_BIG_EVERY === 0 && W.fired > 0);
+      }
+    }
+    var nx = W.next; if (!nx) return null;
+    var left = nx.at - now;
+    if (!nx.warned && left <= C.WAVE_LEAD) { nx.warned = true; if (XY.sfx) XY.sfx('wave_warn'); }
+    if (left > 0) return null;
+    W.next = null; W.fired++; if (nx.big) W.big++; if (nx.restIdx !== undefined) W.restDone = nx.restIdx + 1;
+    W.fired0 = nx; W.firedAt = now;                          // 正在来袭：预告条再显示 4 秒“妖潮来袭”
+    return nx;
+  };
+
+  // 预告条要显示的内容（没有要显示的返回 null）
+  XY.waveForecast = function (G) {
+    if (!C.WAVE_PLAN || G.tut || G.noSpawn || G.tang.phase === 'arrived' || G.ending) return null;
+    var W = G.wave; if (!W) return null;
+    var nx = W.next, seg = XY.waveSeg(G), out = { seg: seg, next: null, now: null };
+    if (nx && nx.at - G.t <= C.WAVE_LEAD) out.next = { left: Math.max(0, nx.at - G.t), w: nx };
+    if (W.fired0 && G.t - W.firedAt < 4) out.now = { w: W.fired0, k: (G.t - W.firedAt) / 4 };
+    return (out.seg || out.next || out.now) ? out : null;
+  };
+})();
+
+</script>
+<script>
 /* ---- js/fx5.js ---- */
 /* ============================================================
  * fx5.js —— v0.5 “爽快样板”：诚实的清屏、顿帧、吸附、WebAudio
@@ -6018,7 +6136,7 @@ XY.TRAITS = {
   /* ================= WebAudio ================= */
   var A = XY.audio = { ctx: null, master: null, mute: false, voices: 0, maxVoices: 0, played: 0, merged: 0, dropped: 0, byName: {}, last: {}, gemStep: 0, gemT: 0, nodes: 0 };
   try { A.mute = window.localStorage.getItem('xy_mute') === '1'; } catch (e) {}
-  var LIMIT = 16, GAP = { hit: 0.045, crit: 0.06, kill: 0.04, elite: 0.1, gem: 0.03, coin: 0.05, ult_charge: 0.2, ult_land: 0.3, ult_sweep: 0.3, sky: 0.3, level: 0.5, card: 0.2, boss: 0.5, enrage: 1, danger: 0.6, win: 1, lose: 1, place: 0.1, ui: 0.05 };
+  var LIMIT = 16, GAP = { hit: 0.045, crit: 0.06, kill: 0.04, elite: 0.1, gem: 0.03, coin: 0.05, ult_charge: 0.2, ult_land: 0.3, ult_sweep: 0.3, sky: 0.3, level: 0.5, card: 0.2, boss: 0.5, enrage: 1, danger: 0.6, wave_warn: 1, wave: 1, win: 1, lose: 1, place: 0.1, ui: 0.05 };
   A.init = function () {
     if (A.ctx) { if (A.ctx.state === 'suspended') A.ctx.resume(); return; }
     try {
@@ -6063,6 +6181,8 @@ XY.TRAITS = {
     card:  function (p) { var b = p === 'S' ? 700 : (p === 'A' ? 600 : 500); return [{ type: 'sine', f0: b, dur: 0.18, gain: 0.12 }, { type: 'sine', f0: b * 1.5, dur: 0.3, gain: 0.12, delay: 0.1 }]; },
     boss:  function () { return [{ type: 'sawtooth', f0: 90, f1: 55, dur: 0.7, gain: 0.25 }, { noise: 1, f0: 600, f1: 100, dur: 0.5, gain: 0.15 }]; },
     enrage: function () { return [{ type: 'sawtooth', f0: 70, f1: 40, dur: 1.0, gain: 0.3 }, { type: 'square', f0: 140, f1: 90, dur: 0.8, gain: 0.12 }, { noise: 1, f0: 2500, f1: 120, dur: 0.8, gain: 0.22 }, { type: 'sawtooth', f0: 220, f1: 330, dur: 0.5, gain: 0.1, delay: 0.5 }]; },
+    wave_warn: function () { return [{ type: 'triangle', f0: 392, dur: 0.22, gain: 0.14 }, { type: 'triangle', f0: 523, dur: 0.3, gain: 0.14, delay: 0.2 }]; },
+    wave:  function () { return [{ type: 'sawtooth', f0: 110, f1: 60, dur: 0.8, gain: 0.2 }, { noise: 1, f0: 800, f1: 120, dur: 0.6, gain: 0.12 }]; },
     danger: function () { return [{ type: 'square', f0: 220, f1: 200, dur: 0.18, gain: 0.07 }, { type: 'square', f0: 220, dur: 0.18, gain: 0.07, delay: 0.25 }]; },
     win:   function () { return [523, 659, 784, 1046].map(function (f, i) { return { type: 'triangle', f0: f, dur: 0.35, gain: 0.13, delay: i * 0.12 }; }); },
     lose:  function () { return [392, 330, 262, 196].map(function (f, i) { return { type: 'sine', f0: f, dur: 0.4, gain: 0.14, delay: i * 0.18 }; }); },
@@ -6575,6 +6695,13 @@ XY.TRAITS = {
     c.restore();
   }
   XY.drawBtcCoin = coin;
+  // 金元宝（掉落物 / 非 Phyrex 角色的金币特效用；BTC 币只属于 Phyrex）
+  XY.drawIngot = function (c, x, y, sc, rot) {
+    c.save(); c.translate(x, y); c.rotate(rot || 0); c.scale(sc || 1, sc || 1);
+    c.fillStyle = '#ffd24a'; c.strokeStyle = '#b8860b'; c.lineWidth = 1.8; c.beginPath(); c.moveTo(-8, -1); c.quadraticCurveTo(0, -10, 8, -1); c.lineTo(5.5, 6); c.lineTo(-5.5, 6); c.closePath(); c.fill(); c.stroke();
+    c.strokeStyle = '#fff1b0'; c.lineWidth = 1.4; c.beginPath(); c.moveTo(-3.5, -3); c.quadraticCurveTo(0, -6, 3.5, -3); c.stroke();
+    c.restore();
+  };
   XY.phDrawProj = function (c, p, rt) {
     var a = Math.atan2(p.vy, p.vx), g = c.createLinearGradient(p.x - cos(a) * 30, p.y - sin(a) * 30, p.x, p.y);
     g.addColorStop(0, 'rgba(255,120,30,0)'); g.addColorStop(1, 'rgba(255,170,40,0.85)');
@@ -6608,7 +6735,8 @@ XY.TRAITS = {
     } else if (f.type === 'coinDrop') {
       var rr = f.big ? 30 : 13, yy = f.y - 160 * (1 - Math.min(1, k * 1.8)); c.save(); c.globalAlpha = k > 0.6 ? Math.max(0, (1 - k) / 0.4) : 1;
       if (k > 0.5) { c.strokeStyle = 'rgba(240,180,41,0.8)'; c.lineWidth = 3; c.beginPath(); c.arc(f.x, f.y, rr * (1 + (k - 0.5) * 4), 0, PI2); c.stroke(); }
-      coin(c, f.x, yy, rr, k * 8); c.restore();
+      if (f.ingot) XY.drawIngot(c, f.x, yy, rr / 8, k * 3); else coin(c, f.x, yy, rr, k * 8);      // 只有 Phyrex 的币才是 BTC；矿机等别人的「砸币」画金元宝
+      c.restore();
     } else if (f.type === 'xform') {
       var h = f.follow || { x: f.x, y: f.y }; c.save(); c.globalAlpha = Math.max(0, 1 - k);
       for (var i = 0; i < 8; i++) { var a = i / 8 * PI2 + k * 2; c.strokeStyle = 'rgba(255,214,90,0.9)'; c.lineWidth = 6; c.beginPath(); c.moveTo(h.x + cos(a) * 30, h.y + sin(a) * 30); c.lineTo(h.x + cos(a) * (60 + 260 * k), h.y + sin(a) * (60 + 260 * k)); c.stroke(); }
@@ -7687,18 +7815,19 @@ XY.TRAITS = {
     // 命令标签：手动 / 自动命令（唐僧驻守生效时写明“只回血”）
     var lab = isC ? '手动' : (h.id === 'tang' && G.station ? '驻守中·只回血' : (XY.ORDER_SHORT[h.order] || ''));
     if (lab) otxt(c, lab, x, y + r + 20, 11, isC ? '#b8300f' : (G.station && h.id === 'tang' ? '#a8700a' : '#4a6a8a'), 'center', true);
+    var clash = XY.R4.labelClash(G, x - 50, y - r - 54, 100, 52);          // v0.7：头顶标签碰到 BOSS 的名牌 / 血条区域 → 名字等挪到脚下
     // 唐僧血量低：红圈 + 感叹号
     if (h.id === 'tang' && (G.tdanger || G.breach)) {
       var pz = 0.5 + 0.5 * Math.sin(rt * 10);
       c.strokeStyle = 'rgba(224,60,40,' + (0.5 + 0.4 * pz) + ')'; c.lineWidth = 3.5; c.beginPath(); c.arc(x, y, r + 11 + pz * 3, 0, PI2); c.stroke();
-      otxt(c, G.breach ? '妖怪进营地了！' : '师傅危险！', x, y - r - 42, 14, '#d62828', 'center', true);
+      otxt(c, G.breach ? '妖怪进营地了！' : '师傅危险！', x, clash ? y + r + 46 : y - r - 42, 14, '#d62828', 'center', true);
     }
     if (h.id === 'tang' && h.inv > 0 && G.t < C.TANG_START_INV + 0.5) {
-      otxt(c, '开局保护 ' + Math.ceil(h.inv) + ' 秒', x, y - r - 42, 12, '#a8700a', 'center', true);
+      otxt(c, '开局保护 ' + Math.ceil(h.inv) + ' 秒', x, clash ? y + r + 46 : y - r - 42, 12, '#a8700a', 'center', true);
     }
     // 名字（操控中的更醒目，头顶带小三角）
-    otxt(c, d.name, x, y - r - (isC ? 17 : 13), isC ? 15 : 13, isC ? '#b8300f' : T.ink, 'center', true);
-    if (isC) { c.fillStyle = '#e0533d'; c.beginPath(); c.moveTo(x - 6, y - r - 36 + Math.sin(rt * 6) * 2); c.lineTo(x + 6, y - r - 36 + Math.sin(rt * 6) * 2); c.lineTo(x, y - r - 28 + Math.sin(rt * 6) * 2); c.fill(); }
+    otxt(c, d.name, x, clash ? y + r + (h.sp ? 47 : 34) : y - r - (isC ? 17 : 13), isC ? 15 : 13, isC ? '#b8300f' : T.ink, 'center', true);
+    if (isC && !clash) { c.fillStyle = '#e0533d'; c.beginPath(); c.moveTo(x - 6, y - r - 36 + Math.sin(rt * 6) * 2); c.lineTo(x + 6, y - r - 36 + Math.sin(rt * 6) * 2); c.lineTo(x, y - r - 28 + Math.sin(rt * 6) * 2); c.fill(); }
   }
 
   function R4rt() { return XY.R4.rt; }
@@ -8516,14 +8645,17 @@ XY.TRAITS = {
     // 牌匾
     var nm = den.name + (alive ? '' : '（已镇灭）');
     c.font = 'bold 15px ' + C.FONT; var tw = c.measureText(nm).width + 22;
-    T.rrect(c, x - tw / 2, y - 100, tw, 26, 8); c.fillStyle = alive ? '#fff1d0' : '#ecebe6'; c.fill(); c.lineWidth = 2; c.strokeStyle = alive ? ec : '#aaa79e'; c.stroke();
-    T.txt(c, nm, x, y - 87, 15, alive ? '#4a2a05' : '#8a8578', 'center', true);
+    var py0 = y - 100, bsn = den.boss;
+    if (alive && bsn && !bsn.dead && !bsn.hidden && dist2(bsn.x, bsn.y, x, y) < 340 * 340) py0 = y + 54;      // v0.7：洞主在洞口附近时，牌匾挪到洞口下方，别和他头顶的名牌 / 血条 / 倒计时叠在一起
+    T.rrect(c, x - tw / 2, py0, tw, 26, 8); c.fillStyle = alive ? '#fff1d0' : '#ecebe6'; c.fill(); c.lineWidth = 2; c.strokeStyle = alive ? ec : '#aaa79e'; c.stroke();
+    T.txt(c, nm, x, py0 + 13, 15, alive ? '#4a2a05' : '#8a8578', 'center', true);
     if (alive) {                                   // 倾巢 / 精英倒计时提示：快到了就闪
       if (den.swarmT < 4 && Math.sin(rt * 14) > 0) T.otxt(c, '倾巢出动！', x, y - 116, 14, '#d62828', 'center', true);
     } else {
       c.strokeStyle = '#8a8578'; c.lineWidth = 3; c.beginPath(); c.moveTo(x - 40, y - 4); c.lineTo(x + 40, y + 30); c.moveTo(x + 40, y - 4); c.lineTo(x - 40, y + 30); c.stroke();
     }
   }
+  function dist2(ax, ay, bx, by) { var dx = ax - bx, dy = ay - by; return dx * dx + dy * dy; }
   function drawGate(c, G, rt) {
     var g = G.gate, x = g.x, y = g.y, T = R(), open = !g.sealed;
     if (!inV(G, x, y, 200)) return;
@@ -8715,6 +8847,22 @@ XY.TRAITS = {
     return { fill: 'rgba(245,238,255,0.95)', line: '#9b59d0', ink: '#5b2d91', warn: 0, pulse: 0 };
   }
   R4.enrageLook = enrageLook;
+  // v0.7 标签防重叠：BOSS 头顶的“倒计时胶囊 + 名牌 + 血条”占一块固定区域；英雄名字 / 洞府牌匾碰到这块区域就挪到脚下 / 洞口下方
+  R4.bossStacks = function (G) {
+    if (G._bsT === R4.rt && G._bsN === G.enemies.length && G._bsX === G.cam.x && G._bsY === G.cam.y) return G._bs;
+    var out = [], i, e, tp;
+    for (i = 0; i < G.enemies.length; i++) {
+      e = G.enemies[i]; if (e.dead || !e.def || !e.def.denBoss || e.hidden || !inV(G, e.x, e.y, 200)) continue;
+      tp = (XY.MA && XY.MA.hasFigure && XY.MA.hasFigure(e)) ? XY.MA.topOf(e) : e.r + 14;
+      out.push({ x0: e.x - 80, x1: e.x + 80, y0: e.y - tp - 66, y1: e.y - tp - 3, e: e });
+    }
+    G._bsT = R4.rt; G._bsN = G.enemies.length; G._bsX = G.cam.x; G._bsY = G.cam.y; return (G._bs = out);
+  };
+  R4.labelClash = function (G, x, y, w, h) {
+    var bs = R4.bossStacks(G);
+    for (var i = 0; i < bs.length; i++) { var b = bs[i]; if (x < b.x1 && x + w > b.x0 && y < b.y1 && y + h > b.y0) return true; }
+    return false;
+  };
   R4.enemyOver = function (c, G, e, rt) {
     var T = R(), d = e.def, x = e.x, y = e.y, r = e.r;
     if (e.shield > 0) {                                   // 精英元素护盾：元素色光罩 + 剩余量弧条
@@ -8806,8 +8954,8 @@ XY.TRAITS = {
     if (cb && cb.n >= 3) {
       var sc = 1 + Math.min(0.5, cb.n / 120) + cb.pop * 2.2, a = Math.min(1, cb.t / 0.6);
       c.save(); c.globalAlpha = a; c.textAlign = 'center';
-      T.otxt(c, cb.n + ' 连杀', W / 2, 118, Math.round(30 * sc), cb.n >= 50 ? '#e8590c' : (cb.n >= 25 ? '#d9822b' : '#7a5a1e'), 'center', true);
-      c.fillStyle = 'rgba(217,130,43,0.85)'; c.fillRect(W / 2 - 60, 132 + 14 * sc * 0.5, 120 * Math.max(0, cb.t / 2.8), 4);
+      T.otxt(c, cb.n + ' 连杀', W / 2, H * 0.3, Math.round(30 * sc), cb.n >= 50 ? '#e8590c' : (cb.n >= 25 ? '#d9822b' : '#7a5a1e'), 'center', true);
+      c.fillStyle = 'rgba(217,130,43,0.85)'; c.fillRect(W / 2 - 60, H * 0.3 + 14 + 14 * sc * 0.5, 120 * Math.max(0, cb.t / 2.8), 4);
       c.restore();
     }
     if (G.comboMs) { k = G.comboMs.t / G.comboMs.max; c.save(); c.globalAlpha = 1 - k * k; T.otxt(c, '连杀 ×' + G.comboMs.n + '！', W / 2, H * 0.32 - 30 * k, 44 + 12 * (1 - k), '#c2410c', 'center', true); c.restore(); }
@@ -8848,6 +8996,50 @@ XY.TRAITS = {
     else T.txt(c, '时间到还没打死：数值 ×' + C.BOSS_ENRAGE_MUL + '，小怪出量 ×' + C.ENRAGE_SPAWN_MUL, x + w - 14, y + 13, 11, T.T.inkSoft, 'right', false);
     T.bar(c, x + 12, y + 23, w - 24, 6, t / total, lk.warn === 2 ? '#d62828' : (lk.warn === 1 ? '#e08a0b' : '#9b59d0'), 'rgba(255,255,255,0.85)');
     return y + h + 6;
+  }
+  // v0.7 妖潮预告条：休息点显示“夜潮 n/3 · 备战 / 来潮 / 收尾 + 倒计时”；下一波 ≤ WAVE_LEAD 秒时再加一行“几秒后 · 哪个方向 · 什么怪 × 多少”；刚刷出来的 4 秒显示“妖潮来袭”
+  var SEGN = { prep: '备战', tide: '来潮', wrap: '收尾' };
+  function waveTri(c, x, y, a, s, fill) {
+    c.save(); c.translate(x, y); c.rotate(a); c.fillStyle = fill; c.strokeStyle = '#fff'; c.lineWidth = 2;
+    c.beginPath(); c.moveTo(s, 0); c.lineTo(-s * 0.7, -s * 0.8); c.lineTo(-s * 0.35, 0); c.lineTo(-s * 0.7, s * 0.8); c.closePath(); c.fill(); c.stroke(); c.restore();
+  }
+  function waveCompTxt(w) {
+    var E = XY.ENEMIES, t = [];
+    if (w.comp[0] > 0) t.push(E.small.name + '×' + w.comp[0]); if (w.comp[1] > 0) t.push(E.ranged.name + '×' + w.comp[1]); if (w.comp[2] > 0) t.push(E.tank.name + '×' + w.comp[2]);
+    if (w.elite > 0) t.push(E.elite.name + '×' + w.elite + '护送');
+    return t.join(' ');
+  }
+  function drawWaveChip(c, G, app, W, y) {
+    var F = XY.waveForecast(G); if (!F) return y;
+    var T = R(), rt = app.rt, w = Math.min(W - 20, 470), x = W / 2 - w / 2, W0 = F.now ? F.now.w : (F.next ? F.next.w : null), h = W0 ? 48 : 26;
+    var near = F.next && F.next.left <= 8, hot = !!F.now || near, p = 0.5 + 0.5 * Math.sin(rt * 9);
+    var bd = F.now ? '#d62828' : (near ? '#e08a0b' : '#c9a24a');
+    c.globalAlpha = 0.96; T.rrect(c, x, y, w, h, 11); c.fillStyle = F.now ? 'rgba(255,238,232,0.97)' : (near ? 'rgba(255,246,226,0.97)' : 'rgba(255,255,255,0.94)'); c.fill();
+    c.lineWidth = hot ? 2.5 + p : 1.8; c.strokeStyle = bd; c.stroke(); c.globalAlpha = 1;
+    var segT = F.seg ? '夜潮 ' + (F.seg.i + 1) + '/3 · ' + SEGN[F.seg.ph] + ' ' + XY.fmtTime(Math.ceil(F.seg.left)) : '行军 · 前方有妖群';
+    T.txt(c, segT, x + 12, y + 13, 13, T.T.inkSoft, 'left', true);
+    if (F.now) {
+      T.txt(c, '妖潮来袭！' + F.now.w.dir, x + w - 36, y + 13, 14, '#c0281a', 'right', true); waveTri(c, x + w - 18, y + 13, F.now.w.a, 8, '#d62828');
+    } else if (F.next) {
+      T.txt(c, '下一波 ' + XY.fmtTime(Math.ceil(F.next.left)) + ' · ' + F.next.w.dir, x + w - 36, y + 13, 14, near ? '#b8680a' : T.T.ink, 'right', true); waveTri(c, x + w - 18, y + 13, F.next.w.a, 8, near ? '#e08a0b' : '#c9a24a');
+    }
+    if (W0) T.txt(c, W0.name + (W0.big ? '！' : '') + ' · ' + waveCompTxt(W0), x + 12, y + 33, 12.5, W0.big ? '#b8300f' : T.T.ink, 'left', W0.big);
+    return y + h + 6;
+  }
+  // 屏幕里的方向提示：从唐僧朝来袭方向射到可玩区域边缘，画一个脉动的箭头 + “妖潮”小字（只在最后 WAVE_LEAD 秒和刚来袭时画）
+  function drawWaveEdge(c, G, app, W, H) {
+    var F = XY.waveForecast(G); if (!F || !(F.now || F.next)) return;
+    var w0 = F.now ? F.now.w : F.next.w, tg = G.heroes[0], T = R(), rt = app.rt;
+    var xl = 300, xr = W - 290, yt = 150, yb = H - 200; if (xr - xl < 160) { xl = W * 0.25; xr = W * 0.75; }
+    var x0 = Math.min(Math.max(tg.x - G.cam.x + G.view.w / 2, xl + 30), xr - 30), y0 = Math.min(Math.max(tg.y - G.cam.y + G.view.h / 2, yt + 30), yb - 30);
+    var dx = Math.cos(w0.a), dy = Math.sin(w0.a), tt = 1e9;
+    if (dx > 1e-3) tt = Math.min(tt, (xr - x0) / dx); else if (dx < -1e-3) tt = Math.min(tt, (xl - x0) / dx);
+    if (dy > 1e-3) tt = Math.min(tt, (yb - y0) / dy); else if (dy < -1e-3) tt = Math.min(tt, (yt - y0) / dy);
+    var px = x0 + dx * tt, py = y0 + dy * tt; XY.ui.waveArrow = { x: px, y: py, a: w0.a, x0: x0, y0: y0 }; var _u = 0, p = 0.5 + 0.5 * Math.sin(rt * 8), hot = !!F.now || (F.next && F.next.left <= 8);
+    var col = hot ? '#d62828' : '#e08a0b', s = 15 + 3 * p;
+    c.save(); c.globalAlpha = 0.28 + 0.2 * p; var gr = c.createRadialGradient(px, py, 4, px, py, 90); gr.addColorStop(0, col); gr.addColorStop(1, 'rgba(255,255,255,0)'); c.fillStyle = gr; c.fillRect(px - 90, py - 90, 180, 180); c.restore();
+    waveTri(c, px - dx * 6, py - dy * 6, w0.a, s, col);
+    var lx = px - dx * 44, ly = py - dy * 44; T.txt(c, F.now ? '妖潮来了' : '妖潮 ' + XY.fmtTime(Math.ceil(F.next.left)), lx, ly, 12, hot ? '#b8201a' : '#a8660a', 'center', true);
   }
   function drawTop(c, G, app, ctx) {
     var T = R(), W = app.lw, rt = app.rt, min = G.t / 60;
@@ -9350,6 +9542,8 @@ XY.TRAITS = {
     // 提示横幅 / 红条
     var stripY = ctx.denBottom + 6;
     if (G.tut) stripY = Math.max(stripY, ctx.tutBottom + 6);                                 // 新手提示条在的时候，横幅 / 红条放到它下面（原来会盖住）
+    stripY = drawWaveChip(c, G, app, W, stripY);                                             // v0.7 妖潮预告条（夜潮第几段 / 下一波几秒后、哪个方向、什么怪）
+    drawWaveEdge(c, G, app, W, H);
     stripY = drawEnrage(c, G, app, W, stripY);                                               // BOSS 狂暴倒计时 / 狂暴提示条（有 BOSS 在倒数才画）
     XY.ui.strip = null;
     if (G.breach && !tg.down) {
