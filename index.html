@@ -9480,22 +9480,24 @@ XY.TRAITS = {
     T.btnS(c, app, ax0, py + 12, abw, 36, '自动加点：' + (G.autoPoints ? '开' : '关'), 'autopts', G.autoPoints);
     T.btnS(c, app, cx0, py + 12, cbw, 36, '关闭 Tab', 'closeSkills', false, true);
     // 标签
-    var nt = n + 1, tw = (pw - 28 - (nt - 1) * 6) / nt, ty = py + 58, th = 46;
+    var nt = n + (G.fb ? 2 : 1), tw = (pw - 28 - (nt - 1) * 6) / nt, ty = py + 58, th = 46;
     for (i = 0; i < nt; i++) {
-      var id = i < n ? i : PT, tx = px + 14 + i * (tw + 6), hd = i < n ? G.heroes[i] : null, dead = hd && hd.down, act = tab === id;
+      var id = i < n ? i : (i === n ? PT : 10), tx = px + 14 + i * (tw + 6), hd = i < n ? G.heroes[i] : null, dead = hd && hd.down, act = tab === id;
       var thov = !dead && mouse && mouse.x >= tx && mouse.x <= tx + tw && mouse.y >= ty && mouse.y <= ty + th;
       T.rrect(c, tx, ty, tw, th, 10); c.fillStyle = dead ? '#dedbd3' : (act ? '#fff3cf' : (thov ? '#fff8e6' : '#faf5e8')); c.fill();
       c.lineWidth = act ? 3.5 : 1.8; c.strokeStyle = dead ? '#b0ac9f' : (act ? (hd ? hd.def.color : '#d9a21a') : '#cdbf9c'); c.stroke();
       c.fillStyle = act ? '#8a5a10' : '#8a7d63'; c.beginPath(); c.arc(tx + 11, ty + 11, 8, 0, PI2); c.fill();
-      T.txt(c, i < n ? String(i + 1) : '9', tx + 11, ty + 12, 11, '#fff', 'center', true);
+      T.txt(c, i < n ? String(i + 1) : (id === 10 ? '8' : '9'), tx + 11, ty + 12, 11, '#fff', 'center', true);
       if (hd) {
         c.save(); if (dead) c.globalAlpha = 0.35; T.drawHeroShape(c, hd.def, tx + 38, ty + 26, 12); c.restore();
         T.txt(c, hd.def.name + (hd.sp ? ' Lv' + hd.def.lv : ''), tx + 58, ty + 17, 14, dead ? '#8a8578' : T.T.ink, 'left', true);
         if (dead) T.txt(c, '阵亡', tx + 58, ty + 34, 12, '#b3402e', 'left', true);
         else T.txt(c, '已投 ' + XY.heroSpent(hd) + ' 点 · 辅助 ' + XY.supportCount(hd) + '/' + XY.MAX_SUPPORTS, tx + 58, ty + 34, 10.5, T.T.inkSoft, 'left', false);
-      } else { T.txt(c, '全队 · 营地', tx + tw / 2, ty + 18, 15, T.T.ink, 'center', true); T.txt(c, '大家一起变强', tx + tw / 2, ty + 35, 11, T.T.inkSoft, 'center', false); }
+      } else if (id === 10) { T.txt(c, '法宝', tx + tw / 2, ty + 18, 15, T.T.ink, 'center', true); T.txt(c, '携带 · 炼化 · 图鉴', tx + tw / 2, ty + 35, 11, T.T.inkSoft, 'center', false); }
+      else { T.txt(c, '全队 · 营地', tx + tw / 2, ty + 18, 15, T.T.ink, 'center', true); T.txt(c, '大家一起变强', tx + tw / 2, ty + 35, 11, T.T.inkSoft, 'center', false); }
       if (!dead) XY.ui.hits.push({ x: tx, y: ty, w: tw, h: th, act: 'tab', i: id });
     }
+    if (tab === 10 && G.fb && XY.fabaoui && XY.fabaoui.page) { XY.fabaoui.page(c, G, app, px, py, pw, ph); return; }
     var rects = [], bx = px + 24, by = py + 116, bw = pw - 48, detH = 92, bodyBot = py + ph - detH - 20;
     if (tab !== PT) {
       h = G.heroes[tab]; var d = h.def, tr = XY.TREE[h.id], col = d.color, hdd = (h.sp ? '常驻 Lv' + d.lv + ' · ' : '');
@@ -9618,6 +9620,7 @@ XY.TRAITS = {
     T.panel(c, W - 252, hy0, 240, 110, 12);
     var lines = ['WASD 或鼠标 都能走（按住左键跟随）', '单击地面设目的地 · 右键也行', '1-6 换人 · Shift+1-6 命令', 'Z X C V B 请天兵 · 点天兵升级', '白龙马：点“骑乘”选一位伙伴驮着跑', '法宝三选一 · 最多带 3 件同套', 'Tab 技能树 · G 召唤特殊人物 · P 暂停'];
     if (app.touchUI) lines = ['按住空地拖动 = 摇杆走路', '轻点空地 = 走到那里', '点头像换人 · 点小按钮下命令', '点天兵按钮，再轻点路上空地', '白龙马：点“骑乘”选一位伙伴驮着跑', '法宝三选一 · 最多带 3 件同套', '右上「暂停」「技能树」· 右侧「召唤」'];
+    if (G.fb) lines = lines.map(function (q) { return q.indexOf('法宝三选一') === 0 ? '法宝 4 + 灵物 3 · 满级再配搭档可炼化' : (q.indexOf('Tab 技能树') === 0 ? 'Tab 技能树 · 8 法宝页 · G 召唤 · P 暂停' : q); });
     for (i = 0; i < lines.length; i++) T.txt(c, lines[i], W - 242, hy0 + 12 + i * 16, 12, T.T.ink, 'left', false);
     c.globalAlpha = 1; }
     drawTowerBar(c, G, app);
@@ -10800,6 +10803,7 @@ XY.CHIBI={"tang":{"w":532,"h":254,"fr":[[1,1,77,121,33,121],[134,1,70,121,24,121
     if (window.XY_AUTO_CARDS && !(opts && opts.manual)) { FB.autoPick(G, cards, opts); return 'auto'; }
     if (G.cardOffer) { G.cardOfferQ = G.cardOfferQ || []; G.cardOfferQ.push({ opts: opts }); return 'queued'; }
     G.cardOffer = { v2: true, cards: cards, opts: opts, t: 0, rr: 0, ids: [] }; G.mode = 'cards';
+    if (!f.hinted) { f.hinted = 1; XY.toast(G, '法宝 4 件 + 灵物 3 件全队共用；满级法宝配上搭档可炼成超级法宝（按 Tab 再按 8 看全部配方）'); }
     return 'open';
   };
   // 机器人 / 测试的自动选择：炼化 > 配方相关的升级 / 新件 > 其他升级 > 新件（有盯就偏盯）
@@ -11385,6 +11389,58 @@ XY.CHIBI={"tang":{"w":532,"h":254,"fr":[[1,1,77,121,33,121],[134,1,70,121,24,121
       Rr.txt(c, '炼成', cx, cy - 12, 16, '#7a4a05', 'center', true); Rr.txt(c, r.name, cx, cy + 14, 28, '#5a3205', 'center', true);
       c.fillStyle = '#ffd24a'; for (var i = 0; i < 12; i++) { var an = i / 12 * 6.283, dd = 80 + 220 * k; c.save(); c.translate(cx + Math.cos(an) * dd, cy + Math.sin(an) * dd * 0.5); c.rotate(an); c.fillRect(-9, -2, 18, 4); c.restore(); } c.restore(); }
   };
+  /* ---------- Tab 面板的“法宝”页（第 10 页；热键 8；手机点 Tab 按钮再点这一页）---------- */
+  UI.TAB = 10;
+  UI.page = function (c, G, app, px, py, pw, ph) {
+    var Rr = R(), ui = XY.ui, f = G.fb, mouse = app.mouse, t = app.rt, i, bx = px + 24, by = py + 116;
+    var colA = Math.min(430, Math.floor(pw * 0.36)), bxB = bx + colA + 24, wB = pw - 48 - colA - 24;
+    Rr.txt(c, '本局携带（全队共用）· 法宝 ' + f.w.length + '/' + C.FB.SLOT_F + ' · 灵物 ' + f.s.length + '/' + C.FB.SLOT_L, bx, by + 4, 15, Rr.T.ink, 'left', true);
+    var y = by + 20;
+    for (i = 0; i < C.FB.SLOT_F + C.FB.SLOT_L; i++) {
+      var s = i < C.FB.SLOT_F ? f.w[i] : f.s[i - C.FB.SLOT_F], isL = i >= C.FB.SLOT_F;
+      Rr.rrect(c, bx, y, colA, 42, 8); c.fillStyle = s ? '#fffdf6' : '#f1ecde'; c.fill(); c.lineWidth = s && (s.sup || s.lv >= FB.maxLv(s.id)) ? 3 : 1.8; c.strokeStyle = s ? (s.sup ? '#c9871a' : '#b9a982') : '#d6cdb2'; c.stroke();
+      if (!s) { Rr.txt(c, isL ? '灵物格（空）' : '法宝格（空）', bx + 14, y + 22, 13, '#a89a78', 'left', false); }
+      else {
+        var it = FB.info(s.id), col = it.sup ? '#c9871a' : UI.col(it), mx = it.sup ? 1 : FB.maxLv(s.id);
+        c.fillStyle = col; c.fillRect(bx + 10, y + 8, 14, 14); Rr.txt(c, it.name, bx + 32, y + 15, 15, Rr.T.ink, 'left', true);
+        Rr.txt(c, (it.sup ? '超级' : (isL ? '灵物' : '法宝')) + (it.set ? ' · ' + FB.SET_NAME[it.set] : '') + (it.el ? ' · ' + FB.EL_NAME[it.el] : ''), bx + 120, y + 15, 11, Rr.T.inkSoft, 'left', false);
+        if (!it.sup) pips(c, bx + colA - 12 - mx * 11, y + 9, s.lv, mx, col); else Rr.txt(c, '超级', bx + colA - 14, y + 15, 13, '#c9871a', 'right', true);
+        var lvTxt = it.d; if (!it.sup && s.lv < mx) lvTxt += ' ｜ 下一级：' + (it.kind === 'l' ? '效果再叠一级' : UI.upText(s.id, s.lv + 1));
+        Rr.txt(c, lvTxt.length > 44 ? lvTxt.slice(0, 43) + '…' : lvTxt, bx + 10, y + 32, 11.5, Rr.T.inkSoft, 'left', false);
+      }
+      y += 46; if (i === C.FB.SLOT_F - 1) { y += 8; }
+    }
+    y += 4; var cm = G.combos.filter(function (b) { return b.n > 0; });
+    cm.forEach(function (b) { var s = XY.CARD_SETS[b.set]; Rr.txt(c, FB.SET_NAME[b.set] + '门派 ×' + b.n + '：' + (b.tier >= 2 ? s.t5.txt || '大加成' : (b.tier >= 1 ? s.t3.txt || '小加成' : '再带 ' + (2 - b.n) + ' 件有加成')), bx, y + 6, 12, b.tier ? '#b8300f' : Rr.T.inkSoft, 'left', b.tier > 0); y += 17; });
+    // 右：8 条配方
+    Rr.txt(c, '炼化配方：满级 A + 带着 B → 超级法宝（点“盯”：三选一更常出这两件）', bxB, by + 4, 15, Rr.T.ink, 'left', true);
+    var ry = by + 20, rh = 46;
+    FB.RECIPES.forEach(function (r) {
+      var st = FB.recipeState(G, r), A = FB.BY[r.a], Bi = FB.BY[r.b], pinned = f.pin === r.id, sup = FB.SUP[r.sup];
+      var tag = { ready: '可炼化', prog: '进行中', missB: '缺 ' + Bi.name, locked: '未解锁', done: '本局已炼成' }[st.st], tc = { ready: '#b8300f', prog: '#2f6f9f', missB: '#9a6b10', locked: '#8a8578', done: '#2f7d3b' }[st.st];
+      Rr.rrect(c, bxB, ry, wB, rh - 4, 8); c.fillStyle = st.st === 'ready' ? '#fff0c4' : '#fffdf6'; c.fill(); c.lineWidth = st.st === 'ready' ? 3 : 1.8; c.strokeStyle = pinned ? '#c9871a' : (st.st === 'ready' ? '#c9871a' : '#cdbf9c'); c.stroke();
+      var aLv = st.a ? st.a.lv : 0; Rr.txt(c, A.name + (st.a ? ' Lv' + aLv + '/5' : '') + ' + ' + Bi.name + (st.b ? ' ✓' : '') + ' → ' + r.name, bxB + 10, ry + 14, 13.5, Rr.T.ink, 'left', true);
+      Rr.txt(c, sup.d.length > 54 ? sup.d.slice(0, 53) + '…' : sup.d, bxB + 10, ry + 31, 11, Rr.T.inkSoft, 'left', false);
+      Rr.txt(c, tag, bxB + wB - 160, ry + 14, 12, tc, 'right', true);
+      var pb = { x: bxB + wB - 148, y: ry + 6, w: 40, h: 26 }; Rr.rrect(c, pb.x, pb.y, pb.w, pb.h, 6); c.fillStyle = pinned ? '#ffd86a' : '#efe6cf'; c.fill(); c.lineWidth = 2; c.strokeStyle = '#a89a78'; c.stroke(); Rr.txt(c, pinned ? '盯✓' : '盯', pb.x + 20, pb.y + 14, 12, Rr.T.ink, 'center', true); ui.hits.push({ x: pb.x, y: pb.y, w: pb.w, h: pb.h, act: 'fbPin', rid: r.id });
+      if (st.st === 'ready') { var fb = { x: bxB + wB - 100, y: ry + 6, w: 90, h: 26 }; Rr.rrect(c, fb.x, fb.y, fb.w, fb.h, 6); c.fillStyle = '#ffd36a'; c.fill(); c.lineWidth = 2; c.strokeStyle = '#a06a10'; c.stroke(); Rr.txt(c, '炼化', fb.x + 45, fb.y + 14, 13, '#5a3a05', 'center', true); ui.hits.push({ x: fb.x, y: fb.y, w: fb.w, h: fb.h, act: 'fuse', rid: r.id }); }
+      ry += rh;
+    });
+    // 下：全部法宝一览（过滤：全部 / 法宝 / 灵物 / 已解锁）
+    var cy = ry + 8, flt = app.fbFilter || 'all', fl = [['all', '全部'], ['f', '法宝'], ['l', '灵物'], ['u', '已解锁']];
+    Rr.txt(c, '图鉴（' + FB.ITEMS.filter(function (x) { return FB.unlocked(x.id); }).length + '/' + FB.ITEMS.length + ' 已解锁）', bxB, cy + 10, 14, Rr.T.ink, 'left', true);
+    fl.forEach(function (o, k) { var fx0 = bxB + 170 + k * 70; Rr.rrect(c, fx0, cy, 62, 22, 6); c.fillStyle = flt === o[0] ? '#ffd86a' : '#efe6cf'; c.fill(); c.lineWidth = 1.8; c.strokeStyle = '#a89a78'; c.stroke(); Rr.txt(c, o[1], fx0 + 31, cy + 12, 12, Rr.T.ink, 'center', true); ui.hits.push({ x: fx0, y: cy, w: 62, h: 22, act: 'fbFilter', k: o[0] }); });
+    var list = FB.ITEMS.filter(function (x) { return flt === 'all' || (flt === 'u' ? FB.unlocked(x.id) : x.kind === flt); }), cols = Math.max(2, Math.floor(wB / 138)), chw = Math.floor(wB / cols) - 4, tip = null;
+    list.forEach(function (x, k) {
+      var cx = bxB + (k % cols) * (chw + 4), cyy = cy + 28 + Math.floor(k / cols) * 25, un = FB.unlocked(x.id), hov = mouse && mouse.x >= cx && mouse.x < cx + chw && mouse.y >= cyy && mouse.y < cyy + 22;
+      Rr.rrect(c, cx, cyy, chw, 22, 6); c.fillStyle = un ? '#fffdf6' : '#ece7da'; c.fill(); c.lineWidth = 1.6; c.strokeStyle = un ? UI.col(x) : '#c9c1ab'; c.stroke();
+      c.fillStyle = un ? UI.col(x) : '#c9c1ab'; c.fillRect(cx + 6, cyy + 6, 10, 10); Rr.txt(c, un ? x.name : '？？？', cx + 22, cyy + 12, 12, un ? Rr.T.ink : '#9a927c', 'left', un);
+      if (hov) tip = { x: cx, y: cyy, t: un ? x.name + '：' + x.d : '未解锁：' + FB.whereText(x.id) };
+    });
+    var ret = FB.retired(); Rr.txt(c, '典藏（不再带进局内）：' + ret.map(function (r) { return r.name; }).join('、'), bxB, py + ph - 20, 11.5, '#8a7d63', 'left', false);
+    if (tip) { var tw2 = Math.min(wB, 420); Rr.rrect(c, Math.min(tip.x, px + pw - tw2 - 16), tip.y + 26, tw2, 40, 8); c.fillStyle = 'rgba(255,250,235,0.98)'; c.fill(); c.lineWidth = 2; c.strokeStyle = '#a89a78'; c.stroke(); Rr.wrap(c, tip.t, Math.min(tip.x, px + pw - tw2 - 16) + tw2 / 2, tip.y + 36, tw2 - 16, 12, 16, Rr.T.ink, 2); }
+  };
+
 })();
 
 </script>
@@ -12177,9 +12233,9 @@ XY.CHIBI={"tang":{"w":532,"h":254,"fr":[[1,1,77,121,33,121],[134,1,70,121,24,121
     }
     if (k === 'KeyT' && G.mode === 'play') { XY.phyrexXform(G); return; }       // 满级 99 的 Phyrex 变身
     if (G.mode === 'skills') {                        // 技能树打开：Tab / Esc 关闭，1-5 选英雄页，6 全队页
-      var tn = { Digit1: 0, Digit2: 1, Digit3: 2, Digit4: 3, Digit5: 4, Digit6: 5, Digit7: 9, Digit0: 9 }[k];
+      var tn = { Digit1: 0, Digit2: 1, Digit3: 2, Digit4: 3, Digit5: 4, Digit6: 5, Digit7: 9, Digit0: 9, Digit8: 10 }[k];
       if (k === 'Tab' || k === 'Escape') XY.toggleSkills(G, false);
-      else if (tn !== undefined) { if (tn === 9 || (G.heroes[tn] && !G.heroes[tn].down)) app.skillTab = tn; }
+      else if (tn !== undefined) { if (tn === 9 || (tn === 10 && G.fb) || (tn < 9 && G.heroes[tn] && !G.heroes[tn].down)) app.skillTab = tn; }
       return;
     }
     var dg = { Digit1: 0, Digit2: 1, Digit3: 2, Digit4: 3, Digit5: 4, Digit6: 5, Numpad1: 0, Numpad2: 1, Numpad3: 2, Numpad4: 3, Numpad5: 4, Numpad6: 5 }[k];
@@ -12301,6 +12357,8 @@ XY.CHIBI={"tang":{"w":532,"h":254,"fr":[[1,1,77,121,33,121],[134,1,70,121,24,121
         case 'skills': if (app.screen === 'play') { app.skillTab = G.heroes[G.ctrl].down ? 0 : G.ctrl; XY.toggleSkills(G); } break;
         case 'closeSkills': XY.toggleSkills(G, false); break;
         case 'tab': app.skillTab = h.i; break;
+        case 'fbPin': if (G.fb) XY.fabao.pin(G, h.rid); break;
+        case 'fbFilter': app.fbFilter = h.k; break;
         case 'node':
           var lr = XY.learn(G, h.hero, h.id);
           app.skillMsg = { text: lr.reason, bad: !lr.ok, until: app.rt + 2.2 };
