@@ -75,6 +75,13 @@ XY.C = {
   STATION_DEF: 0.6,       // 唐僧驻守时营地受到的伤害倍率（0.6 = 少挨 40%）
   GUARD_TAUNT: 0.45,       // 守护师傅的英雄在妖怪眼里“更近”（距离平方乘这个数），把怪引过来
   BOSS_KEEP: 430,          // 佛光结界：牛魔王离师父至少这么远（徒弟还活着时）
+  // —— BOSS 狂暴倒计时（v0.6.4）：BOSS 第一次出洞迎战就开始倒数（躲洞 / 败退 / 追出太远回洞时也照走，不暂停，防止拖时间）；
+  //    时间到还没打死就狂暴一次：血量上限 / 当前血量 / 伤害（弹幕、震地、冲锋、身体接触）/ 出招与接触频率 ×2；BOSS 活着且狂暴期间小怪出量 ×2 ——
+  BOSS_ENRAGE_T: 120,                // 默认 120 秒（所有 BOSS，含牛魔王）
+  BOSS_ENRAGE_BY: {},                // 个别 BOSS 要不同时间就写在这里，如 { boss: 150 }；现在全部用默认 120
+  BOSS_ENRAGE_MUL: 2,                // 狂暴数值倍率
+  ENRAGE_SPAWN_MUL: 2,               // 狂暴期间小怪出量倍率
+  ENRAGE_WARN1: 30, ENRAGE_WARN2: 10,   // 倒数 30 / 10 秒预警
   BOSS_BULLET_LIFE: 2,     // 牛魔王弹幕飞行时间（×190 速度 = 射程 380，够不着结界外的师父）
   SPAWN_MUL: 1.0,            // 刷怪速度总倍率（平衡用；v0.4 起各洞府自己有速率）
   // —— v0.4：妖气（强化）、出量倍率、洞府、妖塔、天兵、法宝切换 ——
@@ -4189,6 +4196,45 @@ XY.TRAITS = {
     e.shootT = C.ETOWER_CD; e.fire = 0.2;
   }
 
+  // ===== BOSS 狂暴（v0.6.4）=====
+  // 倒计时：BOSS 第一次出洞迎战（engaged）时起算，之后不暂停、不重置（躲洞 / 败退 / 回洞都照走）；到点没打死 → 狂暴一次（只一次，不叠加）。
+  XY.enrageSeconds = function (e) { return C.BOSS_ENRAGE_BY[e.type] || C.BOSS_ENRAGE_T; };
+  function enrageTick(G, e, dt) {
+    if (G.tut || e.enraged || e.dead) return;
+    if (e.enrageT === undefined) { if (!e.engaged) return; e.enrageT = XY.enrageSeconds(e); e.enrageW = 0; }
+    var before = e.enrageT; e.enrageT -= dt;
+    if (before > C.ENRAGE_WARN1 && e.enrageT <= C.ENRAGE_WARN1) { toast(G, e.def.name + ' 还有 ' + C.ENRAGE_WARN1 + ' 秒就要狂暴！'); if (XY.sfx) XY.sfx('danger'); }
+    if (before > C.ENRAGE_WARN2 && e.enrageT <= C.ENRAGE_WARN2) { banner(G, e.def.name + ' 10 秒后狂暴！快打！', 2.5); if (XY.sfx) XY.sfx('danger'); }
+    if (e.enrageT <= 0) enrageBoss(G, e);
+  }
+  function enrageBoss(G, e) {
+    if (e.enraged) return;                                                   // 只狂暴一次，不叠加
+    var m = C.BOSS_ENRAGE_MUL;
+    e.enraged = true; e.enrageT = 0; e.enrageAt = G.t;
+    e.maxHp *= m; e.hp *= m; e.baseHp *= m;                                  // 血量上限 / 当前血量按比例翻倍（成长基数一起翻倍）
+    e.baseDmg *= m; e.dmg *= m;                                              // 伤害翻倍：身体接触 / 弹幕 / 震地 / 冲锋都按 e.dmg 折算
+    e.flash = 0.4;
+    banner(G, e.def.name + ' 狂暴了！数值 ×' + m + '，小怪出量 ×' + C.ENRAGE_SPAWN_MUL, 4);
+    toast(G, e.def.name + ' 狂暴：血量 / 伤害 / 出招速度 ×' + m);
+    ring(G, e.x, e.y, 220, '#ff2a1a', 0.8, true); ring(G, e.x, e.y, 120, '#ffb02a', 0.6, true);
+    G.shake = Math.max(G.shake, 14);
+    G.stats.enrages = (G.stats.enrages || 0) + 1;
+    if (XY.sfx) XY.sfx('enrage');
+  }
+  XY.enrageBoss = enrageBoss;
+  // 当前出怪倍率：任何一个活着的 BOSS 处于狂暴 → ×2（含躲在洞里的），BOSS 被打死后自动回到 ×1
+  XY.enrageSpawnMul = function (G) {
+    for (var i = 0; i < G.dens.length; i++) { var b = G.dens[i].boss; if (b && !b.dead && b.enraged) return C.ENRAGE_SPAWN_MUL; }
+    return 1;
+  };
+  // HUD 要显示的那只：优先离操控英雄最近的出战 BOSS，其次剩余时间最少的在倒数 / 已狂暴的
+  XY.enrageFocus = function (G) {
+    var best = null, i, b;
+    if (G.boss && !G.boss.dead && (G.boss.enrageT !== undefined)) return G.boss;
+    for (i = 0; i < G.dens.length; i++) { b = G.dens[i].boss; if (!b || b.dead || b.enrageT === undefined) continue; if (!best || (b.enraged ? -1 : b.enrageT) < (best.enraged ? -1 : best.enrageT)) best = b; }
+    return best;
+  };
+
   function updateEnemies(G, dt) {
     var list = G.enemies, camp = G.camp, nh = G.heroes, i, j, k, cgoal = camp.active ? camp : { x: nh[0].x, y: nh[0].y, r: nh[0].def.r };
     G.boss = null;
@@ -4210,6 +4256,7 @@ XY.TRAITS = {
 
       // 洞府 BOSS：+5%/分钟持续成长（血量上限和当前血量一起涨，放任不管会越来越强）
       if (d.denBoss) {
+        enrageTick(G, e, dt);
         var inc = e.baseHp * C.BOSS_SCALE * dt / 60;
         e.hp += inc; e.maxHp += inc; e.dmg = e.baseDmg * (1 + C.BOSS_SCALE * G.t / 60) * (e.raidDmg || 1);
       }
@@ -4310,7 +4357,7 @@ XY.TRAITS = {
   };
 
   function bossAI(G, e, dt, ux, uy, dist) {
-    var th = e.th, cd = e.phase === 2 ? 3.2 : 4.6, name = e.def.name, kit = KITS[e.def.kit] || KITS.bull;
+    var th = e.th, cd = (e.phase === 2 ? 3.2 : 4.6) / (e.enraged ? C.BOSS_ENRAGE_MUL : 1), name = e.def.name, kit = KITS[e.def.kit] || KITS.bull;
     if (e.flash > 0) e.flash -= dt;
     // —— 洞府守卫：有英雄靠近（850）才出来迎战；追出 1250 太远就回洞口并回血 ——
     var nd = Infinity, i, hh0;
@@ -4404,10 +4451,10 @@ XY.TRAITS = {
     if (e.atkT <= 0) {
       for (var q = 0; q < G.heroes.length; q++) {
         var hh = G.heroes[q]; if (hh.down) continue;
-        if (XY.dist(e.x, e.y, hh.x, hh.y) < e.r + hh.def.r) { hurtHeroBy(G, hh, e.dmg, true, hh.id === 'tang' ? name + '碰到了师父' : undefined, e.def.dtype, e.elem); e.atkT = 0.8; break; }
+        if (XY.dist(e.x, e.y, hh.x, hh.y) < e.r + hh.def.r) { hurtHeroBy(G, hh, e.dmg, true, hh.id === 'tang' ? name + '碰到了师父' : undefined, e.def.dtype, e.elem); e.atkT = 0.8 / (e.enraged ? C.BOSS_ENRAGE_MUL : 1); break; }
       }
       var cc = G.camp;
-      if (cc.active && XY.dist(e.x, e.y, cc.x, cc.y) < e.r + cc.r) { hurtCamp(G, e.dmg); e.atkT = 0.8; }
+      if (cc.active && XY.dist(e.x, e.y, cc.x, cc.y) < e.r + cc.r) { hurtCamp(G, e.dmg); e.atkT = 0.8 / (e.enraged ? C.BOSS_ENRAGE_MUL : 1); }
     }
   }
 
@@ -5307,7 +5354,7 @@ XY.TRAITS = {
     if (G.roadT > 0) return;
     G.roadT = C.ROAD_EVERY * rand(0.8, 1.2) / Math.max(1, G.spawnMul * 0.9);
     var s0 = G.tang.s + rand(C.ROAD_AHEAD0, C.ROAD_AHEAD1); if (s0 > G.rt.total - 80) return;
-    var n = Math.round(rand(C.ROAD_N0, C.ROAD_N1) * (1 + 0.15 * Math.min(G.t / 60, 6)) * Math.min(1.6, 0.8 + 0.3 * G.lv.mul));
+    var n = Math.round(rand(C.ROAD_N0, C.ROAD_N1) * (1 + 0.15 * Math.min(G.t / 60, 6)) * Math.min(1.6, 0.8 + 0.3 * G.lv.mul) * XY.enrageSpawnMul(G));
     var bp = XY.routeAt(G.rt, s0), nx = -Math.sin(bp.a), ny = Math.cos(bp.a);
     for (var j = 0; j < n && G.enemies.length < C.MAX_ENEMIES - 40; j++) {
       var off = rand(-C.ROAD_HALF * 0.9, C.ROAD_HALF * 0.9), al = rand(-90, 90);
@@ -5342,7 +5389,7 @@ XY.TRAITS = {
     }
     var st = G.stats; st.visSum = (st.visSum || 0) + vis; st.visCnt = (st.visCnt || 0) + 1; if (vis > (st.visMax || 0)) st.visMax = vis;
     if (G.noSpawn) return;
-    var want = XY.densityTarget(G), surge = false;
+    var want = Math.round(XY.densityTarget(G) * XY.enrageSpawnMul(G)), surge = false;
     if (G.surgeT <= 0) { G.surgeT = C.SURGE_EVERY * rand(0.8, 1.2) * (rest ? 0.75 : 1); surge = true; st.surges = (st.surges || 0) + 1; }
     var fp = XY.routeAt(G.rt, Math.min(G.rt.total, G.tang.s + 500)), fa = Math.atan2(fp.y - tg.y, fp.x - tg.x);
     for (var q0 = 0; q0 < foci.length; q0++) {
@@ -5360,7 +5407,8 @@ XY.TRAITS = {
   function rest0(G) { return G.tang.phase === 'rest'; }
 
   XY.updateDens = function (G, dt) {
-    var i, e, cnt = G.denCnt, min = G.t / 60;
+    var i, e, cnt = G.denCnt, min = G.t / 60, em = XY.enrageSpawnMul(G);       // em：有 BOSS 狂暴时小怪出量 ×2
+    G.enrageMul = em;
     if (!G.noSpawn) { updateHunt(G, dt); updateRoadside(G, dt); updateFlow(G, dt); }      // G.noSpawn：测试开关，关掉一切刷怪（洞府 / 路边 / 追剿）
     for (i = 0; i < cnt.length; i++) cnt[i] = 0;
     for (i = 0; i < G.enemies.length; i++) {
@@ -5380,10 +5428,10 @@ XY.TRAITS = {
       den._drawToast = false;
       den.cnt = cnt[den.i];
       // 稳定出怪：速率 × 全局出量倍率 M
-      den.acc += den.rate * G.spawnMul * C.SPAWN_MUL * C.DEN_RATE_MUL * dt;
+      den.acc += den.rate * G.spawnMul * C.SPAWN_MUL * C.DEN_RATE_MUL * em * dt;
       while (den.acc >= 1) {
         den.acc -= 1;
-        if (G.enemies.length >= C.MAX_ENEMIES || cnt[den.i] >= C.DEN_CAP) { den.acc = Math.min(den.acc, 1); break; }
+        if (G.enemies.length >= C.MAX_ENEMIES || cnt[den.i] >= C.DEN_CAP * em) { den.acc = Math.min(den.acc, 1); break; }
         var p = den_pos(den, 60, 170);
         K.makeEnemy(G, K.pickType(G.t), p.x, p.y, den.i); cnt[den.i]++;
       }
@@ -5391,8 +5439,8 @@ XY.TRAITS = {
       den.swarmT -= dt;
       if (den.swarmT <= 0) {
         den.swarmT = C.DEN_SWARM_EVERY;
-        var n = Math.round((12 + 3 * min) * G.lv.mul * C.SWARM_MUL), spawned = 0;
-        for (var k = 0; k < n && G.enemies.length < C.MAX_ENEMIES && cnt[den.i] < C.DEN_CAP; k++) {
+        var n = Math.round((12 + 3 * min) * G.lv.mul * C.SWARM_MUL * em), spawned = 0;
+        for (var k = 0; k < n && G.enemies.length < C.MAX_ENEMIES && cnt[den.i] < C.DEN_CAP * em; k++) {
           var q = den_pos(den, 80, 220);
           K.makeEnemy(G, (k % 5 === 0 && G.t > 120) ? 'tank' : 'small', q.x, q.y, den.i); cnt[den.i]++; spawned++;
         }
@@ -5970,7 +6018,7 @@ XY.TRAITS = {
   /* ================= WebAudio ================= */
   var A = XY.audio = { ctx: null, master: null, mute: false, voices: 0, maxVoices: 0, played: 0, merged: 0, dropped: 0, byName: {}, last: {}, gemStep: 0, gemT: 0, nodes: 0 };
   try { A.mute = window.localStorage.getItem('xy_mute') === '1'; } catch (e) {}
-  var LIMIT = 16, GAP = { hit: 0.045, crit: 0.06, kill: 0.04, elite: 0.1, gem: 0.03, coin: 0.05, ult_charge: 0.2, ult_land: 0.3, ult_sweep: 0.3, sky: 0.3, level: 0.5, card: 0.2, boss: 0.5, danger: 0.6, win: 1, lose: 1, place: 0.1, ui: 0.05 };
+  var LIMIT = 16, GAP = { hit: 0.045, crit: 0.06, kill: 0.04, elite: 0.1, gem: 0.03, coin: 0.05, ult_charge: 0.2, ult_land: 0.3, ult_sweep: 0.3, sky: 0.3, level: 0.5, card: 0.2, boss: 0.5, enrage: 1, danger: 0.6, win: 1, lose: 1, place: 0.1, ui: 0.05 };
   A.init = function () {
     if (A.ctx) { if (A.ctx.state === 'suspended') A.ctx.resume(); return; }
     try {
@@ -6014,6 +6062,7 @@ XY.TRAITS = {
     level: function () { return [{ type: 'triangle', f0: 523, dur: 0.15, gain: 0.12 }, { type: 'triangle', f0: 659, dur: 0.15, gain: 0.12, delay: 0.1 }, { type: 'triangle', f0: 784, dur: 0.3, gain: 0.12, delay: 0.2 }]; },
     card:  function (p) { var b = p === 'S' ? 700 : (p === 'A' ? 600 : 500); return [{ type: 'sine', f0: b, dur: 0.18, gain: 0.12 }, { type: 'sine', f0: b * 1.5, dur: 0.3, gain: 0.12, delay: 0.1 }]; },
     boss:  function () { return [{ type: 'sawtooth', f0: 90, f1: 55, dur: 0.7, gain: 0.25 }, { noise: 1, f0: 600, f1: 100, dur: 0.5, gain: 0.15 }]; },
+    enrage: function () { return [{ type: 'sawtooth', f0: 70, f1: 40, dur: 1.0, gain: 0.3 }, { type: 'square', f0: 140, f1: 90, dur: 0.8, gain: 0.12 }, { noise: 1, f0: 2500, f1: 120, dur: 0.8, gain: 0.22 }, { type: 'sawtooth', f0: 220, f1: 330, dur: 0.5, gain: 0.1, delay: 0.5 }]; },
     danger: function () { return [{ type: 'square', f0: 220, f1: 200, dur: 0.18, gain: 0.07 }, { type: 'square', f0: 220, dur: 0.18, gain: 0.07, delay: 0.25 }]; },
     win:   function () { return [523, 659, 784, 1046].map(function (f, i) { return { type: 'triangle', f0: f, dur: 0.35, gain: 0.13, delay: i * 0.12 }; }); },
     lose:  function () { return [392, 330, 262, 196].map(function (f, i) { return { type: 'sine', f0: f, dur: 0.4, gain: 0.14, delay: i * 0.18 }; }); },
@@ -7104,6 +7153,7 @@ XY.TRAITS = {
   function tileKey(G, ix, iy) { return G.levelId + ':' + ix + ':' + iy; }
 
   function buildTile(G, ix, iy) {
+    if (XY.inkBg()) return buildInkTile(G, ix, iy);
     var th = themeOf(G), R = G.rt, cv = document.createElement('canvas'); cv.width = TS; cv.height = TS;
     var c = cv.getContext('2d'), ox = ix * TS, oy = iy * TS, rnd = XY.seeded(9173 + ix * 131 + iy * 977 + G.levelId * 31), i;
     c.fillStyle = th.base; c.fillRect(0, 0, TS, TS);
@@ -7166,6 +7216,80 @@ XY.TRAITS = {
     }
   }
 
+
+  /* ---------- v0.6.4 水墨山水背景（默认）：宣纸浅色 + 淡墨层叠远山 + 薄雾 + 稀疏松竹；同样分块预渲染，每帧只 drawImage ----------
+   * 设置存在 localStorage 'xy_bg'（'classic' = 回到原来的彩色卡通地面）；暂停菜单里有开关。
+   * 画法：每块图块只画“宣纸底 → 附近 3×3 个单元里的远山（用单元坐标做种子，所以跨块接缝连续）→ 薄雾 → 溪水 → 道路 → 疏松 / 疏竹 / 墨点石”。
+   * 对比度刻意压低：山 / 雾的墨色 ≤ 0.3 不透明度；道路是比纸更亮的奶白路面 + 两侧淡墨边线，单位和掉落物仍然是画面上最重的颜色。 */
+  var INK = {
+    bamboo:  { paper: '#f1f0e0', blot: '#e6ead2', mtn: '70,92,92',  mist: '255,255,250', road: '#fffdf3', edge: 'rgba(96,86,60,0.5)',  water: '#d4e6e6', waterEdge: 'rgba(86,120,126,0.45)', tree: '70,96,72',  deco: 'bamboo' },
+    ochre:   { paper: '#f5eedb', blot: '#eadfc4', mtn: '112,94,70', mist: '255,252,240', road: '#fffcf0', edge: 'rgba(120,96,56,0.5)', water: '#d9e8e6', waterEdge: 'rgba(96,126,126,0.45)', tree: '92,96,62',  deco: 'pine' },
+    apricot: { paper: '#f8ecde', blot: '#f0dccb', mtn: '128,92,84', mist: '255,246,238', road: '#fffaf0', edge: 'rgba(140,92,66,0.5)', water: '#d8e8ee', waterEdge: 'rgba(96,126,146,0.45)', tree: '112,92,64', deco: 'pine' }
+  };
+  XY.inkBg = function () { try { return window.localStorage.getItem('xy_bg') !== 'classic'; } catch (e) { return true; } };
+  XY.setInkBg = function (on) { try { window.localStorage.setItem('xy_bg', on ? 'ink' : 'classic'); } catch (e) {} cache = {}; cacheKey = null; };
+  function cellRnd(G, cx, cy, salt) { return XY.seeded(40009 + cx * 7919 + cy * 104729 + G.levelId * 613 + salt * 31); }
+  function inkMountains(c, G, ix, iy, th) {
+    for (var cy = iy - 1; cy <= iy + 1; cy++) for (var cx = ix - 1; cx <= ix + 1; cx++) {
+      if (cx < -1 || cy < -1) continue;
+      var rnd = cellRnd(G, cx, cy, 1); if (rnd() > 0.62) continue;
+      var gx = (cx - ix) * TS + 60 + rnd() * (TS - 120), gy = (cy - iy) * TS + 200 + rnd() * (TS - 260), n = 3 + Math.floor(rnd() * 3), far = rnd() < 0.5;
+      for (var layer = 0; layer < 2; layer++) {
+        for (var k = 0; k < n; k++) {
+          var px = gx + (k - n / 2) * (70 + rnd() * 30) + layer * 30, w = 90 + rnd() * 70, h = (layer ? 70 : 110) + rnd() * 70 + (far ? 20 : 0), by = gy + layer * 34 + rnd() * 14;
+          var g = c.createLinearGradient(0, by - h, 0, by + 4), a0 = layer ? 0.22 : 0.15;
+          g.addColorStop(0, 'rgba(' + th.mtn + ',' + a0 + ')'); g.addColorStop(0.75, 'rgba(' + th.mtn + ',' + a0 * 0.35 + ')'); g.addColorStop(1, 'rgba(' + th.mtn + ',0)');
+          c.fillStyle = g; c.beginPath(); c.moveTo(px - w, by);
+          c.quadraticCurveTo(px - w * 0.55, by - h * 0.45, px - w * 0.22, by - h * 0.78); c.lineTo(px - w * 0.06, by - h * 0.92); c.lineTo(px + w * 0.04, by - h);
+          c.quadraticCurveTo(px + w * 0.3, by - h * 0.62, px + w * 0.6, by - h * 0.35); c.quadraticCurveTo(px + w * 0.85, by - h * 0.12, px + w, by); c.closePath(); c.fill();
+          c.strokeStyle = 'rgba(' + th.mtn + ',' + (layer ? 0.2 : 0.12) + ')'; c.lineWidth = 1.6; c.beginPath(); c.moveTo(px - w * 0.2, by - h * 0.75); c.quadraticCurveTo(px - w * 0.05, by - h * 0.95, px + w * 0.04, by - h); c.quadraticCurveTo(px + w * 0.32, by - h * 0.6, px + w * 0.58, by - h * 0.36); c.stroke();
+          c.lineWidth = 1.2; c.strokeStyle = 'rgba(' + th.mtn + ',0.1)'; for (var q = 0; q < 3; q++) { c.beginPath(); c.moveTo(px - w * 0.1 + q * 12, by - h * 0.6 + q * 8); c.lineTo(px + w * 0.1 + q * 14, by - h * 0.4 + q * 12); c.stroke(); }
+        }
+        c.fillStyle = 'rgba(' + th.mist + ',' + (layer ? 0.55 : 0.5) + ')'; c.beginPath(); c.ellipse(gx + layer * 20, gy + 8 + layer * 36, 150 + n * 14, 22, 0, 0, PI2); c.fill();     // 山脚薄雾
+      }
+    }
+  }
+  function inkTree(c, kind, x, y, s, th, rnd) {
+    c.lineCap = 'round'; c.lineJoin = 'round';
+    if (kind === 'bamboo') {
+      for (var j = -1; j <= 1; j++) { var bx = x + j * 8 * s, h = (40 + rnd() * 18) * s; c.strokeStyle = 'rgba(' + th.tree + ',0.55)'; c.lineWidth = 3 * s; c.beginPath(); c.moveTo(bx, y); c.lineTo(bx + j * 2, y - h); c.stroke();
+        c.strokeStyle = 'rgba(240,244,230,0.9)'; c.lineWidth = 1; for (var m = 1; m < 3; m++) { c.beginPath(); c.moveTo(bx - 3, y - m * h / 3); c.lineTo(bx + 3, y - m * h / 3); c.stroke(); }
+        c.fillStyle = 'rgba(' + th.tree + ',0.45)'; c.beginPath(); c.ellipse(bx + 8 * s, y - h + 4, 9 * s, 3 * s, -0.5, 0, PI2); c.ellipse(bx - 8 * s, y - h + 12, 9 * s, 3 * s, 0.5, 0, PI2); c.fill(); }
+    } else {                                                 // 松：弯干 + 两三层扁平松针
+      c.strokeStyle = 'rgba(78,66,52,0.55)'; c.lineWidth = 4 * s; c.beginPath(); c.moveTo(x, y); c.quadraticCurveTo(x - 8 * s, y - 24 * s, x + 4 * s, y - 50 * s); c.stroke();
+      for (var l = 0; l < 3; l++) { c.fillStyle = 'rgba(' + th.tree + ',' + (0.4 + l * 0.05) + ')'; c.beginPath(); c.ellipse(x + (l - 1) * 5 * s, y - (22 + l * 14) * s, (22 - l * 4) * s, 6 * s, (l - 1) * 0.12, 0, PI2); c.fill(); }
+    }
+  }
+  function buildInkTile(G, ix, iy) {
+    var th = INK[(G.lv && G.lv.theme)] || INK.bamboo, R = G.rt, cv = document.createElement('canvas'); cv.width = TS; cv.height = TS;
+    var c = cv.getContext('2d'), ox = ix * TS, oy = iy * TS, rnd = XY.seeded(7311 + ix * 131 + iy * 977 + G.levelId * 31), i;
+    c.fillStyle = th.paper; c.fillRect(0, 0, TS, TS);
+    for (i = 0; i < 7; i++) { var bx = 40 + rnd() * (TS - 80), by = 40 + rnd() * (TS - 80), rx = Math.min(30 + rnd() * 80, bx - 4, TS - bx - 4), ry = Math.min(20 + rnd() * 50, by - 4, TS - by - 4); c.fillStyle = th.blot; c.globalAlpha = 0.5; c.beginPath(); c.ellipse(bx, by, rx, ry, rnd() * 3, 0, PI2); c.fill(); }
+    c.globalAlpha = 1; c.strokeStyle = 'rgba(150,140,110,0.07)'; c.lineWidth = 1; for (i = 0; i < 34; i++) { var fx = rnd() * TS, fy = rnd() * TS; c.beginPath(); c.moveTo(fx, fy); c.lineTo(fx + 6 + rnd() * 10, fy + rnd() * 4 - 2); c.stroke(); }   // 宣纸纤维
+    inkMountains(c, G, ix, iy, th);
+    var sp = streamPts(G); c.lineJoin = 'round'; c.lineCap = 'round';                                   // 溪：淡青灰 + 墨线边 + 几道波纹
+    c.beginPath(); sp.forEach(function (p, k) { k ? c.lineTo(p.x - ox, p.y - oy) : c.moveTo(p.x - ox, p.y - oy); });
+    c.strokeStyle = th.waterEdge; c.lineWidth = 44; c.stroke(); c.strokeStyle = th.water; c.lineWidth = 38; c.stroke(); c.strokeStyle = 'rgba(255,255,255,0.7)'; c.lineWidth = 3; c.setLineDash([26, 40]); c.stroke(); c.setLineDash([]);
+    pathRoute(c, R, ox, oy); c.strokeStyle = th.edge; c.lineWidth = 92; c.stroke();                      // 道路：淡墨边 + 奶白路面（比纸更亮，一眼能看到）
+    pathRoute(c, R, ox, oy); c.strokeStyle = th.road; c.lineWidth = 84; c.stroke();
+    pathRoute(c, R, ox, oy); c.strokeStyle = 'rgba(150,130,90,0.4)'; c.lineWidth = 3; c.setLineDash([16, 24]); c.stroke(); c.setLineDash([]);
+    for (i = 1; i < sp.length; i++) {                                                                    // 小桥
+      var pr = XY.routeProject(R, sp[i].x, sp[i].y);
+      if (pr.d < 70) { var bp = XY.routeAt(R, pr.s), bpx = bp.x - ox, bpy = bp.y - oy; if (bpx < -80 || bpx > TS + 80 || bpy < -80 || bpy > TS + 80) continue;
+        c.save(); c.translate(bpx, bpy); c.rotate(bp.a); c.fillStyle = '#fbf0d6'; c.strokeStyle = 'rgba(120,96,56,0.65)'; c.lineWidth = 3; c.fillRect(-30, -50, 60, 100); c.strokeRect(-30, -50, 60, 100);
+        c.strokeStyle = 'rgba(150,120,70,0.4)'; c.lineWidth = 2; for (var q = -3; q <= 3; q++) { c.beginPath(); c.moveTo(q * 8, -50); c.lineTo(q * 8, 50); c.stroke(); } c.restore(); }
+    }
+    for (i = 0; i < 16; i++) {                                                                           // 疏松 / 疏竹 / 墨点石（避开道路与溪、不贴图块边）
+      var lx = 40 + rnd() * (TS - 80), ly = 60 + rnd() * (TS - 100), wx = ox + lx, wy = oy + ly, k2 = rnd(), s2 = 0.8 + rnd() * 0.7;
+      if (XY.routeProject(R, wx, wy).d < 80) continue;
+      var near = false; for (var z = 0; z < sp.length; z += 2) if (Math.abs(sp[z].x - wx) < 90 && Math.abs(sp[z].y - wy) < 70) { near = true; break; }
+      if (near) continue;
+      if (k2 < 0.7) inkTree(c, th.deco === 'bamboo' ? (k2 < 0.5 ? 'bamboo' : 'pine') : (k2 < 0.55 ? 'pine' : 'bamboo'), lx, ly, s2, th, rnd);
+      else { c.fillStyle = 'rgba(' + th.mtn + ',0.22)'; c.beginPath(); c.ellipse(lx, ly, 14 * s2, 7 * s2, 0, 0, PI2); c.fill(); c.fillStyle = 'rgba(' + th.mtn + ',0.3)'; c.beginPath(); c.ellipse(lx - 3, ly - 2, 5 * s2, 2.4 * s2, 0, 0, PI2); c.fill(); }
+    }
+    return cv;
+  }
+
   XY.terrainReset = function () { cache = {}; };
   XY.terrainTiles = function () { var n = 0, k; for (k in cache) n++; return n; };
 
@@ -7173,13 +7297,13 @@ XY.TRAITS = {
   XY.drawTerrain = function (c, G) {
     var v = G.view, W = C.WORLD_W, H = C.WORLD_H, th = themeOf(G);
     var x0 = G.cam.x - v.w / 2, y0 = G.cam.y - v.h / 2, x1 = x0 + v.w, y1 = y0 + v.h;
-    var key = G.levelId + ':' + (G.lv && G.lv.theme); if (key !== cacheKey) { cache = {}; cacheKey = key; }
-    c.fillStyle = '#e9efdc'; c.fillRect(x0, y0, v.w, v.h);
+    var ink = XY.inkBg(), key = G.levelId + ':' + (G.lv && G.lv.theme) + ':' + (ink ? 'ink' : 'classic'); if (key !== cacheKey) { cache = {}; cacheKey = key; }
+    c.fillStyle = ink ? '#f3efe0' : '#e9efdc'; c.fillRect(x0, y0, v.w, v.h);
     var ix0 = Math.max(0, Math.floor(x0 / TS)), ix1 = Math.min(Math.ceil(W / TS) - 1, Math.floor(x1 / TS));
     var iy0 = Math.max(0, Math.floor(y0 / TS)), iy1 = Math.min(Math.ceil(H / TS) - 1, Math.floor(y1 / TS)), n = 0, built = 0;
     for (var iy = iy0; iy <= iy1; iy++) for (var ix = ix0; ix <= ix1; ix++) {
       var k = tileKey(G, ix, iy), t = cache[k];
-      if (!t) { if (built >= 2) { c.fillStyle = th.base; c.fillRect(ix * TS, iy * TS, TS, TS); continue; } t = cache[k] = buildTile(G, ix, iy); built++; }   // 每帧最多现画 2 块，避免卡一下
+      if (!t) { if (built >= 2) { c.fillStyle = ink ? '#f3efe0' : th.base; c.fillRect(ix * TS, iy * TS, TS, TS); continue; } t = cache[k] = buildTile(G, ix, iy); built++; }   // 每帧最多现画 2 块，避免卡一下
       c.drawImage(t, ix * TS, iy * TS); n++;
     }
     // 唐僧走过的路段：淡金色（动态）
@@ -7191,7 +7315,7 @@ XY.TRAITS = {
       c.strokeStyle = 'rgba(255,224,130,0.80)'; c.lineWidth = 70; c.stroke();
       c.strokeStyle = 'rgba(255,246,200,0.9)'; c.lineWidth = 8; c.stroke();
     }
-    c.lineWidth = 6; c.strokeStyle = th.edge; c.strokeRect(0, 0, W, H);
+    c.lineWidth = 6; c.strokeStyle = ink ? 'rgba(120,104,76,0.45)' : th.edge; c.strokeRect(0, 0, W, H);
     return n;
   };
 })();
@@ -7436,7 +7560,7 @@ XY.TRAITS = {
         c.save(); c.translate(e.x, fy); c.scale(sq2[0], sq2[1]); c.translate(-e.x, -fy); c.drawImage(sp.cv, e.x - sp.pad, e.y - sp.pad + bob, sp.sz, sp.sz); c.restore();
       } else c.drawImage(sp.cv, e.x - sp.pad, e.y - sp.pad + bob, sp.sz, sp.sz);
       if (e.slowT > 0 || e.burnT > 0 || e.stunT > 0 || (e.type !== 'small' && e.hp < e.maxHp)) drawEnemyStatus(c, e);
-      if (!G._lod && e.elem) { c.fillStyle = XY.ELEMS[e.elem] ? XY.ELEMS[e.elem].color : '#999'; c.beginPath(); c.arc(e.x - e.r - 2, e.y - e.r - 2, 3.2, 0, PI2); c.fill(); }
+      if (!G._lod && e.elem) { c.fillStyle = XY.ELEMS[e.elem] ? XY.ELEMS[e.elem].color : '#999'; var ex0 = e.x - e.r - 2, ey0 = e.y - e.r - 2; c.beginPath(); c.moveTo(ex0, ey0 - 4); c.lineTo(ex0 + 3.6, ey0); c.lineTo(ex0, ey0 + 4); c.lineTo(ex0 - 3.6, ey0); c.closePath(); c.fill(); }
       return;
     }
     drawEnemyBase(c, G, e, rt);
@@ -7445,15 +7569,28 @@ XY.TRAITS = {
   }
   function drawEnemyStatus(c, e) {
     var x = e.x, y = e.y, r = e.r;
-    if (e.slowT > 0) { c.strokeStyle = 'rgba(74,144,217,0.8)'; c.lineWidth = 2; c.beginPath(); c.arc(x, y, r + 3, 0, PI2); c.stroke(); }
-    if (e.burnT > 0) { c.fillStyle = '#ff8a3c'; c.beginPath(); c.arc(x + r * 0.5, y - r - 4, 3.5, 0, PI2); c.fill(); }
-    if (e.stunT > 0) otxt(c, '★ ★', x, y - r - 12, 12, '#e0a415', 'center', true);
+    drawEnemyStatus2(c, e, r * 1.6);
     if (e.type !== 'small' && e.hp < e.maxHp) { var bw = r * 2; bar(c, x - bw / 2, y - r - 11, bw, 5, e.hp / e.maxHp, '#e0533d', 'rgba(255,255,255,0.85)'); }
+  }
+  // 状态标记（不再画圆圈）：减速 = 脚下淡蓝椭圆；灼烧 = 小火苗；眩晕 = 星星
+  function drawEnemyStatus2(c, e, top) {
+    var x = e.x, y = e.y, r = e.r;
+    if (e.slowT > 0) { c.strokeStyle = 'rgba(74,144,217,0.75)'; c.lineWidth = 2; c.beginPath(); c.ellipse(x, y + r * 0.85, r * 1.05, r * 0.4, 0, 0, PI2); c.stroke(); }
+    if (e.burnT > 0) { c.fillStyle = '#ff8a3c'; c.beginPath(); c.moveTo(x + r * 0.4, y - top * 0.55); c.quadraticCurveTo(x + r * 0.4 + 6, y - top * 0.55 - 8, x + r * 0.4, y - top * 0.55 - 14); c.quadraticCurveTo(x + r * 0.4 - 6, y - top * 0.55 - 6, x + r * 0.4, y - top * 0.55); c.fill(); }
+    if (e.stunT > 0) otxt(c, '★ ★', x, y - top - 4, 12, '#e0a415', 'center', true);
   }
   function drawEnemyBase(c, G, e, rt, baked) {
     var d = e.def, x = e.x, y = e.y, r = e.r, fl = e.flash > 0;
     var th = e.toCamp || !e.th ? G.camp : e.th, look = th.x > x ? 1 : -1;
     var bob = baked ? 0 : Math.sin(rt * 8 + e.wob) * 1.2;
+    if (XY.MA) {                                               // v0.6.4：不再用圆圈——BOSS / 精英 / 小怪都是有轮廓的造型
+      if (d.denBoss && XY.MA.hasFigure(e)) { XY.MA.boss(c, G, e, rt); drawEnemyStatus2(c, e, XY.MA.topOf(e)); return; }
+      if (d.elite && !d.boss) { XY.MA.elite(c, G, e, rt); drawEnemyStatus2(c, e, r * 2.2); if (e.hp < e.maxHp || true) bar(c, x - r, y - r * 2.1, r * 2, 5, e.hp / e.maxHp, '#e0533d', 'rgba(255,255,255,0.85)'); return; }
+      if (e.type === 'small' || e.type === 'tank' || e.type === 'ranged') {
+        c.fillStyle = 'rgba(70,50,30,0.16)'; c.beginPath(); c.ellipse(x, y + r * 0.8, r * 0.9, r * 0.35, 0, 0, PI2); c.fill();
+        XY.MA.minion(c, e, look, fl); if (baked) return; drawEnemyStatus2(c, e, r * 1.6); return;
+      }
+    }
     c.fillStyle = 'rgba(70,50,30,0.16)'; c.beginPath(); c.ellipse(x, y + r * 0.8, r * 0.9, r * 0.35, 0, 0, PI2); c.fill();
     c.lineWidth = d.boss ? 4 : 2; c.strokeStyle = d.dark;
     c.fillStyle = fl ? '#ffffff' : d.color;
@@ -7503,8 +7640,8 @@ XY.TRAITS = {
     // 唐僧佛光
     if (h.id === 'tang' && !h.down) {
       var ar = h.auraR || 125;
-      c.fillStyle = 'rgba(255,225,120,' + (0.13 + 0.04 * Math.sin(rt * 3)) + ')'; c.beginPath(); c.arc(x, y, ar, 0, PI2); c.fill();
-      c.setLineDash([8, 8]); c.lineDashOffset = -rt * 12; c.lineWidth = 2; c.strokeStyle = 'rgba(214,160,30,0.6)'; c.beginPath(); c.arc(x, y, ar, 0, PI2); c.stroke(); c.setLineDash([]);
+      c.fillStyle = 'rgba(255,225,120,' + (0.08 + 0.03 * Math.sin(rt * 3)) + ')'; c.beginPath(); c.arc(x, y, ar, 0, PI2); c.fill();
+      c.setLineDash([8, 8]); c.lineDashOffset = -rt * 12; c.lineWidth = 1.5; c.strokeStyle = 'rgba(214,160,30,0.42)'; c.beginPath(); c.arc(x, y, ar, 0, PI2); c.stroke(); c.setLineDash([]);
     }
     // 流沙河、操控标记
     c.fillStyle = 'rgba(70,50,30,0.2)'; c.beginPath(); c.ellipse(x, y + r * 0.85, r * 0.95, r * 0.36, 0, 0, PI2); c.fill();
@@ -7565,6 +7702,12 @@ XY.TRAITS = {
   }
 
   function R4rt() { return XY.R4.rt; }
+  function teardrop(c, x, y, a, r) {                         // 弹丸：水滴 / 流星形（尖尾在后），不再是圆点
+    var ca = Math.cos(a), sa = Math.sin(a), L = r * 2.1, W = r * 1.05;
+    function P(u, v) { return [x + u * ca - v * sa, y + u * sa + v * ca]; }
+    var t = P(-L, 0), a1 = P(-r * 0.2, -W * 1.15), a2 = P(r * 1.0, -W * 0.9), f = P(r * 1.05, 0), b1 = P(r * 1.0, W * 0.9), b2 = P(-r * 0.2, W * 1.15);
+    c.beginPath(); c.moveTo(t[0], t[1]); c.bezierCurveTo(a1[0], a1[1], a2[0], a2[1], f[0], f[1]); c.bezierCurveTo(b1[0], b1[1], b2[0], b2[1], t[0], t[1]); c.closePath();
+  }
   function drawProj(c, p) {
     var k = p.kind, x = p.x, y = p.y, a = Math.atan2(p.vy, p.vx);
     if (k === 'btc') { XY.phDrawProj(c, p, R4rt()); return; }
@@ -7580,7 +7723,7 @@ XY.TRAITS = {
     } else {
       var pc = p.col || '#ffb347';
       if (k === 'wave') { c.strokeStyle = pc; c.lineWidth = 5; c.globalAlpha = 0.85; c.beginPath(); c.arc(x, y, p.r * 1.3, a - 1, a + 1); c.stroke(); c.beginPath(); c.arc(x - Math.cos(a) * 10, y - Math.sin(a) * 10, p.r * 1.1, a - 1, a + 1); c.stroke(); c.globalAlpha = 1; }
-      else { c.fillStyle = pc; c.strokeStyle = '#fff'; c.lineWidth = 2; c.beginPath(); c.arc(x, y, p.r, 0, PI2); c.fill(); c.stroke(); }
+      else { c.fillStyle = pc; c.strokeStyle = '#fff'; c.lineWidth = 2; teardrop(c, x, y, a, p.r); c.fill(); c.stroke(); }
     }
     c.lineCap = 'butt';
   }
@@ -7687,8 +7830,8 @@ XY.TRAITS = {
     for (i = 0; i < G.coinDrops.length; i++) {
       var k = G.coinDrops[i]; if (!inView(G, k.x, k.y, 20)) continue;
       c.globalAlpha = XY.dropAlpha(k, rt);
-      c.fillStyle = '#ffd24a'; c.strokeStyle = '#b8860b'; c.lineWidth = 1.8; c.beginPath(); c.arc(k.x, k.y, 6.5, 0, PI2); c.fill(); c.stroke();
-      c.strokeStyle = '#d9a21a'; c.beginPath(); c.arc(k.x, k.y, 3.2, 0, PI2); c.stroke();
+      c.fillStyle = '#ffd24a'; c.strokeStyle = '#b8860b'; c.lineWidth = 1.8; c.beginPath(); c.moveTo(k.x - 8, k.y - 1); c.quadraticCurveTo(k.x, k.y - 10, k.x + 8, k.y - 1); c.lineTo(k.x + 5.5, k.y + 6); c.lineTo(k.x - 5.5, k.y + 6); c.closePath(); c.fill(); c.stroke();     // 金元宝
+      c.strokeStyle = '#fff1b0'; c.lineWidth = 1.4; c.beginPath(); c.moveTo(k.x - 3.5, k.y - 3); c.quadraticCurveTo(k.x, k.y - 6, k.x + 3.5, k.y - 3); c.stroke();
     }
     c.globalAlpha = 1;
     for (i = 0; i < G.chests.length; i++) drawChest(c, G.chests[i], rt);
@@ -7701,12 +7844,13 @@ XY.TRAITS = {
     for (i = 0; i < G.enemies.length; i++) { var e = G.enemies[i]; if (inView(G, e.x, e.y, 60)) drawEnemy(c, G, e, rt); }
     if (G.breach) for (i = 0; i < G.enemies.length; i++) {        // 闯进营地圈的妖怪：头上一个红圈 + 指向师父的红线
       var ie = G.enemies[i]; if (ie.dead || XY.dist(ie.x, ie.y, G.camp.x, G.camp.y) > C.CAMP_ZONE_R) continue;
-      c.strokeStyle = 'rgba(214,40,40,0.9)'; c.lineWidth = 3; c.beginPath(); c.arc(ie.x, ie.y, ie.r + 7 + Math.sin(rt * 12) * 2, 0, PI2); c.stroke();
+      var bt = ie.def && ie.def.denBoss ? ie.r * 2.4 : ie.r + 12, bz = Math.sin(rt * 12) * 2; c.fillStyle = 'rgba(214,40,40,0.95)'; c.strokeStyle = '#fff'; c.lineWidth = 1.5;      // 闯营警示：头上一个红色倒三角
+      c.beginPath(); c.moveTo(ie.x - 8, ie.y - bt - 12 + bz); c.lineTo(ie.x + 8, ie.y - bt - 12 + bz); c.lineTo(ie.x, ie.y - bt + 1 + bz); c.closePath(); c.fill(); c.stroke();
     }
     // 敌方子弹（红橙色，一眼能看出危险）
     for (i = 0; i < G.eprojs.length; i++) {
       var q = G.eprojs[i]; if (!inView(G, q.x, q.y, 20)) continue;
-      c.fillStyle = q.boss ? '#9b59d0' : '#ff7a3c'; c.strokeStyle = '#fff'; c.lineWidth = 2; c.beginPath(); c.arc(q.x, q.y, q.r, 0, PI2); c.fill(); c.stroke();
+      c.fillStyle = q.boss ? '#9b59d0' : '#ff7a3c'; c.strokeStyle = '#fff'; c.lineWidth = 2; teardrop(c, q.x, q.y, Math.atan2(q.vy, q.vx), q.r); c.fill(); c.stroke();
     }
     for (i = 0; i < G.projs.length; i++) if (inView(G, G.projs[i].x, G.projs[i].y, 20)) drawProj(c, G.projs[i]);
     // 英雄：按 y 排序，靠下的盖在上面
@@ -8213,16 +8357,17 @@ XY.TRAITS = {
   }
 
   function drawPause(c, G, app) {
-    var W = app.lw, H = app.lh;
+    var W = app.lw, H = app.lh, y0 = H / 2 - 200;
     dim(c, app, 0.6);
-    panel(c, W / 2 - 200, H / 2 - 170, 400, 340, 20, 'rgba(255,255,255,0.95)', '#d9a21a');
-    txt(c, '已暂停', W / 2, H / 2 - 120, 40, T.ink, 'center', true);
-    btn(c, app, W / 2 - 110, H / 2 - 70, 220, 52, '继续（Esc / P）', 'resume', { primary: true });
-    btn(c, app, W / 2 - 110, H / 2 - 4, 220, 52, '重新开始（R）', 'restart');
-    btn(c, app, W / 2 - 110, H / 2 + 62, 220, 52, '回到首页', 'home');
-    txt(c, '现在 ' + XY.fmtTime(G.t) + '  ·  ' + G.level + ' 级  ·  击杀 ' + G.kills, W / 2, H / 2 + 134, 14, T.inkSoft, 'center', false);
+    panel(c, W / 2 - 200, y0, 400, 410, 20, 'rgba(255,255,255,0.95)', '#d9a21a');
+    txt(c, '已暂停', W / 2, y0 + 48, 40, T.ink, 'center', true);
+    btn(c, app, W / 2 - 110, y0 + 98, 220, 52, '继续（Esc / P）', 'resume', { primary: true });
+    btn(c, app, W / 2 - 110, y0 + 162, 220, 52, '重新开始（R）', 'restart');
+    btn(c, app, W / 2 - 110, y0 + 226, 220, 52, '回到首页', 'home');
+    btn(c, app, W / 2 - 110, y0 + 290, 220, 44, '背景：' + (XY.inkBg && XY.inkBg() ? '水墨山水（点我换经典）' : '经典彩色（点我换水墨）'), 'bg');
+    txt(c, '现在 ' + XY.fmtTime(G.t) + '  ·  ' + G.level + ' 级  ·  击杀 ' + G.kills, W / 2, y0 + 360, 14, T.inkSoft, 'center', false);
     var mn = G.t / 60;                                                      // 从局内 HUD 挪过来的成长说明
-    txt(c, '小怪 +' + Math.round(C.ENEMY_SCALE * mn * 100) + '%（每分钟 +1%）· BOSS +' + Math.round(C.BOSS_SCALE * mn * 100) + '%（每分钟 +5%）', W / 2, H / 2 + 156, 12, '#8a4a05', 'center', false);
+    txt(c, '小怪 +' + Math.round(C.ENEMY_SCALE * mn * 100) + '%（每分钟 +1%）· BOSS +' + Math.round(C.BOSS_SCALE * mn * 100) + '%（每分钟 +5%）', W / 2, y0 + 384, 12, '#8a4a05', 'center', false);
   }
 
   function drawEnd(c, G, app, win) { return XY.R4.end(c, G, app, win); }
@@ -8563,6 +8708,13 @@ XY.TRAITS = {
     if (bd) { T.bar(c, x - 26, y + 26, 52, 6, k, '#8a5fc0', 'rgba(255,255,255,0.85)'); T.otxt(c, '妖塔建造中', x, y - 56, 12, '#6b3fa0', 'center', true); }
     else { T.otxt(c, '妖塔', x, y - 56, 12, '#6b3fa0', 'center', true); T.bar(c, x - 26, y + 26, 52, 6, e.hp / e.maxHp, '#e0533d', 'rgba(255,255,255,0.85)'); }
   };
+  // 狂暴倒计时配色（浅色主题）：正常淡紫 / ≤30 秒琥珀 / ≤10 秒红色并脉动
+  function enrageLook(t, rt) {
+    if (t <= XY.C.ENRAGE_WARN2) { var p = 0.5 + 0.5 * Math.sin(rt * 14); return { fill: 'rgba(255,' + Math.round(225 - 60 * p) + ',' + Math.round(220 - 60 * p) + ',0.97)', line: '#d62828', ink: '#c01818', warn: 2, pulse: p }; }
+    if (t <= XY.C.ENRAGE_WARN1) { var q = 0.5 + 0.5 * Math.sin(rt * 6); return { fill: 'rgba(255,243,205,0.97)', line: q > 0.5 ? '#e08a0b' : '#f0b84a', ink: '#9a5a00', warn: 1, pulse: q }; }
+    return { fill: 'rgba(245,238,255,0.95)', line: '#9b59d0', ink: '#5b2d91', warn: 0, pulse: 0 };
+  }
+  R4.enrageLook = enrageLook;
   R4.enemyOver = function (c, G, e, rt) {
     var T = R(), d = e.def, x = e.x, y = e.y, r = e.r;
     if (e.shield > 0) {                                   // 精英元素护盾：元素色光罩 + 剩余量弧条
@@ -8571,18 +8723,30 @@ XY.TRAITS = {
       c.strokeStyle = sc; c.lineWidth = 3.5; c.beginPath(); c.arc(x, y, r + 7, -Math.PI / 2, -Math.PI / 2 + PI2 * sk); c.stroke();
     }
     if (e.synMk && e.synMk.until > G.t) { T.otxt(c, '印', x + r * 0.6, y - r - 12, 15, '#c0489a', 'center', true); }
-    if (e.elem && !d.etower) { c.fillStyle = ELC(e.elem); c.strokeStyle = '#fff'; c.lineWidth = 1; c.beginPath(); c.arc(x - r - 2, y - r - 2, d.boss ? 5 : 3.2, 0, PI2); c.fill(); c.stroke(); }
+    if (e.elem && !d.etower && !d.denBoss) { var q = 3.6, ex1 = x - r - 2, ey1 = y - r - 2; c.fillStyle = ELC(e.elem); c.strokeStyle = '#fff'; c.lineWidth = 1; c.beginPath(); c.moveTo(ex1, ey1 - q - 1); c.lineTo(ex1 + q, ey1); c.lineTo(ex1, ey1 + q + 1); c.lineTo(ex1 - q, ey1); c.closePath(); c.fill(); c.stroke(); }
     if (d.denBoss) {
-      var bw = 110, mult = e.maxHp / (e.baseHp || e.maxHp);
-      T.bar(c, x - bw / 2, y - r - 22, bw, 8, e.hp / e.maxHp, '#9b59d0', 'rgba(255,255,255,0.85)');
-      T.otxt(c, d.name + ' ' + ELN(e.elem) + ' · +' + Math.round((mult - 1) * 100) + '%', x, y - r - 32, 13, '#5b2d91', 'center', true);
+      var bw = 120, mult = e.maxHp / (e.baseHp || e.maxHp), tp = (XY.MA && XY.MA.hasFigure(e)) ? XY.MA.topOf(e) : r + 14;
+      if (e.enraged) {                                // 狂暴：红色光晕（半透明、不挡画面）；脚下的火圈和肩头火苗在 monsterart.js 里
+        var ep = 0.5 + 0.5 * Math.sin(rt * 9), eg = c.createRadialGradient(x, y - tp * 0.3, tp * 0.2, x, y - tp * 0.3, tp * 1.1);
+        eg.addColorStop(0, 'rgba(255,40,20,' + (0.26 + 0.12 * ep) + ')'); eg.addColorStop(1, 'rgba(255,40,20,0)');
+        c.fillStyle = eg; c.fillRect(x - tp * 1.2, y - tp * 1.5, tp * 2.4, tp * 2.2);
+      }
+      var tagW = 150, tagY = y - tp - 38;              // 名牌：圆角牌 + 名字 + 元素 + 成长；血条在名牌下面、头顶上面
+      c.globalAlpha = 0.92; T.rrect(c, x - tagW / 2, tagY, tagW, 20, 10); c.fillStyle = e.enraged ? '#ffe3dc' : '#f6efff'; c.fill(); c.lineWidth = 2.5; c.strokeStyle = e.enraged ? '#d11a0a' : d.color; c.stroke(); c.globalAlpha = 1;
+      T.otxt(c, (e.enraged ? '狂暴 ' : '') + d.name + ' ' + ELN(e.elem) + ' +' + Math.round((mult - 1) * 100) + '%', x, tagY + 10, 13, e.enraged ? '#d11a0a' : '#5b2d91', 'center', true);
+      T.bar(c, x - bw / 2, y - tp - 14, bw, 9, e.hp / e.maxHp, e.enraged ? '#e0402a' : '#9b59d0', 'rgba(255,255,255,0.85)');
+      if (e.enrageT !== undefined && !e.enraged) {    // 狂暴倒计时：名牌上方一个小胶囊，30 秒变黄、10 秒变红并脉动
+        var ew = enrageLook(e.enrageT, rt), ey = tagY - 16;
+        c.globalAlpha = 0.95; T.rrect(c, x - 52, ey - 10, 104, 20, 10); c.fillStyle = ew.fill; c.fill(); c.lineWidth = 2; c.strokeStyle = ew.line; c.stroke(); c.globalAlpha = 1;
+        T.txt(c, '狂暴 ' + XY.fmtTime(Math.max(0, e.enrageT)), x, ey + 1, 13, ew.ink, 'center', true);
+      }
       if (e.bstate === 'tele') {                      // 冲锋预警线
         c.strokeStyle = 'rgba(224,83,61,' + (0.3 + 0.3 * Math.sin(rt * 20)) + ')'; c.lineWidth = r * 1.5; c.lineCap = 'butt';
         c.beginPath(); c.moveTo(x, y); c.lineTo(x + e.cdx * 700, y + e.cdy * 700); c.stroke();
       } else if (e.bstate === 'slam') {               // 震地预警圈
         var sp = 0.5 + 0.5 * Math.sin(rt * 18);
         c.fillStyle = 'rgba(255,122,60,' + (0.12 + 0.1 * sp) + ')'; c.beginPath(); c.arc(x, y, e.slamR, 0, PI2); c.fill();
-        c.strokeStyle = 'rgba(224,83,61,0.85)'; c.lineWidth = 3; c.beginPath(); c.arc(x, y, e.slamR, 0, PI2); c.stroke();
+        c.strokeStyle = 'rgba(224,83,61,0.5)'; c.lineWidth = 2; c.setLineDash([10, 8]); c.beginPath(); c.arc(x, y, e.slamR, 0, PI2); c.stroke(); c.setLineDash([]);
       }
     }
   };
@@ -8667,6 +8831,24 @@ XY.TRAITS = {
   };
   var HCOL = { ride: '#2d9aa6', follow: '#3d6288', station: '#a8700a', attack: '#b8300f', guard: '#2f7d3b' };
 
+  // 屏幕上方居中的 BOSS 狂暴提示：倒数中 = 浅色胶囊 + 剩余进度条，≤30 秒琥珀色提示，≤10 秒红色脉动；已狂暴 = 红底白字（数值 / 出怪倍率）
+  function drawEnrage(c, G, app, W, y) {
+    var b = XY.enrageFocus(G); if (!b || G.tut) return y;
+    var T = R(), rt = app.rt, w = Math.min(W - 20, 470), x = W / 2 - w / 2, h = 34, name = b.def.name, total = XY.enrageSeconds(b);
+    if (b.enraged) {
+      var p = 0.5 + 0.5 * Math.sin(rt * 8);
+      T.rrect(c, x, y, w, h, 11); c.fillStyle = 'rgba(214,40,40,' + (0.86 + 0.12 * p) + ')'; c.fill(); c.lineWidth = 2.5; c.strokeStyle = '#fff'; c.stroke();
+      T.txt(c, '🔥 ' + name + ' 狂暴中！数值 ×' + C.BOSS_ENRAGE_MUL + ' · 小怪出量 ×' + (G.enrageMul || 1), W / 2, y + h / 2 + 1, 16, '#fff', 'center', true);
+      return y + h + 6;
+    }
+    var t = Math.max(0, b.enrageT), lk = enrageLook(t, rt), msg = lk.warn === 2 ? '就要狂暴了！快打！' : (lk.warn === 1 ? '快点打，不然它要狂暴！' : '');
+    c.globalAlpha = 0.97; T.rrect(c, x, y, w, h, 11); c.fillStyle = lk.fill; c.fill(); c.lineWidth = lk.warn ? 3 : 2; c.strokeStyle = lk.line; c.stroke(); c.globalAlpha = 1;
+    T.txt(c, name + ' 狂暴倒计时 ' + XY.fmtTime(t), x + 14, y + 13, 15, lk.ink, 'left', true);
+    if (msg) T.txt(c, msg, x + w - 14, y + 13, 13, lk.ink, 'right', true);
+    else T.txt(c, '时间到还没打死：数值 ×' + C.BOSS_ENRAGE_MUL + '，小怪出量 ×' + C.ENRAGE_SPAWN_MUL, x + w - 14, y + 13, 11, T.T.inkSoft, 'right', false);
+    T.bar(c, x + 12, y + 23, w - 24, 6, t / total, lk.warn === 2 ? '#d62828' : (lk.warn === 1 ? '#e08a0b' : '#9b59d0'), 'rgba(255,255,255,0.85)');
+    return y + h + 6;
+  }
   function drawTop(c, G, app, ctx) {
     var T = R(), W = app.lw, rt = app.rt, min = G.t / 60;
     var pw = 430, px = W / 2 - pw / 2;
@@ -8686,7 +8868,9 @@ XY.TRAITS = {
       T.txt(c, den.name, x + 8, y + 12, 13, al ? T.T.ink : '#8a8578', 'left', true);
       T.txt(c, den.bossName + '·' + ELN(den.elem), x + cw - 8, y + 12, 11, al ? ec : '#8a8578', 'right', true);
       if (al && b && !b.dead) {
-        T.bar(c, x + 8, y + 22, cw - 16, 7, b.hp / b.maxHp, '#9b59d0', 'rgba(255,255,255,0.8)');
+        T.bar(c, x + 8, y + 22, cw - 16, 7, b.hp / b.maxHp, b.enraged ? '#e0402a' : '#9b59d0', 'rgba(255,255,255,0.8)');
+        if (b.enraged) { T.txt(c, '狂暴', x + cw / 2, y + 12, 11, '#d11a0a', 'center', true); }
+        else if (b.enrageT !== undefined) { var dl = enrageLook(b.enrageT, rt); T.txt(c, XY.fmtTime(Math.max(0, b.enrageT)), x + cw / 2, y + 12, 11, dl.ink, 'center', true); }
         var mult = b.maxHp / (b.baseHp || b.maxHp);
         if (mult > 1.02) T.txt(c, '+' + Math.round((mult - 1) * 100) + '%', x + cw - 8, y + 26, 10, '#8a4a05', 'right', true);          // 强化百分比缩成右下角小字（“活着就出怪”的说明去掉了）
       } else T.txt(c, '已镇灭', x + 8, y + 25, 12, '#7a766a', 'left', true);
@@ -9166,6 +9350,7 @@ XY.TRAITS = {
     // 提示横幅 / 红条
     var stripY = ctx.denBottom + 6;
     if (G.tut) stripY = Math.max(stripY, ctx.tutBottom + 6);                                 // 新手提示条在的时候，横幅 / 红条放到它下面（原来会盖住）
+    stripY = drawEnrage(c, G, app, W, stripY);                                               // BOSS 狂暴倒计时 / 狂暴提示条（有 BOSS 在倒数才画）
     XY.ui.strip = null;
     if (G.breach && !tg.down) {
       var bp = 0.5 + 0.5 * Math.sin(rt * 12);
@@ -9224,6 +9409,253 @@ XY.TRAITS = {
     edge(G.gate.x, G.gate.y, G.gate.sealed ? '关口（主线未完成）' : '关口：师父走到就通关', G.gate.sealed ? '#a39a8a' : '#e0a415', false);
     drawTip(c, app, tip || app._tip);
     if (G.tut) XY.tutDraw(c, G, app);
+  };
+})();
+
+</script>
+<script>
+/* ---- js/monsterart.js ---- */
+/* ============================================================
+ * monsterart.js —— v0.6.4 妖怪造型：不再用圆圈
+ *  - 9 个 BOSS 各一个全身造型（比小怪大 3 倍多，剪影不同）：牛魔王 / 黑熊精 / 白骨精 / 金角大王 / 红孩儿 / 黄风怪 / 铁扇公主 / 玉面公主 / 赤焰魔
+ *  - 精英（牛头卫）：披甲牛头人；小怪：小妖（带角小鬼）/ 弓箭妖（兜帽 + 弓）/ 石头怪（岩石傀儡），这三种仍然预渲染成精灵图
+ *  - 狂暴：身体偏红、双眼发红光、头顶肩上有火苗；红光环与「狂暴」条在 render4.js 的 enemyOver 里
+ *  - 全部矢量路径 + 粗描边，不用 shadowBlur；只画屏幕上的 BOSS（一般 1~3 个）
+ * ============================================================ */
+(function () {
+  var XY = window.XY, PI2 = Math.PI * 2, MA = XY.MA = {};
+  var c, FL = false, EN = false, RT = 0, DK = '#333', SW = 0, LK = 1, mixC = {};
+  function hexRGB(h) { if (h.length === 4) h = '#' + h[1] + h[1] + h[2] + h[2] + h[3] + h[3]; return [parseInt(h.substr(1, 2), 16), parseInt(h.substr(3, 2), 16), parseInt(h.substr(5, 2), 16)]; }
+  function mix(a, b, t) {
+    var k = a + b + t, v = mixC[k]; if (v) return v;
+    var x = hexRGB(a), y = hexRGB(b), o = '#'; for (var i = 0; i < 3; i++) { var n = Math.round(x[i] + (y[i] - x[i]) * t).toString(16); o += n.length < 2 ? '0' + n : n; }
+    return (mixC[k] = o);
+  }
+  function col(h) { if (FL) return '#ffffff'; return EN ? mix(h, '#ff3a24', 0.26) : h; }
+  function F(h) { c.fillStyle = col(h); }
+  function fs(h) { F(h); c.fill(); c.stroke(); }
+  function poly(a) { c.beginPath(); c.moveTo(a[0], a[1]); for (var i = 2; i < a.length; i += 2) c.lineTo(a[i], a[i + 1]); c.closePath(); }
+  function rr(x, y, w, h, r) { c.beginPath(); c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r); c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath(); }
+  function ell(x, y, a, b, h, rot) { c.beginPath(); c.ellipse(x, y, a, b, rot || 0, 0, PI2); if (h) fs(h); }
+  function limb(x1, y1, x2, y2, w, h) {                                // 粗圆头线段：手臂 / 腿 / 杆（先描边再上色）
+    c.lineCap = 'round'; c.beginPath(); c.moveTo(x1, y1); c.lineTo(x2, y2);
+    c.strokeStyle = DK; c.lineWidth = w + 6; c.stroke(); c.strokeStyle = col(h); c.lineWidth = w; c.stroke(); c.strokeStyle = DK; c.lineWidth = 3;
+  }
+  function flame(x, y, w, h, c1, c2, ph) {                              // 火苗（会摇）
+    var sw = Math.sin(RT * 9 + ph) * w * 0.25;
+    c.beginPath(); c.moveTo(x - w / 2, y); c.quadraticCurveTo(x - w * 0.7, y - h * 0.5, x + sw, y - h); c.quadraticCurveTo(x + w * 0.7, y - h * 0.45, x + w / 2, y); c.closePath();
+    c.fillStyle = FL ? '#fff' : c1; c.fill();
+    c.beginPath(); c.moveTo(x - w * 0.28, y); c.quadraticCurveTo(x - w * 0.3, y - h * 0.4, x + sw * 0.6, y - h * 0.62); c.quadraticCurveTo(x + w * 0.32, y - h * 0.35, x + w * 0.28, y); c.closePath();
+    c.fillStyle = FL ? '#fff' : c2; c.fill();
+  }
+  function eyes(x, y, gap, sz, angry) {                                 // 眼睛：狂暴时发红光 + 眉毛压低
+    for (var s = -1; s <= 1; s += 2) {
+      var ex = x + s * gap;
+      c.fillStyle = EN ? '#ffe45a' : '#fff'; c.beginPath(); c.ellipse(ex, y, sz, sz * 0.8, 0, 0, PI2); c.fill(); c.lineWidth = 2; c.stroke();
+      c.fillStyle = EN ? '#ff1a0a' : '#c0392b'; c.beginPath(); c.ellipse(ex + LK * sz * 0.3, y + 0.5, sz * 0.5, sz * 0.58, 0, 0, PI2); c.fill();
+      if (angry) { c.lineWidth = EN ? 4.5 : 3.2; c.beginPath(); c.moveTo(ex + s * sz * 1.3, y - sz * (EN ? 2.3 : 1.8)); c.lineTo(ex - s * sz * 1.2, y - sz * (EN ? 0.7 : 1.0)); c.stroke(); }
+    }
+    c.lineWidth = 3;
+  }
+  function legs(x1, x2, top, h, color, wid) {
+    var w = wid || 18;
+    rr(x1 - w / 2, top, w, h + SW, 6); fs(color); rr(x2 - w / 2, top, w, h - SW, 6); fs(color);
+  }
+  function horn(s, x0, y0, x1, y1, x2, y2, h) { c.beginPath(); c.moveTo(s * x0, y0); c.quadraticCurveTo(s * x1, y1, s * x2, y2); c.quadraticCurveTo(s * (x0 + x2) / 2 * 0.8, (y0 + y2) / 2 + 6, s * (x0 - 12), y0 + 4); c.closePath(); fs(h); }
+  function crown(n, x, y, w, h, c1, c2) { for (var i = 0; i < n; i++) flame(x + (i - (n - 1) / 2) * w, y - Math.abs(i - (n - 1) / 2) * 3, w * 1.2, h - Math.abs(i - (n - 1) / 2) * 7, c1, c2, i * 1.7); }
+
+  /* ---------- 9 个 BOSS（原点 = 单位位置，脚在 y=+34，头顶约 y=-100；整体乘 r/44） ---------- */
+  var FIG = {
+    bull: function (d, A) {                                              // 牛魔王：披甲牛头巨汉 + 狼牙棒
+      poly([-30, -34, 30, -34, 50, 32, -50, 32]); fs('#b8322a');
+      legs(-15, 15, 10, 26, '#4a2a7a', 22);
+      rr(-12, 30, 24, 6, 3); F('#f3ead2'); c.fill();
+      rr(-36, -38, 72, 56, 20); fs(d.color); rr(-23, -14, 46, 30, 12); fs('#a98bd8');
+      rr(-36, 8, 72, 9, 3); fs('#f0b429'); rr(-8, 6, 16, 13, 3); fs('#ffd75e');
+      limb(-38, -24, -56, 2 - A.up * 6, 16, d.color); rr(-65, -6 - A.up * 6, 18, 16, 6); fs('#7a4ab5');
+      poly([-36, -36, -56, -30, -60, -8, -42, -16]); fs('#f0b429'); poly([36, -36, 56, -30, 60, -8, 42, -16]); fs('#f0b429');
+      poly([-50, -31, -45, -43, -41, -34]); fs('#f3ead2'); poly([50, -31, 45, -43, 41, -34]); fs('#f3ead2');
+      limb(38, -24, 56, -8, 16, d.color);
+      c.save(); c.translate(58, -8); c.rotate(0.55 - A.up * 2.5 + A.swing); c.lineCap = 'round';                // 狼牙棒
+      rr(-5, -66, 10, 76, 4); fs('#8a6a3a'); rr(-15, -104, 30, 46, 10); fs('#8c8c9a');
+      poly([-15, -92, -25, -97, -15, -82]); fs('#cfcfd8'); poly([15, -92, 25, -97, 15, -82]); fs('#cfcfd8'); poly([-15, -72, -25, -75, -15, -64]); fs('#cfcfd8'); poly([15, -72, 25, -75, 15, -64]); fs('#cfcfd8'); poly([-8, -104, 0, -116, 8, -104]); fs('#cfcfd8');
+      c.restore();
+      rr(-28, -76, 56, 44, 18); fs(d.color);
+      poly([-28, -64, -42, -72, -36, -52]); fs(d.color); poly([28, -64, 42, -72, 36, -52]); fs(d.color);
+      horn(-1, 20, -70, 56, -66, 54, -104, '#f3ead2'); horn(1, 20, -70, 56, -66, 54, -104, '#f3ead2');
+      rr(-16, -54, 32, 22, 10); fs('#c9a8ee'); ell(-6, -42, 3, 4, '#4a2a7a'); ell(6, -42, 3, 4, '#4a2a7a');
+      c.strokeStyle = '#e0a415'; c.lineWidth = 3; c.beginPath(); c.arc(0, -35, 6, 0.2, Math.PI - 0.2); c.stroke(); c.strokeStyle = DK;
+      eyes(0, -62, 12, 5.5, true);
+    },
+    bear: function (d, A) {                                              // 黑熊精：圆耳大肚 + 黑缨枪
+      limb(-52, 34, -52 - A.swing * 6, -100, 6, '#8a6a3a'); poly([-58, -98, -52, -124, -46, -98]); fs('#d8dde6'); poly([-58, -98, -62, -80, -52, -88, -42, -80, -46, -98]); fs('#c0392b');
+      legs(-16, 16, 10, 26, '#4a3a33', 24);
+      rr(-40, -40, 80, 64, 26); fs(d.color); rr(-25, -14, 50, 34, 16); fs('#8c7a70');
+      poly([-36, -36, 36, -36, 30, -2, -30, -2]); fs('#3a302b'); for (var i = -2; i <= 2; i += 2) { ell(i * 11, -26, 3, 3, '#f0b429'); }
+      limb(-40, -24, -58, 4 - A.up * 8, 20, d.color); limb(40, -24, 58, 4 - A.up * 24, 20, d.color);
+      for (var s = -1; s <= 1; s += 2) for (var k = -1; k <= 1; k++) { poly([s * 58 + k * 6 - 3, 12 - A.up * (s > 0 ? 24 : 8), s * 58 + k * 6 + 3, 12 - A.up * (s > 0 ? 24 : 8), s * 58 + k * 6, 22 - A.up * (s > 0 ? 24 : 8)]); fs('#f3ead2'); }
+      ell(-24, -76, 12, 12, d.color); ell(-24, -76, 6, 6, '#a58f84'); ell(24, -76, 12, 12, d.color); ell(24, -76, 6, 6, '#a58f84');
+      rr(-30, -78, 60, 48, 22); fs(d.color); ell(0, -48, 17, 12, '#c9b3a2'); ell(0, -54, 6, 4.5, '#2e2420');
+      poly([-8, -41, -4, -33, 0, -41]); fs('#fff'); poly([0, -41, 4, -33, 8, -41]); fs('#fff');
+      eyes(0, -66, 13, 5, true);
+    },
+    bone: function (d, A) {                                              // 白骨精：白骨长裙 + 骷髅脸 + 鬼火
+      for (var s = -1; s <= 1; s += 2) { flame(s * 54, -10 + Math.sin(RT * 3 + s) * 6, 16, 26, '#7cf0c0', '#d8fff0', s); }
+      limb(46, 36, 46, -84, 5, '#d8d2b8'); ell(46, -90, 9, 9, '#f6f2e4'); ell(43, -91, 2.4, 3, '#2a2a3a'); ell(49, -91, 2.4, 3, '#2a2a3a');
+      poly([-20, -34, 20, -34, 44, 34, -44, 34]); fs('#f6f2e4');
+      c.strokeStyle = '#b9b296'; c.lineWidth = 2.5; for (var r = 0; r < 4; r++) { c.beginPath(); c.moveTo(-14 + r * 2, -28 + r * 9); c.quadraticCurveTo(0, -22 + r * 9, 14 - r * 2, -28 + r * 9); c.stroke(); } c.strokeStyle = DK; c.lineWidth = 3;
+      rr(-22, -36, 44, 7, 3); fs('#7b6aa8');
+      poly([-20, -32, -48, -4 - A.up * 20, -38, 6 - A.up * 20, -16, -18]); fs('#efe9d4'); poly([20, -32, 44, -10, 38, 6, 16, -18]); fs('#efe9d4');
+      poly([-22, -64, -34, -20, -20, -30, -2, -26, 22, -30, 34, -20, 22, -64]); fs('#4a4560');
+      rr(-19, -72, 38, 36, 14); fs('#f6f2e4'); ell(-8, -56, 6, 7.5, '#2a2a3a'); ell(8, -56, 6, 7.5, '#2a2a3a');
+      c.fillStyle = EN ? '#ff2a1a' : '#7cf0c0'; c.beginPath(); c.arc(-8, -56, 2.4, 0, PI2); c.arc(8, -56, 2.4, 0, PI2); c.fill();
+      poly([-3, -48, 0, -43, 3, -48]); fs('#2a2a3a'); c.beginPath(); c.moveTo(-8, -40); c.lineTo(8, -40); c.stroke();
+      for (var t = -6; t <= 6; t += 4) { c.beginPath(); c.moveTo(t, -42); c.lineTo(t, -38); c.stroke(); }
+      limb(10, -72, 22, -86, 4, '#f3ead2');
+    },
+    jin: function (d, A) {                                               // 金角大王：金甲 + 独角盔 + 紫金红葫芦
+      poly([-26, -34, 26, -34, 46, 32, -46, 32]); fs('#c0392b');
+      legs(-14, 14, 10, 26, '#8a6a0b', 20);
+      rr(-33, -38, 66, 56, 16); fs(d.color); rr(-33, -4, 66, 8, 3); fs('#8a6a0b');
+      poly([0, -28, 8, -18, 0, -8, -8, -18]); fs('#d33'); c.strokeStyle = '#8a6a0b'; c.lineWidth = 2; c.beginPath(); c.moveTo(-22, -22); c.lineTo(-12, -8); c.moveTo(22, -22); c.lineTo(12, -8); c.stroke(); c.strokeStyle = DK; c.lineWidth = 3;
+      poly([-33, -38, -52, -32, -54, -14, -36, -22]); fs('#f4cf5a'); poly([33, -38, 52, -32, 54, -14, 36, -22]); fs('#f4cf5a');
+      limb(-36, -24, -54, 2, 15, '#f0c85a'); limb(36, -24, 52, 4 - A.up * 20, 15, '#f0c85a');
+      c.save(); c.translate(56, 6 - A.up * 20); c.rotate(A.swing * 0.5);                              // 紫金红葫芦
+      c.beginPath(); c.moveTo(-4, -12); c.lineTo(4, -12); c.lineTo(3, -4); c.lineTo(-3, -4); c.closePath(); fs('#f4cf5a'); ell(0, 4, 10, 9, '#d33'); ell(0, 22, 14, 13, '#d33'); ell(-4, 20, 3, 5, '#ff9a8a'); c.restore();
+      c.strokeStyle = '#f4cf5a'; c.lineWidth = 3; c.beginPath(); c.moveTo(-54, 2); c.quadraticCurveTo(-72, 20, -56, 30); c.quadraticCurveTo(-40, 24, -52, 6); c.stroke(); c.strokeStyle = DK; c.lineWidth = 3;
+      rr(-24, -74, 48, 42, 16); fs('#f4cf5a'); rr(-16, -62, 32, 28, 11); fs('#f6d9a8');
+      poly([-24, -66, -36, -60, -34, -44, -24, -48]); fs('#f4cf5a'); poly([24, -66, 36, -60, 34, -44, 24, -48]); fs('#f4cf5a');
+      poly([-9, -72, 9, -72, 0, -118]); fs('#fff6cf');
+      poly([-14, -42, 0, -30, 14, -42, 8, -36, 0, -34, -8, -36]); fs('#7a5a1a'); eyes(0, -54, 9, 4.6, true);
+    },
+    red: function (d, A) {                                               // 红孩儿：火焰发髻 + 风火轮 + 火尖枪
+      for (var s = -1; s <= 1; s += 2) { flame(s * 14, 40, 26, 30 + Math.sin(RT * 12 + s) * 4, '#ff7a2a', '#ffe45a', s * 2); }
+      limb(40, 34, 54 - A.swing * 6, -92, 6, '#8a4a1a'); flame(54 - A.swing * 6, -86, 22, 40, '#ff4a1a', '#ffd23a', 1);
+      legs(-11, 11, 8, 24, '#b02a14', 16);
+      rr(-27, -32, 54, 46, 16); fs(d.color); poly([-18, -4, 18, -4, 22, 16, -22, 16]); fs('#f6b84a');
+      rr(-27, -2, 54, 7, 3); fs('#ffd23a');
+      limb(-28, -22, -46, 2, 14, '#ffcba4'); limb(28, -22, 44, 0 - A.up * 20, 14, '#ffcba4');
+      crown(4, 0, -72, 11, 42, '#ff4a1a', '#ffd23a');
+      rr(-25, -70, 50, 42, 18); fs('#ffcba4'); poly([-25, -62, -28, -46, -18, -34, -25, -34]); fs('#e0452e'); poly([25, -62, 28, -46, 18, -34, 25, -34]); fs('#e0452e');
+      c.fillStyle = EN ? '#ff6a4a' : '#ff9a8a'; c.beginPath(); c.ellipse(-14, -44, 5, 3.4, 0, 0, PI2); c.ellipse(14, -44, 5, 3.4, 0, 0, PI2); c.fill();
+      eyes(0, -54, 10, 5, true); c.beginPath(); c.moveTo(-5, -38); c.quadraticCurveTo(0, -34, 5, -38); c.stroke();
+    },
+    yellow: function (d, A) {                                            // 黄风怪：尖嘴黄毛怪 + 旋风
+      c.strokeStyle = 'rgba(214,180,70,0.85)'; c.lineWidth = 5; c.lineCap = 'round'; for (var w = 0; w < 3; w++) { c.beginPath(); c.arc(0, -24 + w * 4, 54 + w * 12, RT * 3 + w * 2, RT * 3 + w * 2 + 1.5); c.stroke(); } c.strokeStyle = DK; c.lineWidth = 3;
+      c.beginPath(); c.moveTo(-26, 20); c.quadraticCurveTo(-72, 18, -64, -36); c.strokeStyle = DK; c.lineWidth = 15; c.stroke(); c.strokeStyle = col('#e8c44a'); c.lineWidth = 9; c.stroke(); c.strokeStyle = DK; c.lineWidth = 3;
+      legs(-13, 13, 12, 24, '#6b5510', 18);
+      poly([-22, -34, 22, -34, 44, 28, -44, 28]); fs(d.color); poly([-6, -34, 6, -34, 14, 28, -14, 28]); fs('#e8c44a'); rr(-24, -8, 48, 7, 3); fs('#8a6a0b');
+      limb(-24, -26, -44, -2, 14, '#e8c44a'); limb(24, -26, 46, -6 - A.up * 20, 14, '#e8c44a');
+      for (var s = -1; s <= 1; s += 2) for (var k = 0; k < 3; k++) { poly([s * 46 - 3 + k * 5 * s, -2 - A.up * (s > 0 ? 20 : 0), s * 46 + 3 + k * 5 * s, -2 - A.up * (s > 0 ? 20 : 0), s * 46 + k * 5 * s, 8 - A.up * (s > 0 ? 20 : 0)]); fs('#fff'); }
+      poly([-22, -64, -34, -92, -8, -72]); fs('#e8c44a'); poly([22, -64, 34, -92, 8, -72]); fs('#e8c44a');
+      rr(-22, -74, 44, 40, 14); fs('#e8c44a'); poly([-4, -58, 26, -48, -4, -38]); fs('#f6dc86'); ell(24, -48, 3.6, 3, '#2a2a3a');
+      c.lineWidth = 2; c.beginPath(); c.moveTo(14, -42); c.lineTo(34, -38); c.moveTo(14, -45); c.lineTo(34, -48); c.stroke(); c.lineWidth = 3; eyes(-6, -62, 9, 4.6, true);
+    },
+    iron: function (d, A) {                                              // 铁扇公主：长裙 + 巨大芭蕉扇
+      poly([-20, -32, 20, -32, 46, 34, -46, 34]); fs(d.color); rr(-20, -34, 40, 9, 4); fs('#f0b429');
+      poly([0, -24, 14, 34, -14, 34]); fs('#8fd6cd');
+      limb(-20, -26, -40, 0, 13, '#ffe0c2'); poly([-22, -28, -50, -2, -40, 8, -16, -16]); fs(d.color);
+      c.save(); c.translate(50, -10); c.rotate(-0.5 + A.swing * 0.7 - A.up * 0.5);                      // 芭蕉扇
+      limb(0, 14, 0, -4, 5, '#8a6a3a'); c.beginPath(); c.moveTo(0, -4); c.bezierCurveTo(-34, -20, -34, -76, 0, -96); c.bezierCurveTo(34, -76, 34, -20, 0, -4); c.closePath(); fs('#7fcf8a');
+      c.strokeStyle = '#2f8a4a'; c.lineWidth = 2; for (var r = -2; r <= 2; r++) { c.beginPath(); c.moveTo(0, -6); c.lineTo(r * 12, -80 + Math.abs(r) * 10); c.stroke(); } c.strokeStyle = DK; c.lineWidth = 3; c.restore();
+      limb(20, -26, 40, -6, 13, '#ffe0c2');
+      poly([-24, -62, -30, -34, -20, -38, 20, -38, 30, -34, 24, -62]); fs('#2e2a3a');
+      rr(-19, -72, 38, 36, 15); fs('#ffe0c2'); ell(0, -80, 12, 9, '#2e2a3a'); limb(-12, -88, 12, -82, 3, '#f0b429');
+      c.fillStyle = EN ? '#ff6a4a' : '#ff9a8a'; c.beginPath(); c.ellipse(-11, -48, 4.2, 2.8, 0, 0, PI2); c.ellipse(11, -48, 4.2, 2.8, 0, 0, PI2); c.fill();
+      eyes(0, -58, 8, 4.2, true); c.fillStyle = '#d6445a'; c.beginPath(); c.ellipse(0, -43, 4, 2, 0, 0, PI2); c.fill();
+    },
+    yumian: function (d, A) {                                            // 玉面公主：狐耳 + 三条蓬松尾巴 + 粉裙
+      for (var t = -1; t <= 1; t++) { c.beginPath(); c.moveTo(t * 10, 10); c.quadraticCurveTo(-60 + t * 26, -10 + t * 26, -50 + t * 30, -56 + t * 10 + Math.sin(RT * 4 + t) * 4); c.quadraticCurveTo(-26 + t * 12, -20, t * 10 + 14, 20); c.closePath(); fs(t ? '#f6b6cf' : '#fff0f6'); }
+      poly([-20, -32, 20, -32, 44, 34, -44, 34]); fs(d.color); rr(-20, -34, 40, 9, 4); fs('#fff0f6'); poly([-8, -24, 8, -24, 18, 34, -18, 34]); fs('#ffd0e2');
+      limb(-20, -26, -42, -2, 13, '#ffe6d0'); poly([-22, -28, -50, -2, -38, 10, -16, -16]); fs(d.color); limb(20, -26, 40, -8 - A.up * 20, 13, '#ffe6d0');
+      limb(42, -8 - A.up * 20, 54, -34 - A.up * 20, 4, '#8a6a3a'); ell(56, -40 - A.up * 20, 12, 8, '#fff0f6', -0.6);
+      poly([-18, -66, -26, -96, -6, -74]); fs('#f6b6cf'); poly([18, -66, 26, -96, 6, -74]); fs('#f6b6cf'); poly([-17, -68, -22, -88, -9, -73]); fs('#fff0f6'); poly([17, -68, 22, -88, 9, -73]); fs('#fff0f6');
+      poly([-22, -62, -30, -30, -20, -38, 20, -38, 30, -30, 22, -62]); fs('#7a3a5a');
+      rr(-19, -72, 38, 36, 15); fs('#ffe6d0'); poly([-8, -78, 0, -92, 8, -78]); fs('#f0b429');
+      c.fillStyle = EN ? '#ff6a4a' : '#ff9ab0'; c.beginPath(); c.ellipse(-11, -48, 4.2, 2.8, 0, 0, PI2); c.ellipse(11, -48, 4.2, 2.8, 0, 0, PI2); c.fill();
+      eyes(0, -58, 8, 4.2, true); c.fillStyle = '#d6445a'; c.beginPath(); c.ellipse(0, -43, 4, 2, 0, 0, PI2); c.fill();
+    },
+    chiyan: function (d, A) {                                            // 赤焰魔：熔岩巨魔 + 火焰鬃发
+      for (var s = -1; s <= 1; s += 2) flame(s * 50, 20, 20, 40 + Math.sin(RT * 8 + s) * 6, '#ff7a2a', '#ffe45a', s);
+      legs(-16, 16, 10, 26, '#5a2210', 24);
+      rr(-38, -40, 76, 60, 18); fs(d.color); c.strokeStyle = EN ? '#fff06a' : '#ffd23a'; c.lineWidth = 3; c.beginPath(); c.moveTo(-18, -32); c.lineTo(-8, -14); c.lineTo(-22, 0); c.moveTo(14, -34); c.lineTo(6, -16); c.lineTo(20, 4); c.moveTo(-4, -4); c.lineTo(4, 12); c.stroke(); c.strokeStyle = DK;
+      poly([-38, -40, -62, -52, -58, -16, -40, -20]); fs('#7a2a0b'); poly([38, -40, 62, -52, 58, -16, 40, -20]); fs('#7a2a0b');
+      limb(-40, -24, -60, 4, 18, d.color); limb(40, -24, 62, 4 - A.up * 24, 18, d.color);
+      rr(-72, -4, 22, 20, 7); fs('#7a2a0b'); rr(52, -4 - A.up * 24, 22, 20, 7); fs('#7a2a0b'); flame(-61, -4, 16, 22, '#ff7a2a', '#ffe45a', 0); flame(63, -4 - A.up * 24, 16, 22, '#ff7a2a', '#ffe45a', 2);
+      crown(5, 0, -66, 14, 56, '#ff5a1a', '#ffd23a');
+      rr(-28, -76, 56, 44, 16); fs('#7a2a0b'); horn(-1, 20, -70, 52, -62, 46, -98, '#ffb02a'); horn(1, 20, -70, 52, -62, 46, -98, '#ffb02a');
+      c.fillStyle = '#ffd23a'; c.beginPath(); c.moveTo(-14, -42); c.lineTo(14, -42); c.lineTo(10, -34); c.lineTo(5, -40); c.lineTo(0, -34); c.lineTo(-5, -40); c.lineTo(-10, -34); c.closePath(); c.fill(); c.stroke();
+      eyes(0, -60, 12, 5.5, true);
+    }
+  };
+  var ALIAS = { boss: 'bull' };
+  MA.hasFigure = function (e) { return !!(e && e.def && e.def.denBoss && FIG[ALIAS[e.type] || e.type] || (e.def && e.def.denBoss && FIG[e.def.kit])); };
+  MA.scale = function (e) { return e.r / 44; };
+  MA.topOf = function (e) { return 112 * MA.scale(e); };                    // 头顶（含角）距单位原点的像素
+
+  // 画一个 BOSS 全身像（c 已在世界坐标；原点 = 单位位置）
+  MA.boss = function (ctx, G, e, rt) {
+    var d = e.def, fig = FIG[ALIAS[e.type] || e.type] || FIG[d.kit]; if (!fig) return false;
+    c = ctx; FL = e.flash > 0; EN = !!e.enraged; RT = rt; DK = EN ? '#5a0f08' : d.dark; SW = Math.sin(rt * 8 + (e.wob || 0)) * 4;
+    var th = e.toCamp || !e.th ? G.camp : e.th; LK = th.x > e.x ? 1 : -1;
+    var s = MA.scale(e), bs = e.bstate, A = { up: bs === 'slam' ? 1 : (bs === 'tele' ? 0.5 + 0.2 * Math.sin(rt * 30) : 0), swing: Math.sin(rt * 5 + (e.wob || 0)) * 0.12 + (bs === 'charge' ? 0.5 : 0) };
+    var bob = Math.sin(rt * 6 + (e.wob || 0)) * 1.6, lean = bs === 'charge' ? 0.18 * LK : 0;
+    // 脚下影子 + 狂暴时脚下的红色火圈（椭圆，贴地）
+    c.fillStyle = 'rgba(70,50,30,0.2)'; c.beginPath(); c.ellipse(e.x, e.y + 34 * s, 46 * s, 12 * s, 0, 0, PI2); c.fill();
+    if (EN) { var ep = 0.5 + 0.5 * Math.sin(rt * 9); c.strokeStyle = 'rgba(255,50,28,' + (0.5 + 0.3 * ep) + ')'; c.lineWidth = 5; c.beginPath(); c.ellipse(e.x, e.y + 34 * s, 62 * s + ep * 6, 17 * s + ep * 2, 0, 0, PI2); c.stroke(); }
+    c.save(); c.translate(e.x, e.y - 2 * s + bob); c.scale(s * LK, s); if (lean) c.rotate(lean * 0.5 * LK); c.lineJoin = 'round'; c.lineWidth = 3; c.strokeStyle = DK;
+    // 原图朝右（武器在右）；LK=-1 时整体水平翻转，文字不在这里画，所以不会镜像
+    fig(d, A);
+    if (EN) {                                                           // 狂暴：肩头 / 头顶冒火苗
+      flame(-40, -34, 18, 32, 'rgba(255,60,24,0.85)', 'rgba(255,214,90,0.9)', 0.3); flame(40, -34, 18, 32, 'rgba(255,60,24,0.85)', 'rgba(255,214,90,0.9)', 1.9);
+    }
+    c.restore(); c.lineCap = 'butt';
+    return true;
+  };
+
+  /* ---------- 精英：牛头卫（披甲牛头人，比小怪大一圈，红光脉动改成地面椭圆） ---------- */
+  MA.elite = function (ctx, G, e, rt) {
+    var d = e.def; c = ctx; FL = e.flash > 0; EN = false; RT = rt; DK = d.dark; SW = Math.sin(rt * 9 + (e.wob || 0)) * 3;
+    var th = e.toCamp || !e.th ? G.camp : e.th; LK = th.x > e.x ? 1 : -1; var s = e.r / 27 * 0.58, bob = Math.sin(rt * 8 + (e.wob || 0)) * 1.2;
+    var pr = 0.5 + 0.5 * Math.sin(rt * 6);
+    c.strokeStyle = 'rgba(217,83,79,' + (0.25 + 0.2 * pr) + ')'; c.lineWidth = 3; c.beginPath(); c.ellipse(e.x, e.y + e.r * 0.9, e.r * 1.25, e.r * 0.42, 0, 0, PI2); c.stroke();
+    c.fillStyle = 'rgba(70,50,30,0.18)'; c.beginPath(); c.ellipse(e.x, e.y + e.r * 0.9, e.r * 0.95, e.r * 0.3, 0, 0, PI2); c.fill();
+    c.save(); c.translate(e.x, e.y + bob - 8 * s); c.scale(s * LK, s); c.lineJoin = 'round'; c.lineWidth = 3.4; c.strokeStyle = DK;
+    legs(-12, 12, 10, 24, '#7a2420', 18); rr(-30, -34, 60, 48, 16); fs(d.color); rr(-18, -12, 36, 22, 9); fs('#f0a4a0'); rr(-30, 4, 60, 8, 3); fs('#f0b429');
+    poly([-30, -32, -48, -28, -50, -8, -34, -14]); fs('#a8a8b4'); poly([30, -32, 48, -28, 50, -8, 34, -14]); fs('#a8a8b4');
+    limb(-32, -22, -48, 4, 14, d.color); limb(32, -22, 48, 2, 14, d.color);
+    limb(52, 26, 52, -50, 5, '#8a6a3a'); poly([46, -50, 52, -76, 58, -50]); fs('#d8dde6');      // 长矛
+    rr(-24, -68, 48, 40, 15); fs(d.color); horn(-1, 18, -62, 48, -58, 46, -90, '#f3ead2'); horn(1, 18, -62, 48, -58, 46, -90, '#f3ead2');
+    rr(-14, -48, 28, 18, 8); fs('#f0a4a0'); ell(-5, -38, 2.6, 3.4, '#8f1f1b'); ell(5, -38, 2.6, 3.4, '#8f1f1b');
+    eyes(0, -56, 10, 4.6, true); c.restore(); c.lineCap = 'butt';
+  };
+
+  /* ---------- 小怪（预渲染成精灵图；原点 = 单位中心，r = 半径） ---------- */
+  MA.minion = function (ctx, e, look, fl) {
+    var d = e.def, r = e.r, t = e.type; c = ctx; FL = !!fl; EN = false; DK = d.dark; LK = look; var k = r / 12;
+    c.save(); c.translate(e.x, e.y); c.scale(k * look, k); c.lineJoin = 'round'; c.lineWidth = 2.2 / k * (t === 'tank' ? 1.1 : 1); c.strokeStyle = DK;
+    c.lineWidth = 2.2; if (k > 1.3) c.lineWidth = 2.6 / Math.sqrt(k);
+    if (t === 'small') {                                                // 小妖：梨形身体 + 双角 + 大尖耳 + 小尾巴
+      c.beginPath(); c.moveTo(-3, 11); c.quadraticCurveTo(-14, 10, -12, -2); c.quadraticCurveTo(-8, -14, 0, -14); c.quadraticCurveTo(8, -14, 12, -2); c.quadraticCurveTo(14, 10, 3, 11); c.closePath(); fs(d.color);
+      poly([-9, -9, -17, -13, -12, -3]); fs(d.color); poly([9, -9, 17, -13, 12, -3]); fs(d.color);
+      poly([-6, -12, -9, -23, -1, -14]); fs('#f3ead2'); poly([6, -12, 9, -23, 1, -14]); fs('#f3ead2');
+      ell(-6, 12, 5, 3, d.dark); ell(6, 12, 5, 3, d.dark); c.beginPath(); c.moveTo(-10, 5); c.quadraticCurveTo(-18, 8, -16, 0); c.stroke();
+      c.fillStyle = FL ? '#fff' : '#fff'; c.beginPath(); c.ellipse(-4.5, -3, 3.4, 3.8, 0, 0, PI2); c.ellipse(4.5, -3, 3.4, 3.8, 0, 0, PI2); c.fill(); c.fillStyle = '#2b2118'; c.beginPath(); c.arc(-3.7, -2.6, 1.7, 0, PI2); c.arc(5.3, -2.6, 1.7, 0, PI2); c.fill();
+      c.beginPath(); c.moveTo(-8, -8); c.lineTo(-2, -5); c.moveTo(8, -8); c.lineTo(2, -5); c.stroke(); poly([-2, 4, 0, 7, 2, 4]); c.fillStyle = '#fff'; c.fill();
+    } else if (t === 'ranged') {                                        // 弓箭妖：兜帽 + 弓 + 箭袋
+      poly([-9, 11, 9, 11, 8, -4, 0, -13, -8, -4]); fs(d.color); poly([-10, 2, -13, 10, -5, 8]); fs(d.dark);
+      rr(-9, -6, 18, 3, 1.5); F('#6b4a22'); c.fill(); poly([-5, -8, 0, -17, 5, -8, 3, -5, -3, -5]); fs(d.dark);
+      c.fillStyle = '#fff'; c.beginPath(); c.ellipse(-3.2, -8, 2.6, 2.4, 0, 0, PI2); c.ellipse(3.2, -8, 2.6, 2.4, 0, 0, PI2); c.fill(); c.fillStyle = '#c0392b'; c.beginPath(); c.arc(-2.4, -8, 1.3, 0, PI2); c.arc(4, -8, 1.3, 0, PI2); c.fill();
+      c.strokeStyle = '#6b4a22'; c.lineWidth = 3; c.lineCap = 'round'; c.beginPath(); c.moveTo(14, -12); c.quadraticCurveTo(24, 0, 14, 12); c.stroke(); c.lineWidth = 1; c.strokeStyle = '#f3ead2'; c.beginPath(); c.moveTo(14, -12); c.lineTo(14, 12); c.stroke();
+      c.strokeStyle = DK; c.lineWidth = 2; c.beginPath(); c.moveTo(-8, 2); c.lineTo(-13, -8); c.stroke(); poly([-14, -8, -11, -9, -12, -13]); c.fillStyle = '#d8dde6'; c.fill();
+    } else {                                                            // 石头怪：岩石傀儡（方身、肩上的大石块、发光眼缝）
+      rr(-11, 3, 8, 10, 3); fs(d.dark); rr(3, 3, 8, 10, 3); fs(d.dark);
+      poly([-12, 6, -13, -7, -6, -11, 6, -11, 13, -7, 12, 6]); fs(d.color);
+      poly([-12, -7, -19, -3, -17, 6, -11, 3]); fs('#bba483'); poly([12, -7, 19, -3, 17, 6, 11, 3]); fs('#bba483');
+      poly([-7, -11, -5, -17, 5, -17, 7, -11]); fs('#bba483'); c.strokeStyle = d.dark; c.lineWidth = 1.5; c.beginPath(); c.moveTo(-8, 4); c.lineTo(-3, -1); c.lineTo(-5, -6); c.moveTo(6, 5); c.lineTo(8, 0); c.stroke();
+      c.fillStyle = FL ? '#fff' : '#ffe27a'; c.fillRect(-6, -14, 4, 2.4); c.fillRect(2, -14, 4, 2.4); c.fillStyle = '#7bbf6a'; c.fillRect(-8, -18, 5, 2); c.fillRect(1, -18, 4, 2);
+    }
+    c.restore();
   };
 })();
 
@@ -10114,6 +10546,7 @@ XY.TRAITS = {
         case 'restart': startGame(); break;
         case 'home': goHome(); break;
         case 'resume': resume(); break;
+        case 'bg': if (XY.setInkBg) XY.setInkBg(!XY.inkBg()); break;                 // 水墨山水 / 经典彩色 背景开关
         case 'hero': XY.switchHero(G, h.i); break;
         case 'order': XY.setOrder(G, h.i, h.order); break;
         case 'skills': if (app.screen === 'play') { app.skillTab = G.heroes[G.ctrl].down ? 0 : G.ctrl; XY.toggleSkills(G); } break;
