@@ -10239,11 +10239,14 @@ XY.CHIBI={"tang":{"w":532,"h":254,"fr":[[1,1,77,121,33,121],[134,1,70,121,24,121
 
   /* ---------- 更新 / 绘制 ---------- */
   var last = 0, ema = 16, acc = 0;
-  V.update = function (G, dt) {
-    if (V.G !== G) { V.G = G; V.reset(); }
+  // 画质自适应：必须每个“渲染帧”采样一次（main.js 每帧调）。以前放在每个逻辑步里，一帧补跑几步就量出假的 16.7ms，掉帧时永远不降档
+  V.sample = function () {
     var now = (typeof performance !== 'undefined' ? performance.now() : Date.now());
     if (last) { var d = Math.min(100, now - last); ema = ema * 0.95 + d * 0.05; acc += d; if (acc > 1000) { acc = 0; if (ema > 27 && V.q > 0.25) V.q = Math.max(0.25, V.q - 0.1); else if (ema < 19 && V.q < V.base) V.q = Math.min(V.base, V.q + 0.05); } }
     last = now;
+  };
+  V.update = function (G, dt) {
+    if (V.G !== G) { V.G = G; V.reset(); }
     var w = 0, cap = V.cap();
     for (var i = 0; i < act.length; i++) {
       var p = act[i]; p.t += dt;
@@ -10356,7 +10359,7 @@ XY.CHIBI={"tang":{"w":532,"h":254,"fr":[[1,1,77,121,33,121],[134,1,70,121,24,121
   var V = C.V07B;
 
   /* ---------- 盾兵：正面格挡 ---------- */
-  B.faceOf = function (G, e) { var th = e.toCamp || !e.th ? G.camp : e.th; return th.x > e.x ? 1 : -1; };
+  B.faceOf = function (G, e) { var th = e.toCamp || !e.th ? (G.camp.active ? G.camp : G.heroes[0]) : e.th; return th.x > e.x ? 1 : -1; };   // 营地没开时怪追着唐僧走（updateEnemies 的 cgoal），盾也朝唐僧
   // 返回处理后的伤害；o 里没有攻击者位置（范围爆炸 / 持续伤害 / 天兵）时不挡
   B.guardHit = function (G, e, dmg, o, el) {
     if (o.dot) return dmg;
@@ -10364,9 +10367,9 @@ XY.CHIBI={"tang":{"w":532,"h":254,"fr":[[1,1,77,121,33,121],[134,1,70,121,24,121
     if (o.fx !== undefined && o.fx !== null) { ax = o.fx; ay = o.fy; } else if (o.src && o.src.x !== undefined) { ax = o.src.x; ay = o.src.y; } else return dmg;
     var dx = ax - e.x, dy = ay - e.y, look = B.faceOf(G, e);
     var front = dx * look > 0 && Math.abs(dy) < Math.abs(dx) * V.GUARD_TAN;
-    if (e.stunT > 0) front = false;                                          // 晕住时盾放下了
+    if (e.stunT > 0 || e.gBreak > G.t) front = false;                       // 晕住 / 刚被破阵时盾放下了（e.gBreak 是 G.t 时间戳）
     if (front) {
-      if (el === 'metal' || o.anti) { e.gBreak = 0.5; if (Math.random() < 0.5) XY.core.text(G, e.x, e.y - e.r - 18, '破阵！', 'weak'); return dmg; }
+      if (el === 'metal' || o.anti) { e.gBreak = G.t + 0.5; if (Math.random() < 0.5) XY.core.text(G, e.x, e.y - e.r - 18, '破阵！', 'weak'); return dmg; }
       e.gFlash = 0.16; if (o.kb) o.kb *= 0.3;
       if (XY.core.spark) XY.core.spark(G, e.x + look * e.r * 0.8, e.y, '#e8d9a0', 3);
       if (Math.random() < 0.5) XY.core.text(G, e.x + look * e.r, e.y - e.r - 12, '挡', 'resist');
@@ -10382,7 +10385,7 @@ XY.CHIBI={"tang":{"w":532,"h":254,"fr":[[1,1,77,121,33,121],[134,1,70,121,24,121
   // 盾兵头上的弱点提示：「金」= 金属性能打穿；「背」= 绕到背后（正面挡）。晕住 / 被破阵时盾放下，标记变灰
   B.drawGuardTag = function (c, G, e, rt) {
     if (G._lod) return;
-    var down = e.stunT > 0 || e.gBreak > 0; if (e.gBreak > 0) e.gBreak -= 1 / 60;
+    var down = e.stunT > 0 || e.gBreak > G.t;
     var x = e.x, y = e.y - e.r - 22, look = B.faceOf(G, e);
     c.save(); c.globalAlpha = down ? 0.4 : 0.95;
     c.fillStyle = '#fff8e0'; c.strokeStyle = '#8a6a22'; c.lineWidth = 1.6; c.beginPath(); c.moveTo(x - 17, y - 7); c.lineTo(x + 17, y - 7); c.lineTo(x + 17, y + 6); c.lineTo(x + 3, y + 6); c.lineTo(x, y + 10); c.lineTo(x - 3, y + 6); c.lineTo(x - 17, y + 6); c.closePath(); c.fill(); c.stroke();
@@ -10426,7 +10429,7 @@ XY.CHIBI={"tang":{"w":532,"h":254,"fr":[[1,1,77,121,33,121],[134,1,70,121,24,121
         if (XY.vfx && XY.vfx.land) XY.vfx.land(G, f.x, f.y, f.r);
         // 落石不伤师父（师父一碰就输，红圈不能变成“追着师父打”）；砸中徒弟 / 特殊角色 / 塔
         for (j = 1; j < G.heroes.length; j++) { var h = G.heroes[j]; if (h.down) continue; if (XY.dist(f.x, f.y, h.x, h.y) < f.r + h.def.r) XY.hurtHeroBy(G, h, f.dmg * dmgR, false, (ow ? ow.def.name : '') + '的落石砸中了', 'phys', 'earth'); }
-        for (j = 0; j < G.towers.length; j++) { var t = G.towers[j]; if (XY.dist(f.x, f.y, t.x, t.y) < f.r) XY.hurtTower(G, t, V.ROCK_TOWER * dmgR); }
+        var tws = G.towers.slice(); for (j = 0; j < tws.length; j++) { var t = tws[j]; if (XY.dist(f.x, f.y, t.x, t.y) < f.r) XY.hurtTower(G, t, V.ROCK_TOWER * dmgR); }      // 先复制：hurtTower 打死塔会 splice，正向遍历会漏掉紧随其后的塔
         G.stats.rockLands = (G.stats.rockLands || 0) + 1;
         continue;
       }
@@ -11012,7 +11015,8 @@ XY.CHIBI={"tang":{"w":532,"h":254,"fr":[[1,1,77,121,33,121],[134,1,70,121,24,121
     if (!im) return false;
     var a = Math.min(1, (app.rt - app._bgT) / 0.5), ih = H * 1.12, iw = ih * im.width / im.height, cx = W * 0.68, iy = -H * 0.02;
     c.save(); c.globalAlpha = 0.9 * a;
-    var ob = bgCache[id]; if (!ob || ob.src !== im) {      // 左右边缘羽化的缓存图：不会露出一个硬边的方框
+    var ob = bgCache[id]; if (!ob || ob.src !== im) {
+      Object.keys(bgCache).forEach(function (k) { if (k !== id) delete bgCache[k]; });      // 只留当前这一张（原分辨率的羽化图每张几 MB，点遍 9 位会占几十 MB）      // 左右边缘羽化的缓存图：不会露出一个硬边的方框
       var oc = document.createElement('canvas'); oc.width = im.width; oc.height = im.height; var o = oc.getContext('2d');
       o.drawImage(im, 0, 0); o.globalCompositeOperation = 'destination-in';
       var lg = o.createLinearGradient(0, 0, oc.width, 0); lg.addColorStop(0, 'rgba(0,0,0,0)'); lg.addColorStop(0.22, 'rgba(0,0,0,1)'); lg.addColorStop(0.78, 'rgba(0,0,0,1)'); lg.addColorStop(1, 'rgba(0,0,0,0)');
@@ -11582,6 +11586,7 @@ XY.CHIBI={"tang":{"w":532,"h":254,"fr":[[1,1,77,121,33,121],[134,1,70,121,24,121
       if (acc > C.STEP * 4) acc = 0;
     }
     if (app.screen === 'play' && (G.mode === 'win' || G.mode === 'lose')) { app.screen = G.mode; XY.save.commitRun(G, G.mode); }
+    if (XY.vfx && XY.vfx.sample) XY.vfx.sample();
     XY.render(ctx, G, app);
   }
 
