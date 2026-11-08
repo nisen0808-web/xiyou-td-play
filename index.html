@@ -8324,6 +8324,19 @@ XY.TRAITS = {
     // v0.9 队伍面板在教程里钉开时卡片很高：提示卡要是盖住了亮着的目标，就挪到目标下方 / 上方 / 屏幕底 / 顶，找一个不盖住的位置
     function ov(y) { return tr && !(tr.x + tr.w <= L.x || L.x + L.w <= tr.x || tr.y + tr.h <= y || y + L.h <= tr.y); }
     if (tr && ov(L.y)) { var cands = [tr.y + tr.h + pad + 18, tr.y - pad - 18 - L.h, H - L.h - 8, 8]; for (var q = 0; q < cands.length; q++) if (cands[q] >= 8 && cands[q] + L.h <= H - 8 && !ov(cands[q])) { L.y = cands[q]; break; } }
+    // 44px 关闭钮要整块可点。卡按 620 CSS 像素居中时，667 横屏右缘会盖住它的中心。
+    var zFit = app.zoom || 1, sFit = XY.uiScale ? XY.uiScale(W * zFit, H * zFit) : 1, uFit = sFit / zFit, minW = 300 * uFit, gap = 8;
+    (XY.ui.hits || []).forEach(function (b) {
+      if (b.act !== 'closeSkills') return;
+      if (L.x + L.w <= b.x || b.x + b.w <= L.x || L.y + L.h <= b.y || b.y + b.h <= L.y) return;
+      var keepLeft = b.x - gap - L.x, keepRight = L.x + L.w - (b.x + b.w + gap);
+      if (keepLeft >= minW && keepLeft >= keepRight) L.w = keepLeft;
+      else if (keepRight >= minW) { L.x = b.x + b.w + gap; L.w = keepRight; }
+      else { var below = b.y + b.h + gap; if (below + L.h <= H - 8) L.y = below; }
+    });
+    L.lines = wrapLines(c, st.text(G, app, tt), L.tsz, Math.max(80, L.w - 40 * uFit));
+    L.h = (65 + L.lines.length * 18 + 61) * uFit;
+    if (tr && ov(L.y)) { var cands2 = [tr.y + tr.h + pad + 18, tr.y - pad - 18 - L.h, H - L.h - 8, 8]; for (var q2 = 0; q2 < cands2.length; q2++) if (cands2[q2] >= 8 && cands2[q2] + L.h <= H - 8 && !ov(cands2[q2])) { L.y = cands2[q2]; break; } }
     // 变暗，只留亮着的那一块
     c.save();
     c.fillStyle = 'rgba(70,56,24,0.34)'; c.beginPath(); c.rect(0, 0, W, H);
