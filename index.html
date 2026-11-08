@@ -526,7 +526,7 @@ XY.TRAITS = {
       spT: { cards: { phyrex: 2 }, chosen: 'phyrex', shop: null, shopGen: 0 },  // v0.5：测试版的特殊角色状态（和标准版分开存，互不污染）
       mode: DEFAULT_MODE,                                                       // v0.5：版本开关 'test'（测试版，默认）/ 'std'（标准版）
       sold: { cards: { arrow: 1, heal: 1 } },                                   // v0.5：天兵卡
-      tutorial: { done: false },
+      tutorial: { done: false, grow: false },
       journey: { entry: {}, legacy: false },                                     // 取经之旅：每关入场快照（见 journey.js）
       villain: { series: { niumo: villainSeriesDefault() } },          // v0.8.6 预留：反派模式按 Boss 系列分钱包 / 已得 / 局数 / 通关数（牛魔王是第一个系列；v0.9.0 启用）
       tips: { seen: {}, cut: false },
@@ -580,7 +580,9 @@ XY.TRAITS = {
     if (!record(d.spT)) d.spT = { cards: { phyrex: 2 }, chosen: 'phyrex', shop: null, shopGen: 0 };
     if (!record(d.spT.cards)) d.spT.cards = { phyrex: 2 };
     if (!record(d.sold) || !record(d.sold.cards)) d.sold = base.sold;
-    if (!record(d.tutorial)) d.tutorial = { done: false };
+    if (!record(d.tutorial)) d.tutorial = { done: false, grow: false };
+    if (typeof d.tutorial.done !== 'boolean') d.tutorial.done = false;
+    if (typeof d.tutorial.grow !== 'boolean') d.tutorial.grow = false;
     d.schema = SCHEMA; d.gameVersion = XY.VERSION;
     return d;
   }
@@ -3558,7 +3560,9 @@ XY.TRAITS = {
     if (G.villain) XY.villain.init(G);
     var tutd = XY.save.data && XY.save.data.tutorial;
     G.tut = null;
-    if (!window.XY_NO_TUTORIAL && !G.villain && !G.lair && XY.tutStart && (XY.tutForce || (tutd && !tutd.done))) XY.tutStart(G);     // 新手教程：第一次玩自动出现，可跳过；主菜单可重看
+    var tutFull = XY.tutForce || !tutd || tutd.done !== true;
+    var tutGrow = !XY.tutForce && !!tutd && tutd.done === true && tutd.grow !== true;
+    if (!window.XY_NO_TUTORIAL && !G.villain && !G.lair && XY.tutStart && (tutFull || tutGrow)) XY.tutStart(G, { growOnly: tutGrow });     // 新档走完整教程；旧档只补修行引导。反派 / 验关不插入
     XY.tutForce = false;
     // 洞府 + 洞府 BOSS（BOSS 一开局就站在洞口）
     LV.dens.forEach(function (dd, i) {
@@ -8075,6 +8079,31 @@ XY.TRAITS = {
     };
   }
 
+  function skillHi(G) { var a = app(), n = G.heroes.length; if (a && a.skillTab >= 0 && a.skillTab < n && G.heroes[a.skillTab] && !G.heroes[a.skillTab].down) return a.skillTab; return G.ctrl; }
+  function rootSkill(G) {
+    var hi = skillHi(G), h = G.heroes[hi], tr = h && XY.TREE[h.id];
+    if (!tr) return null;
+    var ids = ['m1', 'm2', 'ma', 'mb'], best = null, rank = 99;
+    tr.nodes.forEach(function (n) { if (n.kind === 'extra') ids.push(n.id); });
+    ids.forEach(function (id) {
+      if (!tr.by[id]) return;
+      var s = XY.nodeStatus(G, hi, id), r = s.st === 'ok' ? 0 : s.st === 'nopts' ? 1 : s.st === 'locked' ? 2 : 3;
+      if (r < rank) { rank = r; best = s; }
+    });
+    return best;
+  }
+  function costLine(s, G) {
+    if (!s || !s.node) return '每条下面写着效果和费用。点「下一步」继续，不扣点。';
+    if (s.st === 'nopts') return '「' + s.node.name + '」要 ' + s.cost + ' 点，你现在有 ' + G.points + ' 点，所以写着差几点。升级打怪才加技能点。点「下一步」，不扣点。';
+    if (s.st === 'ok') return '「' + s.node.name + '」下一级花 ' + s.cost + ' 点，效果就写在这一条上。点「下一步」只是看过，不扣点。';
+    if (s.st === 'max') return '「' + s.node.name + '」已满级。效果和费用仍写在条目上。点「下一步」继续。';
+    return '「' + s.node.name + '」现在不能学：' + s.reason + '。点「下一步」继续，不扣点。';
+  }
+  function hitBy(act, id, hero, tab) {
+    return hitsWhere(function (h) { return h.act === act && (id == null || h.id === id) && (hero == null || h.hero === hero) && (tab == null || h.i === tab); });
+  }
+  function steps(tt) { return (tt && tt.growOnly) ? XY.TUT_GROW : XY.TUT_STEPS; }
+  XY.tutSteps = function (G) { return steps(G && G.tut); };
   XY.TUT_STEPS = [
     { id: 'welcome', title: '欢迎取经！',
       text: function () { return '这位白衣和尚是唐僧师傅。他会自己一路向西走，你指挥不了他。他只有 1 点血，被妖怪一碰就输——你和徒弟们要一路护着他。\n（教程里时间是停的，也不会来怪，放心慢慢点。）'; },
@@ -8121,39 +8150,81 @@ XY.TRAITS = {
     { id: 'lose', title: '怎么输、怎么赢',
       text: function () { return '有两种输法：\n① 唐僧被妖怪碰到或打中（他只有 1 点血）；\n② 经书营地的血被打光。\n想赢：打退洞府 BOSS 完成主线，再让唐僧自己走到最西边的关口。'; },
       target: function () { return hudArea('tang'); }, pos: midIfNarrow },
-    { id: 'buttons', title: '顶部的修行和暂停',
-      text: function () { return touchUI() ? '「暂停」：暂停游戏；造天兵选点的时候，它就是“取消”。\n点顶部等级经验进「修行」给徒弟加点，点关闭回战斗。' : '「Esc / 暂停」：暂停游戏，造天兵选点时是“取消”。\n「Tab / 顶部等级经验」：修行加点，再按 Tab 关闭；H 打开操作说明。右上 Ⅱ 也能暂停。'; },
-      target: function () { return hitsWhere(function (h) { return h.act === 'skills' || h.act === 'esc'; }); }, pos: midIfNarrow },
+    { id: 'buttons', title: '暂停在右上角',
+      text: function () { return '右上角「Ⅱ」暂停；造天兵选点时它是取消。' + (touchUI() ? '' : ' Esc / P 也是暂停。') + '\n加点不在这里，下一步打开修行。'; },
+      target: function () { return hitsWhere(function (h) { return h.act === 'esc'; }); }, pos: midIfNarrow },
+    { id: 'skillOpen', title: '修行：加点入口',
+      text: function () { return '加点、升级技能、全队强化都在顶部「Lv · 经验」。不在首页商店。\n请点亮着的经验条。战斗会按原来的方式暂停，这一步不花技能点。'; },
+      target: function () { return hitsWhere(function (h) { return h.act === 'skills'; }); },
+      allow: function (h) { return h.act === 'skills'; },
+      wait: function (G) { return G.mode === 'skills'; }, pos: 'mid' },
+    { id: 'skillLook', title: '效果和费用写在技能上',
+      text: function (G) { var s = rootSkill(G); return s ? costLine(s, G) : '打开修行后，每条技能下面写着效果和要花的点数。点「下一步」继续，不扣点。'; },
+      target: function (G) { var s = rootSkill(G); return s ? hitBy('node', s.node.id, skillHi(G)) : null; } },
+    { id: 'skillParty', title: '全队强化是另一页',
+      text: function () { return '点「全队」。全队强化用同一池技能点，不占英雄的技能位。\n法宝是旁边另一页，不在这里花技能点。'; },
+      target: function () { return hitBy('tab', null, null, 9); },
+      allow: function (h) { return h.act === 'tab' && h.i === 9; },
+      wait: function (G, tt) { var a = app(); return !!(a && a.skillTab === 9); } },
+    { id: 'skillMark', title: '强化费用也在条目上',
+      text: function (G) { var s = XY.nodeStatus(G, -1, 'p_tower'); return '亮着的是「营地·塔强化」，加强天兵。' + costLine(s, G); },
+      enter: function () { var a = app(); if (a && a.skillTab === 9) { if (!a._pvSub) a._pvSub = {}; a._pvSub[9] = 0; } },
+      target: function () { return hitBy('node', 'p_tower', -1); } },
+    { id: 'skillClose', title: '关闭后战斗恢复',
+      text: function () { return '点右上「关闭」。修行开着时战斗暂停，关掉就恢复。\n以后随时点顶部经验条再来。'; },
+      target: function () { return hitBy('closeSkills'); },
+      allow: function (h) { return h.act === 'closeSkills'; },
+      wait: function (G) { return G.mode === 'play'; } },
     { id: 'done', title: '教程完成！', last: true,
-      text: function () { return '你已经学会了：选角色、下命令、请天兵、看营地和输赢。\n祝取经顺利！以后想再看一遍，在主菜单点「新手教程」。'; },
+      text: function () { return '走路、天兵、输赢，以及修行里的加点、技能费用、全队强化，都看过了。\n想再看：首页「更多」里的「新手教程」。只重看，不清存档。'; },
+      target: function () { return null; } }
+  ];
+  XY.TUT_GROW = [
+    { id: 'growHi', title: '修行在哪里',
+      text: function () { return '加点、升级技能、全队强化都在战斗顶部的经验条里。\n下面带你点开真实入口。可跳过；不会扣技能点，也不清存档。'; },
+      target: function () { return hitsWhere(function (h) { return h.act === 'skills'; }); }, pos: 'mid' },
+    XY.TUT_STEPS.filter(function (s) { return s.id === 'skillOpen' || s.id === 'skillLook' || s.id === 'skillParty' || s.id === 'skillMark' || s.id === 'skillClose'; })[0],
+    XY.TUT_STEPS.filter(function (s) { return s.id === 'skillLook'; })[0],
+    XY.TUT_STEPS.filter(function (s) { return s.id === 'skillParty'; })[0],
+    XY.TUT_STEPS.filter(function (s) { return s.id === 'skillMark'; })[0],
+    XY.TUT_STEPS.filter(function (s) { return s.id === 'skillClose'; })[0],
+    { id: 'growDone', title: '知道去哪看了', last: true,
+      text: function () { return '修行左上角是可用技能点。每条下面是效果和费用；不够就写差几点。\n完整教程在首页「更多」→「新手教程」，不会清存档。'; },
       target: function () { return null; } }
   ];
 
   /* ---------- 状态 ---------- */
-  XY.tutStart = function (G) {
+  function markTut(growOnly) {
+    var t = XY.save && XY.save.data && XY.save.data.tutorial;
+    if (!t || typeof t !== 'object' || Array.isArray(t)) return;
+    if (growOnly) t.grow = true; else { t.done = true; t.grow = true; }
+    if (XY.save.touch) XY.save.touch();
+  }
+  XY.tutStart = function (G, opt) {
     if (!G) return;
-    G.tut = { i: 0, t: 0, entered: -1, ok: 0 };
+    G.tut = { i: 0, t: 0, entered: -1, ok: 0, growOnly: !!(opt && opt.growOnly) };
     G.tutSave = { noSpawn: G.noSpawn, god: G.godMode };
     G.noSpawn = true; G.godMode = true;
   };
   XY.tutFinish = function (G, skipped) {
-    if (!G || !G.tut) { if (XY.save.data.tutorial) { XY.save.data.tutorial.done = true; XY.save.touch(); } return; }
+    var growOnly = !!(G && G.tut && G.tut.growOnly);
+    if (!G || !G.tut) { markTut(false); return; }
     G.tut = null;
     if (G.tutSave) { G.noSpawn = G.tutSave.noSpawn; G.godMode = G.tutSave.god; G.tutSave = null; }
     G.heroes.forEach(function (h, i) { if (i > 0 && h.order !== 'guard') { h.order = 'guard'; h.retreat = false; h.tgt = null; } });
-    var a = app(); if (a) { a.build = null; a.summon = null; a.selTower = null; }
-    if (XY.save.data.tutorial) { XY.save.data.tutorial.done = true; XY.save.touch(); }
-    XY.toast(G, skipped ? '已跳过教程（主菜单可以重看）' : '教程完成，开始取经！');
+    var a = app(); if (a) { a.build = null; a.summon = null; a.selTower = null; if (G.mode === 'skills') XY.toggleSkills(G, false); }
+    markTut(growOnly);
+    XY.toast(G, skipped ? '已跳过（首页「更多」里可以重看，不清存档）' : '教程完成，开始取经！');
   };
   XY.tutNext = function (G) {
     var tt = G && G.tut; if (!tt) return;
-    var st = XY.TUT_STEPS[tt.i];
-    if (!st || st.last || tt.i >= XY.TUT_STEPS.length - 1) { XY.tutFinish(G, false); return; }
+    var list = steps(tt), st = list[tt.i];
+    if (!st || st.last || tt.i >= list.length - 1) { XY.tutFinish(G, false); return; }
     tt.i++; tt.entered = -1; tt.ok = 0; tt.t = 0;
   };
   XY.tutTick = function (G, dt) {
     var tt = G.tut; if (!tt) return;
-    var st = XY.TUT_STEPS[tt.i]; if (!st) { XY.tutFinish(G, false); return; }
+    var st = steps(tt)[tt.i]; if (!st) { XY.tutFinish(G, false); return; }
     if (tt.entered !== tt.i) { tt.entered = tt.i; tt.t = 0; tt.ok = 0; tt.done = false; if (st.enter) st.enter(G, tt); }
     tt.t += dt;
     if (st.wait) {
@@ -8164,7 +8235,8 @@ XY.TRAITS = {
   XY.tutBlocks = function (G, h) {
     var tt = G.tut; if (!tt) return false;
     if (h.act === 'tutNext' || h.act === 'tutSkip' || h.act === 'esc' || h.act === 'ui') return false;
-    var st = XY.TUT_STEPS[tt.i];
+    if (h.act === 'node') { var a2 = app(); if (!tt.nag || (a2 && a2.rt - tt.nag > 2)) { tt.nag = a2 ? a2.rt : 0; XY.toast(G, '先看费用和效果。点「下一步」，教程不扣技能点。'); } return true; }
+    var st = steps(tt)[tt.i];
     if (st && st.allow && st.allow(h, G, tt)) return false;
     var a = app(); if (a && (!tt.nag || a.rt - tt.nag > 2)) { tt.nag = a.rt; XY.toast(G, st && st.wait ? '先照提示点亮着的地方哦' : '点「下一步」继续，或者先看看亮着的地方'); }
     return true;
@@ -8187,10 +8259,10 @@ XY.TRAITS = {
   // 在 drawHUD 靠前的位置调用：算出提示卡的位置和大小，并告诉横幅 / 红条往下让
   XY.tutLayout = function (c, G, app, ctx) {
     var tt = G.tut; if (!tt) return;
-    var W = app.lw, H = app.lh, st = XY.TUT_STEPS[tt.i] || XY.TUT_STEPS[0];
+    var W = app.lw, H = app.lh, list = steps(tt), st = list[tt.i] || list[0];
     var z=app.zoom||1,cw=Math.min(W-24/z,620/z),tsz=12/z,lines=wrapLines(c,st.text(G,app,tt),tsz,cw-40/z);
     var ch = (65 + lines.length*18 + 61)/z;
-    var pos = st.pos ? st.pos(G, app) : 'top';
+    var pos = typeof st.pos === 'function' ? st.pos(G, app) : (st.pos || 'top');
     var y = pos === 'top' ? ctx.denBottom + 6 : Math.max(ctx.denBottom + 6, Math.round(H * 0.42 - ch / 2));
     tt.lay = { x: Math.round(W / 2 - cw / 2), y: y, w: cw, h: ch, lines: lines, tsz: tsz, pos: pos };
     ctx.tutBottom = pos === 'top' ? y + ch : ctx.denBottom + 6;
@@ -8202,7 +8274,7 @@ XY.TRAITS = {
   // 在 drawHUD 最后调用（这时所有真实按钮的位置都已经登记好了）
   XY.tutDraw = function (c, G, app) {
     var tt = G.tut; if (!tt || !tt.lay) return;
-    var R = XY.R, T = R.T, W = app.lw, H = app.lh, st = XY.TUT_STEPS[tt.i] || XY.TUT_STEPS[0], L = tt.lay, rt = app.rt;
+    var R = XY.R, T = R.T, W = app.lw, H = app.lh, list = steps(tt), st = list[tt.i] || list[0], L = tt.lay, rt = app.rt;
     var tr = st.target ? st.target(G, app, tt) : null, pad = 7;
     // v0.9 队伍面板在教程里钉开时卡片很高：提示卡要是盖住了亮着的目标，就挪到目标下方 / 上方 / 屏幕底 / 顶，找一个不盖住的位置
     function ov(y) { return tr && !(tr.x + tr.w <= L.x || L.x + L.w <= tr.x || tr.y + tr.h <= y || y + L.h <= tr.y); }
@@ -8224,7 +8296,7 @@ XY.TRAITS = {
     if(XY.ui2.on&&XY.inkHud){XY.inkHud.tutorialCard(c,G,app,tt,st,L);return;}
     // 提示卡
     R.panel(c, L.x, L.y, L.w, L.h, 16, 'rgba(255,251,236,0.98)', '#e0a415');
-    var n = XY.TUT_STEPS.length;
+    var n = list.length;
     R.txt(c, '新手教程 ' + (tt.i + 1) + '/' + n, L.x + 20, L.y + 18, 12, '#a8700a', 'left', true);
     R.txt(c, st.title, L.x + 20, L.y + 44, L.tsz + 4, '#3a2c10', 'left', true);
     for (var k = 0; k < L.lines.length; k++) R.txt(c, L.lines[k], L.x + 20, L.y + 78 + k * (L.tsz + 9), L.tsz, '#4a3a1a', 'left', false);
@@ -9780,6 +9852,7 @@ XY.BGS1={"src": "data:image/webp;base64,UklGRtT1GgBXRUJQVlA4IMj1GgCQwWGdASoAEAAK
     else if (s === 'pause') { ui.hits.length = 0; drawPause(ctx, G, app); }
     else if (s === 'win') { ui.hits.length = 0; drawEnd(ctx, G, app, true); }
     else if (s === 'lose') { ui.hits.length = 0; drawEnd(ctx, G, app, false); }
+    if (G.tut && G.mode === 'skills' && s === 'play' && XY.tutDraw) XY.tutDraw(ctx, G, app);   // 修行面板盖住战场后，再把教程洞和「下一步」画在真实按钮上
   };
 })();
 
@@ -12840,7 +12913,7 @@ XY.ICONINK_DATA={"金箍棒":{"src":"data:image/webp;base64,UklGRjINAABXRUJQVlA4
   var TUT_PIN = { choose: 1, orders: 1, cmd_follow: 1, cmd_station: 1, cmd_attack: 1, cmd_guard: 1 };
   function available(G, app) { return !!G && !G.villain && app.screen === 'play' && G.mode === 'play'; }
   var P = XY.party = {
-    pinned: function (G) { var tt = G && G.tut, st = tt && XY.TUT_STEPS && XY.TUT_STEPS[tt.i]; return !!(st && TUT_PIN[st.id]); },
+    pinned: function (G) { var tt = G && G.tut, list = XY.tutSteps ? XY.tutSteps(G) : XY.TUT_STEPS, st = tt && list && list[tt.i]; return !!(st && TUT_PIN[st.id]); },
     visible: function (G, app) { return available(G, app) && (!!app.partyPanel || P.pinned(G)); },
     frozen: function (app) { return available(XY.G, app) && !!app.partyPanel; },
     open: function (app) { var G = XY.G; if (!available(G, app) || G.tut) return false; app.partyPage = 0; app.partyPanel = true; app.build = null; app.summon = null; app.selTower = null; if (app.mm) { app.mm.holding = false; } return true; },
@@ -22380,10 +22453,10 @@ var ab=/[ab]$/.test(n.id)&&n.tier>=3?(/a$/.test(n.id)?'A路 · ':'B路 · '):'';
 var effect=lv?X.nodeText(n,lv):n.desc?n.desc[0]:n.eff?n.eff(1):'',sz=small?12:14,lh=small?17:23,textKey='skillText'+tab+'-'+sub+'-'+n.id,allLines=[],text='',units=String(effect).match(/[+-]?\d[\d,]*(?:\.\d+)?(?:%|\/\d+|秒|级|点|倍)?|[A-Za-z][A-Za-z0-9_.-]*|[\s\S]/g)||[];c.font=sz+'px '+X.C.FONT;units.forEach(function(ch){if(c.measureText(text+ch).width>dw&&text){allLines.push(text);text=ch;}else text+=ch;});if(text)allLines.push(text);var per=port?10:small?3:8,pages=Math.max(1,Math.ceil(allLines.length/per)),tp=(P.folio[textKey]||0)%pages,shown=allLines.slice(tp*per,tp*per+per);shown.forEach(function(t,i){K.t(t,dx,y+54+i*lh,sz,T.ink,'left',false);});var sy=y+54+shown.length*lh;if(pages>1)K.btn(dx+dw-68,y+10,68,36,'说明 '+(tp+1)+'/'+pages,'folio',{key:textKey,i:(tp+1)%pages},{size:10,minS:9.5});var reason=st.st==='max'?'已圆满':can?'耗 '+st.cost+' 修行点':st.reason||(st.st==='nopts'?'还差 '+(st.cost-G.points)+' 点':''),by=Math.min(b.y+b.h-44,Math.max(b.y+(port?230:small?100:155),sy+14)),bw=Math.min(140,dw*.46);
 K.tf(reason,dx,by+22,dw-bw-12,11,can?'#795714':T.inkSoft,'left',true,10);K.btn(dx+dw-bw,by,bw,44,lv>=max?'已圆满':'点墨修习','node',{hero:hi,id:n.id},{primary:can,size:14});
 var ny=b.y+b.h+1,step=b.w/Math.max(1,ids.length);ids.forEach(function(nd,i){var letter=/[ab]$/.test(nd.id)&&nd.tier>=3?(/a$/.test(nd.id)?'A':'B'):'';K.btn(b.x+i*step,ny,step-2,44,(nd.tier||i+1)+letter,'folio',{key:leafKey,i:i},{on:i===sel,size:12,minS:10});});a.__inkSkillSpec={key:leafKey,n:ids.length,hi:hi,id:n.id,tab:tab,sub:sub,textKey:textKey,textPages:pages};};
-I.tutorialCard=function(c,G,a,tt,st,L){var K=P.begin(c,a),z=a.zoom,x=L.x*z,y=L.y*z,w=L.w*z,h=L.h*z,wait=!!st.wait;wash(c,x,y,w,h);K.t('引',x+19,y+46,29,'#a42d19','center',true);K.t('新手教程 '+(tt.i+1)+'/'+X.TUT_STEPS.length+(wait?(tt.done?' · 做对了':' · 请依提示操作'):''),x+43,y+17,10.5,T.inkSoft,'left',false);K.t(st.title,x+43,y+39,17,T.ink,'left',true);L.lines.forEach(function(v,i){K.t(v,x+20,y+65+i*18,12,T.ink,'left',false);});K.hit(x,y,w,h,'ui');K.btn(x+12,y+h-51,118,44,'跳过教程','tutSkip',null,{size:13});K.btn(x+w-162,y+h-51,150,44,st.last?'开始游戏':wait?'跳过这一步':'下一步','tutNext',null,{primary:!wait,size:14});P.end(c);};
+I.tutorialCard=function(c,G,a,tt,st,L){var K=P.begin(c,a),z=a.zoom,x=L.x*z,y=L.y*z,w=L.w*z,h=L.h*z,wait=!!st.wait;wash(c,x,y,w,h);K.t('引',x+19,y+46,29,'#a42d19','center',true);K.t('新手教程 '+(tt.i+1)+'/'+(X.tutSteps?X.tutSteps(G):X.TUT_STEPS).length+(wait?(tt.done?' · 做对了':' · 请依提示操作'):''),x+43,y+17,10.5,T.inkSoft,'left',false);K.t(st.title,x+43,y+39,17,T.ink,'left',true);L.lines.forEach(function(v,i){K.t(v,x+20,y+65+i*18,12,T.ink,'left',false);});K.hit(x,y,w,h,'ui');K.btn(x+12,y+h-51,118,44,'跳过教程','tutSkip',null,{size:13});K.btn(x+w-162,y+h-51,150,44,st.last?'开始游戏':wait?'跳过这一步':'下一步','tutNext',null,{primary:!wait,size:14});P.end(c);};
 I.tip=function(c,a,tip){if(!tip)return;var K=P.begin(c,a),sz=K.W<900?10.5:12,w=Math.min(320,K.W-24),lines=[];c.font=sz+'px '+X.C.FONT;(tip.lines||[tip.text]).forEach(function(txt){var v='';String(txt).split('').forEach(function(ch){if(c.measureText(v+ch).width>w-28&&v){lines.push(v);v=ch;}else v+=ch;});if(v)lines.push(v);});var h=18+lines.length*17,x=Math.max(8,Math.min(K.W-w-8,tip.x*a.zoom-w/2)),y=Math.max(8,Math.min(K.H-h-8,tip.below?tip.y*a.zoom:tip.y*a.zoom-h));wash(c,x,y,w,h);K.ink(x+10,y+7,Math.min(46,w-20),.5,91);lines.forEach(function(v,i){K.t(v,x+13,y+18+i*17,sz,i?T.inkSoft:T.ink,'left',i===0);});P.end(c);};
 I.vendor=function(c,G,a){X.ui.hits.length=0;var K=P.begin(c,a),W=K.W,H=K.H,port=K.port,V=X.vendor,items=V.stock(G),sel=(P.folio.vendorItem||0)%items.length,it=items[sel],d=V.DEFS[it.id],why=V.why(G,it),dx=port?24:W*.43,dy=port?H*.44:W>=900?H*.24:82,dw=port?W-48:W-dx-26;P.paper(c,W,H);K.t('货郎的担子',20,32,24,T.ink,'left',true);K.btn(W-178,9,164,44,'收摊（N / Esc）','vendorClose',null,{size:13});K.t('金币 '+Math.floor(G.coins),22,65,14,'#8a5a19','left',true);P.object(c,d.name,port?W*.5:W*.23,port?H*.26:H*.47,port?150:Math.min(W>=900?280:184,H*.49),it.sold);K.tf(d.name,dx,dy,dw,27,T.ink,'left',true,20);K.lines(d.d,dx,dy+37,dw,13,20,T.inkSoft,port?5:3,false);var by=Math.min(H-183,dy+(port?119:92));K.btn(dx,by,Math.min(196,dw),44,it.sold?'此处已买':X.C.VENDOR.price[it.id]+' 金币 · 换取','vendorBuy',{i:sel},{primary:!why,size:15});K.tf(why||'每件每个休息点限买一次',dx,by+61,dw,11,why?'#a42d19':T.inkSoft,'left',true,10);if(G.vendorMsg&&G.vendorMsg.t>0){K.tf(G.vendorMsg.text,dx,by+81,dw,11,G.vendorMsg.bad?'#a42d19':'#37643d','left',true,10);G.vendorMsg.t-=1/60;}var step=(W-32)/items.length;items.forEach(function(q,i){var cx=16+step*(i+.5),yy=H-94+[3,0,7,2][i];P.object(c,V.DEFS[q.id].name,cx,yy+20,45,q.sold);K.tf(V.DEFS[q.id].name,cx,yy+56,step-8,11,i===sel?'#a42d19':T.ink,'center',true,10);if(i===sel)K.ink(cx-18,yy+68,36,.6,i+7);K.hit(cx-step/2+2,H-101,step-4,94,'folio',{key:'vendorItem',i:i});});P.end(c);};
-I.skillKey=function(G,a,k){var s=a.__inkSkillSpec;if(!s||s.tab!==a.skillTab||s.sub!==((a._pvSub||{})[a.skillTab]||0))return false;if(k==='ArrowLeft'||k==='ArrowRight'){P.folio[s.key]=((P.folio[s.key]||0)+s.n+(k==='ArrowRight'?1:-1))%s.n;return true;}if(k==='PageDown'||k==='PageUp'){P.folio[s.textKey]=((P.folio[s.textKey]||0)+s.textPages+(k==='PageDown'?1:-1))%s.textPages;return true;}if(k==='Enter'){var r=X.learn(G,s.hi,s.id);a.skillMsg={text:r.reason,bad:!r.ok,until:a.rt+2.2};return true;}return false;};
+I.skillKey=function(G,a,k){var s=a.__inkSkillSpec;if(!s||s.tab!==a.skillTab||s.sub!==((a._pvSub||{})[a.skillTab]||0))return false;if(k==='ArrowLeft'||k==='ArrowRight'){P.folio[s.key]=((P.folio[s.key]||0)+s.n+(k==='ArrowRight'?1:-1))%s.n;return true;}if(k==='PageDown'||k==='PageUp'){P.folio[s.textKey]=((P.folio[s.textKey]||0)+s.textPages+(k==='PageDown'?1:-1))%s.textPages;return true;}if(k==='Enter'){if(G.tut)return true;var r=X.learn(G,s.hi,s.id);a.skillMsg={text:r.reason,bad:!r.ok,until:a.rt+2.2};return true;}return false;};
 I.vendorKey=function(G,a,k){var n=X.vendor.stock(G).length;if(k==='ArrowLeft'||k==='ArrowRight'){P.folio.vendorItem=((P.folio.vendorItem||0)+n+(k==='ArrowRight'?1:-1))%n;return true;}if(k==='Enter'){X.vendor.buy(G,(P.folio.vendorItem||0)%n);return true;}return false;};
 })();
 
@@ -23072,6 +23145,7 @@ X.step=function(g,dt){if(!g._simRandom)return step.apply(this,arguments);var sel
     if (dt > 0) app.fps += (1 / dt - app.fps) * 0.05;
     if (app.moveMark) app.moveMark.t += dt;
     if (app.partyPanel && (G.villain || app.screen !== 'play' || G.mode !== 'play')) XY.party.close(app);
+    if (app.screen === 'play' && G && G.tut && G.mode === 'skills' && !app.tipHold && !app.partyPanel && XY.tutTick) XY.tutTick(G, dt);   // 修行面板沿用 mode!==play 暂停战斗，只推进教程计时
     if (app.screen === 'play' && G.mode === 'play' && !app.tipHold && !app.partyPanel) {     // v0.9 队伍面板打开 = 战斗时间冻结（不推进 XY.step）
       updateMove();
       acc += dt * G.speed;

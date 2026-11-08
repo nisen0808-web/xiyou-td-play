@@ -11,3 +11,5 @@
 `xiyou-survivors.html` 与 `index.html` 是同一份字节。轻入口 `index-split.html` 还需要同目录的 `assets/`、`chunks/`、`bossfight/`、`villain/`。
 
 Bot 是单独的启动攻略个人榜助手，没有全服数据源。上面的地址是游戏页。
+
+开局会带你点开战斗顶部的「Lv · 经验」：那里是加点、技能升级费用和全队强化。可跳过，首页「更多」里的「新手教程」可以再看，不清存档。Linux WebKit、真机 Safari / iPhone、人工听感仍未验证。
