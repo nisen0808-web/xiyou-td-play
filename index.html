@@ -8093,27 +8093,47 @@ XY.TRAITS = {
     return best;
   }
   XY.rootSkill = rootSkill;
+  function folioBook() { return (XY.pv2 && XY.pv2.folio) || null; }
   function skillRestore(a) {
     if (!a || !a._tutHold) return;
+    var h = a._tutHold;
     if (!a._pvSub) a._pvSub = {};
-    a._pvSub[a._tutHold.tab] = a._tutHold.sub;
+    a._pvSub[h.tab] = h.sub;
+    var book = folioBook();
+    if (book && h.folioKey) { if (h.hadFolio) book[h.folioKey] = h.folio; else delete book[h.folioKey]; }
+    if (h.skillTab != null) a.skillTab = h.skillTab;
     a._tutHold = null;
   }
-  function skillHold(a, tab, sub) {
+  function skillLease(a, tab, sub) {
     if (!a._pvSub) a._pvSub = {};
-    if (!a._tutHold || a._tutHold.tab !== tab) { skillRestore(a); a._tutHold = { tab: tab, sub: a._pvSub[tab] || 0 }; }
+    var key = tab + ':' + sub, fk = 'skillPg' + tab + '-' + sub, book = folioBook();
+    if (!a._tutHold || a._tutHold.key !== key) {
+      skillRestore(a);
+      a._tutHold = { key: key, tab: tab, sub: a._pvSub[tab] || 0, folioKey: fk, hadFolio: !!(book && Object.prototype.hasOwnProperty.call(book, fk)), folio: book ? book[fk] : 0, skillTab: a.skillTab };
+    }
+    a.skillTab = tab;
     a._pvSub[tab] = sub;
   }
-  // 教程要看的那一页，和玩家上次停在的分支不是一回事。只在这一步临时切过去，离开时把原来的子页还回去。
+  // 教程临时借用修行子页和根分页。借的时候记下玩家原来的值，离开这一步、跳过或结束时原样还回去。
   XY.tutSkillSync = function (G, a) {
     if (!a) return;
     if (!G || !G.tut) { skillRestore(a); return; }
     var st = steps(G.tut)[G.tut.i];
     if (!st) { skillRestore(a); return; }
-    if (st.id === 'skillLook') { var hi = skillHi(G); a.skillTab = hi; skillHold(a, hi, 0); return; }
-    if (st.id === 'skillMark') { skillHold(a, 9, 0); return; }
+    if (st.id === 'skillLook') { skillLease(a, skillHi(G), 0); return; }
+    if (st.id === 'skillMark') { skillLease(a, 9, 0); return; }
     skillRestore(a);
   };
+  function panelGuide(G, inner) {
+    var a = app();
+    if (!a || !G || G.mode !== 'skills') return hitsWhere(function (h) { return h.act === 'skills'; });
+    return inner(G, a);
+  }
+  function panelAllow(h, G) {
+    if (h.act === 'closeSkills') return true;
+    if (h.act === 'skills' && G.mode !== 'skills') return true;
+    return false;
+  }
   function costLine(s, G) {
     if (!s || !s.node) return '每条下面写着效果和费用。点「下一步」继续，不扣点。';
     if (s.st === 'nopts') return '「' + s.node.name + '」要 ' + s.cost + ' 点，你现在有 ' + G.points + ' 点，所以写着差几点。升级打怪才加技能点。点「下一步」，不扣点。';
@@ -8182,20 +8202,22 @@ XY.TRAITS = {
       wait: function (G) { return G.mode === 'skills'; }, pos: 'mid' },
     { id: 'skillLook', title: '效果和费用写在技能上',
       text: function (G) { var s = rootSkill(G); return s ? costLine(s, G) : '打开修行后，每条技能下面写着效果和要花的点数。点「下一步」继续，不扣点。'; },
-      target: function (G) { var s = rootSkill(G); return s ? hitBy('node', s.node.id, skillHi(G)) : null; } },
+      target: function (G) { return panelGuide(G, function () { var s = rootSkill(G); return s ? hitBy('node', s.node.id, skillHi(G)) : null; }); },
+      allow: function (h, G) { return panelAllow(h, G); } },
     { id: 'skillParty', title: '全队强化是另一页',
       text: function () { return '点「全队」。全队强化用同一池技能点，不占英雄的技能位。\n法宝是旁边另一页，不在这里花技能点。'; },
-      target: function () { return hitBy('tab', null, null, 9); },
-      allow: function (h) { return h.act === 'tab' && h.i === 9; },
+      target: function (G) { return panelGuide(G, function () { return hitBy('tab', null, null, 9); }); },
+      allow: function (h, G) { return panelAllow(h, G) || (h.act === 'tab' && h.i === 9); },
       wait: function (G, tt) { var a = app(); return !!(a && a.skillTab === 9); } },
     { id: 'skillMark', title: '强化费用也在条目上',
       text: function (G) { var s = XY.nodeStatus(G, -1, 'p_tower'); return '亮着的是「营地·塔强化」，加强天兵。' + costLine(s, G); },
       enter: function (G) { var a = app(); if (a) XY.tutSkillSync(G, a); },
-      target: function () { return hitBy('node', 'p_tower', -1); } },
+      target: function (G) { return panelGuide(G, function () { return hitBy('node', 'p_tower', -1); }); },
+      allow: function (h, G) { return panelAllow(h, G); } },
     { id: 'skillClose', title: '关闭后战斗恢复',
       text: function () { return '点右上「关闭」。修行开着时战斗暂停，关掉就恢复。\n以后随时点顶部经验条再来。'; },
-      target: function () { return hitBy('closeSkills'); },
-      allow: function (h) { return h.act === 'closeSkills'; },
+      target: function (G) { return panelGuide(G, function () { return hitBy('closeSkills'); }); },
+      allow: function (h, G) { return panelAllow(h, G) || h.act === 'closeSkills'; },
       wait: function (G) { return G.mode === 'play'; } },
     { id: 'done', title: '教程完成！', last: true,
       text: function () { return '走路、天兵、输赢，以及修行里的加点、技能费用、全队强化，都看过了。\n想再看：开始取经 → 出发页「更多」进洞府阁 →「新手教程」。只重看，不清存档。'; },
@@ -18858,11 +18880,11 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
         used += rh + gap; row = [];
       }
     });
-    var pageKey = 'skillPg' + tab + '-' + sub, pageN = pages.length, pageI = (P.folio[pageKey] || 0) % pageN, pin = null, step = G.tut && XY.tutSteps ? XY.tutSteps(G)[G.tut.i] : null;
+    var pageKey = 'skillPg' + tab + '-' + sub, pageN = pages.length, savedPage = P.folio[pageKey], pageI = ((savedPage || 0) % pageN + pageN) % pageN, pin = null, step = G.tut && XY.tutSteps ? XY.tutSteps(G)[G.tut.i] : null;
     if (step && step.id === 'skillLook' && XY.rootSkill) { var rs = XY.rootSkill(G); if (rs && rs.node) pin = rs.node.id; }
     else if (step && step.id === 'skillMark') pin = 'p_tower';
-    if (pin) pages.forEach(function (p, i) { if (p.some(function (it) { return it.nd.id === pin; })) pageI = i; });
-    P.folio[pageKey] = pageI;
+    if (pin) { pages.forEach(function (p, i) { if (p.some(function (it) { return it.nd.id === pin; })) pageI = i; }); P.folio[pageKey] = pageI; }
+    else if (savedPage == null) P.folio[pageKey] = pageI;
     layout = pages[pageI] || [];
     if (layered) { c.save(); c.strokeStyle = 'rgba(88,66,37,0.32)'; c.lineWidth = 1.3; layout.forEach(function (p) { Object.keys((p.nd.req && p.nd.req[0]) || {}).forEach(function (id) { var prev = layout.filter(function (t) { return t.nd.id === id; })[0]; if (!prev) return; c.beginPath(); c.moveTo(prev.x + prev.w - 8, prev.y + 18); c.bezierCurveTo(prev.x + prev.w + 10, prev.y + 18, p.x - 10, p.y + 18, p.x + 6, p.y + 18); c.stroke(); }); }); c.restore(); }
     if(pageN>1){K.btn(x0+w0-196,bottom-detH+8,92,36,'上一页','folio',{key:pageKey,i:(pageI+pageN-1)%pageN},{size:14,minS:12});K.btn(x0+w0-98,bottom-detH+8,92,36,(pageI+1)+' / '+pageN,'folio',{key:pageKey,i:(pageI+1)%pageN},{size:14,minS:12});}
