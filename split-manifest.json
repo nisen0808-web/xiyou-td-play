@@ -1,0 +1,57 @@
+{
+  "version": "0.8.7",
+  "default": "index.html (single-file compatible)",
+  "optional": "index-split.html (requires sibling assets/, chunks/, bossfight/, villain/)",
+  "chunks": [
+    {
+      "id": "ui",
+      "src": "chunks/ui-008ff700a700.js",
+      "bytes": 553547,
+      "token": "008ff700a700b1c89a73c056a45733acc2d7edea3743931487e19b401b6aa9c0",
+      "check": [
+        "ICONINK_DATA",
+        "ITEMINK_DATA",
+        "SKILLFX_DATA"
+      ]
+    },
+    {
+      "id": "hero",
+      "src": "chunks/hero-6940e3022967.js",
+      "bytes": 3086438,
+      "token": "6940e3022967d267a888e54f56cd797e7e2cf7f2405967a0f39f9a4f9ea666de",
+      "check": [
+        "CHIBI",
+        "CHIBI_INK"
+      ]
+    },
+    {
+      "id": "world",
+      "src": "chunks/world-46b19b26483d.js",
+      "bytes": 4241412,
+      "token": "46b19b26483da883740d1f3706d9f73e0a1d18b07a9d6780414f96278d4d347d",
+      "check": [
+        "BGS1",
+        "MINK_DATA",
+        "SINK_DATA"
+      ]
+    },
+    {
+      "id": "ult",
+      "src": "chunks/ult-f47b82bd7bf4.js",
+      "bytes": 1613765,
+      "token": "f47b82bd7bf47ce93a140310fa47f5e17a87d52d6f3f046a71528b91184fc44d",
+      "check": [
+        "ULTINK_DATA"
+      ]
+    },
+    {
+      "id": "xchar",
+      "src": "chunks/xchar-e220ea78d1a9.js",
+      "bytes": 585131,
+      "token": "e220ea78d1a9784dd61e4ea785e09f93f2ef26aae81dcac8f38ca15e88c6db72",
+      "check": [
+        "XC_TPL"
+      ]
+    }
+  ]
+}
