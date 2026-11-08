@@ -8085,6 +8085,7 @@ XY.TRAITS = {
     });
     return best;
   }
+  XY.rootSkill = rootSkill;
   function costLine(s, G) {
     if (!s || !s.node) return '每条下面写着效果和费用。点「下一步」继续，不扣点。';
     if (s.st === 'nopts') return '「' + s.node.name + '」要 ' + s.cost + ' 点，你现在有 ' + G.points + ' 点，所以写着差几点。升级打怪才加技能点。点「下一步」，不扣点。';
@@ -13534,9 +13535,16 @@ XY.chibi.portrait = function (c, id, x, foot, h, alpha) {
 (function () {
   var XY = window.XY, KEY = 'xy_auto_v1', DEF = { points: false, treat: true, guest: true, pick: false };
   var A = XY.auto = { DEF: DEF, LABEL: { points: '加点', treat: '犒赏', guest: '召唤', pick: '选卡' } };
-  function load() { var o = {}; try { o = JSON.parse(window.localStorage.getItem(KEY) || '{}') || {}; } catch (e) { o = {}; } return o; }
-  A.get = function (k) { var o = load(); if (!o || typeof o !== 'object' || Array.isArray(o) || typeof o[k] !== 'boolean') return DEF[k]; return o[k]; };
-  A.set = function (k, v) { var o = load(); o[k] = !!v; try { window.localStorage.setItem(KEY, JSON.stringify(o)); } catch (e) { /* 存不了就只本次有效 */ } return A.get(k); };
+  function plain(o) { return !!o && typeof o === 'object' && !Array.isArray(o); }
+  function load() { var o = {}; try { o = JSON.parse(window.localStorage.getItem(KEY) || '{}'); } catch (e) { o = {}; } return plain(o) ? o : {}; }
+  A.get = function (k) { var o = load(); if (typeof o[k] !== 'boolean') return DEF[k]; return o[k]; };
+  A.set = function (k, v) {
+    var o = load(), next = {}, key;
+    for (key in DEF) if (DEF.hasOwnProperty(key)) next[key] = typeof o[key] === 'boolean' ? o[key] : DEF[key];
+    next[k] = !!v;
+    try { window.localStorage.setItem(KEY, JSON.stringify(next)); } catch (e) { /* 存不了就只本次有效 */ }
+    return next[k];
+  };
   A.toggle = function (k) { return A.set(k, !A.get(k)); };
 
   /* 每帧（真实时间）调一次：三选一在面板上停够 0.9 秒后替玩家点推荐；战斗中每 0.5 秒看一次犒赏 / 召唤 */
@@ -18646,26 +18654,44 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
     out.push({ n: '辅助 ' + XY.supportCount(h) + '/' + XY.MAX_SUPPORTS, nodes: tr.nodes.filter(function (z) { return z.kind === 'support'; }), hi: G.heroes.indexOf(h) });
     return out;
   }
-  function nodeCard(c, G, app, hi, n, x, y, w, h, col, hov) {
-    var st = XY.nodeStatus(G, hi, n.id), lv = st.lv, locked = st.st === 'locked', maxed = st.st === 'max', can = st.st === 'ok', nt = XY.nodeType(n), ov = K.over(x, y, w, h);
-    // 修行路上的墨点，不再给每个技能套一张绿/灰边矩形表格卡。
-    if(ov){var wash=c.createLinearGradient(x,y,x+w,y+h);wash.addColorStop(0,'rgba(184,48,15,0.10)');wash.addColorStop(1,'rgba(184,48,15,0)');c.fillStyle=wash;c.fillRect(x,y,w,h);}
-    c.beginPath();c.arc(x+5,y+15,4,0,PI2);c.fillStyle=maxed?'#b8300f':can?'#4f7044':lv>0?col:'#b8ad96';c.fill();
-    if(XY.INKP)XY.INKP.stroke(c,x+12,y+h-2,x+w-8,y+h-3,1.2,'83,61,34',0.22,(x+y)|0,0.004);
-    c.save(); c.beginPath(); c.rect(x, y, w, h); c.clip();
-    var nameSz = K.port ? 17 : 20, effSz = K.port ? 15 : 16.5, costSz = K.port ? 14.5 : 16, pipW = n.max * 14 + 8;
-    XY.skillRead = { name: nameSz, effect: effSz, cost: costSz, level: costSz };
-    K.lines(n.name, x + 14, y + 18, w - 28 - pipW, nameSz, nameSz + 4, locked && lv === 0 ? '#9a9486' : T.ink, 0, true);
-    for (var k = 0; k < n.max; k++) { c.beginPath(); c.arc(x + w - 12 - (n.max - 1 - k) * 14, y + 18, 5, 0, PI2); c.fillStyle = k < lv ? (maxed ? '#e0a415' : col) : 'rgba(0,0,0,0.08)'; c.fill(); c.lineWidth = 1; c.strokeStyle = '#a89d7e'; c.stroke(); }
-    var eff = lv > 0 ? XY.nodeText(n, lv) : (n.desc ? n.desc[0] : (n.eff ? n.eff(1) : '')), yEff = y + 18 + nameSz + 10, room = h - (yEff - y) - costSz - 18;
-    c.save(); c.beginPath(); c.rect(x + 10, yEff - effSz, w - 20, Math.max(effSz + 4, room)); c.clip();
-    var yAfter = K.lines(eff, x + 14, yEff, w - 24, effSz, effSz + 4, locked && lv === 0 ? '#aaa598' : T.inkSoft, 0, false);
-    c.restore();
-    var line, lc;
-    if (maxed) { line = '已学 ' + lv + '/' + n.max; lc = '#b8860b'; } else if (can) { line = '学 ' + st.cost + ' 点 · ' + lv + '/' + n.max; lc = '#2e7d32'; } else if (st.st === 'nopts') { line = '差 ' + (st.cost - G.points) + ' 点 · ' + lv + '/' + n.max; lc = '#9a6a1a'; } else { line = lv + '/' + n.max; lc = '#a0705a'; }
+  function skillFonts() { return K.port ? { name: 17, eff: 15, cost: 14.5 } : { name: 20, eff: 16.5, cost: 16 }; }
+  function skillUnits(s) { return String(XY.fmtStr(s)).match(/[+-]?\d[\d,]*(?:\.\d+)?(?:%|\/\d+|秒|级|点|倍)?|[A-Za-z][A-Za-z0-9_.-]*|[\s\S]/g) || []; }
+  function skillFont(size, bold) { var kai = (XY.menu && XY.menu.KAI) || XY.C.FONT, fam = bold && size >= 16 ? kai : XY.C.FONT; return (bold ? 'bold ' : '') + size + 'px ' + fam; }
+  function skillLines(c, text, size, bold, maxW) {
+    c.font = skillFont(size, bold); c.textAlign = 'left'; c.textBaseline = 'middle';
+    var units = skillUnits(text), line = '', out = [], i, tt;
+    for (i = 0; i < units.length; i++) { tt = line + units[i]; if (line && c.measureText(tt).width > maxW) { out.push(line); line = units[i]; } else line = tt; }
+    if (line || !out.length) out.push(line);
+    return out;
+  }
+  function skillDraw(c, lines, x, y, size, bold, col, lh) { c.font = skillFont(size, bold); c.fillStyle = col; c.textAlign = 'left'; c.textBaseline = 'middle'; lines.forEach(function (t, i) { c.fillText(t, x, y + i * lh); }); }
+  function skillInk(size) { return { up: size * 0.68, down: size * 0.62 }; }
+  function skillBody(c, G, hi, n, w) {
+    var st = XY.nodeStatus(G, hi, n.id), sz = skillFonts(), pipW = Math.max(0, n.max) * 14 + 8;
+    var nameW = Math.max(36, w - 28 - pipW), bodyW = Math.max(36, w - 28);
+    var eff = st.lv > 0 ? XY.nodeText(n, st.lv) : (n.desc ? n.desc[0] : (n.eff ? n.eff(1) : ''));
+    var cost = st.st === 'max' ? '已学 · 等级 ' + st.lv + '/' + n.max : st.st === 'ok' ? '点击学习 · ' + st.cost + ' 点 · 等级 ' + st.lv + '/' + n.max : st.st === 'nopts' ? '差 ' + (st.cost - G.points) + ' 点 · 要 ' + st.cost + ' 点 · 等级 ' + st.lv + '/' + n.max : '等级 ' + st.lv + '/' + n.max + (st.reason ? ' · ' + st.reason : '');
     var ab = /[ab]$/.test(n.id) && n.tier >= 3 ? (/a$/.test(n.id) ? 'A路 ' : 'B路 ') : '';
-    K.lines(ab + line, x + 14, Math.max(yAfter + 2, y + h - costSz - 12), w - 24, costSz, costSz + 4, lc, 0, true);
-    c.restore();
+    var nameLh = sz.name + 6, effLh = sz.eff + 8, costLh = sz.cost + 6;
+    var names = skillLines(c, n.name, sz.name, true, nameW), effs = skillLines(c, eff, sz.eff, false, bodyW), costs = skillLines(c, ab + cost, sz.cost, true, bodyW);
+    var yName = 8 + skillInk(sz.name).up;
+    var yEff = yName + (names.length - 1) * nameLh + skillInk(sz.name).down + 8 + skillInk(sz.eff).up;
+    var yCost = yEff + (effs.length - 1) * effLh + skillInk(sz.eff).down + 8 + skillInk(sz.cost).up;
+    var h = Math.ceil(yCost + (costs.length - 1) * costLh + skillInk(sz.cost).down + 10);
+    return { st: st, sz: sz, names: names, effs: effs, costs: costs, yName: yName, yEff: yEff, yCost: yCost, nameLh: nameLh, effLh: effLh, costLh: costLh, h: h, pipW: pipW };
+  }
+  XY.skillBody = function (c, G, hi, n, w) { return skillBody(c, G, hi, n, w); };
+  function nodeCard(c, G, app, hi, n, x, y, w, h, col, hov) {
+    var b = skillBody(c, G, hi, n, w), st = b.st, lv = st.lv, locked = st.st === 'locked', maxed = st.st === 'max', can = st.st === 'ok', ov = K.over(x, y, w, h);
+    XY.skillRead = { name: b.sz.name, effect: b.sz.eff, cost: b.sz.cost, level: b.sz.cost };
+    if(ov){var wash=c.createLinearGradient(x,y,x+w,y+h);wash.addColorStop(0,'rgba(184,48,15,0.10)');wash.addColorStop(1,'rgba(184,48,15,0)');c.fillStyle=wash;c.fillRect(x,y,w,h);}
+    c.beginPath();c.arc(x+5,y+b.yName,4,0,PI2);c.fillStyle=maxed?'#b8300f':can?'#4f7044':lv>0?col:'#b8ad96';c.fill();
+    if(XY.INKP)XY.INKP.stroke(c,x+12,y+h-2,x+w-8,y+h-3,1.2,'83,61,34',0.22,(x+y)|0,0.004);
+    var pk;
+    for (pk = 0; pk < n.max; pk++) { c.beginPath(); c.arc(x + w - 12 - (n.max - 1 - pk) * 14, y + b.yName, 5, 0, PI2); c.fillStyle = pk < lv ? (maxed ? '#e0a415' : col) : 'rgba(0,0,0,0.08)'; c.fill(); c.lineWidth = 1; c.strokeStyle = '#a89d7e'; c.stroke(); }
+    skillDraw(c, b.names, x + 14, y + b.yName, b.sz.name, true, locked && lv === 0 ? '#9a9486' : T.ink, b.nameLh);
+    skillDraw(c, b.effs, x + 14, y + b.yEff, b.sz.eff, false, locked && lv === 0 ? '#aaa598' : T.inkSoft, b.effLh);
+    skillDraw(c, b.costs, x + 14, y + b.yCost, b.sz.cost, true, maxed ? '#b8860b' : can ? '#2e7d32' : st.st === 'nopts' ? '#9a6a1a' : '#a0705a', b.costLh);
     K.hit(x, y, w, h, 'node', { hero: hi, id: n.id });
     return { n: n, st: st, hov: ov };
   }
@@ -18712,48 +18738,54 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
     });
     y += 58;
     // —— 修行谱：前置关系按层分岔，全队独立加成按错落墨点展开
-    var detH = port ? 128 : 96, gy = y, gh = bottom - detH - 6 - y, S0 = subs[sub], col = h ? h.def.color : '#d9a21a', rects = [];
+    var S0 = subs[sub], detH = port ? 100 : (H < 480 ? 56 : 84), gy = y, cardHi = tab === PT ? -1 : S0.hi, gap = 12, minW = port ? 168 : 230;
+    function tallest(nodes, ww) { var m = 72, i; for (i = 0; i < nodes.length; i++) m = Math.max(m, skillBody(c, G, cardHi, nodes[i], ww).h); return m; }
+    var probe = S0.nodes.length ? tallest(S0.nodes, Math.max(minW, w0)) : 72;
+    if (probe + 8 > bottom - detH - 6 - gy) detH = Math.max(48, bottom - gy - 8 - probe);
+    var gh = bottom - detH - 6 - gy, col = h ? h.def.color : '#d9a21a', rects = [];
     if(XY.inkHud&&sub>0&&!S0.locked&&S0.nodes.length){XY.inkHud.skillLeaf(c,G,app,h,S0,tab,sub,{x:x0,y:gy,w:w0,h:bottom-gy-45});P.end(c);return;}
-    var nn = S0.nodes.length, gap=12, layout=[], byId={}, depth={}, layered=false;
+    var nn = S0.nodes.length, layout=[], byId={}, depth={}, layered=false;
     S0.nodes.forEach(function(nd){byId[nd.id]=nd;depth[nd.id]=0;});
-    // 只画真实前置关系：不能凭视觉把互相独立的全队加成串成假依赖。
     for(var pass=0;pass<nn;pass++)S0.nodes.forEach(function(nd){Object.keys((nd.req&&nd.req[0])||{}).forEach(function(id){if(byId[id]){layered=true;depth[nd.id]=Math.max(depth[nd.id],depth[id]+1);}});});
-    var levels=1;Object.keys(depth).forEach(function(id){levels=Math.max(levels,depth[id]+1);});
-    var pageKey='skillPg'+tab+'-'+sub, pageN=1, pageI=0;
-    if(layered){
-      var groups=[];for(var gi=0;gi<levels;gi++)groups.push([]);S0.nodes.forEach(function(nd){groups[depth[nd.id]].push(nd);});
-      var lvGap=port?16:12, slot=(gh-(levels-1)*lvGap)/Math.max(1,levels), minH=port?112:100;
-      if(slot<minH) gh-=44;
-      slot=(gh-(levels-1)*lvGap)/Math.max(1,levels);
-      var fit=slot>=minH?levels:Math.max(1,Math.floor((gh+lvGap)/(minH+lvGap)));
-      pageN=Math.max(1,Math.ceil(levels/fit)); pageI=(P.folio[pageKey]||0)%pageN;
-      var slice=groups.slice(pageI*fit, Math.min(levels, pageI*fit+fit)), sl=slice.length, hh=Math.min(port?140:128,(gh-(sl-1)*lvGap)/Math.max(1,sl));
-      slice.forEach(function(group,li){group.forEach(function(nd,ki){
-        var ww=port?(w0-gap*(group.length-1))/group.length:Math.min(360,(w0-(sl-1)*18)/Math.max(1,sl));
-        layout.push({nd:nd,x:port?x0+ki*(ww+gap):x0+li*(ww+18),y:port?gy+li*(hh+lvGap):gy+(gh-group.length*hh-(group.length-1)*12)/2+ki*(hh+12),w:ww,h:hh});
-      });});
-      c.save();c.strokeStyle='rgba(88,66,37,0.32)';c.lineWidth=1.3;
-      layout.forEach(function(p){Object.keys((p.nd.req&&p.nd.req[0])||{}).forEach(function(id){var prev=layout.filter(function(t){return t.nd.id===id;})[0];if(!prev)return;var ax=port?prev.x+5:prev.x+prev.w-8,ay=port?prev.y+prev.h:prev.y+15,bx=p.x+5,by=p.y+15;c.beginPath();c.moveTo(ax,ay);c.bezierCurveTo(port?ax:ax+14,port?ay+14:ay,port?bx:bx-14,port?by-12:by,bx,by);c.stroke();});});c.restore();
-    }else{
-      var cols=port?1:Math.min(3,Math.max(2,nn)),rows=Math.max(1,Math.ceil(nn/cols)),ww=(w0-(cols-1)*gap)/cols,hh=Math.min(port?150:140,(gh-12-(rows-1)*gap)/rows);
-      S0.nodes.forEach(function(nd,ki){layout.push({nd:nd,x:x0+(ki%cols)*(ww+gap),y:gy+Math.floor(ki/cols)*(hh+gap)+(ki%2?8:0),w:ww,h:hh});});
-    }
-    if(pageN>1){K.btn(x0,gy+gh+4,108,36,'上一层','folio',{key:pageKey,i:(pageI+pageN-1)%pageN},{size:14,minS:12});K.btn(x0+116,gy+gh+4,92,36,(pageI+1)+' / '+pageN,'folio',{key:pageKey,i:(pageI+1)%pageN},{size:14,minS:12});}
+    var ordered = [];
+    if (layered) { var lv = 1, id; Object.keys(depth).forEach(function (k) { lv = Math.max(lv, depth[k] + 1); }); var bucket = []; for (id = 0; id < lv; id++) bucket.push([]); S0.nodes.forEach(function (nd) { bucket[depth[nd.id]].push(nd); }); bucket.forEach(function (g) { g.forEach(function (nd) { ordered.push(nd); }); }); }
+    else ordered = S0.nodes.slice();
+    var maxCols = Math.max(1, Math.min(ordered.length || 1, Math.floor((w0 + gap) / (minW + gap))));
+    var cols = maxCols, ww = (w0 - (cols - 1) * gap) / cols, oneH = ordered.length ? tallest(ordered, ww) : 72;
+    function room() { if (oneH > gh && detH > 48) { var give = Math.min(detH - 48, oneH - gh); detH -= give; gh += give; } }
+    room();
+    while (cols > 1 && oneH > gh) { cols--; ww = (w0 - (cols - 1) * gap) / cols; oneH = ordered.length ? tallest(ordered, ww) : 72; room(); }
+    var pages = [[]], used = 0, row = [];
+    function rowH(r) { var m = 0, i; for (i = 0; i < r.length; i++) if (r[i].h > m) m = r[i].h; return m; }
+    ordered.forEach(function (nd, i) {
+      row.push({ nd: nd, h: Math.max(72, skillBody(c, G, cardHi, nd, ww).h) });
+      if (row.length === cols || i === ordered.length - 1) {
+        var rh = rowH(row);
+        if (pages[pages.length - 1].length && used + gap + rh > gh + 0.5) { pages.push([]); used = 0; }
+        row.forEach(function (it, k) { pages[pages.length - 1].push({ nd: it.nd, x: x0 + k * (ww + gap), y: gy + used, w: ww, h: rh }); });
+        used += rh + gap; row = [];
+      }
+    });
+    var pageKey = 'skillPg' + tab + '-' + sub, pageN = pages.length, pageI = (P.folio[pageKey] || 0) % pageN, pin = null, step = G.tut && XY.tutSteps ? XY.tutSteps(G)[G.tut.i] : null;
+    if (step && step.id === 'skillLook' && XY.rootSkill) { var rs = XY.rootSkill(G); if (rs && rs.node) pin = rs.node.id; }
+    else if (step && step.id === 'skillMark') pin = 'p_tower';
+    if (pin) pages.forEach(function (p, i) { if (p.some(function (it) { return it.nd.id === pin; })) pageI = i; });
+    P.folio[pageKey] = pageI;
+    layout = pages[pageI] || [];
+    if (layered) { c.save(); c.strokeStyle = 'rgba(88,66,37,0.32)'; c.lineWidth = 1.3; layout.forEach(function (p) { Object.keys((p.nd.req && p.nd.req[0]) || {}).forEach(function (id) { var prev = layout.filter(function (t) { return t.nd.id === id; })[0]; if (!prev) return; c.beginPath(); c.moveTo(prev.x + prev.w - 8, prev.y + 18); c.bezierCurveTo(prev.x + prev.w + 10, prev.y + 18, p.x - 10, p.y + 18, p.x + 6, p.y + 18); c.stroke(); }); }); c.restore(); }
+    if(pageN>1){K.btn(x0+w0-196,bottom-detH+8,92,36,'上一页','folio',{key:pageKey,i:(pageI+pageN-1)%pageN},{size:14,minS:12});K.btn(x0+w0-98,bottom-detH+8,92,36,(pageI+1)+' / '+pageN,'folio',{key:pageKey,i:(pageI+1)%pageN},{size:14,minS:12});}
     if(S0.locked)K.tf('🔒 角色升到 Lv4 开放（'+XY.SP_LV_AT[3]+' 张角色卡）',x0+w0/2,gy+gh/2,w0-20,15,'#8a5a10','center',true,12);
     else if(!nn)K.t('这一页没有技能',x0+w0/2,gy+gh/2,15,T.inkSoft,'center',false);
     else layout.forEach(function(p){rects.push(nodeCard(c,G,app,tab===PT?-1:S0.hi,p.nd,p.x,p.y,p.w,p.h,tab===PT?(S0.n==='协同技'?'#c0489a':'#d9a21a'):col));});
     // —— 详情条
-    var dy = bottom - detH, hv = null; rects.forEach(function (r) { if (r.hov) hv = r; });
+    var dy = bottom - detH, hv = null, dw = w0 - 24 - (pageN > 1 ? 210 : 0); rects.forEach(function (r) { if (r.hov) hv = r; });
     if(XY.INKP)XY.INKP.stroke(c,x0,dy,x0+w0,dy-1,1.5,'83,61,34',0.3,39,0.004);
     if (hv) {
       var nd2 = hv.n, st = hv.st, ty = XY.nodeType(nd2), okk = st.st === 'ok';
-      c.save(); c.beginPath(); c.rect(x0 + 8, dy + 4, w0 - 16, detH - 8); c.clip();
-      K.lines(nd2.name + ' · 等级 ' + st.lv + '/' + nd2.max + ' · ' + ty.name, x0 + 12, dy + 18, w0 - 24, port ? 16 : 18, port ? 20 : 22, T.ink, 0, true);
+      K.lines(nd2.name + ' · 等级 ' + st.lv + '/' + nd2.max + ' · ' + ty.name, x0 + 12, dy + Math.min(22, detH * 0.28), dw, port ? 16 : 18, port ? 20 : 22, T.ink, 2, true);
       var nxt = '现在：' + (st.lv > 0 ? XY.nodeText(nd2, st.lv) : '（还没学）') + '　下一级：' + (st.lv < nd2.max ? XY.nodeText(nd2, st.lv + 1) + '（' + nd2.cost[st.lv] + ' 点）' : '已满');
-      K.lines(nxt, x0 + 12, dy + (port ? 58 : 42), w0 - 24, port ? 15 : 16, port ? 19 : 20, '#8a5a10', 0, false);
-      K.lines(okk ? '点击就能学' : (st.st === 'max' ? '已学会' : st.reason), x0 + 12, dy + detH - 22, w0 - 24, port ? 14 : 15, 18, okk ? '#2e7d32' : (st.st === 'max' ? '#b8860b' : '#b5503a'), 0, true);
-      c.restore();
-    } else K.lines(tab !== PT ? G.heroes[tab].def.name + '：生命 ' + Math.ceil(G.heroes[tab].hp) + '/' + G.heroes[tab].maxHp + ' · 点一张卡学习，学前先看效果；A / B 二选一，选了一边另一边就锁了。' : '全队强化不占英雄的技能位；协同技要两位搭档都在队里。', x0 + 12, dy + 24, w0 - 24, port ? 15 : 16, 22, T.inkSoft, 4, false);
+      K.lines(nxt, x0 + 12, dy + Math.min(port ? 58 : 46, detH * 0.55), dw, port ? 15 : 16, port ? 19 : 20, '#8a5a10', 3, false);
+    } else K.lines(tab !== PT ? G.heroes[tab].def.name + '：生命 ' + Math.ceil(G.heroes[tab].hp) + '/' + G.heroes[tab].maxHp + ' · 点一张卡学习，学前先看效果；A / B 二选一，选了一边另一边就锁了。' : '全队强化不占英雄的技能位；协同技要两位搭档都在队里。', x0 + 12, dy + Math.min(28, detH * 0.4), dw, port ? 15 : 16, 22, T.inkSoft, 3, false);
     P.end(c);
   }
   function helpPage(c,x,y,w,h){
