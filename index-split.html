@@ -8086,6 +8086,27 @@ XY.TRAITS = {
     return best;
   }
   XY.rootSkill = rootSkill;
+  function skillRestore(a) {
+    if (!a || !a._tutHold) return;
+    if (!a._pvSub) a._pvSub = {};
+    a._pvSub[a._tutHold.tab] = a._tutHold.sub;
+    a._tutHold = null;
+  }
+  function skillHold(a, tab, sub) {
+    if (!a._pvSub) a._pvSub = {};
+    if (!a._tutHold || a._tutHold.tab !== tab) { skillRestore(a); a._tutHold = { tab: tab, sub: a._pvSub[tab] || 0 }; }
+    a._pvSub[tab] = sub;
+  }
+  // 教程要看的那一页，和玩家上次停在的分支不是一回事。只在这一步临时切过去，离开时把原来的子页还回去。
+  XY.tutSkillSync = function (G, a) {
+    if (!a) return;
+    if (!G || !G.tut) { skillRestore(a); return; }
+    var st = steps(G.tut)[G.tut.i];
+    if (!st) { skillRestore(a); return; }
+    if (st.id === 'skillLook') { var hi = skillHi(G); a.skillTab = hi; skillHold(a, hi, 0); return; }
+    if (st.id === 'skillMark') { skillHold(a, 9, 0); return; }
+    skillRestore(a);
+  };
   function costLine(s, G) {
     if (!s || !s.node) return '每条下面写着效果和费用。点「下一步」继续，不扣点。';
     if (s.st === 'nopts') return '「' + s.node.name + '」要 ' + s.cost + ' 点，你现在有 ' + G.points + ' 点，所以写着差几点。升级打怪才加技能点。点「下一步」，不扣点。';
@@ -8162,7 +8183,7 @@ XY.TRAITS = {
       wait: function (G, tt) { var a = app(); return !!(a && a.skillTab === 9); } },
     { id: 'skillMark', title: '强化费用也在条目上',
       text: function (G) { var s = XY.nodeStatus(G, -1, 'p_tower'); return '亮着的是「营地·塔强化」，加强天兵。' + costLine(s, G); },
-      enter: function () { var a = app(); if (a && a.skillTab === 9) { if (!a._pvSub) a._pvSub = {}; a._pvSub[9] = 0; } },
+      enter: function (G) { var a = app(); if (a) XY.tutSkillSync(G, a); },
       target: function () { return hitBy('node', 'p_tower', -1); } },
     { id: 'skillClose', title: '关闭后战斗恢复',
       text: function () { return '点右上「关闭」。修行开着时战斗暂停，关掉就恢复。\n以后随时点顶部经验条再来。'; },
@@ -8201,6 +8222,7 @@ XY.TRAITS = {
     G.noSpawn = true; G.godMode = true;
   };
   XY.tutFinish = function (G, skipped) {
+    var aHold = app(); if (aHold) skillRestore(aHold);
     var growOnly = !!(G && G.tut && G.tut.growOnly);
     if (!G || !G.tut) { markTut(false); return; }
     G.tut = null;
@@ -18698,6 +18720,7 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
   function skills(c, G, app) {
     R.dim(c, app, 0.66); XY.ui.hits.length = 0; P.begin(c, app);
     var W = K.W, H = K.H, port = K.port, m = 6, n = G.heroes.length, PT = 9, i, rt = app.rt;
+    if (XY.tutSkillSync) XY.tutSkillSync(G, app);
     var tab = app.skillTab; if (tab !== PT && tab < n && G.heroes[tab].down) tab = app.skillTab = PT;
     P.paper(c,W,H);
     var x0 = m + 8, w0 = W - 2 * m - 16, y = m + 6;
