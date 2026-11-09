@@ -519,7 +519,7 @@ XY.TRAITS = {
       spT: { cards: { phyrex: 2 }, chosen: 'phyrex', shop: null, shopGen: 0 },  // v0.5：测试版的特殊角色状态（和标准版分开存，互不污染）
       mode: DEFAULT_MODE,                                                       // v0.5：版本开关 'test'（测试版，默认）/ 'std'（标准版）
       sold: { cards: { arrow: 1, heal: 1 } },                                   // v0.5：天兵卡
-      tutorial: { done: false },
+      tutorial: { done: false, grow: false },
       journey: { entry: {}, legacy: false },                                     // 取经之旅：每关入场快照（见 journey.js）
       villain: { series: { niumo: villainSeriesDefault() } },          // v0.8.6 预留：反派模式按 Boss 系列分钱包 / 已得 / 局数 / 通关数（牛魔王是第一个系列；v0.9.0 启用）
       tips: { seen: {}, cut: false },
@@ -573,7 +573,9 @@ XY.TRAITS = {
     if (!record(d.spT)) d.spT = { cards: { phyrex: 2 }, chosen: 'phyrex', shop: null, shopGen: 0 };
     if (!record(d.spT.cards)) d.spT.cards = { phyrex: 2 };
     if (!record(d.sold) || !record(d.sold.cards)) d.sold = base.sold;
-    if (!record(d.tutorial)) d.tutorial = { done: false };
+    if (!record(d.tutorial)) d.tutorial = { done: false, grow: false };
+    if (typeof d.tutorial.done !== 'boolean') d.tutorial.done = false;
+    if (typeof d.tutorial.grow !== 'boolean') d.tutorial.grow = false;
     d.schema = SCHEMA; d.gameVersion = XY.VERSION;
     return d;
   }
@@ -3132,7 +3134,7 @@ XY.TRAITS = {
     apply: function (G) {
       var s = JR.entryFor(G.levelId); G.inherit = null;
       if (!s) return null;
-      G.level = s.level || 1; G.xp = s.xp || 0; G.points = s.points || 0; G.pointsTotal = s.pointsTotal || 0; G.autoPoints = !!s.autoPoints;
+      G.level = s.level || 1; G.xp = s.xp || 0; G.points = s.points || 0; G.pointsTotal = s.pointsTotal || 0; G.autoPoints = XY.auto ? !!XY.auto.get('points') : !!s.autoPoints;
       G.upg = copy(s.upg);
       G.heroes.forEach(function (h) {
         var r = h.sp ? (s.sp && s.sp[h.id]) : (s.heroes && s.heroes[h.id]);
@@ -3551,7 +3553,9 @@ XY.TRAITS = {
     if (G.villain) XY.villain.init(G);
     var tutd = XY.save.data && XY.save.data.tutorial;
     G.tut = null;
-    if (!window.XY_NO_TUTORIAL && !G.villain && !G.lair && XY.tutStart && (XY.tutForce || (tutd && !tutd.done))) XY.tutStart(G);     // 新手教程：第一次玩自动出现，可跳过；主菜单可重看
+    var tutFull = XY.tutForce || !tutd || tutd.done !== true;
+    var tutGrow = !XY.tutForce && !!tutd && tutd.done === true && tutd.grow !== true;
+    if (!window.XY_NO_TUTORIAL && !G.villain && !G.lair && XY.tutStart && (tutFull || tutGrow)) XY.tutStart(G, { growOnly: tutGrow });     // 新档走完整教程；旧档只补修行引导。反派 / 验关不插入
     XY.tutForce = false;
     // 洞府 + 洞府 BOSS（BOSS 一开局就站在洞口）
     LV.dens.forEach(function (dd, i) {
@@ -3671,7 +3675,7 @@ XY.TRAITS = {
     if (!(G.points > 0) || G.mode !== 'play') return;
     var tch = XY.app && XY.app.touchUI;
     G.skillHintLast = G.t;
-    notify(G, '有 ' + G.points + ' 个技能点可以用（' + (tch ? (XY.compactHud&&XY.compactHud.on(G,XY.app)?'点顶部等级经验':'点右上角菜单') : 'Tab 菜单') + '）', { kind: 'toast', level: 0 });
+    notify(G, '有 ' + G.points + ' 个技能点可以用（' + (tch ? (XY.compactHud&&XY.compactHud.on(G,XY.app)?'点顶部等级经验':'点右上角菜单') : 'Tab 修行') + '）', { kind: 'toast', level: 0 });
   }
   function noteStep(G, dt) {
     if (G.points > 0 && G.skillHintLast != null && G.t - G.skillHintLast > 50) skillHint(G);
@@ -5155,9 +5159,9 @@ XY.TRAITS = {
     if (XY.sfx) XY.sfx('level');
     if (XY.anim) { XY.anim.levelUp(G); if (G.level >= C.PH_XF_LEVEL && !G._maxLvShown) { G._maxLvShown = true; XY.anim.maxLevel(G); } }
     if (XY.followGrow) XY.followGrow(G, n);
-    if (G.autoPoints) XY.autoSpend(G);
+    if (G.autoPoints && !G.tut) XY.autoSpend(G);
     // v0.8.0：拿到点数时的提示 = 顶部通知条一行（菜单按钮上不再有红角标 / 红字）；之后一直没用，skillHint 每 50 秒轻提示一次
-    if (G.points > 0) { var tch = XY.app && XY.app.touchUI; G.skillHintLast = G.t; banner(G, '升级了！有 ' + G.points + ' 个技能点可以用（' + (tch ? (XY.compactHud&&XY.compactHud.on(G,XY.app)?'点顶部等级经验':'点右上角菜单') : 'Tab 菜单') + '）', 2.2); } else banner(G, '升级了！', 1.6);
+    if (G.points > 0) { var tch = XY.app && XY.app.touchUI; G.skillHintLast = G.t; banner(G, '升级了！有 ' + G.points + ' 个技能点可以用（' + (tch ? (XY.compactHud&&XY.compactHud.on(G,XY.app)?'点顶部等级经验':'点右上角菜单') : 'Tab 修行') + '）', 2.2); } else banner(G, '升级了！', 1.6);
   }
   XY.gainPoints = gainPoints;
 
@@ -8068,6 +8072,73 @@ XY.TRAITS = {
     };
   }
 
+  function skillHi(G) { var a = app(), n = G.heroes.length; if (a && a.skillTab >= 0 && a.skillTab < n && G.heroes[a.skillTab] && !G.heroes[a.skillTab].down) return a.skillTab; return G.ctrl; }
+  function rootSkill(G) {
+    var hi = skillHi(G), h = G.heroes[hi], tr = h && XY.TREE[h.id];
+    if (!tr) return null;
+    var ids = ['m1', 'm2', 'ma', 'mb'], best = null, rank = 99;
+    tr.nodes.forEach(function (n) { if (n.kind === 'extra') ids.push(n.id); });
+    ids.forEach(function (id) {
+      if (!tr.by[id]) return;
+      var s = XY.nodeStatus(G, hi, id), r = s.st === 'ok' ? 0 : s.st === 'nopts' ? 1 : s.st === 'locked' ? 2 : 3;
+      if (r < rank) { rank = r; best = s; }
+    });
+    return best;
+  }
+  XY.rootSkill = rootSkill;
+  function folioBook() { return (XY.pv2 && XY.pv2.folio) || null; }
+  function skillRestore(a) {
+    if (!a || !a._tutHold) return;
+    var h = a._tutHold;
+    if (!a._pvSub) a._pvSub = {};
+    a._pvSub[h.tab] = h.sub;
+    var book = folioBook();
+    if (book && h.folioKey) { if (h.hadFolio) book[h.folioKey] = h.folio; else delete book[h.folioKey]; }
+    if (h.skillTab != null) a.skillTab = h.skillTab;
+    a._tutHold = null;
+  }
+  function skillLease(a, tab, sub) {
+    if (!a._pvSub) a._pvSub = {};
+    var key = tab + ':' + sub, fk = 'skillPg' + tab + '-' + sub, book = folioBook();
+    if (!a._tutHold || a._tutHold.key !== key) {
+      skillRestore(a);
+      a._tutHold = { key: key, tab: tab, sub: a._pvSub[tab] || 0, folioKey: fk, hadFolio: !!(book && Object.prototype.hasOwnProperty.call(book, fk)), folio: book ? book[fk] : 0, skillTab: a.skillTab };
+    }
+    a.skillTab = tab;
+    a._pvSub[tab] = sub;
+  }
+  // 教程临时借用修行子页和根分页。借的时候记下玩家原来的值，离开这一步、跳过或结束时原样还回去。
+  XY.tutSkillSync = function (G, a) {
+    if (!a) return;
+    if (!G || !G.tut) { skillRestore(a); return; }
+    var st = steps(G.tut)[G.tut.i];
+    if (!st) { skillRestore(a); return; }
+    if (st.id === 'skillLook') { skillLease(a, skillHi(G), 0); return; }
+    if (st.id === 'skillMark') { skillLease(a, 9, 0); return; }
+    skillRestore(a);
+  };
+  function panelGuide(G, inner) {
+    var a = app();
+    if (!a || !G || G.mode !== 'skills') return hitsWhere(function (h) { return h.act === 'skills'; });
+    return inner(G, a);
+  }
+  function panelAllow(h, G) {
+    if (h.act === 'closeSkills') return true;
+    if (h.act === 'skills' && G.mode !== 'skills') return true;
+    return false;
+  }
+  function costLine(s, G) {
+    if (!s || !s.node) return '每条下面写着效果和费用。点「下一步」继续，不扣点。';
+    if (s.st === 'nopts') return '「' + s.node.name + '」要 ' + s.cost + ' 点，你现在有 ' + G.points + ' 点，所以写着差几点。升级打怪才加技能点。点「下一步」，不扣点。';
+    if (s.st === 'ok') return '「' + s.node.name + '」下一级花 ' + s.cost + ' 点，效果就写在这一条上。点「下一步」只是看过，不扣点。';
+    if (s.st === 'max') return '「' + s.node.name + '」已满级。效果和费用仍写在条目上。点「下一步」继续。';
+    return '「' + s.node.name + '」现在不能学：' + s.reason + '。点「下一步」继续，不扣点。';
+  }
+  function hitBy(act, id, hero, tab) {
+    return hitsWhere(function (h) { return h.act === act && (id == null || h.id === id) && (hero == null || h.hero === hero) && (tab == null || h.i === tab); });
+  }
+  function steps(tt) { return (tt && tt.growOnly) ? XY.TUT_GROW : XY.TUT_STEPS; }
+  XY.tutSteps = function (G) { return steps(G && G.tut); };
   XY.TUT_STEPS = [
     { id: 'welcome', title: '欢迎取经！',
       text: function () { return '这位白衣和尚是唐僧师傅。他会自己一路向西走，你指挥不了他。他只有 1 点血，被妖怪一碰就输——你和徒弟们要一路护着他。\n（教程里时间是停的，也不会来怪，放心慢慢点。）'; },
@@ -8114,39 +8185,84 @@ XY.TRAITS = {
     { id: 'lose', title: '怎么输、怎么赢',
       text: function () { return '有两种输法：\n① 唐僧被妖怪碰到或打中（他只有 1 点血）；\n② 经书营地的血被打光。\n想赢：打退洞府 BOSS 完成主线，再让唐僧自己走到最西边的关口。'; },
       target: function () { return hudArea('tang'); }, pos: midIfNarrow },
-    { id: 'buttons', title: '顶部的修行和暂停',
-      text: function () { return touchUI() ? '「暂停」：暂停游戏；造天兵选点的时候，它就是“取消”。\n点顶部等级经验进「修行」给徒弟加点，点关闭回战斗。' : '「Esc / 暂停」：暂停游戏，造天兵选点时是“取消”。\n「Tab / 顶部等级经验」：修行加点，再按 Tab 关闭；H 打开操作说明。右上 Ⅱ 也能暂停。'; },
-      target: function () { return hitsWhere(function (h) { return h.act === 'skills' || h.act === 'esc'; }); }, pos: midIfNarrow },
+    { id: 'buttons', title: '暂停在右上角',
+      text: function () { return '右上角「Ⅱ」暂停；造天兵选点时它是取消。' + (touchUI() ? '' : ' Esc / P 也是暂停。') + '\n加点不在这里，下一步打开修行。'; },
+      target: function () { return hitsWhere(function (h) { return h.act === 'esc'; }); }, pos: midIfNarrow },
+    { id: 'skillOpen', title: '修行：加点入口',
+      text: function () { return '加点、升级技能、全队强化都在顶部「Lv · 经验」。不在首页商店。\n请点亮着的经验条。战斗会按原来的方式暂停，这一步不花技能点。'; },
+      target: function () { return hitsWhere(function (h) { return h.act === 'skills'; }); },
+      allow: function (h) { return h.act === 'skills'; },
+      wait: function (G) { return G.mode === 'skills'; }, pos: 'mid' },
+    { id: 'skillLook', title: '效果和费用写在技能上',
+      text: function (G) { var s = rootSkill(G); return s ? costLine(s, G) : '打开修行后，每条技能下面写着效果和要花的点数。点「下一步」继续，不扣点。'; },
+      target: function (G) { return panelGuide(G, function () { var s = rootSkill(G); return s ? hitBy('node', s.node.id, skillHi(G)) : null; }); },
+      allow: function (h, G) { return panelAllow(h, G); } },
+    { id: 'skillParty', title: '全队强化是另一页',
+      text: function () { return '点「全队」。全队强化用同一池技能点，不占英雄的技能位。\n法宝是旁边另一页，不在这里花技能点。'; },
+      target: function (G) { return panelGuide(G, function () { return hitBy('tab', null, null, 9); }); },
+      allow: function (h, G) { return panelAllow(h, G) || (h.act === 'tab' && h.i === 9); },
+      wait: function (G, tt) { var a = app(); return !!(a && a.skillTab === 9); } },
+    { id: 'skillMark', title: '强化费用也在条目上',
+      text: function (G) { var s = XY.nodeStatus(G, -1, 'p_tower'); return '亮着的是「营地·塔强化」，加强天兵。' + costLine(s, G); },
+      enter: function (G) { var a = app(); if (a) XY.tutSkillSync(G, a); },
+      target: function (G) { return panelGuide(G, function () { return hitBy('node', 'p_tower', -1); }); },
+      allow: function (h, G) { return panelAllow(h, G); } },
+    { id: 'skillClose', title: '关闭后战斗恢复',
+      text: function () { return '点右上「关闭」。修行开着时战斗暂停，关掉就恢复。\n以后随时点顶部经验条再来。'; },
+      target: function (G) { return panelGuide(G, function () { return hitBy('closeSkills'); }); },
+      allow: function (h, G) { return panelAllow(h, G) || h.act === 'closeSkills'; },
+      wait: function (G) { return G.mode === 'play'; } },
     { id: 'done', title: '教程完成！', last: true,
-      text: function () { return '你已经学会了：选角色、下命令、请天兵、看营地和输赢。\n祝取经顺利！以后想再看一遍，在主菜单点「新手教程」。'; },
+      text: function () { return '走路、天兵、输赢，以及修行里的加点、技能费用、全队强化，都看过了。\n想再看：开始取经 → 出发页「更多」进洞府阁 →「新手教程」。只重看，不清存档。'; },
+      target: function () { return null; } }
+  ];
+  XY.TUT_GROW = [
+    { id: 'growHi', title: '修行在哪里',
+      text: function () { return '加点、升级技能、全队强化都在战斗顶部的经验条里。\n下面带你点开真实入口。可跳过；不会扣技能点，也不清存档。'; },
+      target: function () { return hitsWhere(function (h) { return h.act === 'skills'; }); }, pos: 'mid' },
+    XY.TUT_STEPS.filter(function (s) { return s.id === 'skillOpen' || s.id === 'skillLook' || s.id === 'skillParty' || s.id === 'skillMark' || s.id === 'skillClose'; })[0],
+    XY.TUT_STEPS.filter(function (s) { return s.id === 'skillLook'; })[0],
+    XY.TUT_STEPS.filter(function (s) { return s.id === 'skillParty'; })[0],
+    XY.TUT_STEPS.filter(function (s) { return s.id === 'skillMark'; })[0],
+    XY.TUT_STEPS.filter(function (s) { return s.id === 'skillClose'; })[0],
+    { id: 'growDone', title: '知道去哪看了', last: true,
+      text: function () { return '修行左上角是可用技能点。每条下面是效果和费用；不够就写差几点。\n完整教程：开始取经 → 出发页「更多」进洞府阁 →「新手教程」。不清存档。'; },
       target: function () { return null; } }
   ];
 
   /* ---------- 状态 ---------- */
-  XY.tutStart = function (G) {
+  function markTut(growOnly) {
+    var t = XY.save && XY.save.data && XY.save.data.tutorial;
+    if (!t || typeof t !== 'object' || Array.isArray(t)) return;
+    if (growOnly) t.grow = true; else { t.done = true; t.grow = true; }
+    if (XY.save.touch) XY.save.touch();
+  }
+  XY.tutStart = function (G, opt) {
     if (!G) return;
-    G.tut = { i: 0, t: 0, entered: -1, ok: 0 };
+    G.tut = { i: 0, t: 0, entered: -1, ok: 0, growOnly: !!(opt && opt.growOnly) };
     G.tutSave = { noSpawn: G.noSpawn, god: G.godMode };
     G.noSpawn = true; G.godMode = true;
   };
   XY.tutFinish = function (G, skipped) {
-    if (!G || !G.tut) { if (XY.save.data.tutorial) { XY.save.data.tutorial.done = true; XY.save.touch(); } return; }
+    var aHold = app(); if (aHold) skillRestore(aHold);
+    var growOnly = !!(G && G.tut && G.tut.growOnly);
+    if (!G || !G.tut) { markTut(false); return; }
     G.tut = null;
     if (G.tutSave) { G.noSpawn = G.tutSave.noSpawn; G.godMode = G.tutSave.god; G.tutSave = null; }
     G.heroes.forEach(function (h, i) { if (i > 0 && h.order !== 'guard') { h.order = 'guard'; h.retreat = false; h.tgt = null; } });
-    var a = app(); if (a) { a.build = null; a.summon = null; a.selTower = null; }
-    if (XY.save.data.tutorial) { XY.save.data.tutorial.done = true; XY.save.touch(); }
-    XY.toast(G, skipped ? '已跳过教程（主菜单可以重看）' : '教程完成，开始取经！');
+    var a = app(); if (a) { a.build = null; a.summon = null; a.selTower = null; if (G.mode === 'skills') XY.toggleSkills(G, false); }
+    markTut(growOnly);
+    XY.toast(G, skipped ? '已跳过。出发页「更多」→新手教程' : '教程完成，开始取经！');
   };
   XY.tutNext = function (G) {
     var tt = G && G.tut; if (!tt) return;
-    var st = XY.TUT_STEPS[tt.i];
-    if (!st || st.last || tt.i >= XY.TUT_STEPS.length - 1) { XY.tutFinish(G, false); return; }
+    var list = steps(tt), st = list[tt.i];
+    if (!st || st.last || tt.i >= list.length - 1) { XY.tutFinish(G, false); return; }
     tt.i++; tt.entered = -1; tt.ok = 0; tt.t = 0;
   };
   XY.tutTick = function (G, dt) {
     var tt = G.tut; if (!tt) return;
-    var st = XY.TUT_STEPS[tt.i]; if (!st) { XY.tutFinish(G, false); return; }
+    var st = steps(tt)[tt.i]; if (!st) { XY.tutFinish(G, false); return; }
     if (tt.entered !== tt.i) { tt.entered = tt.i; tt.t = 0; tt.ok = 0; tt.done = false; if (st.enter) st.enter(G, tt); }
     tt.t += dt;
     if (st.wait) {
@@ -8157,7 +8273,8 @@ XY.TRAITS = {
   XY.tutBlocks = function (G, h) {
     var tt = G.tut; if (!tt) return false;
     if (h.act === 'tutNext' || h.act === 'tutSkip' || h.act === 'esc' || h.act === 'ui') return false;
-    var st = XY.TUT_STEPS[tt.i];
+    if (h.act === 'node') { var a2 = app(); if (!tt.nag || (a2 && a2.rt - tt.nag > 2)) { tt.nag = a2 ? a2.rt : 0; XY.toast(G, '先看费用和效果。点「下一步」，教程不扣技能点。'); } return true; }
+    var st = steps(tt)[tt.i];
     if (st && st.allow && st.allow(h, G, tt)) return false;
     var a = app(); if (a && (!tt.nag || a.rt - tt.nag > 2)) { tt.nag = a.rt; XY.toast(G, st && st.wait ? '先照提示点亮着的地方哦' : '点「下一步」继续，或者先看看亮着的地方'); }
     return true;
@@ -8180,10 +8297,10 @@ XY.TRAITS = {
   // 在 drawHUD 靠前的位置调用：算出提示卡的位置和大小，并告诉横幅 / 红条往下让
   XY.tutLayout = function (c, G, app, ctx) {
     var tt = G.tut; if (!tt) return;
-    var W = app.lw, H = app.lh, st = XY.TUT_STEPS[tt.i] || XY.TUT_STEPS[0];
-    var z=app.zoom||1,cw=Math.min(W-24/z,620/z),tsz=12/z,lines=wrapLines(c,st.text(G,app,tt),tsz,cw-40/z);
-    var ch = (65 + lines.length*18 + 61)/z;
-    var pos = st.pos ? st.pos(G, app) : 'top';
+    var W = app.lw, H = app.lh, list = steps(tt), st = list[tt.i] || list[0];
+    var z=app.zoom||1, s=XY.uiScale?XY.uiScale(W*z,H*z):1, u=s/z, cw=Math.min(W-24*u,620*u),tsz=12*u,lines=wrapLines(c,st.text(G,app,tt),tsz,cw-40*u);
+    var ch = (65 + lines.length*18 + 61)*u;
+    var pos = typeof st.pos === 'function' ? st.pos(G, app) : (st.pos || 'top');
     var y = pos === 'top' ? ctx.denBottom + 6 : Math.max(ctx.denBottom + 6, Math.round(H * 0.42 - ch / 2));
     tt.lay = { x: Math.round(W / 2 - cw / 2), y: y, w: cw, h: ch, lines: lines, tsz: tsz, pos: pos };
     ctx.tutBottom = pos === 'top' ? y + ch : ctx.denBottom + 6;
@@ -8195,11 +8312,24 @@ XY.TRAITS = {
   // 在 drawHUD 最后调用（这时所有真实按钮的位置都已经登记好了）
   XY.tutDraw = function (c, G, app) {
     var tt = G.tut; if (!tt || !tt.lay) return;
-    var R = XY.R, T = R.T, W = app.lw, H = app.lh, st = XY.TUT_STEPS[tt.i] || XY.TUT_STEPS[0], L = tt.lay, rt = app.rt;
+    var R = XY.R, T = R.T, W = app.lw, H = app.lh, list = steps(tt), st = list[tt.i] || list[0], L = tt.lay, rt = app.rt;
     var tr = st.target ? st.target(G, app, tt) : null, pad = 7;
     // v0.9 队伍面板在教程里钉开时卡片很高：提示卡要是盖住了亮着的目标，就挪到目标下方 / 上方 / 屏幕底 / 顶，找一个不盖住的位置
     function ov(y) { return tr && !(tr.x + tr.w <= L.x || L.x + L.w <= tr.x || tr.y + tr.h <= y || y + L.h <= tr.y); }
     if (tr && ov(L.y)) { var cands = [tr.y + tr.h + pad + 18, tr.y - pad - 18 - L.h, H - L.h - 8, 8]; for (var q = 0; q < cands.length; q++) if (cands[q] >= 8 && cands[q] + L.h <= H - 8 && !ov(cands[q])) { L.y = cands[q]; break; } }
+    // 44px 关闭钮要整块可点。卡按 620 CSS 像素居中时，667 横屏右缘会盖住它的中心。
+    var zFit = app.zoom || 1, sFit = XY.uiScale ? XY.uiScale(W * zFit, H * zFit) : 1, uFit = sFit / zFit, minW = 300 * uFit, gap = 8;
+    (XY.ui.hits || []).forEach(function (b) {
+      if (b.act !== 'closeSkills') return;
+      if (L.x + L.w <= b.x || b.x + b.w <= L.x || L.y + L.h <= b.y || b.y + b.h <= L.y) return;
+      var keepLeft = b.x - gap - L.x, keepRight = L.x + L.w - (b.x + b.w + gap);
+      if (keepLeft >= minW && keepLeft >= keepRight) L.w = keepLeft;
+      else if (keepRight >= minW) { L.x = b.x + b.w + gap; L.w = keepRight; }
+      else { var below = b.y + b.h + gap; if (below + L.h <= H - 8) L.y = below; }
+    });
+    L.lines = wrapLines(c, st.text(G, app, tt), L.tsz, Math.max(80, L.w - 40 * uFit));
+    L.h = (65 + L.lines.length * 18 + 61) * uFit;
+    if (tr && ov(L.y)) { var cands2 = [tr.y + tr.h + pad + 18, tr.y - pad - 18 - L.h, H - L.h - 8, 8]; for (var q2 = 0; q2 < cands2.length; q2++) if (cands2[q2] >= 8 && cands2[q2] + L.h <= H - 8 && !ov(cands2[q2])) { L.y = cands2[q2]; break; } }
     // 变暗，只留亮着的那一块
     c.save();
     c.fillStyle = 'rgba(70,56,24,0.34)'; c.beginPath(); c.rect(0, 0, W, H);
@@ -8217,7 +8347,7 @@ XY.TRAITS = {
     if(XY.ui2.on&&XY.inkHud){XY.inkHud.tutorialCard(c,G,app,tt,st,L);return;}
     // 提示卡
     R.panel(c, L.x, L.y, L.w, L.h, 16, 'rgba(255,251,236,0.98)', '#e0a415');
-    var n = XY.TUT_STEPS.length;
+    var n = list.length;
     R.txt(c, '新手教程 ' + (tt.i + 1) + '/' + n, L.x + 20, L.y + 18, 12, '#a8700a', 'left', true);
     R.txt(c, st.title, L.x + 20, L.y + 44, L.tsz + 4, '#3a2c10', 'left', true);
     for (var k = 0; k < L.lines.length; k++) R.txt(c, L.lines[k], L.x + 20, L.y + 78 + k * (L.tsz + 9), L.tsz, '#4a3a1a', 'left', false);
@@ -9768,6 +9898,7 @@ XY.TRAITS = {
     else if (s === 'pause') { ui.hits.length = 0; drawPause(ctx, G, app); }
     else if (s === 'win') { ui.hits.length = 0; drawEnd(ctx, G, app, true); }
     else if (s === 'lose') { ui.hits.length = 0; drawEnd(ctx, G, app, false); }
+    if (G.tut && G.mode === 'skills' && s === 'play' && XY.tutDraw) XY.tutDraw(ctx, G, app);   // 修行面板盖住战场后，再把教程洞和「下一步」画在真实按钮上
   };
 })();
 
@@ -10646,7 +10777,7 @@ XY.TRAITS = {
     return { PB: PB, PE: PE, W: W, m: m, tx: m, ty: ty, tw: W - 2 * m - (2 * sr + 14), th: tbh, sky: { cx: W - m - sr - 4, cy: ty + tbh - sr - 6, r: sr } };
   }
   R4.botLayout = botLayout;
-  function summonSpot(G, app) { if (XY.compactHud && XY.compactHud.on(G,app)) { var q=XY.compactHud.layout(app).sky; return {cx:q.cx/app.zoom,cy:q.cy/app.zoom,r:q.r/app.zoom}; } if (portrait(app)) return botLayout(G, app).sky; if (XY.hud2 && XY.hud2.phoneLand(app)) { var z = app.zoom, W = app.lw * z, H = app.lh * z; return { cx: (W - 39) / z, cy: (H - 39) / z, r: 31 / z }; } return { cx: app.lw - 12 - 46, cy: app.lh - 12 - 46, r: 36 }; }
+  function summonSpot(G, app) { if (XY.compactHud && XY.compactHud.on(G,app)) { var q=XY.compactHud.layout(app).sky; return {cx:XY.kToLog(app,q.cx),cy:XY.kToLog(app,q.cy),r:XY.kToLog(app,q.r)}; } if (portrait(app)) return botLayout(G, app).sky; if (XY.hud2 && XY.hud2.phoneLand(app)) { var z = app.zoom, W = app.lw * z, H = app.lh * z; return { cx: (W - 39) / z, cy: (H - 39) / z, r: 31 / z }; } return { cx: app.lw - 12 - 46, cy: app.lh - 12 - 46, r: 36 }; }
   R4.summonSpot = summonSpot;
   function drawTowerBarP(c, G, app) {
     if(XY.ui2.on&&XY.inkHud){var W=app.lw*app.zoom,H=app.lh*app.zoom;return XY.inkHud.soldiers(c,G,app,{x:8,y:H-111,w:W-92,h:99},false);}
@@ -10748,7 +10879,7 @@ XY.TRAITS = {
     // 卡牌飞向右侧法宝栏
     G.cardFly.forEach(function (f) {
       var k = f.t / f.max, card = XY.CARD_BY[f.id], e = k < 0.4 ? k / 0.4 : 1, sx = W / 2, sy = H / 2 - 40, tx = W - 120, ty = 190;
-      if(XY.compactHud&&XY.compactHud.on(G,app)){var fa=XY.compactHud.layout(app).fabao;tx=fa.cx/app.zoom;ty=fa.cy/app.zoom;}
+      if(XY.compactHud&&XY.compactHud.on(G,app)){var fa=XY.compactHud.layout(app).fabao;tx=XY.kToLog(app,fa.cx);ty=XY.kToLog(app,fa.cy);}
       var p = k < 0.45 ? 0 : Math.pow((k - 0.45) / 0.55, 2), x = sx + (tx - sx) * p, y = sy + (ty - sy) * p, s = (k < 0.45 ? 0.6 + 0.9 * e : 1.5 - 1.0 * p);
       c.save(); c.translate(x, y); c.scale(s, s);
       var R_ = XY.RARITY[card.r]; c.fillStyle = R_.glow; c.beginPath(); c.arc(0, 0, 56, 0, 6.3); c.fill();
@@ -12778,7 +12909,7 @@ XY.chibi.portrait = function (c, id, x, foot, h, alpha) {
   var TUT_PIN = { choose: 1, orders: 1, cmd_follow: 1, cmd_station: 1, cmd_attack: 1, cmd_guard: 1 };
   function available(G, app) { return !!G && !G.villain && app.screen === 'play' && G.mode === 'play'; }
   var P = XY.party = {
-    pinned: function (G) { var tt = G && G.tut, st = tt && XY.TUT_STEPS && XY.TUT_STEPS[tt.i]; return !!(st && TUT_PIN[st.id]); },
+    pinned: function (G) { var tt = G && G.tut, list = XY.tutSteps ? XY.tutSteps(G) : XY.TUT_STEPS, st = tt && list && list[tt.i]; return !!(st && TUT_PIN[st.id]); },
     visible: function (G, app) { return available(G, app) && (!!app.partyPanel || P.pinned(G)); },
     frozen: function (app) { return available(XY.G, app) && !!app.partyPanel; },
     open: function (app) { var G = XY.G; if (!available(G, app) || G.tut) return false; app.partyPage = 0; app.partyPanel = true; app.build = null; app.summon = null; app.selTower = null; if (app.mm) { app.mm.holding = false; } return true; },
@@ -13456,14 +13587,21 @@ XY.chibi.portrait = function (c, id, x, foot, h, alpha) {
 /* ============================================================
  * auto.js —— v0.9「尽量只用方向键」：自动加点 / 自动犒赏天兵（F）/ 自动召唤特殊人物（G）/ 法宝三选一自动选推荐
  * 偏好存在 localStorage（xy_auto_v1），测试版和普通版共用；暂停页里有四个开关。
- * 默认：加点 开、犒赏 开、召唤 开、选推荐 关。手动按键（F / G / 1 2 3）照旧可用。
+ * 默认：加点 关、犒赏 开、召唤 开、选推荐 关。只有玩家打开「自动加点」才花技能点。手动按键（F / G / 1 2 3）照旧可用。
  * ============================================================ */
 (function () {
-  var XY = window.XY, KEY = 'xy_auto_v1', DEF = { points: true, treat: true, guest: true, pick: false };
+  var XY = window.XY, KEY = 'xy_auto_v1', DEF = { points: false, treat: true, guest: true, pick: false };
   var A = XY.auto = { DEF: DEF, LABEL: { points: '加点', treat: '犒赏', guest: '召唤', pick: '选卡' } };
-  function load() { var o = {}; try { o = JSON.parse(window.localStorage.getItem(KEY) || '{}') || {}; } catch (e) { o = {}; } return o; }
-  A.get = function (k) { var o = load(); return o[k] === undefined ? DEF[k] : !!o[k]; };
-  A.set = function (k, v) { var o = load(); o[k] = !!v; try { window.localStorage.setItem(KEY, JSON.stringify(o)); } catch (e) { /* 存不了就只本次有效 */ } return A.get(k); };
+  function plain(o) { return !!o && typeof o === 'object' && !Array.isArray(o); }
+  function load() { var o = {}; try { o = JSON.parse(window.localStorage.getItem(KEY) || '{}'); } catch (e) { o = {}; } return plain(o) ? o : {}; }
+  A.get = function (k) { var o = load(); if (typeof o[k] !== 'boolean') return DEF[k]; return o[k]; };
+  A.set = function (k, v) {
+    var o = load(), next = {}, key;
+    for (key in DEF) if (DEF.hasOwnProperty(key)) next[key] = typeof o[key] === 'boolean' ? o[key] : DEF[key];
+    next[k] = !!v;
+    try { window.localStorage.setItem(KEY, JSON.stringify(next)); } catch (e) { /* 存不了就只本次有效 */ }
+    return next[k];
+  };
   A.toggle = function (k) { return A.set(k, !A.get(k)); };
 
   /* 每帧（真实时间）调一次：三选一在面板上停够 0.9 秒后替玩家点推荐；战斗中每 0.5 秒看一次犒赏 / 召唤 */
@@ -18207,10 +18345,11 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
 
   /* ---------- 工具集 ---------- */
   P.begin = function (c, app) {
-    var z = app.zoom; K = P.K = { c: c, app: app, z: z, W: app.lw * z, H: app.lh * z, port: app.lw < app.lh };
-    c.save(); c.scale(1 / z, 1 / z);
-    K.over = function (x, y, w, h) { var m = app.mouse; return !!m && m.x * z >= x && m.x * z <= x + w && m.y * z >= y && m.y * z <= y + h; };
-    K.hit = function (x, y, w, h, act, ex) { var o = { x: x / z, y: y / z, w: w / z, h: h / z, act: act }, k; if (ex) for (k in ex) o[k] = ex[k]; XY.ui.hits.push(o); };
+    var z = app.zoom, cssW = app.lw * z, cssH = app.lh * z, s = XY.uiScale ? XY.uiScale(cssW, cssH) : 1;
+    K = P.K = { c: c, app: app, z: z, s: s, W: cssW / s, H: cssH / s, port: app.lw < app.lh };
+    c.save(); c.scale(s / z, s / z);
+    K.over = function (x, y, w, h) { var m = app.mouse; return !!m && m.x * z >= x * s && m.x * z <= (x + w) * s && m.y * z >= y * s && m.y * z <= (y + h) * s; };
+    K.hit = function (x, y, w, h, act, ex) { var o = { x: x * s / z, y: y * s / z, w: w * s / z, h: h * s / z, act: act }, k; if (ex) for (k in ex) o[k] = ex[k]; XY.ui.hits.push(o); };
     var KAI = function () { return (XY.menu && XY.menu.KAI) || XY.C.FONT; };
     K.fam = function (size, bold) { return bold !== false && size >= 16 ? KAI() : XY.C.FONT; };      // 水墨风：标题级（≥16px 粗体）用楷体，正文仍用黑体（11–14px 的楷体太细）
     K.t = function (s, x, y, size, col, al, bold) {
@@ -18226,7 +18365,7 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
       if(red){c.save();c.translate(x+w/2,y+h/2);c.rotate(-.022);c.fillStyle=hover?'#c64b2d':'#ad321c';c.beginPath();c.moveTo(-w/2+2,-h*.36);c.lineTo(w/2,-h*.42);c.lineTo(w/2-2,h*.39);c.lineTo(-w/2,h*.35);c.closePath();c.fill();c.restore();}
       else if(o.on||hover){c.save();c.fillStyle=o.on?'rgba(165,46,25,.10)':'rgba(50,39,22,.045)';c.beginPath();c.ellipse(x+w*.48,y+h*.55,w*.47,h*.3,-.03,0,Math.PI*2);c.fill();c.restore();}
       if(o.on) K.ink(x+w*.18,y+h-5,w*.64,.65,label.length+7);
-      K.tf(label,x+w/2,y+h/2,w-6,o.size||15,col,'center',true,o.minS||11);
+      if(o.wrap){c.save();c.beginPath();c.rect(x+4,y+2,w-8,h-4);c.clip();K.lines(label,x+8,y+h/2-((o.size||15)+3)/2,w-16,o.size||15,(o.size||15)+3,col,0,true);c.restore();}else K.tf(label,x+w/2,y+h/2,w-6,o.size||15,col,'center',true,o.minS||11);
       if(act&&!o.off)K.hit(x,y,w,h,act,ex);
     };
     K.lines = function (s, x, y, w, size, lh, col, maxL, bold) {               // 自动换行（逐字），返回下一行 y
@@ -18572,27 +18711,51 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
     out.push({ n: '辅助 ' + XY.supportCount(h) + '/' + XY.MAX_SUPPORTS, nodes: tr.nodes.filter(function (z) { return z.kind === 'support'; }), hi: G.heroes.indexOf(h) });
     return out;
   }
-  function nodeCard(c, G, app, hi, n, x, y, w, h, col, hov) {
-    var st = XY.nodeStatus(G, hi, n.id), lv = st.lv, locked = st.st === 'locked', maxed = st.st === 'max', can = st.st === 'ok', nt = XY.nodeType(n), ov = K.over(x, y, w, h);
-    // 修行路上的墨点，不再给每个技能套一张绿/灰边矩形表格卡。
-    if(ov){var wash=c.createLinearGradient(x,y,x+w,y+h);wash.addColorStop(0,'rgba(184,48,15,0.10)');wash.addColorStop(1,'rgba(184,48,15,0)');c.fillStyle=wash;c.fillRect(x,y,w,h);}
-    c.beginPath();c.arc(x+5,y+15,4,0,PI2);c.fillStyle=maxed?'#b8300f':can?'#4f7044':lv>0?col:'#b8ad96';c.fill();
-    if(XY.INKP)XY.INKP.stroke(c,x+12,y+h-2,x+w-8,y+h-3,1.2,'83,61,34',0.22,(x+y)|0,0.004);
-    var pipW = n.max * 12 + 4;
-    K.tf(n.name, x + 12, y + 15, w - 22 - pipW, 13.5, locked && lv === 0 ? '#9a9486' : T.ink, 'left', true, 11);
-    for (var k = 0; k < n.max; k++) { c.beginPath(); c.arc(x + w - 10 - (n.max - 1 - k) * 12, y + 15, 4.2, 0, PI2); c.fillStyle = k < lv ? (maxed ? '#e0a415' : col) : 'rgba(0,0,0,0.08)'; c.fill(); c.lineWidth = 1; c.strokeStyle = '#a89d7e'; c.stroke(); }
-    var eff = lv > 0 ? XY.nodeText(n, lv) : (n.desc ? n.desc[0] : (n.eff ? n.eff(1) : '')), room = h - 44, lines = Math.max(1, Math.floor(room / 14));
-    K.lines(eff, x + 12, y + 31, w - 20, 11.5, 14, locked && lv === 0 ? '#aaa598' : T.inkSoft, lines, false);
-    var line, lc;
-    if (maxed) { line = '已学'; lc = '#b8860b'; } else if (can) { line = '点击学习 · ' + st.cost + ' 点'; lc = '#2e7d32'; } else if (st.st === 'nopts') { line = '差 ' + (st.cost - G.points) + ' 点'; lc = '#9a6a1a'; } else { line = '🔒 ' + (st.reason || ''); lc = '#a0705a'; }
+  function skillFonts() { return K.port ? { name: 17, eff: 15, cost: 14.5 } : { name: 20, eff: 16.5, cost: 16 }; }
+  function skillUnits(s) { return String(XY.fmtStr(s)).match(/[+-]?\d[\d,]*(?:\.\d+)?(?:%|\/\d+|秒|级|点|倍)?|[A-Za-z][A-Za-z0-9_.-]*|[\s\S]/g) || []; }
+  function skillFont(size, bold) { var kai = (XY.menu && XY.menu.KAI) || XY.C.FONT, fam = bold && size >= 16 ? kai : XY.C.FONT; return (bold ? 'bold ' : '') + size + 'px ' + fam; }
+  function skillLines(c, text, size, bold, maxW) {
+    c.font = skillFont(size, bold); c.textAlign = 'left'; c.textBaseline = 'middle';
+    var units = skillUnits(text), line = '', out = [], i, tt;
+    for (i = 0; i < units.length; i++) { tt = line + units[i]; if (line && c.measureText(tt).width > maxW) { out.push(line); line = units[i]; } else line = tt; }
+    if (line || !out.length) out.push(line);
+    return out;
+  }
+  function skillDraw(c, lines, x, y, size, bold, col, lh) { c.font = skillFont(size, bold); c.fillStyle = col; c.textAlign = 'left'; c.textBaseline = 'middle'; lines.forEach(function (t, i) { c.fillText(t, x, y + i * lh); }); }
+  function skillInk(size) { return { up: size * 0.68, down: size * 0.62 }; }
+  function skillBody(c, G, hi, n, w) {
+    var st = XY.nodeStatus(G, hi, n.id), sz = skillFonts(), pipW = Math.max(0, n.max) * 14 + 8;
+    var nameW = Math.max(36, w - 28 - pipW), bodyW = Math.max(36, w - 28);
+    var eff = st.lv > 0 ? XY.nodeText(n, st.lv) : (n.desc ? n.desc[0] : (n.eff ? n.eff(1) : ''));
+    var cost = st.st === 'max' ? '已学 · 等级 ' + st.lv + '/' + n.max : st.st === 'ok' ? '点击学习 · ' + st.cost + ' 点 · 等级 ' + st.lv + '/' + n.max : st.st === 'nopts' ? '差 ' + (st.cost - G.points) + ' 点 · 要 ' + st.cost + ' 点 · 等级 ' + st.lv + '/' + n.max : '等级 ' + st.lv + '/' + n.max + (st.reason ? ' · ' + st.reason : '');
     var ab = /[ab]$/.test(n.id) && n.tier >= 3 ? (/a$/.test(n.id) ? 'A路 ' : 'B路 ') : '';
-    K.tf(ab + line, x + 12, y + h - 10, w - 20, 11.5, lc, 'left', true, 10);
+    var nameLh = sz.name + 6, effLh = sz.eff + 8, costLh = sz.cost + 6;
+    var names = skillLines(c, n.name, sz.name, true, nameW), effs = skillLines(c, eff, sz.eff, false, bodyW), costs = skillLines(c, ab + cost, sz.cost, true, bodyW);
+    var yName = 8 + skillInk(sz.name).up;
+    var yEff = yName + (names.length - 1) * nameLh + skillInk(sz.name).down + 8 + skillInk(sz.eff).up;
+    var yCost = yEff + (effs.length - 1) * effLh + skillInk(sz.eff).down + 8 + skillInk(sz.cost).up;
+    var h = Math.ceil(yCost + (costs.length - 1) * costLh + skillInk(sz.cost).down + 10);
+    return { st: st, sz: sz, names: names, effs: effs, costs: costs, yName: yName, yEff: yEff, yCost: yCost, nameLh: nameLh, effLh: effLh, costLh: costLh, h: h, pipW: pipW };
+  }
+  XY.skillBody = function (c, G, hi, n, w) { return skillBody(c, G, hi, n, w); };
+  function nodeCard(c, G, app, hi, n, x, y, w, h, col, hov) {
+    var b = skillBody(c, G, hi, n, w), st = b.st, lv = st.lv, locked = st.st === 'locked', maxed = st.st === 'max', can = st.st === 'ok', ov = K.over(x, y, w, h);
+    XY.skillRead = { name: b.sz.name, effect: b.sz.eff, cost: b.sz.cost, level: b.sz.cost };
+    if(ov){var wash=c.createLinearGradient(x,y,x+w,y+h);wash.addColorStop(0,'rgba(184,48,15,0.10)');wash.addColorStop(1,'rgba(184,48,15,0)');c.fillStyle=wash;c.fillRect(x,y,w,h);}
+    c.beginPath();c.arc(x+5,y+b.yName,4,0,PI2);c.fillStyle=maxed?'#b8300f':can?'#4f7044':lv>0?col:'#b8ad96';c.fill();
+    if(XY.INKP)XY.INKP.stroke(c,x+12,y+h-2,x+w-8,y+h-3,1.2,'83,61,34',0.22,(x+y)|0,0.004);
+    var pk;
+    for (pk = 0; pk < n.max; pk++) { c.beginPath(); c.arc(x + w - 12 - (n.max - 1 - pk) * 14, y + b.yName, 5, 0, PI2); c.fillStyle = pk < lv ? (maxed ? '#e0a415' : col) : 'rgba(0,0,0,0.08)'; c.fill(); c.lineWidth = 1; c.strokeStyle = '#a89d7e'; c.stroke(); }
+    skillDraw(c, b.names, x + 14, y + b.yName, b.sz.name, true, locked && lv === 0 ? '#9a9486' : T.ink, b.nameLh);
+    skillDraw(c, b.effs, x + 14, y + b.yEff, b.sz.eff, false, locked && lv === 0 ? '#aaa598' : T.inkSoft, b.effLh);
+    skillDraw(c, b.costs, x + 14, y + b.yCost, b.sz.cost, true, maxed ? '#b8860b' : can ? '#2e7d32' : st.st === 'nopts' ? '#9a6a1a' : '#a0705a', b.costLh);
     K.hit(x, y, w, h, 'node', { hero: hi, id: n.id });
     return { n: n, st: st, hov: ov };
   }
   function skills(c, G, app) {
     R.dim(c, app, 0.66); XY.ui.hits.length = 0; P.begin(c, app);
     var W = K.W, H = K.H, port = K.port, m = 6, n = G.heroes.length, PT = 9, i, rt = app.rt;
+    if (XY.tutSkillSync) XY.tutSkillSync(G, app);
     var tab = app.skillTab; if (tab !== PT && tab < n && G.heroes[tab].down) tab = app.skillTab = PT;
     P.paper(c,W,H);
     var x0 = m + 8, w0 = W - 2 * m - 16, y = m + 6;
@@ -18629,42 +18792,58 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
     var h = tab !== PT ? G.heroes[tab] : null, subs = subList(G, tab, h), key = tab, sub = (app._pvSub && app._pvSub[key]) || 0; if (sub >= subs.length) sub = 0;
     var sw = (w0 - (subs.length - 1) * 5) / subs.length;
     subs.forEach(function (s, k) {
-      var on = sub === k; K.btn(x0 + k * (sw + 5), y, sw, 44, s.n, 'pvSub', { i: k }, { on: on, off: false, size: sw < 70 ? 12.5 : 14 });
+      var on = sub === k; K.btn(x0 + k * (sw + 5), y, sw, 52, s.n, 'pvSub', { i: k }, { on: on, off: false, size: sw < 90 ? 14 : 16, wrap: true });
     });
-    y += 50;
+    y += 58;
     // —— 修行谱：前置关系按层分岔，全队独立加成按错落墨点展开
-    var detH = port ? 92 : 50, gy = y, gh = bottom - detH - 6 - y, S0 = subs[sub], col = h ? h.def.color : '#d9a21a', rects = [];
+    var S0 = subs[sub], detH = port ? 100 : (H < 480 ? 56 : 84), gy = y, cardHi = tab === PT ? -1 : S0.hi, gap = 12, minW = port ? 168 : 230;
+    function tallest(nodes, ww) { var m = 72, i; for (i = 0; i < nodes.length; i++) m = Math.max(m, skillBody(c, G, cardHi, nodes[i], ww).h); return m; }
+    var probe = S0.nodes.length ? tallest(S0.nodes, Math.max(minW, w0)) : 72;
+    if (probe + 8 > bottom - detH - 6 - gy) detH = Math.max(48, bottom - gy - 8 - probe);
+    var gh = bottom - detH - 6 - gy, col = h ? h.def.color : '#d9a21a', rects = [];
     if(XY.inkHud&&sub>0&&!S0.locked&&S0.nodes.length){XY.inkHud.skillLeaf(c,G,app,h,S0,tab,sub,{x:x0,y:gy,w:w0,h:bottom-gy-45});P.end(c);return;}
-    var nn = S0.nodes.length, gap=12, layout=[], byId={}, depth={}, layered=false;
+    var nn = S0.nodes.length, layout=[], byId={}, depth={}, layered=false;
     S0.nodes.forEach(function(nd){byId[nd.id]=nd;depth[nd.id]=0;});
-    // 只画真实前置关系：不能凭视觉把互相独立的全队加成串成假依赖。
     for(var pass=0;pass<nn;pass++)S0.nodes.forEach(function(nd){Object.keys((nd.req&&nd.req[0])||{}).forEach(function(id){if(byId[id]){layered=true;depth[nd.id]=Math.max(depth[nd.id],depth[id]+1);}});});
-    var levels=1;Object.keys(depth).forEach(function(id){levels=Math.max(levels,depth[id]+1);});
-    if(layered){
-      var groups=[];for(var gi=0;gi<levels;gi++)groups.push([]);S0.nodes.forEach(function(nd){groups[depth[nd.id]].push(nd);});
-      groups.forEach(function(group,li){group.forEach(function(nd,ki){
-        var ww=port?(w0-gap*(group.length-1))/group.length:Math.min(320,(w0-(levels-1)*18)/levels), hh=port?Math.min(108,(gh-(levels-1)*16)/levels):Math.min(110,(gh-12*(group.length-1))/group.length);
-        layout.push({nd:nd,x:port?x0+ki*(ww+gap):x0+li*(ww+18),y:port?gy+li*((gh+16)/levels):gy+(gh-group.length*hh-(group.length-1)*12)/2+ki*(hh+12),w:ww,h:hh});
-      });});
-      c.save();c.strokeStyle='rgba(88,66,37,0.32)';c.lineWidth=1.3;
-      layout.forEach(function(p){Object.keys((p.nd.req&&p.nd.req[0])||{}).forEach(function(id){var prev=layout.filter(function(t){return t.nd.id===id;})[0];if(!prev)return;var ax=port?prev.x+5:prev.x+prev.w-8,ay=port?prev.y+prev.h:prev.y+15,bx=p.x+5,by=p.y+15;c.beginPath();c.moveTo(ax,ay);c.bezierCurveTo(port?ax:ax+14,port?ay+14:ay,port?bx:bx-14,port?by-12:by,bx,by);c.stroke();});});c.restore();
-    }else{
-      var cols=port?2:Math.min(4,Math.max(2,nn)),rows=Math.max(1,Math.ceil(nn/cols)),ww=(w0-(cols-1)*gap)/cols,hh=Math.min(port?112:110,(gh-12-(rows-1)*gap)/rows);
-      S0.nodes.forEach(function(nd,ki){layout.push({nd:nd,x:x0+(ki%cols)*(ww+gap),y:gy+Math.floor(ki/cols)*(hh+gap)+(ki%2?10:0),w:ww,h:hh});});
-    }
+    var ordered = [];
+    if (layered) { var lv = 1, id; Object.keys(depth).forEach(function (k) { lv = Math.max(lv, depth[k] + 1); }); var bucket = []; for (id = 0; id < lv; id++) bucket.push([]); S0.nodes.forEach(function (nd) { bucket[depth[nd.id]].push(nd); }); bucket.forEach(function (g) { g.forEach(function (nd) { ordered.push(nd); }); }); }
+    else ordered = S0.nodes.slice();
+    var maxCols = Math.max(1, Math.min(ordered.length || 1, Math.floor((w0 + gap) / (minW + gap))));
+    var cols = maxCols, ww = (w0 - (cols - 1) * gap) / cols, oneH = ordered.length ? tallest(ordered, ww) : 72;
+    function room() { if (oneH > gh && detH > 48) { var give = Math.min(detH - 48, oneH - gh); detH -= give; gh += give; } }
+    room();
+    while (cols > 1 && oneH > gh) { cols--; ww = (w0 - (cols - 1) * gap) / cols; oneH = ordered.length ? tallest(ordered, ww) : 72; room(); }
+    var pages = [[]], used = 0, row = [];
+    function rowH(r) { var m = 0, i; for (i = 0; i < r.length; i++) if (r[i].h > m) m = r[i].h; return m; }
+    ordered.forEach(function (nd, i) {
+      row.push({ nd: nd, h: Math.max(72, skillBody(c, G, cardHi, nd, ww).h) });
+      if (row.length === cols || i === ordered.length - 1) {
+        var rh = rowH(row);
+        if (pages[pages.length - 1].length && used + gap + rh > gh + 0.5) { pages.push([]); used = 0; }
+        row.forEach(function (it, k) { pages[pages.length - 1].push({ nd: it.nd, x: x0 + k * (ww + gap), y: gy + used, w: ww, h: rh }); });
+        used += rh + gap; row = [];
+      }
+    });
+    var pageKey = 'skillPg' + tab + '-' + sub, pageN = pages.length, savedPage = P.folio[pageKey], pageI = ((savedPage || 0) % pageN + pageN) % pageN, pin = null, step = G.tut && XY.tutSteps ? XY.tutSteps(G)[G.tut.i] : null;
+    if (step && step.id === 'skillLook' && XY.rootSkill) { var rs = XY.rootSkill(G); if (rs && rs.node) pin = rs.node.id; }
+    else if (step && step.id === 'skillMark') pin = 'p_tower';
+    if (pin) { pages.forEach(function (p, i) { if (p.some(function (it) { return it.nd.id === pin; })) pageI = i; }); P.folio[pageKey] = pageI; }
+    else if (savedPage == null) P.folio[pageKey] = pageI;
+    layout = pages[pageI] || [];
+    if (layered) { c.save(); c.strokeStyle = 'rgba(88,66,37,0.32)'; c.lineWidth = 1.3; layout.forEach(function (p) { Object.keys((p.nd.req && p.nd.req[0]) || {}).forEach(function (id) { var prev = layout.filter(function (t) { return t.nd.id === id; })[0]; if (!prev) return; c.beginPath(); c.moveTo(prev.x + prev.w - 8, prev.y + 18); c.bezierCurveTo(prev.x + prev.w + 10, prev.y + 18, p.x - 10, p.y + 18, p.x + 6, p.y + 18); c.stroke(); }); }); c.restore(); }
+    if(pageN>1){K.btn(x0+w0-196,bottom-detH+8,92,36,'上一页','folio',{key:pageKey,i:(pageI+pageN-1)%pageN},{size:14,minS:12});K.btn(x0+w0-98,bottom-detH+8,92,36,(pageI+1)+' / '+pageN,'folio',{key:pageKey,i:(pageI+1)%pageN},{size:14,minS:12});}
     if(S0.locked)K.tf('🔒 角色升到 Lv4 开放（'+XY.SP_LV_AT[3]+' 张角色卡）',x0+w0/2,gy+gh/2,w0-20,15,'#8a5a10','center',true,12);
     else if(!nn)K.t('这一页没有技能',x0+w0/2,gy+gh/2,15,T.inkSoft,'center',false);
     else layout.forEach(function(p){rects.push(nodeCard(c,G,app,tab===PT?-1:S0.hi,p.nd,p.x,p.y,p.w,p.h,tab===PT?(S0.n==='协同技'?'#c0489a':'#d9a21a'):col));});
     // —— 详情条
-    var dy = bottom - detH, hv = null; rects.forEach(function (r) { if (r.hov) hv = r; });
+    var dy = bottom - detH, hv = null, dw = w0 - 24 - (pageN > 1 ? 210 : 0); rects.forEach(function (r) { if (r.hov) hv = r; });
     if(XY.INKP)XY.INKP.stroke(c,x0,dy,x0+w0,dy-1,1.5,'83,61,34',0.3,39,0.004);
     if (hv) {
       var nd2 = hv.n, st = hv.st, ty = XY.nodeType(nd2), okk = st.st === 'ok';
-      K.tf(nd2.name + ' · 等级 ' + st.lv + '/' + nd2.max + ' · ' + ty.name, x0 + 12, dy + 16, w0 - 24, 14.5, T.ink, 'left', true, 11);
+      K.lines(nd2.name + ' · 等级 ' + st.lv + '/' + nd2.max + ' · ' + ty.name, x0 + 12, dy + Math.min(22, detH * 0.28), dw, port ? 16 : 18, port ? 20 : 22, T.ink, 2, true);
       var nxt = '现在：' + (st.lv > 0 ? XY.nodeText(nd2, st.lv) : '（还没学）') + '　下一级：' + (st.lv < nd2.max ? XY.nodeText(nd2, st.lv + 1) + '（' + nd2.cost[st.lv] + ' 点）' : '已满');
-      var yy2 = K.lines(nxt, x0 + 12, dy + 36, w0 - 24, 13, 17, '#8a5a10', port ? 6 : 1, false);
-      K.tf(okk ? '✔ 点击就能学' : (st.st === 'max' ? '已学会' : '✘ ' + st.reason), x0 + 12, dy + detH - 11, w0 - 24, 12, okk ? '#2e7d32' : (st.st === 'max' ? '#b8860b' : '#b5503a'), 'left', true, 10.5);
-    } else K.lines(tab !== PT ? G.heroes[tab].def.name + '：生命 ' + Math.ceil(G.heroes[tab].hp) + '/' + G.heroes[tab].maxHp + ' · 点一张卡学习，学前先看效果；A / B 二选一，选了一边另一边就锁了。' : '全队强化不占英雄的技能位；协同技要两位搭档都在队里。', x0 + 12, dy + 20, w0 - 24, 13, 18, T.inkSoft, 5, false);
+      K.lines(nxt, x0 + 12, dy + Math.min(port ? 58 : 46, detH * 0.55), dw, port ? 15 : 16, port ? 19 : 20, '#8a5a10', 3, false);
+    } else K.lines(tab !== PT ? G.heroes[tab].def.name + '：生命 ' + Math.ceil(G.heroes[tab].hp) + '/' + G.heroes[tab].maxHp + ' · 点一张卡学习，学前先看效果；A / B 二选一，选了一边另一边就锁了。' : '全队强化不占英雄的技能位；协同技要两位搭档都在队里。', x0 + 12, dy + Math.min(28, detH * 0.4), dw, port ? 15 : 16, 22, T.inkSoft, 3, false);
     P.end(c);
   }
   function helpPage(c,x,y,w,h){
@@ -21554,7 +21733,9 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
   };
   HUB.key = function (k, a) {
     if (a.screen !== 'hub') return false;
-    if (k === 'Escape') { if (a.confirm) a.confirm = null; else if (HUB.how) HUB.how = false; else HUB.close(); }
+    if (k === 'Escape') { if (a.confirm) a.confirm = null; else if (HUB.how) HUB.how = false; else HUB.close(); return true; }
+    // 修行 / 杂务这一页的回车不学习、不扣技能点、不开新局。重看教程用「新手教程」按钮（menuTutorial）。
+    if (k === 'Enter' || k === 'NumpadEnter') return true;
     return true;
   };
 })();
@@ -22296,25 +22477,25 @@ function wash(c,x,y,w,h){c.save();c.fillStyle='rgba(248,239,217,.88)';c.beginPat
 function line(c,x,y,w,f,col){c.save();c.strokeStyle=col||'#58452b';c.lineWidth=1.8;c.globalAlpha=.25;c.beginPath();c.moveTo(x,y);c.lineTo(x+w,y+.8);c.stroke();c.globalAlpha=.85;[0,.29,.69].forEach(function(p,i){var e=Math.min(f,[.26,.65,1][i]);if(e>p){c.beginPath();c.moveTo(x+w*p,y+(i%2));c.lineTo(x+w*e,y+.7);c.stroke();}});c.restore();}
 I.line=line;I.wash=wash;
 function qReward(q){var r=q.def.reward||{};return (r.card?'卡 ':'')+(r.lingshi?'灵石 '+r.lingshi:'')+(q.failed?' · 未成':'');}
-function rec(a,id,x,y,w,h){X.ui.hud.push({id:id,x:x/a.zoom,y:y/a.zoom,w:w/a.zoom,h:h/a.zoom});}
+function rec(a,id,x,y,w,h){X.ui.hud.push({id:id,x:XY.kToLog(a,x),y:XY.kToLog(a,y),w:XY.kToLog(a,w),h:XY.kToLog(a,h)});}
 I.left=function(c,G,a,ctx){var K=P.begin(c,a),small=K.W<900,w=small?(K.port?124:132):214,x=8,y=24,sz=small?10:13,lh=small?14:20,t=G.heroes[0],progress=X.clamp(G.tang.s/G.rt.total,0,1),danger=G.breach||G.tdanger,col=danger?'#a52c1d':T.ink;
 wash(c,x-3,y-8,w+6,small?170:286);K.t('金 '+Math.floor(G.coins),x+4,y+3,small?14:20,'#946213','left',true);K.t('杀 '+G.kills,x+w-3,y+3,sz,T.inkSoft,'right',true);K.t('经书营 '+Math.ceil(G.camp.hp)+'/'+G.camp.maxHp,x+4,y+19,sz,T.inkSoft,'left',false);line(c,x+4,y+26,w-8,G.camp.hp/G.camp.maxHp,'#64543d');rec(a,'gold',x,y-8,w,35);
 y+=small?33:46;K.t('唐僧',x+4,y,sz,col,'left',true);K.t(Math.ceil(t.hp)+'/'+t.maxHp,x+w-3,y,sz,col,'right',true);line(c,x+4,y+9,w-8,t.hp/t.maxHp,col);rec(a,'tang',x,y-6,w,18);if(t.inv>0)K.t('护身 '+t.inv.toFixed(0)+'秒',x+w-3,y-12,9,'#a52c1d','right',true);
 y+=small?25:35;var rest=G.tang.phase==='rest'?'歇脚 '+X.fmtTime(Math.max(0,G.tang.restMax-G.tang.restT)):Math.round(progress*100)+'%';K.t('取经路',x+4,y,sz,T.ink,'left',true);K.t(rest,x+w-3,y,sz,T.inkSoft,'right',true);line(c,x+4,y+9,w-8,progress,'#725b36');rec(a,'path',x,y-9,w,22);
 var q=G.quests;if(q){var qs=[q.main].concat(q.sides||[]).filter(Boolean),sides=(q.sides||[]).filter(function(v){return v.done;}).length;var yy=y+22;K.tf('主线 '+(q.main.done?'成':'行')+' · 支线 '+sides+'/'+(q.sides||[]).length,x+4,yy,w-8,sz,T.inkSoft,'left',true,9);if(small){qs.push({def:{short:G.gate.sealed?'关口 · 封印':'西行关口',reward:{}},prog:G.gate.sealed?'先完成主线':'距 '+Math.round(X.dist(t.x,t.y,G.gate.x,G.gate.y))+' · 护送唐僧'});var k=(P.folio.hudQuest||0)%qs.length,qq=qs[k];K.btn(x,yy+4,36,36,'‹','folio',{key:'hudQuest',i:(k+qs.length-1)%qs.length},{size:17});K.t((k+1)+' / '+qs.length,x+w/2,yy+23,10,T.inkSoft,'center',false);K.btn(x+w-36,yy+4,36,36,'›','folio',{key:'hudQuest',i:(k+1)%qs.length},{size:17});K.tf((qq.done?'✓ ':qq.failed?'✗ ':'')+qq.def.short,x+4,yy+47,w-8,11,qq.done?'#37643d':T.ink,'left',true,9.5);K.tf(qq.prog||'',x+4,yy+62,w-8,10,T.inkSoft,'left',false,9);K.tf(qReward(qq),x+4,yy+77,w-8,9.5,'#946213','left',false,9);rec(a,'quest',x,yy-8,w,92);y=yy+87;}else{qs.forEach(function(qq,i){var qy=yy+21+i*37;K.tf((qq.done?'✓ ':qq.failed?'✗ ':'')+qq.def.short,x+4,qy,w-8,13,qq.done?'#37643d':T.ink,'left',true,11);K.tf(qq.prog||''+' · '+qReward(qq),x+4,qy+16,w-8,11,T.inkSoft,'left',false,10);});rec(a,'quest',x,yy-8,w,qs.length*37+28);y=yy+qs.length*37+32;}}
-P.end(c);return y/a.zoom;};
-I.soldiers=function(c,G,a,box,land){var K=P.begin(c,a),x=box.x,y=box.y,w=box.w,h=box.h,ids=['arrow','cannon','frost','siege','heal'],keys=['Z','X','C','V','B'];wash(c,x-3,y-4,w+6,h+5);K.t('天兵',x+3,y+9,12,T.ink,'left',true);K.tf(G.towers.length+'/'+X.soldierCap(G)+' · 空地布阵',x+w-2,y+9,w-39,9.5,T.inkSoft,'right',false,9);ids.forEach(function(id,i){var d=X.TOWERS[id],owned=X.save.solOwned(id),on=a.build===id,cx,cy,bw,bh=44;if(land){bh=54;var pos=[[0,19],[66,15],[0,75],[66,70],[32,130]][i];cx=x+pos[0];cy=y+pos[1];bw=56;}else{bw=w/5-2;cx=x+i*w/5;cy=y+24+[4,0,9,1,6][i];bh=Math.max(44,h-28);}if(on){c.save();c.fillStyle='rgba(160,42,23,.13)';c.beginPath();c.ellipse(cx+bw/2,cy+20,bw*.45,27,-.07,0,Math.PI*2);c.fill();c.restore();}c.save();if(!owned)c.globalAlpha=.36;if(!(X.ICONINK&&X.ICONINK.sol(c,id,cx+bw/2,cy+18,32,1)))P.object(c,d.name,cx+bw/2,cy+18,32,!owned);c.restore();K.tf(d.name,cx+bw/2,cy+34,bw,9.5,owned?T.ink:T.inkSoft,'center',true,9);K.tf(owned?keys[i]+' '+X.soldierCost(G,id):'未有卡',cx+bw/2,cy+46,bw,9,T.inkSoft,'center',false,8.5);K.hit(cx,cy,bw,Math.max(54,bh),'tower',{type:id});if(K.over(cx,cy,bw,Math.max(54,bh)))a._tip={x:(cx+bw/2)/a.zoom,y:(cy-6)/a.zoom,text:d.name+'（卡 Lv'+X.save.solLevel(id)+' · '+X.save.solCards(id)+' 张）：'+d.desc};});rec(a,'tower',x,y,w,h);P.end(c);};
-I.fabao=function(c,G,a,y0,all,combos,ready){if(!G.fb)return;var K=P.begin(c,a),sm=K.W<900,w=sm?134:232,x=K.W-w-8,y=y0*a.zoom,tab=P.folio.hudFabao||0,names=['宝物','门派','炼化'],rh=sm?15:24,items=all(G),cmb=combos(G),rdy=ready(G),list=tab===0?items:tab===1?cmb:rdy,spot=X.R4.summonSpot(G,a),maxH=(spot.cy-spot.r-5)*a.zoom-y-4,per=tab===0?7:2,key='hudFabaoPage'+tab,page=P.folio[key]||0,start=page*per;if(sm&&tab===0){rh=Math.min(15,Math.floor((maxH-54)/Math.max(1,Math.min(7,items.length))));if(rh<12){rh=14;per=Math.max(1,Math.floor((maxH-90)/rh));}start=page*per;}if(start>=list.length)start=0;var n=Math.min(per,list.length-start),ph=54+Math.max(1,n)*(tab===0?rh:sm?29:45)+(list.length>per?36:0);wash(c,x,y,w,ph);names.forEach(function(s,i){K.btn(x+i*w/3,y,w/3,36,s,'folio',{key:'hudFabao',i:i},{on:i===tab,size:sm?11:14,minS:10});});K.tf('宝 '+G.fb.w.length+'/'+X.C.FB.SLOT_F+' · 灵 '+G.fb.s.length+'/'+X.C.FB.SLOT_L,x+6,y+43,w-12,sm?9:11,T.inkSoft,'left',false,9);var yy=y+58;if(!list.length)K.t(tab===0?'尚无宝物':tab===1?'尚无门派加成':'暂无可炼配方',x+7,yy,sm?10:13,T.inkSoft,'left',false);list.slice(start,start+per).forEach(function(o,i){var iy=yy+i*(tab===0?rh:sm?29:45);if(tab===0){var info=X.fabao.info(o.id),name=info.name;P.object(c,name,x+(sm?12:18),iy,sm?17:26,false);K.tf(name,x+(sm?26:39),iy,w-(sm?55:83),sm?10:13,T.ink,'left',true,sm?9:11);K.t(info.sup?'绝':o.lv+'级',x+w-7,iy,sm?10:13,info.sup?'#a52c1d':T.inkSoft,'right',true);}else if(tab===1){K.tf(X.fabao.SET_NAME[o.set]+' · '+o.n+' 件',x+7,iy,w-14,sm?10:13,T.ink,'left',true,9);K.tf(o.tier?(o.tier>=2?'大加成':'小加成'):'再得 '+(2-o.n)+' 件触发',x+7,iy+(sm?13:20),w-14,sm?9:11,o.tier?'#a52c1d':T.inkSoft,'left',false,9);}else{K.tf(o.name,x+7,iy,w-14,sm?10:13,'#a52c1d','left',true,9);K.tf(o.src||o.need||'待抉择时炼化',x+7,iy+(sm?13:20),w-14,sm?9:11,T.inkSoft,'left',false,9);}});if(list.length>per){var by=y+ph-36;K.btn(x,by,36,36,'‹','folio',{key:key,i:(page+Math.ceil(list.length/per)-1)%Math.ceil(list.length/per)});K.t((page+1)+'/'+Math.ceil(list.length/per),x+w/2,by+18,10,T.inkSoft,'center',false);K.btn(x+w-36,by,36,36,'›','folio',{key:key,i:(page+1)%Math.ceil(list.length/per)});}X.ui.cardPanel={x:x/a.zoom,y:y/a.zoom,w:w/a.zoom,h:ph/a.zoom};var fa=G.fb.fuseAnim;if(fa){var aa=K.W/2,bb=K.H*.31,fr=X.fabao.recipe(fa.rid);wash(c,aa-165,bb-40,330,80);P.object(c,fr.name,aa-113,bb,60,false);K.t('炼成 · '+fr.name,aa-70,bb,23,'#a52c1d','left',true);}P.end(c);};
+P.end(c);return XY.kToLog(a,y);};
+I.soldiers=function(c,G,a,box,land){var K=P.begin(c,a),s=K.s||1,x=box.x/s,y=box.y/s,w=box.w/s,h=box.h/s,ids=['arrow','cannon','frost','siege','heal'],keys=['Z','X','C','V','B'];wash(c,x-3,y-4,w+6,h+5);K.t('天兵',x+3,y+9,12,T.ink,'left',true);K.tf(G.towers.length+'/'+X.soldierCap(G)+' · 空地布阵',x+w-2,y+9,w-39,9.5,T.inkSoft,'right',false,9);ids.forEach(function(id,i){var d=X.TOWERS[id],owned=X.save.solOwned(id),on=a.build===id,cx,cy,bw,bh=44;if(land){bh=54;var pos=[[0,19],[66,15],[0,75],[66,70],[32,130]][i];cx=x+pos[0];cy=y+pos[1];bw=56;}else{bw=w/5-2;cx=x+i*w/5;cy=y+24+[4,0,9,1,6][i];bh=Math.max(44,h-28);}if(on){c.save();c.fillStyle='rgba(160,42,23,.13)';c.beginPath();c.ellipse(cx+bw/2,cy+20,bw*.45,27,-.07,0,Math.PI*2);c.fill();c.restore();}c.save();if(!owned)c.globalAlpha=.36;if(!(X.ICONINK&&X.ICONINK.sol(c,id,cx+bw/2,cy+18,32,1)))P.object(c,d.name,cx+bw/2,cy+18,32,!owned);c.restore();K.tf(d.name,cx+bw/2,cy+34,bw,9.5,owned?T.ink:T.inkSoft,'center',true,9);K.tf(owned?keys[i]+' '+X.soldierCost(G,id):'未有卡',cx+bw/2,cy+46,bw,9,T.inkSoft,'center',false,8.5);K.hit(cx,cy,bw,Math.max(54,bh),'tower',{type:id});if(K.over(cx,cy,bw,Math.max(54,bh)))a._tip={x:XY.kToLog(a,(cx+bw/2)),y:XY.kToLog(a,cy-6),text:d.name+'（卡 Lv'+X.save.solLevel(id)+' · '+X.save.solCards(id)+' 张）：'+d.desc};});rec(a,'tower',x,y,w,h);P.end(c);};
+I.fabao=function(c,G,a,y0,all,combos,ready){if(!G.fb)return;var K=P.begin(c,a),sm=K.W<900,w=sm?134:232,x=K.W-w-8,y=y0*a.zoom/(K.s||1),tab=P.folio.hudFabao||0,names=['宝物','门派','炼化'],rh=sm?15:24,items=all(G),cmb=combos(G),rdy=ready(G),list=tab===0?items:tab===1?cmb:rdy,spot=X.R4.summonSpot(G,a),maxH=(spot.cy-spot.r-5)*a.zoom/(K.s||1)-y-4,per=tab===0?7:2,key='hudFabaoPage'+tab,page=P.folio[key]||0,start=page*per;if(sm&&tab===0){rh=Math.min(15,Math.floor((maxH-54)/Math.max(1,Math.min(7,items.length))));if(rh<12){rh=14;per=Math.max(1,Math.floor((maxH-90)/rh));}start=page*per;}if(start>=list.length)start=0;var n=Math.min(per,list.length-start),ph=54+Math.max(1,n)*(tab===0?rh:sm?29:45)+(list.length>per?36:0);wash(c,x,y,w,ph);names.forEach(function(s,i){K.btn(x+i*w/3,y,w/3,36,s,'folio',{key:'hudFabao',i:i},{on:i===tab,size:sm?11:14,minS:10});});K.tf('宝 '+G.fb.w.length+'/'+X.C.FB.SLOT_F+' · 灵 '+G.fb.s.length+'/'+X.C.FB.SLOT_L,x+6,y+43,w-12,sm?9:11,T.inkSoft,'left',false,9);var yy=y+58;if(!list.length)K.t(tab===0?'尚无宝物':tab===1?'尚无门派加成':'暂无可炼配方',x+7,yy,sm?10:13,T.inkSoft,'left',false);list.slice(start,start+per).forEach(function(o,i){var iy=yy+i*(tab===0?rh:sm?29:45);if(tab===0){var info=X.fabao.info(o.id),name=info.name;P.object(c,name,x+(sm?12:18),iy,sm?17:26,false);K.tf(name,x+(sm?26:39),iy,w-(sm?55:83),sm?10:13,T.ink,'left',true,sm?9:11);K.t(info.sup?'绝':o.lv+'级',x+w-7,iy,sm?10:13,info.sup?'#a52c1d':T.inkSoft,'right',true);}else if(tab===1){K.tf(X.fabao.SET_NAME[o.set]+' · '+o.n+' 件',x+7,iy,w-14,sm?10:13,T.ink,'left',true,9);K.tf(o.tier?(o.tier>=2?'大加成':'小加成'):'再得 '+(2-o.n)+' 件触发',x+7,iy+(sm?13:20),w-14,sm?9:11,o.tier?'#a52c1d':T.inkSoft,'left',false,9);}else{K.tf(o.name,x+7,iy,w-14,sm?10:13,'#a52c1d','left',true,9);K.tf(o.src||o.need||'待抉择时炼化',x+7,iy+(sm?13:20),w-14,sm?9:11,T.inkSoft,'left',false,9);}});if(list.length>per){var by=y+ph-36;K.btn(x,by,36,36,'‹','folio',{key:key,i:(page+Math.ceil(list.length/per)-1)%Math.ceil(list.length/per)});K.t((page+1)+'/'+Math.ceil(list.length/per),x+w/2,by+18,10,T.inkSoft,'center',false);K.btn(x+w-36,by,36,36,'›','folio',{key:key,i:(page+1)%Math.ceil(list.length/per)});}X.ui.cardPanel={x:XY.kToLog(a,x),y:XY.kToLog(a,y),w:XY.kToLog(a,w),h:XY.kToLog(a,ph)};var fa=G.fb.fuseAnim;if(fa){var aa=K.W/2,bb=K.H*.31,fr=X.fabao.recipe(fa.rid);wash(c,aa-165,bb-40,330,80);P.object(c,fr.name,aa-113,bb,60,false);K.t('炼成 · '+fr.name,aa-70,bb,23,'#a52c1d','left',true);}P.end(c);};
 I.skillLeaf=function(c,G,a,h,S0,tab,sub,b){var K=P.K,ids=S0.nodes||[],leafKey='skillLeaf'+tab+'-'+sub,sel=(P.folio[leafKey]||0)%ids.length,n=ids[sel],hi=tab===9?-1:S0.hi,st=X.nodeStatus(G,hi,n.id),lv=st.lv,max=n.max,can=st.st==='ok',port=K.port,small=K.W<900,ax=b.x,artW=port?90:Math.min(210,b.w*.29),dx=b.x+artW+16,dw=b.w-artW-16,y=b.y+18,ay=b.y+Math.min(port?115:150,b.h*.38),radius=artW*.38;
 if(tab===9){K.t('合',ax+artW*.45,ay,Math.min(92,artW),'#a42d19','center',true);K.tf('全队协同',ax+artW*.5,ay+radius+19,artW,12,T.inkSoft,'center',true,10);}else{X.hud2.face(c,h,ax+artW*.5,ay,radius,a.rt);K.tf(h.def.name,ax+artW*.5,ay+radius+23,artW,port?15:19,T.ink,'center',true,12);}
-var ab=/[ab]$/.test(n.id)&&n.tier>=3?(/a$/.test(n.id)?'A路 · ':'B路 · '):'';K.tf(ab+n.name,dx,y,dw,port?20:26,T.ink,'left',true,17);K.t(lv+' / '+max+' 阶 · '+X.nodeType(n).name,dx,y+27,12,'#a42d19','left',true);
-var effect=lv?X.nodeText(n,lv):n.desc?n.desc[0]:n.eff?n.eff(1):'',sz=small?12:14,lh=small?17:23,textKey='skillText'+tab+'-'+sub+'-'+n.id,allLines=[],text='',units=String(effect).match(/[+-]?\d[\d,]*(?:\.\d+)?(?:%|\/\d+|秒|级|点|倍)?|[A-Za-z][A-Za-z0-9_.-]*|[\s\S]/g)||[];c.font=sz+'px '+X.C.FONT;units.forEach(function(ch){if(c.measureText(text+ch).width>dw&&text){allLines.push(text);text=ch;}else text+=ch;});if(text)allLines.push(text);var per=port?10:small?3:8,pages=Math.max(1,Math.ceil(allLines.length/per)),tp=(P.folio[textKey]||0)%pages,shown=allLines.slice(tp*per,tp*per+per);shown.forEach(function(t,i){K.t(t,dx,y+54+i*lh,sz,T.ink,'left',false);});var sy=y+54+shown.length*lh;if(pages>1)K.btn(dx+dw-68,y+10,68,36,'说明 '+(tp+1)+'/'+pages,'folio',{key:textKey,i:(tp+1)%pages},{size:10,minS:9.5});var reason=st.st==='max'?'已圆满':can?'耗 '+st.cost+' 修行点':st.reason||(st.st==='nopts'?'还差 '+(st.cost-G.points)+' 点':''),by=Math.min(b.y+b.h-44,Math.max(b.y+(port?230:small?100:155),sy+14)),bw=Math.min(140,dw*.46);
-K.tf(reason,dx,by+22,dw-bw-12,11,can?'#795714':T.inkSoft,'left',true,10);K.btn(dx+dw-bw,by,bw,44,lv>=max?'已圆满':'点墨修习','node',{hero:hi,id:n.id},{primary:can,size:14});
+var ab=/[ab]$/.test(n.id)&&n.tier>=3?(/a$/.test(n.id)?'A路 · ':'B路 · '):'';K.lines(ab+n.name,dx,y,dw,port?22:28,port?26:32,T.ink,2,true);K.t('等级 '+lv+' / '+max+' · '+X.nodeType(n).name,dx,y+36,port?16:18,'#a42d19','left',true);
+var effect=lv?X.nodeText(n,lv):n.desc?n.desc[0]:n.eff?n.eff(1):'',sz=small?16:18,lh=small?22:26,textKey='skillText'+tab+'-'+sub+'-'+n.id,allLines=[],text='',units=String(effect).match(/[+-]?\d[\d,]*(?:\.\d+)?(?:%|\/\d+|秒|级|点|倍)?|[A-Za-z][A-Za-z0-9_.-]*|[\s\S]/g)||[];c.font=sz+'px '+X.C.FONT;units.forEach(function(ch){if(c.measureText(text+ch).width>dw&&text){allLines.push(text);text=ch;}else text+=ch;});if(text)allLines.push(text);var per=port?8:small?4:6,pages=Math.max(1,Math.ceil(allLines.length/per)),tp=(P.folio[textKey]||0)%pages,shown=allLines.slice(tp*per,tp*per+per);shown.forEach(function(t,i){K.t(t,dx,y+64+i*lh,sz,T.ink,'left',false);});var sy=y+64+shown.length*lh;if(pages>1)K.btn(dx+dw-92,y+8,92,40,'说明 '+(tp+1)+'/'+pages,'folio',{key:textKey,i:(tp+1)%pages},{size:13,minS:12});var reason=st.st==='max'?'已圆满 · 等级 '+lv+'/'+max:can?'费用 '+st.cost+' 点 · 等级 '+lv+'/'+max:st.reason||(st.st==='nopts'?'还差 '+(st.cost-G.points)+' 点 · 要 '+st.cost+' 点':''),by=Math.min(b.y+b.h-48,Math.max(b.y+(port?250:small?120:175),sy+16)),bw=Math.min(168,dw*.48);
+K.lines(reason,dx,by+18,dw-bw-12,port?15:16,20,can?'#795714':T.inkSoft,3,true);K.btn(dx+dw-bw,by,bw,48,lv>=max?'已圆满':'点墨修习','node',{hero:hi,id:n.id},{primary:can,size:16});
 var ny=b.y+b.h+1,step=b.w/Math.max(1,ids.length);ids.forEach(function(nd,i){var letter=/[ab]$/.test(nd.id)&&nd.tier>=3?(/a$/.test(nd.id)?'A':'B'):'';K.btn(b.x+i*step,ny,step-2,44,(nd.tier||i+1)+letter,'folio',{key:leafKey,i:i},{on:i===sel,size:12,minS:10});});a.__inkSkillSpec={key:leafKey,n:ids.length,hi:hi,id:n.id,tab:tab,sub:sub,textKey:textKey,textPages:pages};};
-I.tutorialCard=function(c,G,a,tt,st,L){var K=P.begin(c,a),z=a.zoom,x=L.x*z,y=L.y*z,w=L.w*z,h=L.h*z,wait=!!st.wait;wash(c,x,y,w,h);K.t('引',x+19,y+46,29,'#a42d19','center',true);K.t('新手教程 '+(tt.i+1)+'/'+X.TUT_STEPS.length+(wait?(tt.done?' · 做对了':' · 请依提示操作'):''),x+43,y+17,10.5,T.inkSoft,'left',false);K.t(st.title,x+43,y+39,17,T.ink,'left',true);L.lines.forEach(function(v,i){K.t(v,x+20,y+65+i*18,12,T.ink,'left',false);});K.hit(x,y,w,h,'ui');K.btn(x+12,y+h-51,118,44,'跳过教程','tutSkip',null,{size:13});K.btn(x+w-162,y+h-51,150,44,st.last?'开始游戏':wait?'跳过这一步':'下一步','tutNext',null,{primary:!wait,size:14});P.end(c);};
-I.tip=function(c,a,tip){if(!tip)return;var K=P.begin(c,a),sz=K.W<900?10.5:12,w=Math.min(320,K.W-24),lines=[];c.font=sz+'px '+X.C.FONT;(tip.lines||[tip.text]).forEach(function(txt){var v='';String(txt).split('').forEach(function(ch){if(c.measureText(v+ch).width>w-28&&v){lines.push(v);v=ch;}else v+=ch;});if(v)lines.push(v);});var h=18+lines.length*17,x=Math.max(8,Math.min(K.W-w-8,tip.x*a.zoom-w/2)),y=Math.max(8,Math.min(K.H-h-8,tip.below?tip.y*a.zoom:tip.y*a.zoom-h));wash(c,x,y,w,h);K.ink(x+10,y+7,Math.min(46,w-20),.5,91);lines.forEach(function(v,i){K.t(v,x+13,y+18+i*17,sz,i?T.inkSoft:T.ink,'left',i===0);});P.end(c);};
+I.tutorialCard=function(c,G,a,tt,st,L){var K=P.begin(c,a),z=a.zoom,s=K.s||1,x=L.x*z/s,y=L.y*z/s,w=L.w*z/s,h=L.h*z/s,wait=!!st.wait;wash(c,x,y,w,h);K.t('引',x+19,y+46,29,'#a42d19','center',true);K.t('新手教程 '+(tt.i+1)+'/'+(X.tutSteps?X.tutSteps(G):X.TUT_STEPS).length+(wait?(tt.done?' · 做对了':' · 请依提示操作'):''),x+43,y+17,10.5,T.inkSoft,'left',false);K.t(st.title,x+43,y+39,17,T.ink,'left',true);L.lines.forEach(function(v,i){K.t(v,x+20,y+65+i*18,12,T.ink,'left',false);});K.hit(x,y,w,h,'ui');K.btn(x+12,y+h-51,118,44,'跳过教程','tutSkip',null,{size:13});K.btn(x+w-162,y+h-51,150,44,st.last?'开始游戏':wait?'跳过这一步':'下一步','tutNext',null,{primary:!wait,size:14});P.end(c);};
+I.tip=function(c,a,tip){if(!tip)return;var K=P.begin(c,a),sz=K.W<900?10.5:12,w=Math.min(320,K.W-24),lines=[];c.font=sz+'px '+X.C.FONT;(tip.lines||[tip.text]).forEach(function(txt){var v='';String(txt).split('').forEach(function(ch){if(c.measureText(v+ch).width>w-28&&v){lines.push(v);v=ch;}else v+=ch;});if(v)lines.push(v);});var s=K.s||1,tx=tip.x*a.zoom/s,ty=tip.y*a.zoom/s,h=18+lines.length*17,x=Math.max(8,Math.min(K.W-w-8,tx-w/2)),y=Math.max(8,Math.min(K.H-h-8,tip.below?ty:ty-h));wash(c,x,y,w,h);K.ink(x+10,y+7,Math.min(46,w-20),.5,91);lines.forEach(function(v,i){K.t(v,x+13,y+18+i*17,sz,i?T.inkSoft:T.ink,'left',i===0);});P.end(c);};
 I.vendor=function(c,G,a){X.ui.hits.length=0;var K=P.begin(c,a),W=K.W,H=K.H,port=K.port,V=X.vendor,items=V.stock(G),sel=(P.folio.vendorItem||0)%items.length,it=items[sel],d=V.DEFS[it.id],why=V.why(G,it),dx=port?24:W*.43,dy=port?H*.44:W>=900?H*.24:82,dw=port?W-48:W-dx-26;P.paper(c,W,H);K.t('货郎的担子',20,32,24,T.ink,'left',true);K.btn(W-178,9,164,44,'收摊（N / Esc）','vendorClose',null,{size:13});K.t('金币 '+Math.floor(G.coins),22,65,14,'#8a5a19','left',true);P.object(c,d.name,port?W*.5:W*.23,port?H*.26:H*.47,port?150:Math.min(W>=900?280:184,H*.49),it.sold);K.tf(d.name,dx,dy,dw,27,T.ink,'left',true,20);K.lines(d.d,dx,dy+37,dw,13,20,T.inkSoft,port?5:3,false);var by=Math.min(H-183,dy+(port?119:92));K.btn(dx,by,Math.min(196,dw),44,it.sold?'此处已买':X.C.VENDOR.price[it.id]+' 金币 · 换取','vendorBuy',{i:sel},{primary:!why,size:15});K.tf(why||'每件每个休息点限买一次',dx,by+61,dw,11,why?'#a42d19':T.inkSoft,'left',true,10);if(G.vendorMsg&&G.vendorMsg.t>0){K.tf(G.vendorMsg.text,dx,by+81,dw,11,G.vendorMsg.bad?'#a42d19':'#37643d','left',true,10);G.vendorMsg.t-=1/60;}var step=(W-32)/items.length;items.forEach(function(q,i){var cx=16+step*(i+.5),yy=H-94+[3,0,7,2][i];P.object(c,V.DEFS[q.id].name,cx,yy+20,45,q.sold);K.tf(V.DEFS[q.id].name,cx,yy+56,step-8,11,i===sel?'#a42d19':T.ink,'center',true,10);if(i===sel)K.ink(cx-18,yy+68,36,.6,i+7);K.hit(cx-step/2+2,H-101,step-4,94,'folio',{key:'vendorItem',i:i});});P.end(c);};
-I.skillKey=function(G,a,k){var s=a.__inkSkillSpec;if(!s||s.tab!==a.skillTab||s.sub!==((a._pvSub||{})[a.skillTab]||0))return false;if(k==='ArrowLeft'||k==='ArrowRight'){P.folio[s.key]=((P.folio[s.key]||0)+s.n+(k==='ArrowRight'?1:-1))%s.n;return true;}if(k==='PageDown'||k==='PageUp'){P.folio[s.textKey]=((P.folio[s.textKey]||0)+s.textPages+(k==='PageDown'?1:-1))%s.textPages;return true;}if(k==='Enter'){var r=X.learn(G,s.hi,s.id);a.skillMsg={text:r.reason,bad:!r.ok,until:a.rt+2.2};return true;}return false;};
+I.skillKey=function(G,a,k){var s=a.__inkSkillSpec;if(!s||s.tab!==a.skillTab||s.sub!==((a._pvSub||{})[a.skillTab]||0))return false;if(k==='ArrowLeft'||k==='ArrowRight'){P.folio[s.key]=((P.folio[s.key]||0)+s.n+(k==='ArrowRight'?1:-1))%s.n;return true;}if(k==='PageDown'||k==='PageUp'){P.folio[s.textKey]=((P.folio[s.textKey]||0)+s.textPages+(k==='PageDown'?1:-1))%s.textPages;return true;}if(k==='Enter'){if(G.tut)return true;var r=X.learn(G,s.hi,s.id);a.skillMsg={text:r.reason,bad:!r.ok,until:a.rt+2.2};return true;}return false;};
 I.vendorKey=function(G,a,k){var n=X.vendor.stock(G).length;if(k==='ArrowLeft'||k==='ArrowRight'){P.folio.vendorItem=((P.folio.vendorItem||0)+n+(k==='ArrowRight'?1:-1))%n;return true;}if(k==='Enter'){X.vendor.buy(G,(P.folio.vendorItem||0)%n);return true;}return false;};
 })();
 
@@ -22328,7 +22509,7 @@ I.vendorKey=function(G,a,k){var n=X.vendor.stock(G).length;if(k==='ArrowLeft'||k
   var IDS=['arrow','cannon','frost','siege','heal'], NAMES=['弓兵','炮兵','寒冰','破阵','佛光'], stamps={};
   I.on=function(G,a){return !!(X.ui2&&X.ui2.on)&&!!G.fb&&!G.villain&&!G.lair;};
   I.layout=function(a){
-    var W=a.lw*a.zoom,H=a.lh*a.zoom,port=W<H,small=W<900,head=port?64:small?30:39;
+    var s=XY.uiScale?XY.uiScale(a.lw*a.zoom,a.lh*a.zoom):1,W=a.lw*a.zoom/s,H=a.lh*a.zoom/s,port=W<H,small=W<900,head=port?64:small?30:39;
     var L={W:W,H:H,port:port,small:small,head:head,fs:small?11.5:15,
       map:{x:W-(small?82:134),y:small?50:59,w:small?72:116,h:small?51:80},
       fabao:{cx:W-(small?34:48),cy:small?126:178,r:small?16:23},
@@ -22358,7 +22539,7 @@ I.vendorKey=function(G,a,k){var n=X.vendor.stock(G).length;if(k==='ArrowLeft'||k
     });
     return L;
   };
-  function rec(a,id,b){X.ui.hud.push({id:id,x:b.x/a.zoom,y:b.y/a.zoom,w:b.w/a.zoom,h:b.h/a.zoom});}
+  function rec(a,id,b){X.ui.hud.push({id:id,x:XY.kToLog(a,b.x),y:XY.kToLog(a,b.y),w:XY.kToLog(a,b.w),h:XY.kToLog(a,b.h)});}
   function hit(K,b,act,ex){K.hit(b.x,b.y,b.w,b.h,act,ex);}
   function paper(c,x,y,w,h,alpha,seed){
     c.save();c.globalAlpha=alpha==null?.92:alpha;c.fillStyle='#f4efdf';c.beginPath();c.moveTo(x,y+1);
@@ -22386,7 +22567,7 @@ I.vendorKey=function(G,a,k){var n=X.vendor.stock(G).length;if(k==='ArrowLeft'||k
     c.drawImage(cv,x,y,w,h);
   }
   function kai(K,s,x,y,size,col,align){K._fam=(X.menu&&X.menu.KAI)||X.C.FONT;K.t(s,x,y,size,col,align||'left',true);K._fam=null;}
-  function tooltip(a,K,b,lines){if(K.over(b.x,b.y,b.w,b.h))a._tip={x:(b.x+b.w/2)/a.zoom,y:(b.y+b.h+6)/a.zoom,below:true,lines:lines};}
+  function tooltip(a,K,b,lines){if(K.over(b.x,b.y,b.w,b.h))a._tip={x:XY.kToLog(a,b.x+b.w/2),y:XY.kToLog(a,b.y+b.h+6),below:true,lines:lines};}
   function statChips(K,G,a,L){
     var chips=X.R4.battleChips(G,a),x=L.port?L.W-115:L.skills.x+L.skills.w+4,w=L.port?48:L.speed.x-x-4;
     X.ui.topChips=[];X.ui.strip=null;
@@ -22396,7 +22577,7 @@ I.vendorKey=function(G,a,k){var n=X.vendor.stock(G).length;if(k==='ArrowLeft'||k
     var b={x:x,y:L.port?7:5,w:w,h:L.small?20:27};
     if(ch.id==='breach'||ch.id==='rage')brush(K.c,x,b.y+b.h-2,w,1,RED,1.5);
     K.tf(s,x+w/2,b.y+b.h/2,w,L.small?10.5:12,RED,'center',true,10.5);
-    X.ui.topChips.push({id:ch.id,x:x/a.zoom,y:b.y/a.zoom,w:w/a.zoom,h:b.h/a.zoom});
+    X.ui.topChips.push({id:ch.id,x:XY.kToLog(a,x),y:XY.kToLog(a,b.y),w:XY.kToLog(a,w),h:XY.kToLog(a,b.h)});
     if(ch.id==='breach')X.ui.strip=X.ui.topChips[0];tooltip(a,K,b,ch.tip||[ch.text]);
   }
   I.battle=function(c,G,a,ctx){
@@ -22421,7 +22602,9 @@ I.vendorKey=function(G,a,k){var n=X.vendor.stock(G).length;if(k==='ArrowLeft'||k
     tooltip(a,K,{x:tx,y:0,w:(L.small?283:455)-tx,h:L.port?30:L.head},['唐僧气血 '+Math.ceil(t.hp)+' / '+t.maxHp,X.fmtStr(invText)]);
     K.t(X.fmtTime(G.t),L.time.x,L.time.y,L.small?14:20,INK,'center',true);
     var xpt='Lv'+G.level+' · 经验'+X.fmtNum(Math.floor(G.xp))+'/'+X.fmtNum(need);
-    K.tf(xpt,L.xp.x,L.xp.y,L.xp.w,L.small?11:14,SOFT,'left',false,10.5);
+    var tabHint=!L.port&&!a.touchUI, xpW=L.xp.w-(tabHint?52:0);
+    K.tf(xpt,L.xp.x,L.xp.y,Math.max(48,xpW),L.small?11:14,SOFT,'left',false,10.5);
+    if(tabHint)K.t('Tab 修行',L.skills.x+L.skills.w-4,L.skills.y+L.skills.h-8,12,'#8a5a12','right',true);
     if(G.points>0){c.fillStyle=RED;c.beginPath();c.arc(L.xp.x-4,L.xp.y,2.5,0,PI*2);c.fill();}
     rec(a,'skillBtn',{x:L.skills.x,y:L.xp.y-9,w:L.skills.w,h:18});
     hit(K,L.skills,'skills',{label:'修行菜单 · 技能点 '+G.points});
@@ -22443,9 +22626,9 @@ I.vendorKey=function(G,a,k){var n=X.vendor.stock(G).length;if(k==='ArrowLeft'||k
       var dbg=(G.godMode?'无敌 · ':'')+((a.debugOn||a.showFps)?Math.round(a.fps)+' FPS · 敌'+G.enemies.length+' · ':'')+'×'+G.speed;
       K.tf('调试 '+dbg,qb.x+10,qb.y+qb.h+12,qb.w-10,10.5,RED,'left',false,10.5);
     }
-    ctx.denBottom=(qb.y+qb.h)/a.zoom;ctx.topCount=1;
+    ctx.denBottom=XY.kToLog(a,qb.y+qb.h);ctx.topCount=1;
     P.end(c);I.minimap(c,G,a,L);I.artifact(c,G,a,L);
-    X.ui.compact={anchors:{tang:{x:tx/a.zoom,y:0,w:((L.small?283:455)-tx)/a.zoom,h:(L.port?30:L.head)/a.zoom},quest:{x:qb.x/a.zoom,y:qb.y/a.zoom,w:qb.w/a.zoom,h:qb.h/a.zoom}},layout:L,coins:G.coins,tangHp:t.hp,inv:t.inv,level:G.level,xp:G.xp,target:goal};
+    X.ui.compact={anchors:{tang:{x:XY.kToLog(a,tx),y:0,w:XY.kToLog(a,(L.small?283:455)-tx),h:XY.kToLog(a,L.port?30:L.head)},quest:{x:XY.kToLog(a,qb.x),y:XY.kToLog(a,qb.y),w:XY.kToLog(a,qb.w),h:XY.kToLog(a,qb.h)}},layout:L,coins:G.coins,tangHp:t.hp,inv:t.inv,level:G.level,xp:G.xp,target:goal};
   };
   var miniImage=null;
   I.minimap=function(c,G,a,L){
@@ -22472,7 +22655,7 @@ I.vendorKey=function(G,a,k){var n=X.vendor.stock(G).length;if(k==='ArrowLeft'||k
     K.t('法宝'+(all.length?' '+all.length:''),b.cx,b.cy+b.r+9,L.small?10.5:13,INK,'center',false);
     if(rdy.length||s){c.fillStyle=RED;c.beginPath();c.arc(b.cx+b.r-2,b.cy-b.r+2,3,0,PI*2);c.fill();}
     var box={x:b.cx-Math.max(22,b.r+3),y:b.cy-Math.max(22,b.r+3),w:Math.max(44,(b.r+3)*2),h:Math.max(44,(b.r+3)*2)+14};
-    hit(K,box,'battleFabao',{label:'法宝详情 · 已有 '+all.length+' 件 · 可炼 '+rdy.length});rec(a,'fabao',box);X.ui.cardPanel={x:box.x/a.zoom,y:box.y/a.zoom,w:box.w/a.zoom,h:box.h/a.zoom};
+    hit(K,box,'battleFabao',{label:'法宝详情 · 已有 '+all.length+' 件 · 可炼 '+rdy.length});rec(a,'fabao',box);X.ui.cardPanel={x:XY.kToLog(a,box.x),y:XY.kToLog(a,box.y),w:XY.kToLog(a,box.w),h:XY.kToLog(a,box.h)};
     tooltip(a,K,box,['法宝 '+G.fb.w.length+'/'+X.C.FB.SLOT_F+' · 灵物 '+G.fb.s.length+'/'+X.C.FB.SLOT_L,'可炼配方 '+rdy.length+' · 点击查看携带 / 门派 / 配方']);
     var fa=G.fb.fuseAnim;if(fa){var fr=X.fabao.recipe(fa.rid),xx=L.W/2,yy=L.H*.29;paper(c,xx-115,yy-26,230,52,.95,49);X.ICONINK.draw(c,fr.name,xx-85,yy,42);K.t('炼成 · '+fr.name,xx-55,yy,18,RED,'left',true);}
     P.end(c);
@@ -22494,7 +22677,7 @@ I.vendorKey=function(G,a,k){var n=X.vendor.stock(G).length;if(k==='ArrowLeft'||k
     var K=P.begin(c,a),L=I.layout(a),b=L.party,h=G.heroes[G.ctrl],pad=L.small?4:4;
     stamp(c,b.x,b.y,b.w,b.h,false,false);kai(K,'队伍',b.x+b.w/2,b.y+b.h/2,L.small?15:20,'#faefd8','center');
     var box={x:b.x-pad,y:b.y-5,w:b.w+pad*2,h:Math.max(44,b.h+8)},label='队伍 · 操控 '+h.def.name;
-    hit(K,box,'party',{label:label});X.ui.party.tab={x:box.x/a.zoom,y:box.y/a.zoom,w:box.w/a.zoom,h:box.h/a.zoom};X.ui.party.current={id:h.id,name:h.def.name,label:label};rec(a,'partyTab',b);
+    hit(K,box,'party',{label:label});X.ui.party.tab={x:XY.kToLog(a,box.x),y:XY.kToLog(a,box.y),w:XY.kToLog(a,box.w),h:XY.kToLog(a,box.h)};X.ui.party.current={id:h.id,name:h.def.name,label:label};rec(a,'partyTab',b);
     tooltip(a,K,box,[label,'打开海报手卷 · 打开暂停 / 收起继续','唐僧自己赶路，不受指挥']);P.end(c);
   };
   I.sky=function(c,G,a){
@@ -22516,7 +22699,7 @@ I.vendorKey=function(G,a,k){var n=X.vendor.stock(G).length;if(k==='ArrowLeft'||k
     var K=P.begin(c,a),L=I.layout(a),n=G.banner||G.toast,b=L.notice;X.ui.banner=null;
     // 360竖屏：没有连杀提示时借用空位，不把开场目标截在空白旁；认可的390+布局不变。
     if(L.port&&L.W<390&&!(G.combo&&G.combo.n>=3)&&!G.comboMs)b={x:b.x,y:b.y,w:L.W-24,h:b.h};
-    if(n){var al=Math.min(1,n.t/.15,((n.max||3)-n.t+.03)/.15);c.save();c.globalAlpha=X.clamp(al,0,1);paper(c,b.x,b.y,b.w,b.h,.96,83);brush(c,b.x+2,b.y+b.h-2,b.w-4,1,RED,.75);K.tf(X.fmtStr(n.short||n.text),b.x+b.w/2,b.y+b.h/2,b.w-10,L.small?10.5:14,RED,'center',true,10.5);c.restore();rec(a,'toast',b);X.ui.banner={x:b.x/a.zoom,y:b.y/a.zoom,w:b.w/a.zoom,h:b.h/a.zoom};}
+    if(n){var al=Math.min(1,n.t/.15,((n.max||3)-n.t+.03)/.15);c.save();c.globalAlpha=X.clamp(al,0,1);paper(c,b.x,b.y,b.w,b.h,.96,83);brush(c,b.x+2,b.y+b.h-2,b.w-4,1,RED,.75);K.tf(X.fmtStr(n.short||n.text),b.x+b.w/2,b.y+b.h/2,b.w-10,L.small?10.5:14,RED,'center',true,10.5);c.restore();rec(a,'toast',b);X.ui.banner={x:XY.kToLog(a,b.x),y:XY.kToLog(a,b.y),w:XY.kToLog(a,b.w),h:XY.kToLog(a,b.h)};}
     var cb=G.combo;if(cb&&cb.n>=3||G.comboMs){var q=L.combo,nn=G.comboMs?G.comboMs.n:cb.n;paper(c,q.x,q.y,q.w,q.h,.88,79);K.tf(X.fmtNum(nn)+' 连杀',q.x+q.w/2,q.y+q.h/2,q.w-8,L.small?11:15,RED,'center',true,10.5);if(cb)brush(c,q.x+4,q.y+q.h-2,q.w-8,X.clamp(cb.t/2.8,0,1),RED,.8);rec(a,'combo',q);}
     P.end(c);
   };
@@ -22570,10 +22753,20 @@ X.step=function(g,dt){if(!g._simRandom)return step.apply(this,arguments);var sel
   var SPEEDS = [1, 2, 4, 8];
 
   /* ---------- 画布尺寸：窗口多大就画多大，整体按比例缩放 ---------- */
+  XY.uiScale = function (cssW, cssH) {
+    if (cssW < 1100 || cssH < 700) return 1;
+    var fit = Math.min(cssW / 1280, cssH / 720);
+    return fit > 1.05 ? Math.min(fit, 3.5) : 1;
+  };
+  XY.kToLog = function (app, v) {
+    var z = app.zoom || 1, s = XY.uiScale(app.lw * z, app.lh * z);
+    return v * s / z;
+  };
   function resize() {
     var w = window.innerWidth, h = window.innerHeight, dpr = Math.min(window.devicePixelRatio || 1, 2);
     app.dpr = dpr;
-    app.zoom = Math.max(0.5, Math.min(1.4, Math.min(w / 1280, h / 720)));      // 下限 0.5：手机横屏（如 844×390）整个界面（含底部按钮）都在屏幕里；原来 0.8 会把底部挤出屏幕
+    var fit = Math.min(w / 1280, h / 720);
+    app.zoom = Math.max(0.5, Math.min(fit, 3.5));      // 下限 0.5 保住手机横屏；大屏按 1280×720 设计放大，不再卡在 1.4 让字缩在角落
     app.lw = w / app.zoom; app.lh = h / app.zoom;
     canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
     canvas.style.width = w + 'px'; canvas.style.height = h + 'px';
@@ -23003,6 +23196,7 @@ X.step=function(g,dt){if(!g._simRandom)return step.apply(this,arguments);var sel
     if (dt > 0) app.fps += (1 / dt - app.fps) * 0.05;
     if (app.moveMark) app.moveMark.t += dt;
     if (app.partyPanel && (G.villain || app.screen !== 'play' || G.mode !== 'play')) XY.party.close(app);
+    if (app.screen === 'play' && G && G.tut && G.mode === 'skills' && !app.tipHold && !app.partyPanel && XY.tutTick) XY.tutTick(G, dt);   // 修行面板沿用 mode!==play 暂停战斗，只推进教程计时
     if (app.screen === 'play' && G.mode === 'play' && !app.tipHold && !app.partyPanel) {     // v0.9 队伍面板打开 = 战斗时间冻结（不推进 XY.step）
       updateMove();
       acc += dt * G.speed;
