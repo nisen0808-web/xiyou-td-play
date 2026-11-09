@@ -9040,13 +9040,36 @@ XY.TRAITS = {
       otxt(c, d.name, x, y - 32, 12, '#8a8578', 'center', true);
       return;
     }
-    // 沙僧的骷髅
+  function inkSkull(c, x, y, r, seed) {
+    function hs(n) { var s = Math.sin(seed * 12.9898 + n * 78.233) * 43758.5453; return s - Math.floor(s); }
+    c.save(); c.translate(x, y); c.rotate((hs(1) - 0.5) * 0.4);
+    c.lineCap = 'round'; c.lineJoin = 'round'; c.strokeStyle = '#241c16'; c.fillStyle = '#241c16';
+    c.lineWidth = Math.max(1.7, r * 0.2);
+    c.beginPath();
+    c.moveTo(-r * 0.55, r * 0.12);
+    c.quadraticCurveTo(-r * 1.05, -r * 0.2, -r * 0.45, -r * 0.78);
+    c.quadraticCurveTo(r * 0.05, -r * 1.2, r * 0.62, -r * 0.55);
+    c.quadraticCurveTo(r * 1.0, r * 0.05, r * 0.42, r * 0.2);
+    c.stroke();
+    c.globalAlpha = 0.35; c.lineWidth = Math.max(1, r * 0.09);
+    c.beginPath(); c.moveTo(-r * 0.28, -r * 0.72); c.quadraticCurveTo(r * 0.05, -r * 1.02, r * 0.4, -r * 0.48); c.stroke();
+    c.globalAlpha = 1;
+    c.beginPath();
+    c.moveTo(-r * 0.5, -r * 0.16); c.quadraticCurveTo(-r * 0.28, -r * 0.46, -r * 0.06, -r * 0.14); c.quadraticCurveTo(-r * 0.28, r * 0.06, -r * 0.5, -r * 0.16);
+    c.moveTo(r * 0.08, -r * 0.12); c.quadraticCurveTo(r * 0.32, -r * 0.42, r * 0.52, -r * 0.08); c.quadraticCurveTo(r * 0.3, r * 0.08, r * 0.08, -r * 0.12);
+    c.fill();
+    c.lineWidth = Math.max(1.3, r * 0.14);
+    c.beginPath(); c.moveTo(-r * 0.08, r * 0.02); c.lineTo(0, r * 0.24); c.lineTo(r * 0.12, r * 0.04); c.stroke();
+    c.beginPath(); c.moveTo(-r * 0.46, r * 0.22); c.quadraticCurveTo(-r * 0.1, r * 0.62, r * 0.08, r * 0.86); c.quadraticCurveTo(r * 0.34, r * 0.55, r * 0.46, r * 0.18); c.stroke();
+    c.lineWidth = Math.max(1.15, r * 0.11);
+    var ti; for (ti = -1; ti <= 1; ti++) { if (hs(4 + ti) < 0.15) continue; c.beginPath(); c.moveTo(ti * r * 0.18, r * 0.48); c.lineTo(ti * r * 0.16, r * 0.72); c.stroke(); }
+    c.restore();
+  }
+    // 沙僧的骷髅念珠：墨色枯笔，飞白断线，没有白底圆片
     if (h.id === 'wujing' && h.beads) {
       for (var i = 0; i < h.beads; i++) {
         var a = h.orbit + i / h.beads * PI2, bx = x + Math.cos(a) * h.beadR, by = y + Math.sin(a) * h.beadR, br = h.beadSize;
-        c.fillStyle = '#fffdf4'; c.strokeStyle = '#6b6b6b'; c.lineWidth = 1.8; c.beginPath(); c.arc(bx, by, br, 0, PI2); c.fill(); c.stroke();
-        c.fillStyle = '#444'; c.beginPath(); c.arc(bx - br * 0.35, by - br * 0.1, br * 0.2, 0, PI2); c.arc(bx + br * 0.35, by - br * 0.1, br * 0.2, 0, PI2); c.fill();
-        c.fillRect(bx - br * 0.15, by + br * 0.25, br * 0.3, br * 0.3);
+        inkSkull(c, bx, by, br, i + 1);
       }
     }
     var mnt = h.mounted ? G.heroes[4] : null, ry = 0;
@@ -11725,10 +11748,11 @@ XY.TRAITS = {
     return true;
   };
   M.dexPose = function (c, type, x, foot, bh) {
-    if (!DEN6[type] && type !== 'bat' && type !== 'owl') return false;
-    var got = resolvePose(type, 'stance');
+    var id = type === 'boss' ? 'niumo' : type;
+    if (!DEN6[type] && type !== 'bat' && type !== 'owl' && type !== 'boss') return false;
+    var got = resolvePose(id, 'stance') || resolvePose(id, 'idle_a');
     if (!got) return true;
-    c.save(); c.translate(x, foot); paintFoot(c, type, got.pose, got.im, bh, 0); c.restore();
+    c.save(); c.translate(x, foot); paintFoot(c, id, got.pose, got.im, bh, 0); c.restore();
     return true;
   };
   if (XY.MINK_DATA) M.preload(); else setTimeout(function () { if (XY.MINK_DATA) M.preload(); }, 0);
@@ -16389,7 +16413,9 @@ XY.chibi.portrait = function (c, id, x, foot, h, alpha) {
   function drawEnemyIcon(c, type, x, y, r, sil, rt) {
     var d = XY.ENEMIES[type], col = sil ? '#aaa59a' : d.color, dk = sil ? '#85807a' : d.dark;
     if (d.fly && XY.fly) { XY.fly.icon(c, type, x, y, r, sil, rt); if (sil) txt(c, '？', x, y + 2, Math.round(r * 1.0), '#fff', 'center', true); return; }
-    if (XY.MINK && XY.MINK.denPose && XY.MINK.denPose(type) && XY.MINK.dexPose && XY.MINK.dexPose(c, type, x, y + r * 0.9, r * 2.8)) return;
+    if (!sil && XY.MINK && XY.MINK.portrait && XY.MINK_DATA && XY.MINK_DATA[type] && XY.MINK.portrait(c, type, x, y + r * 0.95, r * 2.3)) return;
+    if (XY.MINK && XY.MINK.dexPose && XY.MINK.dexPose(c, type, x, y + r * 0.95, r * 2.6)) return;
+    if (type === 'boss' || (XY.MINK_DATA && XY.MINK_DATA[type]) || (XY.MINK && XY.MINK.denPose && XY.MINK.denPose(type))) return;
     c.lineWidth = 3; c.strokeStyle = dk; c.fillStyle = col;
     if (type === 'elite' || type === 'boss') {
       c.beginPath(); c.moveTo(x - r * 0.7, y - r * 0.5); c.quadraticCurveTo(x - r * 1.3, y - r * 0.8, x - r * 1.1, y - r * 1.4); c.quadraticCurveTo(x - r * 0.6, y - r * 1.0, x - r * 0.3, y - r * 0.85); c.fill(); c.stroke();
