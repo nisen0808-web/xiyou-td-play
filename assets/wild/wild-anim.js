@@ -34,19 +34,19 @@
     return { index: seq[seq.length - 1], done: !!oneshot, total: total };
   }
   /* 出招是一次性的。没有出招包（币圈老司机）时 edge 不离开待机。播完回到待机。 */
-  /* Boss 战姿势名 → 狂野水墨片段。没有对应片段时返回 null，调用方继续画旧图。
-   * 牛魔王：待机 / 出招 / 受击。队伍和特殊人物：待机和普攻；走路、蓄力、格挡、必杀仍走旧图。 */
+  /* Boss 战姿势名 → 水墨片段。有水墨图的角色不再回退彩色厚涂：受击走 hit，出招走 attack，其余走待机。 */
   function poseClip(id, pose) {
     if (!pose) return null;
+    var hit = pose === 'hit' || pose === 'hit_a' || pose === 'fly' || pose === 'ko' || pose === 'ko_a';
+    var atk = pose === 'attack' || pose === 'ult' || pose === 'atk2' || pose === 'atk3' || pose.indexOf('atk') === 0 || pose.indexOf('attack') === 0 || pose === 'swing' || pose === 'swing_a' || pose === 'swing_b' || pose === 'smash' || pose === 'smash_a';
     if (id === 'niumo') {
-      if (pose === 'hit' || pose === 'hit_a') return 'hit';
-      if (pose === 'attack' || pose === 'swing' || pose === 'swing_a' || pose === 'swing_b' || pose === 'smash' || pose === 'smash_a') return 'attack';
-      if (pose === 'stance' || pose === 'idle' || pose === 'idle_a' || pose === 'idle_b' || pose === 'idle2') return 'idle';
-      return null;
+      if (hit) return 'hit';
+      if (atk) return 'attack';
+      return 'idle';
     }
-    if (pose === 'attack' || pose === 'attack_a' || pose === 'attack_b' || pose === 'attack_c') return 'attack';
-    if (pose === 'stance' || pose === 'idle' || pose === 'idle_a' || pose === 'idle_b') return 'idle';
-    return null;
+    if (hit) return 'hit';
+    if (atk) return 'attack';
+    return 'idle';
   }
   function step(state, dtMs, edge, attackClip) {
     if (!state) state = { mode: 'idle', t: 0 };
@@ -108,8 +108,8 @@
   /* 大图集解码后拆成单帧。牛魔王待机一张就有五百多万像素，每帧再从整张图里裁会把帧率压下去。 */
   function bakeFrames(im, clip) {
     if (!clip || typeof document === 'undefined') return;
-    var area = clip.cell[0] * clip.cell[1] * clip.frameCount;
-    if (area < 1500000) return;
+    // 只拆牛魔王这种单格就很大的图。角色图集格子小，拆成几十张画布会卡住进战斗。
+    if (clip.cell[0] * clip.cell[1] < 100000) return;
     var frames = [], cw = clip.cell[0], ch = clip.cell[1], i, col, row, cnv;
     for (i = 0; i < clip.frameCount; i++) {
       cnv = document.createElement('canvas');

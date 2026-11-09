@@ -46,8 +46,12 @@ test('niumo plays idle, attack, and hit, then returns to idle', function () {
   assert.equal(wild.frameAt(hit, hs.t).index, 2);
   hs = wild.step(hs, 417 - 167, false, hit);
   assert.equal(hs.mode, 'idle');
-  assert.equal(wild.poseClip('niumo', 'ko'), null);
-  assert.equal(wild.poseClip('niumo', 'rush'), null);
+  assert.equal(wild.poseClip('niumo', 'ko'), 'hit');
+  assert.equal(wild.poseClip('niumo', 'rush'), 'idle');
+  assert.equal(wild.poseClip('wukong', 'stance'), 'idle');
+  assert.equal(wild.poseClip('wukong', 'hit'), 'hit');
+  assert.equal(wild.poseClip('heyuxi', 'leap'), 'idle');
+  assert.equal(wild.poseClip('heyuxi', 'ult'), 'attack');
   assert.equal(wild.poseClip('niumo', 'hit'), 'hit');
   assert.ok(fs.existsSync(path.join(__dirname, '../assets/wild', hit.file)));
 });

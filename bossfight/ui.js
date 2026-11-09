@@ -317,7 +317,8 @@
       tx += nudge;
     }
     if (!p.noShadow) drawShadow(c, cx + nudge, gyy, Math.min(body * .55, ref * .5), fh, p, al, face);
-    c.save(); c.globalAlpha = al; c.imageSmoothingEnabled = true;
+    if (id !== 'niumo' && k > 2.2) k = 2.2;
+    c.save(); c.globalAlpha = al; c.imageSmoothingEnabled = true; c.imageSmoothingQuality = 'high';
     c.translate(tx, ty); c.rotate(p.rot || 0); c.transform(1, 0, (p.skew || 0) * fl, 1, 0, 0); c.scale(fl * (p.sx || 1), p.sy || 1);
     if (W.blit) W.blit(c, clip, im, fr.index, -ax * k, -ay * k, cw * k, chh * k);
     else c.drawImage(im, col * cw, row * chh, cw, chh, -ax * k, -ay * k, cw * k, chh * k);
@@ -351,6 +352,8 @@
   }
   function drawSpr1(c, id, pose, cx, gyy, fh, p) {
     p = p || {}; if (drawWildPose(c, id, pose, cx, gyy, fh, p)) return;
+    var Ww = window.XY && XY.wildAnim;
+    if (Ww && Ww.ready && Ww.ready(id, 'idle')) { paintWild(c, id, 'idle', VT() * 1000, cx, gyy, fh, p); return; }
     var im = spr(id, pose), m = SMETA[id] && (SMETA[id][pose] && has(id, pose) ? SMETA[id][pose] : SMETA[id].stance); if (!im || !im.naturalWidth || !m) { if (SMETA[id] && !/^ret/.test(pose)) inkBlob(c, cx + (p.dx || 0), gyy, (p.fitH || fh * (SZ[id] || 1) * .74), p.alpha); return; }
     var k = p.fitH ? p.fitH / m.h : fh * (SZ[id] || 1) * 0.74 / 480, w = m.w * k, h = m.h * k, fl0 = p.fs != null ? p.fs : (p.flip ? -1 : 1), fl = p.fs != null ? turnW(fl0) : fl0, al = p.alpha == null ? 1 : p.alpha; if (Math.abs(fl) < .05) return;
     var face = (id === 'niumo' ? -1 : 1) * (fl < 0 ? -1 : 1), afl = Math.abs(fl), ref = p.fitH || fh;
@@ -570,9 +573,13 @@
     // dir=1：左侧血条，满格靠外侧，往外掉；-1 反之
     c.save(); para(c, x, y, w, h, sk); c.fillStyle = '#efe3c0'; c.fill(); c.clip();
     var fw = w * clamp(frac, 0, 1), cw = w * clamp(chip, 0, 1);
-    function seg(wid, col1, col2) { var xx = dir > 0 ? x + w - wid : x, g = c.createLinearGradient(0, y, 0, y + h); g.addColorStop(0, col1); g.addColorStop(1, col2); c.fillStyle = g; c.fillRect(xx - 2, y, wid + sk + 6, h); }
-    seg(cw, '#ffe9a0', '#f3c75a'); seg(fw, colA, colB);
-    c.globalAlpha = .38; c.fillStyle = '#fff'; c.fillRect(x - 4, y + h * .08, w + sk + 8, h * .3); c.globalAlpha = .12; c.fillStyle = '#000'; c.fillRect(x - 4, y + h * .66, w + sk + 8, h * .34);
+    function seg(wid, col1) {
+      var xx = dir > 0 ? x + w - wid : x, i, yy;
+      c.fillStyle = col1; c.fillRect(xx - 2, y, wid + sk + 6, h);
+      c.strokeStyle = 'rgba(236,228,210,.34)'; c.lineWidth = Math.max(1, h * .07); c.lineCap = 'round';
+      for (i = 0; i < 3; i++) { yy = y + h * (.26 + i * .22); c.beginPath(); c.moveTo(xx + 3, yy); c.quadraticCurveTo(xx + wid * .5, yy + (i % 2 ? h * .16 : -h * .1), xx + Math.max(6, wid) - 3, yy); c.stroke(); }
+    }
+    seg(cw, '#c4b48a'); seg(fw, colA);
     c.restore(); c.save(); para(c, x, y, w, h, sk); c.lineJoin = 'round'; c.lineWidth = 3.2; c.strokeStyle = '#2f2a1f'; c.stroke(); c.lineWidth = 1.2; c.strokeStyle = '#e6c474'; para(c, x + 2.2, y + 2.2, w - 4.4, h - 4.4, sk); c.stroke(); c.restore();
   }
   function pips(c, x, y, n, w, h, gap, sk, frac, dir, colA, colB) {
@@ -589,19 +596,19 @@
     G.hp = G.hp || {}; function chip(key, v) { var o = G.hp[key]; if (o == null || G.t < .05) o = v; o = o > v ? Math.max(v, o - .35 * (1 / 60)) : v; G.hp[key] = o; return o; }
     var wf = wu.hp / wu.maxHp, bf = b.hp / b.maxHp;
     // 头像底座（斜切金边）
-    bar(c, lx, top, lw, bh, sk, wf, chip('w', wf), '#f0693a', '#d23a1c', 1);
-    bar(c, rx, top, rw, bh, sk, bf, chip('b', bf), '#8b3fa8', '#5a2275', -1);
+    bar(c, lx, top, lw, bh, sk, wf, chip('w', wf), '#5c3a32', '#2a1814', 1);
+    bar(c, rx, top, rw, bh, sk, bf, chip('b', bf), '#3a342c', '#16130f', -1);
     // 牛魔王阶段刻度
     c.save(); c.strokeStyle = '#e6c474'; c.lineWidth = 2.2 * S; [.5, .25].forEach(function (p) { var x = rx + (1 - p) * 0 + p * rw * 0 + (p * rw); c.beginPath(); c.moveTo(rx + p * rw + sk - 1 * S, top + 3 * S); c.lineTo(rx + p * rw - 1 * S, top + bh - 3 * S); c.stroke(); }); c.restore();
     // 搭档血条（细）
-    if (pa) { var py = top + bh + 5 * S, ph = 10 * S, pf = pa.hp / pa.maxHp, pw = lw * .74; if (!pa.alive) pf = 0; bar(c, lx + lw - pw, py, pw, ph, sk * .5, pf, chip('p', pf), pa.alive ? '#e6a23a' : '#a39a86', pa.alive ? '#c9831f' : '#8a8270', 1); }
+    if (pa) { var py = top + bh + 5 * S, ph = 10 * S, pf = pa.hp / pa.maxHp, pw = lw * .74; if (!pa.alive) pf = 0; bar(c, lx + lw - pw, py, pw, ph, sk * .5, pf, chip('p', pf), pa.alive ? '#4a4034' : '#a39a86', pa.alive ? '#2a241c' : '#8a8270', 1); }
     // 能量格
     var pyl = top + bh + (pa ? 19 : 5) * S, pw0 = (land ? 17 : 11) * S;
-    pips(c, lx + lw - 8 * (pw0 + 3 * S) + 3 * S + (pa ? 0 : 0), pyl, 8, pw0, 6 * S, 3 * S, 6 * S, 1 - clamp(wu.ult.t / wu.ult.cd, 0, 1), 1, '#e8c24a', '#c9951f');
-    pips(c, rx + 2 * S, top + bh + 5 * S, 8, pw0, 6 * S, 3 * S, 6 * S, 1 - clamp(b.bt / (b.phase === 2 ? 3.2 : 4.6), 0, 1), -1, '#e35d3c', '#b8321a');
+    pips(c, lx + lw - 8 * (pw0 + 3 * S) + 3 * S + (pa ? 0 : 0), pyl, 8, pw0, 6 * S, 3 * S, 6 * S, 1 - clamp(wu.ult.t / wu.ult.cd, 0, 1), 1, '#5a5044', '#2a241c');
+    pips(c, rx + 2 * S, top + bh + 5 * S, 8, pw0, 6 * S, 3 * S, 6 * S, 1 - clamp(b.bt / (b.phase === 2 ? 3.2 : 4.6), 0, 1), -1, '#4a4036', '#1c1814');
     // 头像与名字
-    head(c, 'wukong', 34 * S + (land ? 6 * S : 0), top + 24 * S, (land ? 27 : 24) * S, '#f0693a');
-    head(c, 'niumo', W - 34 * S - (land ? 6 * S : 0), top + 24 * S, (land ? 27 : 24) * S, '#8b3fa8');
+    head(c, 'wukong', 34 * S + (land ? 6 * S : 0), top + 24 * S, (land ? 27 : 24) * S, '#5c4030');
+    head(c, 'niumo', W - 34 * S - (land ? 6 * S : 0), top + 24 * S, (land ? 27 : 24) * S, '#3a342c');
     var ny = top + bh / 2 + 1 * S;
     label(c, '孙悟空', lx + 14 * S, ny, 15 * S, '#2f2a1f'); label(c, 'Lv' + wu.lv, lx + 14 * S + 56 * S, ny + 1 * S, 11 * S, '#6d6455');
     label(c, '牛魔王', rx + rw + sk - 18 * S, ny, 15 * S, '#2f2a1f', 'right'); label(c, b.phase === 2 ? '狂暴' : '一阶段', rx + rw + sk - 18 * S - 58 * S, ny + 1 * S, 11 * S, b.phase === 2 ? '#c8341f' : '#6d6455', 'right');
@@ -620,7 +627,7 @@
     G.sumRect = { x: 0, y: gy0 - 6 * S, w: gx + gw + 24 * S, h: uh + 14 * S };
     // 右下：怒气槽（牛魔王血量降到 25% 触发“绝命”）
     var rage = clamp((0.75 - (b.hp / b.maxHp - 0.25)) / 0.75, 0, 1), rgw = (land ? 190 : 120) * S, rgx = W - 46 * S - rgw - 14 * S;
-    c.save(); para(c, rgx, gy0 + 8 * S, rgw, uh - 16 * S, 12 * S); c.fillStyle = '#e9ddba'; c.fill(); c.clip(); var rg = c.createLinearGradient(0, 0, rgw, 0); rg.addColorStop(0, '#f3a64a'); rg.addColorStop(1, '#c8341f'); c.fillStyle = rg; c.fillRect(rgx, gy0, (rgw + 14 * S) * rage, uh); c.restore();
+    c.save(); para(c, rgx, gy0 + 8 * S, rgw, uh - 16 * S, 12 * S); c.fillStyle = '#e4d8c0'; c.fill(); c.clip(); c.fillStyle = '#5c3a32'; c.fillRect(rgx, gy0, (rgw + 14 * S) * rage, uh); c.restore();
     c.save(); para(c, rgx, gy0 + 8 * S, rgw, uh - 16 * S, 12 * S); c.lineWidth = 3 * S; c.strokeStyle = '#2f2a1f'; c.stroke(); c.restore();
     label(c, '怒', rgx + 22 * S, gy0 + uh * .5, 15 * S, '#2f2a1f', 'center'); label(c, b.finalDone ? '1' : '0', W - 24 * S, gy0 + uh * .5, 50 * S, b.finalDone ? '#c8341f' : '#6d6455', 'center');
   }
