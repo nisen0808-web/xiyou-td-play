@@ -7632,11 +7632,10 @@ XY.TRAITS = {
 
   /* ---------- 画：BTC 币 / 环绕 / 光印 / 变身 ---------- */
   function coin(c, x, y, r, rot) {
+    var IP = XY.INKP, INK = IP ? IP.INK : '24,20,16';
     c.save(); c.translate(x, y); c.rotate(rot || 0);
-    c.fillStyle = '#f7c948'; c.strokeStyle = '#b67f0f'; c.lineWidth = Math.max(1.5, r * 0.18); c.beginPath(); c.arc(0, 0, r, 0, PI2); c.fill(); c.stroke();
-    c.strokeStyle = 'rgba(255,255,255,0.6)'; c.lineWidth = Math.max(1, r * 0.1); c.beginPath(); c.arc(0, 0, r * 0.72, 0.3, 2.2); c.stroke();
-    c.rotate(-(rot || 0)); c.fillStyle = '#8a5a05'; c.font = 'bold ' + Math.round(r * 1.25) + 'px ' + C.FONT; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('B', 0, r * 0.06);
-    c.lineWidth = Math.max(1, r * 0.13); c.strokeStyle = '#8a5a05'; c.beginPath(); c.moveTo(-r * 0.18, -r * 0.78); c.lineTo(-r * 0.18, -r * 0.6); c.moveTo(r * 0.18, -r * 0.78); c.lineTo(r * 0.18, -r * 0.6); c.moveTo(-r * 0.18, r * 0.6); c.lineTo(-r * 0.18, r * 0.78); c.moveTo(r * 0.18, r * 0.6); c.lineTo(r * 0.18, r * 0.78); c.stroke();
+    if (IP) { IP.blot(c, 0, 0, r, INK, 0.62, (r * 13) | 0, 2, 1); IP.ring(c, 0, 0, r * 0.82, Math.max(1, r * 0.1), INK, 0.82, 5, 5, 1, rot || 0); }
+    c.fillStyle = 'rgba(' + INK + ',0.92)'; c.font = 'bold ' + Math.round(r * 1.15) + 'px ' + C.FONT; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('B', 0, r * 0.04);
     c.restore();
   }
   XY.drawBtcCoin = coin;
@@ -7648,9 +7647,8 @@ XY.TRAITS = {
     c.restore();
   };
   XY.phDrawProj = function (c, p, rt) {
-    var a = Math.atan2(p.vy, p.vx), g = c.createLinearGradient(p.x - cos(a) * 30, p.y - sin(a) * 30, p.x, p.y);
-    g.addColorStop(0, 'rgba(255,120,30,0)'); g.addColorStop(1, 'rgba(255,170,40,0.85)');
-    c.strokeStyle = g; c.lineWidth = p.r * 1.6; c.lineCap = 'round'; c.beginPath(); c.moveTo(p.x - cos(a) * 30, p.y - sin(a) * 30); c.lineTo(p.x, p.y); c.stroke(); c.lineCap = 'butt';
+    var a = Math.atan2(p.vy, p.vx);
+    if (XY.INKP) XY.INKP.stroke(c, p.x, p.y, p.x - cos(a) * 26, p.y - sin(a) * 26, p.r * 0.7, XY.INKP.INK, 0.4, 2, 0.05);
     coin(c, p.x, p.y, p.r + 2, rt * 10);
   };
   XY.phDrawHeroUnder = function (c, G, h, x, y, r, rt) {      // 在英雄身体后面：变身光翼
@@ -7667,25 +7665,25 @@ XY.TRAITS = {
   };
   XY.phDrawHeroOver = function (c, G, h, x, y, r, rt) {       // 在英雄身体上面：BTC 环绕
     var n = h.orbitN || 0; if (!n || h.down) return;
-    c.save(); c.strokeStyle = 'rgba(240,180,41,0.28)'; c.lineWidth = 2; c.beginPath(); c.arc(x, y, h.orbitR, 0, PI2); c.stroke(); c.restore();
+    if (XY.INKP) XY.INKP.ring(c, x, y, h.orbitR, 1.4, XY.INKP.INK, 0.35, 11, 5, 1, rt * 0.2);
     for (var i = 0; i < n; i++) { var a = (h.orbA || 0) + i / n * PI2; coin(c, x + cos(a) * h.orbitR, y + sin(a) * h.orbitR, 9, rt * 8 + i); }
   };
   XY.phDrawFx = function (c, f, k, G) {
     if (f.type === 'btcSeal') {
       var s = 0.3 + k * 1.1, al = k < 0.7 ? 1 : (1 - k) / 0.3, r = 240 * s;
       c.save(); c.translate(f.x, f.y); c.globalAlpha = Math.max(0, al) * 0.85;
-      var g = c.createRadialGradient(0, 0, r * 0.2, 0, 0, r * 1.3); g.addColorStop(0, 'rgba(255,240,170,0.9)'); g.addColorStop(1, 'rgba(255,200,60,0)'); c.fillStyle = g; c.beginPath(); c.arc(0, 0, r * 1.3, 0, PI2); c.fill();
+      if (XY.INKP) { XY.INKP.blot(c, 0, 0, r * 0.85, XY.INKP.INK, 0.2, 8, 0, 1); XY.INKP.ring(c, 0, 0, r, 3, XY.INKP.INK, 0.45, 2, 6, 1, k); }
       coin(c, 0, 0, r, k * 0.6);
       c.restore();
     } else if (f.type === 'coinDrop') {
       var rr = f.big ? 30 : 13, yy = f.y - 160 * (1 - Math.min(1, k * 1.8)); c.save(); c.globalAlpha = k > 0.6 ? Math.max(0, (1 - k) / 0.4) : 1;
-      if (k > 0.5) { c.strokeStyle = 'rgba(240,180,41,0.8)'; c.lineWidth = 3; c.beginPath(); c.arc(f.x, f.y, rr * (1 + (k - 0.5) * 4), 0, PI2); c.stroke(); }
+      if (k > 0.5 && XY.INKP) XY.INKP.ring(c, f.x, f.y, rr * (1 + (k - 0.5) * 4), 2, XY.INKP.INK, 0.55 * (1 - k), 6, 5, 1, k);
       if (f.ingot) XY.drawIngot(c, f.x, yy, rr / 8, k * 3); else coin(c, f.x, yy, rr, k * 8);      // 只有 Phyrex 的币才是 BTC；矿机等别人的「砸币」画金元宝
       c.restore();
     } else if (f.type === 'xform') {
       var h = f.follow || { x: f.x, y: f.y }; c.save(); c.globalAlpha = Math.max(0, 1 - k);
-      for (var i = 0; i < 8; i++) { var a = i / 8 * PI2 + k * 2; c.strokeStyle = 'rgba(255,214,90,0.9)'; c.lineWidth = 6; c.beginPath(); c.moveTo(h.x + cos(a) * 30, h.y + sin(a) * 30); c.lineTo(h.x + cos(a) * (60 + 260 * k), h.y + sin(a) * (60 + 260 * k)); c.stroke(); }
-      c.fillStyle = 'rgba(255,240,170,' + (0.5 * (1 - k)) + ')'; c.beginPath(); c.arc(h.x, h.y, 40 + 200 * k, 0, PI2); c.fill();
+      for (var i = 0; i < 8; i++) { var a = i / 8 * PI2 + k * 2; if (XY.INKP) XY.INKP.stroke(c, h.x + cos(a) * 30, h.y + sin(a) * 30, h.x + cos(a) * (60 + 260 * k), h.y + sin(a) * (60 + 260 * k), 2.4, XY.INKP.INK, 0.7 * (1 - k), i + 3, 0.04); }
+      if (XY.INKP) XY.INKP.blot(c, h.x, h.y, 40 + 80 * k, XY.INKP.INK, 0.12 * (1 - k), 4, 0, 1);
       c.restore();
     }
   };
@@ -9003,6 +9001,35 @@ XY.TRAITS = {
 
   /* ---------- 英雄 ---------- */
   var cloudNow = false;
+    /* 沙僧骷髅念珠：深墨珠串、枯笔飞白描边、浓淡墨小骷髅。不是白圆片，也没有彩色光晕。 */
+  function drawInkBeads(c, x, y, n, R, br, orbit) {
+    var IP = XY.INKP, INK = IP ? IP.INK : '24,20,16', i, a, bx, by, a2, x2, y2, wash, s;
+    c.save();
+    for (i = 0; i < n; i++) {
+      a = orbit + i / n * PI2; a2 = orbit + (i + 0.72) / n * PI2;
+      bx = x + Math.cos(a) * R; by = y + Math.sin(a) * R; x2 = x + Math.cos(a2) * R; y2 = y + Math.sin(a2) * R;
+      if (IP) IP.stroke(c, bx, by, x2, y2, 1.05, INK, 0.48, i * 19 + 4, 0.35);
+    }
+    for (i = 0; i < n; i++) {
+      a = orbit + i / n * PI2; bx = x + Math.cos(a) * R; by = y + Math.sin(a) * R;
+      wash = 0.18 + (i % 4) * 0.08;
+      var vis = Math.max(br * 1.45, 18);
+      if (IP) IP.blot(c, bx, by, vis * 0.78, INK, wash, i * 11 + 3, 1, 0.92);
+      c.save(); c.translate(bx, by);
+      c.strokeStyle = 'rgba(' + INK + ',' + (0.62 + (i % 3) * 0.1) + ')'; c.lineCap = 'round';
+      for (s = 0; s < 3; s++) {
+        c.lineWidth = 1.3 + (s === 1 ? 0.8 : 0);
+        c.beginPath(); c.arc(0, 0, vis * (0.58 + s * 0.05), a + s * 1.7, a + s * 1.7 + 1.05); c.stroke();
+      }
+      c.fillStyle = 'rgba(' + INK + ',' + (0.82 + (i % 2) * 0.12) + ')';
+      c.beginPath(); c.ellipse(-vis * 0.22, -vis * 0.1, vis * 0.16, vis * 0.2, 0, 0, PI2); c.ellipse(vis * 0.22, -vis * 0.1, vis * 0.15, vis * 0.18, 0, 0, PI2); c.fill();
+      c.beginPath(); c.moveTo(0, vis * 0.02); c.lineTo(-vis * 0.08, vis * 0.22); c.lineTo(vis * 0.08, vis * 0.22); c.closePath(); c.fill();
+      c.lineWidth = 1.1; c.beginPath(); c.moveTo(-vis * 0.2, vis * 0.36); c.lineTo(-vis * 0.06, vis * 0.3); c.moveTo(vis * 0.06, vis * 0.36); c.lineTo(vis * 0.2, vis * 0.3); c.stroke();
+      c.restore();
+    }
+    c.lineCap = 'butt'; c.restore();
+  }
+
   function drawHero(c, G, h, rt) {                                  // v0.8.0 腾云：不在路上的角色脚踏水墨云、不迈步（js/cloudride.js）；只在路上才播走路动画
     if (h.ridden || h.down || !(XY.cloud && XY.cloud.on(G, h))) return drawHero0(c, G, h, rt);
     var mv = h.moving; cloudNow = true; h.moving = false;
@@ -9019,8 +9046,7 @@ XY.TRAITS = {
     // 唐僧佛光
     if (h.id === 'tang' && !h.down) {
       var ar = h.auraR || 125;
-      c.fillStyle = 'rgba(255,225,120,' + (0.08 + 0.03 * Math.sin(rt * 3)) + ')'; c.beginPath(); c.arc(x, y, ar, 0, PI2); c.fill();
-      c.setLineDash([8, 8]); c.lineDashOffset = -rt * 12; c.lineWidth = 1.5; c.strokeStyle = 'rgba(214,160,30,0.42)'; c.beginPath(); c.arc(x, y, ar, 0, PI2); c.stroke(); c.setLineDash([]);
+      if (XY.INKP) { XY.INKP.ring(c, x, y, ar, 2.1, XY.INKP.INK, 0.22 + 0.06 * Math.sin(rt * 2), 9, 6, 1, rt * 0.35); XY.INKP.ring(c, x, y, ar * 0.97, 1, XY.INKP.INK, 0.14, 4, 4, 1, -rt * 0.2); }
     }
     // 流沙河、操控标记
     if (cl) {
@@ -9029,8 +9055,8 @@ XY.TRAITS = {
       XY.cloud.draw(c, h, x, y + fo + 3, r * (mn0 ? 1.25 : 1), rt, cloudMv);
     } else { c.fillStyle = 'rgba(70,50,30,0.2)'; c.beginPath(); c.ellipse(x, y + r * 0.85, r * 0.95, r * 0.36, 0, 0, PI2); c.fill(); }
     if (isC && !h.down) {
-      c.strokeStyle = d.color; c.lineWidth = 3.5; c.globalAlpha = 0.9;
-      c.beginPath(); c.ellipse(x, y + r * 0.8, r * 1.35 + Math.sin(rt * 5) * 1.5, r * 0.6, 0, 0, PI2); c.stroke(); c.globalAlpha = 1;
+      if (XY.INKP) XY.INKP.ring(c, x, y + r * 0.8, r * 1.35, 2.2, XY.INKP.INK, 0.7, 6, 5, 0.45, rt);
+      else { c.strokeStyle = 'rgba(24,20,16,0.75)'; c.lineWidth = 2; c.beginPath(); c.ellipse(x, y + r * 0.8, r * 1.35, r * 0.6, 0, 0, PI2); c.stroke(); }
     }
     if (h.down && !(XY.MINK && XY.MINK.poseOwns && XY.MINK.poseOwns(h))) {                                            // 有倒地立绘的角色留在下面画 ko；其余仍是墓碑
       c.fillStyle = 'rgba(70,50,30,0.15)'; c.beginPath(); c.ellipse(x, y + 12, 18, 6, 0, 0, PI2); c.fill();
@@ -9040,15 +9066,7 @@ XY.TRAITS = {
       otxt(c, d.name, x, y - 32, 12, '#8a8578', 'center', true);
       return;
     }
-    // 沙僧的骷髅
-    if (h.id === 'wujing' && h.beads) {
-      for (var i = 0; i < h.beads; i++) {
-        var a = h.orbit + i / h.beads * PI2, bx = x + Math.cos(a) * h.beadR, by = y + Math.sin(a) * h.beadR, br = h.beadSize;
-        c.fillStyle = '#fffdf4'; c.strokeStyle = '#6b6b6b'; c.lineWidth = 1.8; c.beginPath(); c.arc(bx, by, br, 0, PI2); c.fill(); c.stroke();
-        c.fillStyle = '#444'; c.beginPath(); c.arc(bx - br * 0.35, by - br * 0.1, br * 0.2, 0, PI2); c.arc(bx + br * 0.35, by - br * 0.1, br * 0.2, 0, PI2); c.fill();
-        c.fillRect(bx - br * 0.15, by + br * 0.25, br * 0.3, br * 0.3);
-      }
-    }
+    // 沙僧念珠改到人物画完再画，避免被身体挡住
     var mnt = h.mounted ? G.heroes[4] : null, ry = 0;
     if (mnt) {                                                  // 骑乘：脚下是白龙马（跑动时有速度线和尘土），骑手抬高一点
       var hsOK = XY.chibi && XY.chibi.ready(mnt); ry = hsOK ? -r * 1.05 : -r * 0.55; var mr = mnt.def.r * 1.25, my = y + bob * 0.5 + r * 0.55;
@@ -9064,6 +9082,7 @@ XY.TRAITS = {
     var useCb = !posed && !(h.id === 'horse' && d.form === 'human') && XY.chibi && XY.chibi.ready(h);
     var tall = useCb || posed, tr = tall ? rr * 2.85 - ry : r;
     if (!posed && useCb) XY.chibi.draw(c, G, h, rt, x, y + ry, rr);
+    if (h.id === 'wujing' && h.beads) drawInkBeads(c, x, y + ry, h.beads, h.beadR, h.beadSize, h.orbit);
     else if (!posed && !((XY.chibiKey && XY.CHIBI && XY.CHIBI[XY.chibiKey(h)]) || (XY.CHIBI_INK && XY.CHIBI_INK[h.id]) || (h.def && h.def.xid))) {
       var sq = XY.anim ? XY.anim.squash(h.moving, rt, h.bob || 0) : null;          // 待机呼吸 / 走路挤压（以脚底为轴）
       if (sq) { c.save(); c.translate(x, y + r * 0.85); c.scale(sq[0], sq[1]); c.translate(-x, -(y + r * 0.85)); }
@@ -9131,7 +9150,7 @@ XY.TRAITS = {
     if (k === 'water') {
       var wc = accOf('#2aa6b8');
       IP.stroke(c, x, y, x - ca * 20, y - sa * 20, p.r * 1.0, wc, 0.55, sd + 1, 0.06); IP.stroke(c, x, y, x - ca * 16, y - sa * 16, p.r * 0.5, INK, 0.5, sd + 2, 0.06);
-      c.fillStyle = 'rgba(150,222,232,0.95)'; c.strokeStyle = 'rgba(' + INK + ',0.85)'; c.lineWidth = 1.5; c.beginPath(); c.arc(x, y, p.r * 0.85, 0, PI2); c.fill(); c.stroke();
+      IP.blot(c, x, y, p.r * 1.2, INK, 0.5, sd, 2, 0.75); IP.ring(c, x, y, p.r * 0.72, 1.15, wc, 0.65, sd + 3, 4, 1, a);
     } else if (k === 'ring') {
       var rc = accOf(p.magic ? '#4aa3d6' : '#e0642b'), rr = p.r + 4, rot = R4rt() * 9;
       c.fillStyle = 'rgba(' + rc + ',0.14)'; c.beginPath(); c.arc(x, y, rr, 0, PI2); c.fill();
@@ -9189,8 +9208,8 @@ XY.TRAITS = {
         IPs.stroke(c, sx, f.y, sx - 6, f.y + f.h, 9, IPs.INK, (1 - k) * 0.85, ((f.y * 3) | 0) & 1023, 0.04);          // 横扫前沿：一笔竖着的浓墨
       } else if (f.type === 'arc') {
         var ox = f.owner ? f.owner.x : f.x, oy = f.owner ? f.owner.y : f.y;
-        c.globalAlpha = (1 - k) * 0.32;
-        c.fillStyle = f.color; c.beginPath(); c.moveTo(ox, oy);
+        c.globalAlpha = (1 - k) * 0.16;
+        c.fillStyle = 'rgba(' + XY.INKP.INK + ',0.9)'; c.beginPath(); c.moveTo(ox, oy);
         if (f.arc >= PI2 - 0.01) c.arc(ox, oy, f.range, 0, PI2); else c.arc(ox, oy, f.range, f.ang - f.arc / 2, f.ang + f.arc / 2);
         c.closePath(); c.fill();
         c.globalAlpha = (1 - k) * 0.85; c.strokeStyle = 'rgb(' + XY.INKP.INK + ')'; c.lineWidth = 3; c.lineCap = 'round'; c.beginPath();
@@ -9199,7 +9218,7 @@ XY.TRAITS = {
       }
     }
     for (i = 0; i < G.parts.length; i++) {
-      var p = G.parts[i]; c.globalAlpha = 1 - p.t / p.max; c.fillStyle = p.c; if (p.sq) { c.save(); c.translate(p.x, p.y); c.rotate(p.t * 9 + p.r); c.fillRect(-p.r, -p.r, p.r * 2, p.r * 2); c.restore(); } else { c.beginPath(); c.arc(p.x, p.y, p.r, 0, PI2); c.fill(); }
+      var p = G.parts[i]; c.globalAlpha = 1 - p.t / p.max; c.fillStyle = 'rgba(' + XY.INKP.INK + ',0.85)'; if (p.sq) { c.save(); c.translate(p.x, p.y); c.rotate(p.t * 9 + p.r); c.fillRect(-p.r, -p.r, p.r * 2, p.r * 2); c.restore(); } else { XY.INKP.blot(c, p.x, p.y, Math.max(2, p.r), XY.INKP.INK, 0.55 * (1 - p.t / p.max), (p.x | 0) & 31, 1, 1); }
     }
     c.globalAlpha = 1;
     if (XY.vfx) XY.vfx.draw(c, G);                                              // v0.7：池化粒子（火花 / 拖尾 / 币 / 雷 / 叶 …）
@@ -9208,8 +9227,7 @@ XY.TRAITS = {
   function drawZones(c, G, rt) {
     for (var i = 0; i < G.zones.length; i++) {
       var z = G.zones[i], a = Math.min(1, z.t / 1.2);
-      c.globalAlpha = 0.45 * a; c.fillStyle = '#d9bf85'; c.beginPath(); c.arc(z.x, z.y, z.r, 0, PI2); c.fill();
-      c.globalAlpha = 0.8 * a; c.setLineDash([10, 8]); c.lineDashOffset = rt * 20; c.strokeStyle = '#a9873f'; c.lineWidth = 3; c.beginPath(); c.arc(z.x, z.y, z.r, 0, PI2); c.stroke(); c.setLineDash([]);
+      if (XY.INKP) { XY.INKP.blot(c, z.x, z.y, z.r * 0.55, XY.INKP.INK, 0.08 * a, (z.x | 0) & 63, 0, 1); XY.INKP.ring(c, z.x, z.y, z.r, 2.4, XY.INKP.INK, 0.55 * a, 8, 6, 1, rt * 0.4); }
       c.globalAlpha = 1;
     }
   }
@@ -9303,7 +9321,9 @@ XY.TRAITS = {
     // 敌方子弹（红橙色，一眼能看出危险）
     for (i = 0; i < G.eprojs.length; i++) {
       var q = G.eprojs[i]; if (!inView(G, q.x, q.y, 20)) continue;
-      c.fillStyle = q.boss ? '#9b59d0' : '#ff7a3c'; c.strokeStyle = '#fff'; c.lineWidth = 2; teardrop(c, q.x, q.y, Math.atan2(q.vy, q.vx), q.r); c.fill(); c.stroke();
+      var IPe = XY.INKP, eang = Math.atan2(q.vy, q.vx), eac = IPe.mix(IPe.rgb(q.boss ? '#4a3058' : '#6a3020'), 0.25);
+      IPe.stroke(c, q.x, q.y, q.x - Math.cos(eang) * 16, q.y - Math.sin(eang) * 16, q.r * 0.7, IPe.INK, 0.45, (q.x | 0) + 3, 0.08);
+      c.fillStyle = 'rgba(' + IPe.INK + ',0.78)'; c.strokeStyle = 'rgba(' + eac + ',0.9)'; c.lineWidth = 1.3; teardrop(c, q.x, q.y, eang, q.r); c.fill(); c.stroke();
     }
     for (i = 0; i < G.projs.length; i++) if (inView(G, G.projs[i].x, G.projs[i].y, 20)) drawProj(c, G.projs[i]);
     // 英雄：按 y 排序，靠下的盖在上面

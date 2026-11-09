@@ -68,12 +68,29 @@
     frameAt: frameAt,
     step: step,
     sum: sum,
-    poseClip: poseClip
+    poseClip: poseClip,
+    mergePending: mergePending,
+    slots: { 'wujing/idle': 'replace', 'laosiji/attack': 'add' }
   };
   function ingest(data) {
     if (!data || !data.ids) throw new Error('wild manifest missing ids');
     W.data = data;
     return Object.keys(data.ids);
+  }
+  /* 稍后补包的替换口：pending.json 里的同名片段盖过 manifest。
+   * 沙僧待机（wujing.idle）和币圈老司机出招（laosiji.attack）到了就写进 pending.json，不必改播放器。 */
+  function mergePending(data, extra) {
+    if (!data || !extra || !extra.ids) return data;
+    Object.keys(extra.ids).forEach(function (id) {
+      var row = extra.ids[id];
+      if (!row || typeof row !== 'object') return;
+      data.ids[id] = data.ids[id] || {};
+      Object.keys(row).forEach(function (name) {
+        if (name === 'note' || !row[name] || !row[name].file) return;
+        data.ids[id][name] = row[name];
+      });
+    });
+    return data;
   }
   W.ingest = ingest;
   W.knows = function (id) {
@@ -105,9 +122,14 @@
       if (!r.ok) throw new Error('manifest ' + r.status);
       return r.json();
     }).then(function (data) {
+      return fetch(W.base + 'pending.json').then(function (r) {
+        if (!r.ok) return data;
+        return r.json().then(function (extra) { return mergePending(data, extra); }, function () { return data; });
+      }, function () { return data; });
+    }).then(function (data) {
       var ids = ingest(data), jobs = [], i, names, n;
       for (i = 0; i < ids.length; i++) {
-        names = ['idle', 'attack'];
+        names = ['idle', 'attack', 'hit'];
         for (n = 0; n < names.length; n++) {
           (function (id, name) {
             var clip = data.ids[id][name];
@@ -123,6 +145,6 @@
   root.XY = root.XY || {};
   root.XY.wildAnim = W;
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { frameAt: frameAt, step: step, sum: sum, poseClip: poseClip, ingest: ingest, api: W };
+    module.exports = { frameAt: frameAt, step: step, sum: sum, poseClip: poseClip, mergePending: mergePending, ingest: ingest, api: W };
   }
 })(typeof window !== 'undefined' ? window : globalThis);

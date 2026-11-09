@@ -61,6 +61,25 @@ test('attack plays once, hit frame lands at 250ms, then idle', function () {
   });
 });
 
+test('pending.json can replace wujing idle and add laosiji attack', function () {
+  var data = JSON.parse(JSON.stringify(manifest));
+  assert.equal(data.ids.laosiji.attack, undefined);
+  wild.mergePending(data, {
+    ids: {
+      wujing: { idle: { file: 'wujing-idle-next.webp', loopPolicy: 'cycle', durationsMs: [100, 100, 100, 100], frameCount: 4, anchor: [1, 2], cell: [3, 4], cols: 2 } },
+      laosiji: { attack: { file: 'laosiji-attack.webp', loopPolicy: 'oneshot', durationsMs: [83, 84, 83, 83, 84, 83, 83, 84], frameCount: 8, durationMs: 667, hit: { atMs: 250, frame: 3 }, anchor: [1, 2], cell: [3, 4], cols: 4 } },
+      note: 'ignored'
+    }
+  });
+  assert.equal(data.ids.wujing.idle.file, 'wujing-idle-next.webp');
+  assert.equal(data.ids.wujing.idle.frameCount, 4);
+  assert.equal(data.ids.laosiji.attack.frameCount, 8);
+  assert.equal(data.ids.tang.idle.file, manifest.ids.tang.idle.file);
+  var st = wild.step({ mode: 'idle', t: 0 }, 0, true, data.ids.laosiji.attack);
+  st = wild.step(st, 667, false, data.ids.laosiji.attack);
+  assert.equal(st.mode, 'idle');
+});
+
 test('pingpong walks forward then back without repeating the ends', function () {
   var clip = { loopPolicy: 'pingpong', baked: false, durationsMs: [100, 100, 100] };
   assert.equal(wild.frameAt(clip, 0).index, 0);
