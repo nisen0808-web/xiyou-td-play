@@ -57,13 +57,13 @@ window.XY_AVATAR_FILES = ["diaoyulao", "haiteng", "heyuxi", "kuanggong", "laosij
 var XY = window.XY = window.XY || {};
 
 XY.VERSION = '0.8.7';
-// 测试版开关：打开时 12 位特殊角色开局全部可选（默认 Lv1，不写入存档）；网址加 ?test=0 或 build.sh 的 TEST_BUILD=0 关闭
+// 测试版开关：公开入口默认关闭。网址加 ?test=1 才进入测试版（全角色可选、单独存档）；?test=0 / ?normal=1 回到标准版
 // 版本开关（测试版 / 标准版）现在存在存档里：见 meta.js 的 XY.TEST_BUILD / XY.version
 XY.TEST_LV = 5;     // 测试版里特殊角色的角色卡等级（5 = 卡牌等级上限 XY.CARD_MAXLV，也是 SP_MAX_LV；隐藏角色不受影响）
 
 /* ---------- 全局常量 ---------- */
 XY.C = {
-  TEST_DEFAULT: true,     // 打开网页默认进测试版（三关全开 / 全员 Lv98 差一只怪满级 / 特殊角色 Lv5 / 单独存档）；改成 false = 默认普通版；网址 ?normal=1 随时回普通版、?test=1 进测试版
+  TEST_DEFAULT: false,    // 公开入口默认标准版（新档特殊角色全锁、第 1 关从 Lv1 打）。?test=1 才进测试版
   WORLD_W: 5120,          // 地图宽（v0.4：东西向长图，营地在东、关口在西）
   WORLD_H: 3200,          // 地图高
   STEP: 1 / 60,           // 固定逻辑步长（秒）
@@ -394,7 +394,7 @@ XY.TRAITS = {
     if (ss === 'std' || ss === 'test') return ss;
     if (/[?&](normal=1|test=0)(&|#|$)/.test(q)) return 'std';
     if (/[?&]test=1(&|#|$)/.test(q)) return 'test';
-    return XY.C && XY.C.TEST_DEFAULT === false ? 'std' : 'test';
+    return XY.C && XY.C.TEST_DEFAULT === true ? 'test' : 'std';
   }
   var MODE = resolveMode(), KEY = MODE === 'test' ? KEY_TEST : KEY_STD;
   var DEFAULT_MODE = MODE;
@@ -515,11 +515,12 @@ XY.TRAITS = {
       stats: { runs: 0, wins: 0, kills: 0, bestTime: 0, totalTime: 0, bossKills: 0, sideDone: 0 },
       cards: {}, deck: [], dex: {}, unlocks: {}, skins: {}, party: { horse: 'horse' },
       levels: {}, dng: {}, routes: { N: 0, S: 0 }, lingshi: 0, shards: 0, questsDone: {},   // v0.4：关卡进度、灵石（货币）、皮肤碎片、已完成过的支线
-      sp: { cards: { phyrex: 2 }, chosen: 'phyrex', shop: null, shopGen: 0 },   // v0.5：新存档直接有 2 张 Phyrex 卡（=解锁 Lv1）并已选为常驻角色（标准版的特殊角色状态）
-      spT: { cards: { phyrex: 2 }, chosen: 'phyrex', shop: null, shopGen: 0 },  // v0.5：测试版的特殊角色状态（和标准版分开存，互不污染）
+      sp: { cards: {}, chosen: null, shop: null, shopGen: 0 },   // 公开新档：特殊角色一张都没有。出发页十连抽到的才解锁
+      spT: { cards: {}, chosen: null, shop: null, shopGen: 0 },  // 测试版特殊角色状态（和标准版分开存）。测试版仍按 TEST_LV 全可选，不靠这叠卡
       mode: DEFAULT_MODE,                                                       // v0.5：版本开关 'test'（测试版，默认）/ 'std'（标准版）
       sold: { cards: { arrow: 1, heal: 1 } },                                   // v0.5：天兵卡
       tutorial: { done: false, grow: false },
+      gacha10: null,                                                             // 出发页十连：抽出即写入；null = 这个存档还没抽
       journey: { entry: {}, legacy: false },                                     // 取经之旅：每关入场快照（见 journey.js）
       villain: { series: { niumo: villainSeriesDefault() } },          // v0.8.6 预留：反派模式按 Boss 系列分钱包 / 已得 / 局数 / 通关数（牛魔王是第一个系列；v0.9.0 启用）
       tips: { seen: {}, cut: false },
@@ -570,8 +571,9 @@ XY.TRAITS = {
       d.journey = { entry: {}, legacy: anyClear };   // 旧档：已通关的老玩家用补偿快照，不从零打后面的关
     }
     if (d.mode !== 'std' && d.mode !== 'test') d.mode = DEFAULT_MODE;
-    if (!record(d.spT)) d.spT = { cards: { phyrex: 2 }, chosen: 'phyrex', shop: null, shopGen: 0 };
-    if (!record(d.spT.cards)) d.spT.cards = { phyrex: 2 };
+    if (!record(d.spT)) d.spT = { cards: {}, chosen: null, shop: null, shopGen: 0 };
+    if (!record(d.spT.cards)) d.spT.cards = {};
+    if (d.gacha10 === undefined) d.gacha10 = null;
     if (!record(d.sold) || !record(d.sold.cards)) d.sold = base.sold;
     if (!record(d.tutorial)) d.tutorial = { done: false, grow: false };
     if (typeof d.tutorial.done !== 'boolean') d.tutorial.done = false;
@@ -753,7 +755,7 @@ XY.TRAITS = {
   XY.version = {
     mode: function () { return XY.TEST_BUILD ? 'test' : 'std'; },
     name: function (m) { return (m || XY.version.mode()) === 'test' ? '测试版' : '标准版'; },
-    desc: function (m) { return (m || XY.version.mode()) === 'test' ? '三关全开 · 全员满级差一只怪 · 特殊角色 Lv5 · 单独存档' : '只有 Phyrex 开局可用 · 其他人靠角色卡解锁'; },
+    desc: function (m) { return (m || XY.version.mode()) === 'test' ? '三关全开 · 全员满级差一只怪 · 特殊角色 Lv5 · 单独存档' : '新档特殊角色未解锁 · 出发页可十连一次'; },
     set: function (m) {                                  // 切换版本 = 换一份存档（先把当前这份写好）；同一标签页刷新后保持
       m = m === 'std' ? 'std' : 'test';
       if (S.data && m !== MODE) {
@@ -762,6 +764,7 @@ XY.TRAITS = {
       }
       S.data.mode = m; return XY.version.mode();
     },
+    showToggle: function () { return !!XY.TEST_BUILD; },   // 公开标准版不放切换按钮；?test=1 进来之后才能切回
     toggle: function () { return XY.version.set(XY.TEST_BUILD ? 'std' : 'test'); }
   };
   S.load();
@@ -1995,13 +1998,13 @@ XY.TRAITS = {
   /* ---------- 存档：角色卡张数 / 携带 ---------- */
   function sd() {
     var d = XY.save.data, key = XY.TEST_BUILD ? 'spT' : 'sp';     // 测试版 / 标准版各存一份，互不污染
-    if (!d[key] || typeof d[key] !== 'object') d[key] = { cards: key === 'spT' ? { phyrex: 2 } : {}, chosen: key === 'spT' ? 'phyrex' : null, shop: null, shopGen: 0 };
+    if (!d[key] || typeof d[key] !== 'object') d[key] = { cards: {}, chosen: null, shop: null, shopGen: 0 };
     if (!d[key].cards) d[key].cards = {};
     return d[key];
   }
   XY.spLevelOf = function (n) { var l = 0; XY.SP_LV_AT.forEach(function (a, i) { if (n >= a) l = i + 1; }); return l; };
   XY.save.spCards = function (id) { return sd().cards[id] || 0; };
-  // 测试版（XY.TEST_BUILD，默认开）：12 位特殊角色开局全部可选，等级至少 XY.TEST_LV（不写入存档）
+  // 测试版（仅 ?test=1 / 存档 mode=test）：12 位特殊角色开局全部可选，等级至少 XY.TEST_LV（不写入存档）
   XY.save.spLevel = function (id) { if (XY.isHidden(id) || !XY.SP_BY[id]) return 0; return Math.max(XY.spLevelOf(XY.save.spCards(id)), XY.TEST_BUILD ? XY.TEST_LV : 0); };
   XY.save.spOwned = function (id) { return XY.save.spLevel(id) >= 1; };
   XY.save.spRealOwned = function (id) { return XY.spLevelOf(XY.save.spCards(id)) >= 1; };
@@ -2019,7 +2022,8 @@ XY.TRAITS = {
   XY.save.setCarry = function (id) {
     if (!id) { sd().chosen = null; XY.save.touch(); return { ok: true, reason: '这一关不带常驻角色' }; }
     if (!XY.SP_BY[id]) return { ok: false, reason: '没有这个角色' };
-    if (!XY.save.spOwned(id)) return { ok: false, reason: '还没解锁：集齐 ' + XY.SP_LV_AT[0] + ' 张角色卡（掉落或商店购买）' };
+    if (typeof id === 'string' && id.indexOf('x_') === 0 && XY.save.xcharOpen && !XY.save.xcharOpen()) return { ok: false, reason: '通关第 1 关后才能携带自建角色' };
+    if (!XY.save.spOwned(id)) return { ok: false, reason: '未解锁：集齐 ' + XY.SP_LV_AT[0] + ' 张「' + XY.SP_BY[id].name + '」角色卡（掉落或灵石商店）' };
     sd().chosen = id; XY.save.touch(); return { ok: true, reason: '本关常驻：' + XY.SP_BY[id].name };
   };
   // 测试版“一击满级”：只在测试版、只对本局常驻的特殊角色；师徒五人不受影响（队伍等级 G.level 不动）。
@@ -2042,6 +2046,122 @@ XY.TRAITS = {
   XY.spNext = function (id) {
     var n = XY.save.spCards(id), lv = XY.spLevelOf(n);
     return lv >= 5 ? null : { need: XY.SP_LV_AT[lv], have: n, lv: lv + 1 };
+  };
+
+  /* ---------- 出发页十连（每个存档一次）----------
+   * 第一次进入出发页就定下 10 张特殊角色卡并立刻写入存档。
+   * 刷新、关闭、跳过都用同一组结果，不会重抽。
+   * 抽到的角色：第一张把角色卡补到解锁（2 张 = Lv1），之后每张重复 +1，够 5/10/20/40 张就升级。
+   * 没抽到的仍锁，靠掉落或灵石商店凑 2 张。 */
+  var gachaMint = null, gachaView = null;
+  function gachaBag() {
+    var d = XY.save.data, key = XY.TEST_BUILD ? 'spT' : 'sp', src = d && d[key] && d[key].cards, o = {}, k;
+    if (src) for (k in src) o[k] = src[k] || 0;
+    return o;
+  }
+  XY.gacha10 = {
+    roll: function (rnd) {
+      rnd = rnd || Math.random;
+      var pool = XY.SPECIALS.map(function (d) { return d.id; }), out = [], i;
+      if (!pool.length) return out;
+      for (i = 0; i < 10; i++) out.push(pool[Math.floor(rnd() * pool.length)]);
+      return out;
+    },
+    plan: function (pulls, cards) {
+      var bag = {}, seen = {}, rows = [], k;
+      cards = cards || {};
+      for (k in cards) bag[k] = cards[k] || 0;
+      (pulls || []).forEach(function (id) {
+        var had = bag[id] || 0, owned = XY.spLevelOf(had) >= 1, n = (seen[id] = (seen[id] || 0) + 1);
+        var add, kind, text, beforeLv, afterLv;
+        if (!owned && n === 1) {
+          add = Math.max(XY.SP_LV_AT[0] - had, 1);
+          kind = 'unlock';
+          text = '解锁 · 计入 ' + add + ' 张';
+        } else {
+          add = 1;
+          beforeLv = XY.spLevelOf(had);
+          afterLv = XY.spLevelOf(had + add);
+          kind = afterLv > beforeLv ? 'up' : 'dup';
+          text = afterLv > beforeLv ? ('重复 · 升到 Lv' + afterLv) : '重复 · 角色卡 +1';
+        }
+        bag[id] = had + add;
+        rows.push({ id: id, add: add, kind: kind, text: text, cards: bag[id], lv: XY.spLevelOf(bag[id]) });
+      });
+      return rows;
+    },
+    grant: function (rec) {
+      if (!rec || rec.granted) return;
+      (rec.rows || []).forEach(function (r) { XY.save.addSpCard(r.id, r.add); });
+      rec.granted = true;
+      XY.save.flush();
+    },
+    ensure: function () {
+      var d = XY.save.data, rec;
+      if (!d) return { show: false, fresh: false, rec: null };
+      rec = d.gacha10;
+      if (rec && rec.pulls && rec.pulls.length === 10) {
+        if (!rec.rows) rec.rows = XY.gacha10.plan(rec.pulls, rec.granted ? {} : gachaBag());
+        if (!rec.granted) XY.gacha10.grant(rec);
+        return { show: !rec.acked, fresh: gachaMint === rec.seed, rec: rec };
+      }
+      var seed = ((Date.now() ^ ((Math.random() * 0x7fffffff) | 0)) >>> 0) || 1;
+      var pulls = XY.gacha10.roll(XY.seeded(seed));
+      rec = { seed: seed, pulls: pulls, rows: XY.gacha10.plan(pulls, gachaBag()), granted: false, acked: false, at: Date.now() };
+      d.gacha10 = rec;
+      gachaMint = seed;
+      XY.gacha10.grant(rec);
+      if (XY.bgArt) pulls.forEach(function (id) { try { XY.bgArt(id); } catch (e) {} });
+      return { show: true, fresh: true, rec: rec };
+    },
+    ack: function () {
+      var g = XY.save.data && XY.save.data.gacha10;
+      if (g) g.acked = true;
+      gachaView = null;
+      if (XY.save.flush) XY.save.flush();
+    },
+    blocking: function () {
+      var g = XY.save.data && XY.save.data.gacha10;
+      return !!(g && g.pulls && g.pulls.length === 10 && !g.acked);
+    },
+    nudge: function (dir) {
+      if (!gachaView || !gachaView.rec) return;
+      var n = (gachaView.rec.rows && gachaView.rec.rows.length) || 10;
+      if (gachaView.phase === 'result') {
+        var pages = gachaView.pages || 1;
+        gachaView.page = Math.max(0, Math.min(pages - 1, (gachaView.page || 0) + (dir || 0)));
+        return;
+      }
+      var cur = gachaView.focus;
+      if (cur == null) cur = 0;
+      gachaView.focus = Math.max(0, Math.min(n - 1, cur + dir));
+      gachaView.hold = true;
+    },
+    key: function () {
+      var pack = XY.gacha10.ensure();
+      if (!pack.show) return;
+      if (!gachaView || gachaView.seed !== pack.rec.seed) gachaView = { seed: pack.rec.seed, phase: 'flip', t0: 0, rec: pack.rec };
+      if (gachaView.phase === 'flip') gachaView.phase = 'result';
+      else XY.gacha10.ack();
+    },
+    view: function (a) {
+      var pack = XY.gacha10.ensure();
+      if (!pack.show) { gachaView = null; return null; }
+      if (!gachaView || gachaView.seed !== pack.rec.seed) {
+        gachaView = { seed: pack.rec.seed, phase: pack.fresh ? 'flip' : 'result', t0: a && a.rt || 0, rec: pack.rec };
+      }
+      gachaView.rec = pack.rec;
+      return gachaView;
+    },
+    freeze: null
+  };
+  XY.save.xcharOpen = function () {
+    if (XY.TEST_BUILD) return true;
+    var d = XY.save.data;
+    if (!d) return false;
+    if (d.stats && d.stats.wins > 0) return true;
+    var lv = d.levels && d.levels[1];
+    return !!(lv && lv.cleared);
   };
 
   // 等级加成：Lv2 +25%，Lv3 +50%，Lv4 +75%，Lv5 +100%（属性）；Lv2 起解锁特性；Lv3 大招 +30%；Lv4 开第 3 条分支；Lv5 特性 CD −25% + 觉醒外观
@@ -9040,13 +9160,36 @@ XY.TRAITS = {
       otxt(c, d.name, x, y - 32, 12, '#8a8578', 'center', true);
       return;
     }
-    // 沙僧的骷髅
+  function inkSkull(c, x, y, r, seed) {
+    function hs(n) { var s = Math.sin(seed * 12.9898 + n * 78.233) * 43758.5453; return s - Math.floor(s); }
+    c.save(); c.translate(x, y); c.rotate((hs(1) - 0.5) * 0.4);
+    c.lineCap = 'round'; c.lineJoin = 'round'; c.strokeStyle = '#241c16'; c.fillStyle = '#241c16';
+    c.lineWidth = Math.max(1.7, r * 0.2);
+    c.beginPath();
+    c.moveTo(-r * 0.55, r * 0.12);
+    c.quadraticCurveTo(-r * 1.05, -r * 0.2, -r * 0.45, -r * 0.78);
+    c.quadraticCurveTo(r * 0.05, -r * 1.2, r * 0.62, -r * 0.55);
+    c.quadraticCurveTo(r * 1.0, r * 0.05, r * 0.42, r * 0.2);
+    c.stroke();
+    c.globalAlpha = 0.35; c.lineWidth = Math.max(1, r * 0.09);
+    c.beginPath(); c.moveTo(-r * 0.28, -r * 0.72); c.quadraticCurveTo(r * 0.05, -r * 1.02, r * 0.4, -r * 0.48); c.stroke();
+    c.globalAlpha = 1;
+    c.beginPath();
+    c.moveTo(-r * 0.5, -r * 0.16); c.quadraticCurveTo(-r * 0.28, -r * 0.46, -r * 0.06, -r * 0.14); c.quadraticCurveTo(-r * 0.28, r * 0.06, -r * 0.5, -r * 0.16);
+    c.moveTo(r * 0.08, -r * 0.12); c.quadraticCurveTo(r * 0.32, -r * 0.42, r * 0.52, -r * 0.08); c.quadraticCurveTo(r * 0.3, r * 0.08, r * 0.08, -r * 0.12);
+    c.fill();
+    c.lineWidth = Math.max(1.3, r * 0.14);
+    c.beginPath(); c.moveTo(-r * 0.08, r * 0.02); c.lineTo(0, r * 0.24); c.lineTo(r * 0.12, r * 0.04); c.stroke();
+    c.beginPath(); c.moveTo(-r * 0.46, r * 0.22); c.quadraticCurveTo(-r * 0.1, r * 0.62, r * 0.08, r * 0.86); c.quadraticCurveTo(r * 0.34, r * 0.55, r * 0.46, r * 0.18); c.stroke();
+    c.lineWidth = Math.max(1.15, r * 0.11);
+    var ti; for (ti = -1; ti <= 1; ti++) { if (hs(4 + ti) < 0.15) continue; c.beginPath(); c.moveTo(ti * r * 0.18, r * 0.48); c.lineTo(ti * r * 0.16, r * 0.72); c.stroke(); }
+    c.restore();
+  }
+    // 沙僧的骷髅念珠：墨色枯笔，飞白断线，没有白底圆片
     if (h.id === 'wujing' && h.beads) {
       for (var i = 0; i < h.beads; i++) {
         var a = h.orbit + i / h.beads * PI2, bx = x + Math.cos(a) * h.beadR, by = y + Math.sin(a) * h.beadR, br = h.beadSize;
-        c.fillStyle = '#fffdf4'; c.strokeStyle = '#6b6b6b'; c.lineWidth = 1.8; c.beginPath(); c.arc(bx, by, br, 0, PI2); c.fill(); c.stroke();
-        c.fillStyle = '#444'; c.beginPath(); c.arc(bx - br * 0.35, by - br * 0.1, br * 0.2, 0, PI2); c.arc(bx + br * 0.35, by - br * 0.1, br * 0.2, 0, PI2); c.fill();
-        c.fillRect(bx - br * 0.15, by + br * 0.25, br * 0.3, br * 0.3);
+        inkSkull(c, bx, by, br, i + 1);
       }
     }
     var mnt = h.mounted ? G.heroes[4] : null, ry = 0;
@@ -9130,14 +9273,14 @@ XY.TRAITS = {
     if (k === 'water') {
       var wc = accOf('#2aa6b8');
       IP.stroke(c, x, y, x - ca * 20, y - sa * 20, p.r * 1.0, wc, 0.55, sd + 1, 0.06); IP.stroke(c, x, y, x - ca * 16, y - sa * 16, p.r * 0.5, INK, 0.5, sd + 2, 0.06);
-      c.fillStyle = 'rgba(150,222,232,0.95)'; c.strokeStyle = 'rgba(' + INK + ',0.85)'; c.lineWidth = 1.5; c.beginPath(); c.arc(x, y, p.r * 0.85, 0, PI2); c.fill(); c.stroke();
+      c.fillStyle = 'rgba(232,236,230,0.9)'; c.strokeStyle = 'rgba(' + INK + ',0.9)'; c.lineWidth = 1.6; c.beginPath(); c.arc(x, y, p.r * 0.72, 0, PI2); c.fill(); c.stroke();
     } else if (k === 'ring') {
       var rc = accOf(p.magic ? '#4aa3d6' : '#e0642b'), rr = p.r + 4, rot = R4rt() * 9;
       c.fillStyle = 'rgba(' + rc + ',0.14)'; c.beginPath(); c.arc(x, y, rr, 0, PI2); c.fill();
       IP.ring(c, x, y, rr, 3.4, rc, 0.8, 7, 4, 1, rot); IP.ring(c, x, y, rr, 1.5, INK, 0.85, 11, 3, 1, rot + 1);
     } else if (k === 'sutra') {
-      c.fillStyle = '#fff2b5'; c.strokeStyle = 'rgba(' + INK + ',0.8)'; c.lineWidth = 1.6; c.save(); c.translate(x, y); c.rotate(a); rrect(c, -8, -5, 16, 10, 2); c.fill(); c.stroke();
-      c.fillStyle = 'rgba(190,40,30,0.85)'; c.fillRect(-2, -2, 4, 4); c.restore();
+      c.fillStyle = '#f7f1e2'; c.strokeStyle = 'rgba(' + INK + ',0.9)'; c.lineWidth = 1.5; c.save(); c.translate(x, y); c.rotate(a); rrect(c, -9, -5, 18, 10, 1); c.fill(); c.stroke();
+      c.fillStyle = 'rgba(36,28,22,0.85)'; c.fillRect(-1.5, -3, 3, 6); c.restore();
     } else if (k === 'arrow') {
       IP.stroke(c, x + ca * 8, y + sa * 8, x - ca * 16, y - sa * 16, 2.4, INK, 0.9, sd + 3, 0.04);
     } else {
@@ -11725,10 +11868,11 @@ XY.TRAITS = {
     return true;
   };
   M.dexPose = function (c, type, x, foot, bh) {
-    if (!DEN6[type] && type !== 'bat' && type !== 'owl') return false;
-    var got = resolvePose(type, 'stance');
+    var id = type === 'boss' ? 'niumo' : type;
+    if (!DEN6[type] && type !== 'bat' && type !== 'owl' && type !== 'boss') return false;
+    var got = resolvePose(id, 'stance') || resolvePose(id, 'idle_a');
     if (!got) return true;
-    c.save(); c.translate(x, foot); paintFoot(c, type, got.pose, got.im, bh, 0); c.restore();
+    c.save(); c.translate(x, foot); paintFoot(c, id, got.pose, got.im, bh, 0); c.restore();
     return true;
   };
   if (XY.MINK_DATA) M.preload(); else setTimeout(function () { if (XY.MINK_DATA) M.preload(); }, 0);
@@ -16389,7 +16533,9 @@ XY.chibi.portrait = function (c, id, x, foot, h, alpha) {
   function drawEnemyIcon(c, type, x, y, r, sil, rt) {
     var d = XY.ENEMIES[type], col = sil ? '#aaa59a' : d.color, dk = sil ? '#85807a' : d.dark;
     if (d.fly && XY.fly) { XY.fly.icon(c, type, x, y, r, sil, rt); if (sil) txt(c, '？', x, y + 2, Math.round(r * 1.0), '#fff', 'center', true); return; }
-    if (XY.MINK && XY.MINK.denPose && XY.MINK.denPose(type) && XY.MINK.dexPose && XY.MINK.dexPose(c, type, x, y + r * 0.9, r * 2.8)) return;
+    if (!sil && XY.MINK && XY.MINK.portrait && XY.MINK_DATA && XY.MINK_DATA[type] && XY.MINK.portrait(c, type, x, y + r * 0.95, r * 2.3)) return;
+    if (XY.MINK && XY.MINK.dexPose && XY.MINK.dexPose(c, type, x, y + r * 0.95, r * 2.6)) return;
+    if (type === 'boss' || (XY.MINK_DATA && XY.MINK_DATA[type]) || (XY.MINK && XY.MINK.denPose && XY.MINK.denPose(type))) return;
     c.lineWidth = 3; c.strokeStyle = dk; c.fillStyle = col;
     if (type === 'elite' || type === 'boss') {
       c.beginPath(); c.moveTo(x - r * 0.7, y - r * 0.5); c.quadraticCurveTo(x - r * 1.3, y - r * 0.8, x - r * 1.1, y - r * 1.4); c.quadraticCurveTo(x - r * 0.6, y - r * 1.0, x - r * 0.3, y - r * 0.85); c.fill(); c.stroke();
@@ -16875,7 +17021,7 @@ XY.chibi.portrait = function (c, id, x, foot, h, alpha) {
     var cy = y0 + ch + 14, ph = 214;
     panel(c, 30, cy, W - 60, ph, 14, app._bgId ? 'rgba(255,252,242,0.78)' : 'rgba(255,252,242,0.98)', '#c9a24a');
     var cur = S.carryId();
-    txt(c, XY.TEST_BUILD ? '携带常驻角色（测试版：' + XY.SPECIALS.length + ' 位全可选 · 打死第一只怪就满级，不写入存档）' : '携带常驻角色（标准版：只有 Phyrex 开局可用 · 其他人靠角色卡解锁）', 46, cy + 22, 16, T.ink, 'left', true);
+    txt(c, XY.TEST_BUILD ? '携带常驻角色（测试版：' + XY.SPECIALS.length + ' 位全可选 · 打死第一只怪就满级，不写入存档）' : '携带常驻角色（没抽到的要集齐 ' + XY.SP_LV_AT[0] + ' 张角色卡）', 46, cy + 22, 16, T.ink, 'left', true);
     txt(c, cur ? '本关：' + XY.SP_BY[cur].name + ' Lv' + S.spLevel(cur) + ' · ' + XY.synText(cur) : '本关：不带', W - 46, cy + 22, 15, cur ? '#2f7d3b' : T.inkSoft, 'right', true);
     var ids = XY.SPECIALS.map(function (d) { return d.id; }), sw = Math.floor((W - 60 - 32 - 4 * 12) / 13), k;
     var none = !cur;
@@ -17786,6 +17932,7 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
 
   /* ---------- 版本 / 测试版开关（菜单、选关页、组牌页共用）：小药丸 + 滑块 ---------- */
   M.verSwitch = function (c, app, x, y, w, h) {
+    if (XY.version && XY.version.showToggle && !XY.version.showToggle()) return;
     var test = XY.TEST_BUILD, hov = over(app, x, y, w, h), flash = app.verFlash && app.rt < app.verFlash, kr = h / 2 - 4;
     c.save();
     if (hov || flash) { c.shadowColor = test ? 'rgba(74,127,201,0.45)' : 'rgba(67,160,71,0.45)'; c.shadowBlur = 10; }
@@ -18578,7 +18725,7 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
     // —— 携带常驻角色
     var cy = carY, cols = port ? 5 : Math.max(5, Math.floor(carW / 66)), gap = 6, tw = (carW - (cols - 1) * gap) / cols, th = port ? 86 : 78, js = XY.journey.status(app.levelId);
     K.t('携带常驻角色', carX + 2, cy + 10, 15, '#b8300f', 'left', true);
-    K.tf(XY.TEST_BUILD ? '测试版：全员可选、不写存档' : (carW < 340 ? '标准版 · 其他靠角色卡' : '标准版：Phyrex 开局可用 · 其他靠角色卡'), carX + carW - 2, cy + 10, carW - 130, 12, T.inkSoft, 'right', false, 11);
+    K.tf(XY.TEST_BUILD ? '测试版：全员可选、不写存档' : (carW < 340 ? '没抽到的仍锁' : '没抽到的要集齐 ' + XY.SP_LV_AT[0] + ' 张角色卡'), carX + carW - 2, cy + 10, carW - 130, 12, T.inkSoft, 'right', false, 11);
     cy += 24;
     var tiles = [{ id: null }].concat(ids.map(function (id) { return { id: id }; })), XC = XY.xchar, rec = XC && (XC.get(cur) || XC.list[0]);
     if (rec) tiles.push({ id: rec.id, xc: true, rec: rec }); if (!XC || !rec || (XC.list && XC.MAX && XC.list.length < XC.MAX)) tiles.push({ id: '_xc', xc: true, rec: null }); tiles.push({ id: '_q' });   // 已有自建角色时，没满额就仍留一个「＋自建」空位
@@ -18624,7 +18771,7 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
         var sold = st.sold[k], r = { sold: sold, btn: { label: sold ? '已买走' : (sl.kind === 'reroll' ? '刷新 ' : '买 ') + sl.price + (can(sl.price) ? '' : ' 不够'), act: sold ? null : 'shopBuy', ex: { slot: k }, primary: !sold && can(sl.price), off: sold || !can(sl.price) } };
         if (sl.kind === 'sp') { r.spId=sl.id; var d = XY.SP_BY[sl.id], lv = S.spLevel(sl.id), nx = XY.spNext(sl.id); r.title = '角色卡 · ' + d.name; r.sub = d.role; r.l2 = lv ? '已有 ' + S.spCards(sl.id) + ' 张 · Lv' + lv + (nx ? '（再 ' + (nx.need - nx.have) + ' 张升级）' : '（满级）') : '已有 ' + S.spCards(sl.id) + '/' + XY.SP_LV_AT[0] + ' 张'; r.icon = function (x, y, s) { var hd=XY.specialDef(sl.id,Math.max(1,lv)); XY.hud2.face(c,{id:sl.id,def:hd},x+s/2,y+s/2,s*.44,app.rt); }; r.col = d.frame; }
         else if (sl.kind === 'card') { var cd = XY.CARD_BY[sl.id], Rr = XY.RARITY[cd.r]; r.title = '法宝 · ' + cd.name; r.sub = Rr.name + ' · ' + XY.CARD_SETS[cd.set].name + '套'; r.l2 = XY.cardFxText(cd, 1); r.icon = function (x, y, s) { R.drawCardMini(c, cd, x + s / 2, y + s / 2, s * 0.7, s, 1); }; r.col = Rr.color; }
-        else if (sl.kind === 'shard') { r.title = '皮肤碎片 ×' + sl.n; r.sub = '集齐解锁皮肤'; r.l2 = '现有 ' + S.data.shards + ' 枚'; r.icon = function (x, y, s) { c.fillStyle = '#bfe3fa'; c.strokeStyle = '#4a90d9'; c.lineWidth = 2; c.beginPath(); c.moveTo(x + s / 2, y + 4); c.lineTo(x + s - 8, y + s / 2); c.lineTo(x + s / 2, y + s - 4); c.lineTo(x + 8, y + s / 2); c.closePath(); c.fill(); c.stroke(); }; }
+        else if (sl.kind === 'shard') { r.title = '皮肤碎片 ×' + sl.n; r.sub = '集齐解锁皮肤'; r.l2 = '现有 ' + S.data.shards + ' 枚'; r.icon = function (x, y, s) { c.strokeStyle = '#3a3226'; c.fillStyle = 'rgba(58,50,38,0.12)'; c.lineWidth = 1.6; c.beginPath(); c.moveTo(x + s / 2, y + 6); c.lineTo(x + s - 10, y + s / 2); c.lineTo(x + s / 2, y + s - 6); c.lineTo(x + 10, y + s / 2); c.closePath(); c.fill(); c.stroke(); }; }
         else { r.title = '刷新货架'; r.sub = '换一批角色卡和法宝'; r.l2 = ''; r.icon = function (x, y, s) { c.strokeStyle = '#8a7d63'; c.lineWidth = 5; c.lineCap = 'round'; c.beginPath(); c.arc(x + s / 2, y + s / 2, s * 0.3, 0.6, 5.4); c.stroke(); c.lineCap = 'butt'; }; }
         items.push(r);
       });
@@ -18632,61 +18779,59 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
       var list = tab === 'fb' ? XY.shop.fbList() : XY.shop.solList();
       list.forEach(function (r0) {
         var ok = can(r0.price) && !r0.full, r = { btn: { label: r0.full ? '已满级' : (tab === 'fb' ? '解锁 ' : '买 1 张 ') + r0.price + (ok || r0.full ? '' : ' 不够'), act: tab === 'fb' ? 'shopBuyFb' : 'shopBuySol', ex: tab === 'fb' ? { id: r0.id } : { t: r0.type }, primary: ok, off: !ok } };
-        if (tab === 'fb') { var it = XY.fabao.BY[r0.id]; r.title = (it.kind === 'l' ? '灵物 · ' : '法宝 · ') + it.name; r.sub = it.d; r.l2 = XY.fabao.whereText(r0.id) ? '也可以：' + XY.fabao.whereText(r0.id) : ''; r.icon = function (x, y, s) { c.fillStyle = it.kind === 'l' ? '#e8dcc0' : '#f3e2b0'; c.beginPath(); c.arc(x + s / 2, y + s / 2, s / 2 - 1, 0, PI2); c.fill(); c.lineWidth = 1.6; c.strokeStyle = '#b8863b'; c.stroke(); if (!(XY.ICONINK && XY.ICONINK.draw(c, it.name, x + s / 2, y + s / 2, s * 0.9))) K.t(it.name.charAt(0), x + s / 2, y + s / 2, 22, T.ink, 'center', true); }; }
-        else { var td = XY.TOWERS[r0.type]; r.title = '天兵卡 · ' + td.name; r.sub = '已有 ' + r0.cards + ' 张' + (r0.lv ? ' · Lv' + r0.lv : ' · 还没解锁'); r.l2 = r0.full ? '已满级' : '造价 ' + td.cost + ' 金币'; r.icon = function (x, y, s) { c.fillStyle = td.color; c.beginPath(); c.arc(x + s / 2, y + s / 2, s / 2 - 1, 0, PI2); c.fill(); if (!(XY.ICONINK && XY.ICONINK.sol(c, r0.type, x + s / 2, y + s * 0.46, s * 0.95))) K.t(td.name.charAt(0), x + s / 2, y + s / 2, 22, '#fff', 'center', true); }; }
+        if (tab === 'fb') { var it = XY.fabao.BY[r0.id]; r.title = (it.kind === 'l' ? '灵物 · ' : '法宝 · ') + it.name; r.sub = it.d; r.l2 = XY.fabao.whereText(r0.id) ? '也可以：' + XY.fabao.whereText(r0.id) : ''; r.icon = function (x, y, s) { if (!(XY.ICONINK && XY.ICONINK.draw(c, it.name, x + s / 2, y + s / 2, s * 0.9))) K.t(it.name.charAt(0), x + s / 2, y + s / 2, Math.max(28, Math.round(s * 0.42)), T.ink, 'center', true); }; }
+        else { var td = XY.TOWERS[r0.type]; r.title = '天兵卡 · ' + td.name; r.sub = '已有 ' + r0.cards + ' 张' + (r0.lv ? ' · Lv' + r0.lv : ' · 还没解锁'); r.l2 = r0.full ? '已满级' : '造价 ' + td.cost + ' 金币'; r.icon = function (x, y, s) { if (!(XY.ICONINK && XY.ICONINK.sol(c, r0.type, x + s / 2, y + s * 0.5, s * 0.92))) K.t(td.name.charAt(0), x + s / 2, y + s / 2, Math.max(28, Math.round(s * 0.42)), T.ink, 'center', true); }; }
         items.push(r);
       });
     }
-    // 行脚货摊：左边一件主货，其他货物以开放货签错落陈列；不再是六张等宽白卡。
-    var top = port ? f.y + 54 : f.y + 6, bot = f.y + f.h, bodyH=bot-top-52;
-    var featuredH = port ? Math.min(190,bodyH*0.31) : bodyH, featuredW = port ? f.w : Math.min(300,f.w*0.30);
-    var compact=!port && W<950, per=compact?3:6, from=P.pager(items.length,per,'shop-'+tab,f.x,bot-46,f.w,tab==='shelf');
-    if (!items.length) K.lines('能买的法宝 / 灵物都已解锁。其余的要靠击败洞主得到。',f.x+18,top+44,f.w-36,15,22,T.inkSoft,4,true);
-    if (items.length<=per) {
-      if(tab==='shelf') K.btn(f.x,bot-46,port?f.w:280,44,'抽一张法宝 '+S.CARD_PRICE+' 灵石','buyCard',null,{off:S.data.lingshi<S.CARD_PRICE,size:15});
-      else K.tf(tab==='fb'?'买下就永久解锁，开局可以带；洞主专属法宝不卖':'天兵卡：1 张 Lv1，3 张 Lv2，6 张 Lv3；每次买 1 张',f.x+2,bot-24,f.w-4,12.5,T.inkSoft,'left',false,11);
-    } else if(tab==='shelf') K.btn(f.x+84,bot-46,f.w-168,44,'抽法宝 '+S.CARD_PRICE+' · '+((P.page['shop-'+tab]||0)+1)+'/'+Math.ceil(items.length/per),'buyCard',null,{off:S.data.lingshi<S.CARD_PRICE,size:14});
-    function shelfLine(x,y,w,seed){ if(XY.INKP) XY.INKP.stroke(c,x,y,x+w,y+Math.sin(seed)*1.2,1.6,'83,61,34',0.38,seed,0.004); }
-    function buy(r,x,y,w) {
-      var hv=K.over(x,y,w,44), on=r.btn.primary, red='#b8300f';
-      c.save();c.translate(x+w/2,y+22);c.rotate(-0.025);c.fillStyle=r.btn.off?'rgba(100,80,45,0.09)':on?(hv?'#c74427':red):'rgba(184,48,15,0.12)';c.fillRect(-w/2,-17,w,34);c.restore();
-      var bc=r.btn.off?T.inkSoft:on?'#fff2d6':red;
-      if(/不够/.test(r.btn.label)){K.tf(r.btn.label.replace(/\s+/g,'').replace('不够',''),x+w/2,y+15,w-6,12,bc,'center',true,11);K.t('不够',x+w/2,y+29,11,bc,'center',true);}
-      else K.tf(r.btn.label,x+w/2,y+22,w-6,14,bc,'center',true,11);
-      if(r.btn.act&&!r.btn.off)K.hit(x,y,w,44,r.btn.act,r.btn.ex);
-    }
-    items.slice(from,from+per).forEach(function(r,k){
-      var x,y,ww,iw,tx,ty,iconX,iconY,bx,by,bw;
-      if(k===0){
-        x=f.x+6;y=top+10;ww=featuredW-16;iw=port?116:compact?80:Math.min(230,featuredW-28);
-        K.t('行脚珍藏',x,y+8,15,'#a42d19','left',true);
-        if(port){iconX=x;iconY=y+40;tx=x+146;ty=y+28;ww=f.w-158;bx=tx;by=y+featuredH-56;bw=ww;}
-        else {iconX=x+(featuredW-iw)/2;iconY=y+(compact?44:82);tx=x+10;ty=y+35;bx=x+10;by=top+bodyH-54;bw=Math.min(210,featuredW-30);}
-        c.save();if(r.sold)c.globalAlpha=.4;r.icon(iconX,iconY,iw);c.restore();
-        K.tf(r.title,tx,ty,ww,port?19:compact?18:25,T.ink,'left',true,12);
-        var sy=port?ty+31:compact?top+146:iconY+iw+28;
-        var ny=K.lines(r.sub||'',tx,sy,ww,compact?12:14,compact?16:19,T.inkSoft,port?3:compact?2:3,false);
-        var ey=r.l2?K.lines(r.l2,tx,ny+4,ww,compact?11.5:13,compact?14:18,'#8a4c23',compact?2:3,false):ny;
-        if(compact)by=bot-92;else if(!port)by=Math.min(by,ey+22);buy(r,bx,by,bw);
-      }else{
-        var q=k-1;
-        if(port){
-          var rh=(bodyH-featuredH-12)/5,rev=q%2,yy=top+featuredH+10+q*rh,sz=Math.min(66,rh-12),xx=f.x+[0,12,4,18,8][q];
-          iconX=rev?f.x+f.w-sz-9:xx+3;iconY=yy+3;tx=rev?f.x+8:xx+sz+14;ty=yy+11;ww=f.w-sz-44;iw=sz;bx=tx+(rev?4:0);by=yy+rh-39;bw=Math.min(104,ww);
-        }else if(compact){
-          var rh=bodyH/2;iconX=f.x+featuredW+28+(q?18:0);iconY=top+q*rh+16;iw=Math.min(70,rh-48);tx=iconX+iw+16;ty=top+q*rh+18;ww=f.x+f.w-tx-8;bx=tx+(q?20:0);by=top+(q+1)*rh-44;bw=104;
-        }else{
-          var pos=[[.35,.045,.25],[.67,.0,.28],[.53,.34,.30],[.33,.68,.31],[.78,.65,.21]][q];
-          var xx=f.x+f.w*pos[0],yy=top+bodyH*pos[1];iw=Math.min(108,bodyH*.17);iconX=xx;iconY=yy+12;tx=xx+iw+12;ty=yy+20;ww=Math.min(f.w*pos[2]-iw-16,f.x+f.w-tx-8);bx=tx+(q%2?8:0);by=yy+122;bw=Math.min(128,Math.max(76,ww));
-        }
-        c.save();if(r.sold)c.globalAlpha=.4;r.icon(iconX,iconY,iw);c.restore();
-        K.tf(r.title,tx,ty,ww,port?14:compact?17:18,T.ink,'left',true,11.5);
-        var ny=K.lines(r.sub||'',tx,ty+(port?20:25),ww,port?11.5:12.5,port?14:17,T.inkSoft,port?1:compact?2:3,false);
-        if(r.l2)K.lines(r.l2,tx,ny+2,ww,port?11.5:12.5,port?14:17,'#8a4c23',port?1:2,false);
-        buy(r,bx,by,bw);
+    // 整齐的水墨卡格：每张一样大，购买钮钉在卡底，说明留在格子下面。
+    var cols = port ? 2 : 3, rowsN = 2, per = cols * rowsN;
+    var note = tab === 'shelf' ? '角色卡和法宝用灵石买。抽一张法宝也会出现在下面。' : (tab === 'fb' ? '买下就永久解锁，开局可以带。洞主专属的不在这里卖。' : '天兵卡：1 张是 Lv1，3 张 Lv2，6 张 Lv3。每次买 1 张。');
+    var needPager = items.length > per;
+    var showBuy = tab === 'shelf';
+    var ctrlY = f.y + f.h - 8 - 44;
+    var noteY = (needPager || showBuy) ? ctrlY - 22 : f.y + f.h - 16;
+    var gridTop = port ? ty0 + 54 : f.y + 8;
+    var gridBot = noteY - 18;
+    var gap = port ? 8 : 14;
+    var from = P.pager(items.length, per, 'shop-' + tab, f.x, ctrlY, f.w, true);
+    var availW = f.w, availH = Math.max(120, gridBot - gridTop);
+    var cardW = Math.floor((availW - gap * (cols - 1)) / cols);
+    var cardH = Math.floor((availH - gap * (rowsN - 1)) / rowsN);
+    var gridW = cols * cardW + gap * (cols - 1);
+    var x0 = f.x + Math.max(0, Math.round((f.w - gridW) / 2));
+    function paperCard(x, y, w, h) {
+      c.save();
+      c.fillStyle = 'rgba(58,50,38,0.1)'; c.fillRect(x + 3, y + 4, w, h);
+      c.fillStyle = '#fffdf6'; c.fillRect(x, y, w, h);
+      if (XY.INKP) {
+        XY.INKP.stroke(c, x + 3, y + 2, x + w - 4, y + 4, 1.7, '36,28,22', 0.72, (x + y) | 0, 0.03);
+        XY.INKP.stroke(c, x + 4, y + h - 3, x + w - 6, y + h - 1, 2, '36,28,22', 0.8, (x * 3 + y) | 0, 0.03);
       }
+      c.strokeStyle = 'rgba(36,28,22,0.72)'; c.lineWidth = 1.3; c.strokeRect(x + 0.6, y + 0.6, w - 1.2, h - 1.2);
+      c.restore();
+    }
+    if (!items.length) K.lines('能买的法宝和灵物都已解锁。其余的要靠击败洞主得到。', f.x + 16, gridTop + 36, f.w - 32, 16, 22, T.inkSoft, 4, true);
+    items.slice(from, from + per).forEach(function (r, k) {
+      var col = k % cols, row = Math.floor(k / cols);
+      var x = x0 + col * (cardW + gap), y = gridTop + row * (cardH + gap);
+      paperCard(x, y, cardW, cardH);
+      var iconS = Math.min(cardW - 28, Math.max(56, Math.floor(cardH * 0.36)));
+      var ix = x + (cardW - iconS) / 2, iy = y + 14;
+      c.save(); if (r.sold) c.globalAlpha = 0.4;
+      if (r.icon) r.icon(ix, iy, iconS);
+      c.restore();
+      var ty = iy + iconS + 6;
+      K.tf(r.title || '', x + cardW / 2, ty, cardW - 16, port ? 14 : 17, T.ink, 'center', true, 12);
+      K.tf(r.sub || '', x + cardW / 2, ty + 20, cardW - 18, port ? 11 : 13, T.inkSoft, 'center', false, 11);
+      if (r.l2) K.tf(r.l2, x + cardW / 2, ty + 38, cardW - 18, port ? 11 : 12, '#8a4c23', 'center', false, 10);
+      var by = y + cardH - 52;
+      var lab = (r.btn && r.btn.label) || '';
+      K.btn(x + 10, by, cardW - 20, 44, lab, r.btn && !r.btn.off ? r.btn.act : null, r.btn && r.btn.ex, { off: !r.btn || !!r.btn.off, primary: !!(r.btn && r.btn.primary), size: port ? 12 : 14 });
     });
-    K.msg(f.x + f.w / 2, f.y + f.h - 62, 'center');
+    K.tf(note, f.x + 8, noteY, f.w - 16, 13, T.inkSoft, 'left', false, 11);
+    if (showBuy) K.btn(needPager ? f.x + 80 : f.x, ctrlY, needPager ? f.w - 160 : Math.min(f.w, port ? f.w : 300), 44, '抽一张法宝 ' + S.CARD_PRICE, 'buyCard', null, { off: S.data.lingshi < S.CARD_PRICE, size: 14 });
+    K.msg(f.x + f.w / 2, noteY - 16, 'center');
     P.end(c);
   }
 
@@ -21728,11 +21873,12 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
 
   function groups() {
     var nx = XY.xchar ? XY.xchar.list.length : 0;
+    var cloudBtn = (XY.account && XY.account.signedIn && XY.account.signedIn()) ? ['退出登录', 'cloudLogout', 0] : ['用 Google 登录', 'cloudLogin', 1];
     /* 洞府副本 / Boss 战 / 反派模式 / 排行榜（原「出征」组）已搬到「出发」页（depart.js）：这里只剩修行 + 杂务 */
     /* 第三项：0 淡赭墨条 · 1 浓墨条 · 2 朱红浓条 · 3 淡朱墨条 · 9 朱砂细边印（危险） */
     return [
       { name: '修行', col: '#b8322a', items: [['卡牌组牌', 'menuDeck', 1], ['灵石商店', 'menuShop', 0], ['图鉴', 'menuDex', 0], ['解锁皮肤', 'menuUnlock', 0], [nx ? '自建角色 ' + nx + '/' + XY.xchar.MAX : '自建角色', 'xchar', 0]] },
-      { name: '杂务', col: '#7a4a32', items: [['导入玩法', 'menuMods', 0], ['玩法速览', 'hubHow', 0], ['新手教程', 'menuTutorial', 0], ['引路码', 'refOpen', 3], ['版本：' + XY.version.name() + ' ⇄', 'toggleVer', 1], ['重置存档', 'menuReset', 9]] }
+      { name: '杂务', col: '#7a4a32', items: [cloudBtn, ['导入玩法', 'menuMods', 0], ['玩法速览', 'hubHow', 0], ['新手教程', 'menuTutorial', 0], ['引路码', 'refOpen', 3], (XY.version && XY.version.showToggle && XY.version.showToggle() ? ['版本：' + XY.version.name() + ' ⇄', 'toggleVer', 1] : null), ['重置存档', 'menuReset', 9]].filter(function (it) { return it; }) }
     ];
   }
   var RGB = ['150,108,62', '58,50,38', '184,50,42', '168,70,52'], YJ = [0, 3, 1, 4, 2], XJ = [0, 6, 2, 8, 4];
@@ -21820,7 +21966,9 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
       });
     }
     var mm = a.menuMsg; if (mm && a.rt < mm.until) { var vm = VU.msg; VU.msg = { text: mm.text, bad: !!mm.bad, until: mm.until }; VU.toast(c, st, a, ch - 40); VU.msg = vm; }
+    if (XY.account && XY.account.paintHub) XY.account.paintHub(c, st);
     if (HUB.how) drawHow(c, st);
+    if (XY.account && XY.account.paintModal) XY.account.paintModal(c, st, a);
     st.end();
   };
   function drawHow(c, st) {
@@ -22059,8 +22207,13 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
     }
     if (id === '_q') { c.globalAlpha = 0.7; ring(true, 'rgba(58,50,38,0.3)'); kt(c, '？', cx, cy, r * 0.9, 'rgba(109,100,85,0.6)', 'center'); c.restore(); hit('lockedSlot'); return; }
     if (id === null) { ring(true, on ? RED : 'rgba(58,50,38,0.55)', on ? 2 : 1.5); kt(c, '不带', cx, cy, Math.min(15, r * 0.62), on ? RED : INK, 'center', d - 6); label('独行', on ? RED : SOFT, on); if (on) onMark(); c.restore(); hit('carryPick', { id: null }); return; }
-    if (tl.xc && !tl.rec) { ring(true, 'rgba(58,50,38,0.5)'); kt(c, '＋', cx, cy, r * 0.95, RED, 'center'); label('自建', INK); c.restore(); hit('xchar'); return; }
-    var def = XY.SP_BY[id], owned = tl.xc ? true : S.spOwned(id), lv = tl.xc ? XC.LV : S.spLevel(id);
+    if (tl.xc && !tl.rec) {
+      var createOpen = !S.xcharOpen || S.xcharOpen();
+      ring(true, 'rgba(58,50,38,0.5)');
+      if (!createOpen) { kt(c, '锁', cx, cy - 1, Math.min(18, r * 0.7), RED, 'center'); label('通关解锁', SOFT); c.restore(); hit('xcharLocked'); return; }
+      kt(c, '＋', cx, cy, r * 0.95, RED, 'center'); label('自建', INK); c.restore(); hit('xchar'); return;
+    }
+    var def = XY.SP_BY[id], xcLock = !!(tl.xc && tl.rec && S.xcharOpen && !S.xcharOpen()), owned = xcLock ? false : (tl.xc ? true : S.spOwned(id)), lv = tl.xc ? XC.LV : S.spLevel(id);
     if (!owned) { c.globalAlpha = 0.5; if ('filter' in c) c.filter = 'grayscale(1)'; }
     c.save(); c.fillStyle = 'rgba(58,50,38,0.14)'; c.beginPath(); c.arc(cx + 1, cy + 2, r + 1, 0, PI2); c.fill(); c.restore();
     var usedX = !tl.xc && xDisc(c, id, cx, cy, r, false);
@@ -22068,11 +22221,13 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
     else if (owned) { var _fr = XY.VD && XY.VD.activeFrame && XY.VD.activeFrame(); if (_fr) XY.VD.drawFrame(c, cx, cy, r, _fr); }
     if ('filter' in c) c.filter = 'none';
     c.globalAlpha = 1;
-    if (on) onMark();
+    if (!owned) { var lk = Math.max(18, Math.round(d * 0.46)); VU.drawSeal(c, cx + r * 0.42, cy - r * 0.55, lk, lk, '锁', { style: 'solid', col: RED, sz: Math.round(lk * 0.62), rot: -0.06, stack: false }); }
+    if (on && owned) onMark();
     var nm = !tl.xc && stageName(id), nmH = Math.min(nh * 1.05, 17);
     if (nm && nm.img) { var nw = nm.w * nmH / nm.h, k2 = Math.min(1, (w - 10) / nw); c.save(); c.globalAlpha = owned ? (on ? 1 : 0.9) : 0.4; c.drawImage(nm.img, cx - nw * k2 / 2, ny - nmH * k2 / 2, nw * k2, nmH * k2); c.restore(); }
     else label(tl.xc ? (tl.rec && tl.rec.name) || '自建' : def.name, owned ? INK : 'rgba(58,50,38,0.5)');
     c.restore();
+    if (!owned && tl.xc) { hit('xcharLocked'); return; }
     hit('carryPick', { id: id });
     if (hv) out.hover = id;
   }
@@ -22145,7 +22300,10 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
 
   function carryInfo(a, out) {
     var cur = S.carryId(), sd = out.hover && XY.SP_BY[out.hover];
-    if (sd) return sd.name + '（' + sd.handle + '）· ' + sd.role + ' · 大招 ' + sd.ult;
+    if (sd) {
+      if (!S.spOwned(out.hover)) return sd.name + ' · 未解锁 · 集齐 ' + XY.SP_LV_AT[0] + ' 张角色卡（关卡掉落或灵石商店）';
+      return sd.name + '（' + sd.handle + '）· ' + sd.role + ' · 大招 ' + sd.ult;
+    }
     if (cur && XY.SP_BY[cur]) { var t = XY.synText(cur); return XY.SP_BY[cur].name + ' Lv' + S.spLevel(cur) + ' · ' + XY.SP_BY[cur].role + (t ? ' · ' + t : ''); }
     return '本关：不带常驻角色';
   }
@@ -22158,6 +22316,297 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
     }
     return out;
   }
+
+  /* 十连浮层：竖版水墨卡。约 7 秒依次翻开；手机一次只放大一张，可左右滑，翻完再给总览。
+   * 结果在翻牌前已经写入存档。刷新不重播，直接看总览。 */
+  var GACHA_INTRO = 0.5, GACHA_STEP = 0.68, GACHA_FLIP = 0.5;
+  function gachaHash(n) { var s = Math.sin(n * 12.9898) * 43758.5453; return s - Math.floor(s); }
+  function gachaEase(p) { p = Math.max(0, Math.min(1, p)); return p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2; }
+  function gachaName(id) { return (XY.SP_BY[id] && XY.SP_BY[id].name) || id; }
+  function tornPath(c, x, y, w, h, seed) {
+    var n = 12, i, p, jx, jy;
+    c.beginPath();
+    for (i = 0; i <= n; i++) {
+      p = i / n; jy = (gachaHash(seed + i * 3) - 0.5) * 7;
+      if (!i) c.moveTo(x + w * p, y + jy * 0.35);
+      else c.lineTo(x + w * p, y + (i === n ? 0 : jy));
+    }
+    for (i = 1; i <= n; i++) {
+      p = i / n; jx = (gachaHash(seed + 50 + i * 3) - 0.5) * 7;
+      c.lineTo(x + w + (i === n ? 0 : jx), y + h * p);
+    }
+    for (i = n - 1; i >= 0; i--) {
+      p = i / n; jy = (gachaHash(seed + 90 + i * 3) - 0.5) * 7;
+      c.lineTo(x + w * p, y + h + (i ? jy : 0));
+    }
+    for (i = n - 1; i >= 1; i--) {
+      p = i / n; jx = (gachaHash(seed + 130 + i * 3) - 0.5) * 7;
+      c.lineTo(x + jx, y + h * p);
+    }
+    c.closePath();
+  }
+  function gachaPaper(c, x, y, w, h, seed) {
+    var i, grd;
+    c.save();
+    c.fillStyle = 'rgba(58,50,38,0.13)';
+    tornPath(c, x + 4, y + 6, w, h, seed + 2); c.fill();
+    tornPath(c, x, y, w, h, seed);
+    grd = c.createLinearGradient(x, y, x + w * 0.15, y + h);
+    grd.addColorStop(0, '#fffdf8'); grd.addColorStop(0.5, '#f7efdc'); grd.addColorStop(1, '#efe1c4');
+    c.fillStyle = grd; c.fill();
+    c.save();
+    tornPath(c, x, y, w, h, seed); c.clip();
+    c.strokeStyle = 'rgba(70,54,32,0.2)'; c.lineWidth = 1.2; c.lineCap = 'round';
+    for (i = 0; i < 5; i++) {
+      var x1 = x + w * (0.15 + 0.7 * gachaHash(seed + i * 7));
+      var y1 = y + h * (0.12 + 0.72 * gachaHash(seed + i * 7 + 2));
+      var len = 16 + 36 * gachaHash(seed + i * 7 + 4);
+      var ang = (gachaHash(seed + i * 7 + 6) - 0.5) * 2.4;
+      c.beginPath();
+      c.moveTo(x1, y1);
+      c.lineTo(x1 + Math.cos(ang) * len, y1 + Math.sin(ang) * len);
+      c.stroke();
+    }
+    if (VU.washE) {
+      VU.washE(c, x + w * 0.22, y + h * 0.16, w * 0.42, h * 0.16, '110,86,48', 0.07);
+      VU.washE(c, x + w * 0.78, y + h * 0.78, w * 0.36, h * 0.18, '150,48,36', 0.05);
+    }
+    c.restore();
+    c.strokeStyle = 'rgba(36,28,22,0.9)';
+    c.lineWidth = Math.max(1.8, Math.min(w, h) * 0.011);
+    c.lineJoin = 'round';
+    tornPath(c, x, y, w, h, seed); c.stroke();
+    c.globalAlpha = 0.32; c.lineWidth = Math.max(0.9, Math.min(w, h) * 0.005);
+    tornPath(c, x + 3.5, y + 3.5, w - 7, h - 7, seed + 6); c.stroke();
+    c.restore();
+  }
+  XY.gacha10.CARD_RATIO = 0.66;
+  XY.gacha10.cardSize = function (maxW, maxH) {
+    var ratio = XY.gacha10.CARD_RATIO, w = Math.max(1, maxW), h = w / ratio;
+    if (h > maxH) { h = Math.max(1, maxH); w = h * ratio; }
+    return { w: w, h: h };
+  };
+  XY.gacha10.portraitBox = function (iw, ih, x, y, w, h) {
+    iw = Math.max(1, iw); ih = Math.max(1, ih);
+    var s = Math.min(w / iw, h / ih), dw = iw * s, dh = ih * s;
+    return { x: x + (w - dw) / 2, y: y + (h - dh) / 2, dw: dw, dh: dh };
+  };
+  XY.gacha10.flipScale = function () { return 1; };
+  function gachaPortraitFit(c, id, x, y, w, h) {
+    var im = (XY.bgArt && XY.bgArt(id)) || xAv(id);
+    c.save();
+    c.beginPath(); c.rect(x, y, w, h); c.clip();
+    c.fillStyle = '#f4ead4'; c.fillRect(x, y, w, h);
+    if (im && (im.naturalWidth || im.width)) {
+      var iw = im.naturalWidth || im.width, ih = im.naturalHeight || im.height;
+      var box = XY.gacha10.portraitBox(iw, ih, x, y, w, h);
+      XY.gacha10.lastPortrait = { id: id, iw: iw, ih: ih, dw: box.dw, dh: box.dh };
+      c.drawImage(im, box.x, box.y, box.dw, box.dh);
+    } else {
+      c.fillStyle = '#241c16'; c.textAlign = 'center'; c.textBaseline = 'middle';
+      c.font = 'bold ' + Math.round(Math.min(w, h) * 0.28) + 'px ' + KAI;
+      c.fillText(gachaName(id).charAt(0), x + w / 2, y + h / 2);
+    }
+    c.restore();
+  }
+  function inkBloom(c, x, y, w, h, p) {
+    var a;
+    if (!VU.washE || p <= 0.02 || p >= 0.98) return;
+    a = Math.sin(Math.max(0, Math.min(1, p)) * Math.PI);
+    VU.washE(c, x + w * 0.5, y + h * 0.46, w * (0.25 + 0.85 * p), h * (0.16 + 0.5 * p), '42,34,26', 0.26 * a);
+    VU.washE(c, x + w * 0.48, y + h * 0.4, w * (0.12 + 0.4 * p), h * (0.08 + 0.28 * p), '168,42,32', 0.34 * a);
+  }
+  function goldBrush(c, x, y, w, h, p, seed) {
+    var k, i, y0, len, a;
+    if (p < 0.48) return;
+    k = Math.min(1, (p - 0.48) / 0.35);
+    a = 0.8 * (k < 0.75 ? 1 : Math.max(0, 1 - (k - 0.75) / 0.25));
+    if (a <= 0.02) return;
+    c.save();
+    c.strokeStyle = '#7a5a22'; c.lineCap = 'round'; c.globalAlpha = a;
+    for (i = 0; i < 3; i++) {
+      y0 = y + h * (0.28 + i * 0.16);
+      len = w * (0.42 + 0.28 * gachaHash(seed + i)) * k;
+      c.lineWidth = 2.4 - i * 0.45;
+      c.beginPath();
+      c.moveTo(x + w * 0.14, y0);
+      c.quadraticCurveTo(x + w * 0.38, y0 - 8 + i * 3, x + w * 0.14 + len, y0 + 1.5);
+      c.stroke();
+      c.globalAlpha = a * 0.4;
+      c.beginPath();
+      c.moveTo(x + w * 0.14 + len * 0.72, y0 - 1);
+      c.lineTo(x + w * 0.14 + len * 0.72 + 14 * k, y0 + 1);
+      c.stroke();
+      c.globalAlpha = a;
+    }
+    c.restore();
+  }
+  function drawBack(c, x, y, w, h, seed) {
+    var ss, i, cx, cy, rx;
+    gachaPaper(c, x, y, w, h, seed);
+    c.save();
+    c.strokeStyle = 'rgba(36,28,22,0.28)'; c.lineWidth = 1.3;
+    for (i = 0; i < 4; i++) {
+      cx = x + w * (0.28 + 0.44 * gachaHash(seed + i));
+      cy = y + h * (0.18 + 0.5 * gachaHash(seed + 15 + i));
+      rx = Math.min(w, h) * (0.08 + 0.06 * gachaHash(seed + 30 + i));
+      c.beginPath(); c.ellipse(cx, cy, rx, rx * 0.66, gachaHash(seed + i), 0, Math.PI * 2); c.stroke();
+    }
+    c.restore();
+    ss = Math.min(w, h) * 0.28;
+    VU.drawSeal(c, x + (w - ss) / 2, y + h * 0.34, ss, ss, '封', { style: 'solid', col: RED, sz: Math.round(ss * 0.5), rot: -0.05, stack: false, seed: 40 + seed });
+    kt(c, '天机', x + w / 2, y + h * 0.74, Math.max(18, Math.min(32, w * 0.13)), '#2b1c08', 'center', w - 24);
+  }
+  function drawFront(c, r, x, y, w, h, seed, sealP) {
+    var subY = y + h - Math.max(48, Math.min(60, h * 0.15));
+    var nameY = subY - Math.max(18, Math.min(26, h * 0.06));
+    var picH = Math.max(24, nameY - y - 28);
+    var ms = Math.round(Math.max(34, Math.min(w * 0.3, h * 0.16, 62)));
+    var drop = sealP >= 1 ? 0 : (1 - gachaEase(Math.max(0, (sealP - 0.15) / 0.7)));
+    var sy = y + 10 - drop * Math.min(56, h * 0.1);
+    gachaPaper(c, x, y, w, h, seed);
+    gachaPortraitFit(c, r.id, x + 12, y + 12, w - 24, picH);
+    if (r.kind === 'unlock') goldBrush(c, x, y, w, h, sealP, seed);
+    VU.drawSeal(c, x + w - ms - 12, sy, ms, ms, r.kind === 'unlock' ? '得' : '复', { style: 'solid', col: r.kind === 'unlock' ? RED : '#5a5146', sz: Math.round(ms * 0.56), rot: -0.07 - drop * 0.25, stack: false, seed: 80 + seed });
+    kt(c, gachaName(r.id), x + w / 2, nameY, Math.max(16, Math.min(28, w * 0.14)), '#2b1c08', 'center', w - 18);
+    kt(c, r.text || '', x + w / 2, subY, Math.max(12, Math.min(16, w * 0.075)), r.kind === 'unlock' ? RED : SOFT, 'center', w - 16, false);
+  }
+  function flipCard(c, r, x, y, w, h, seed, p) {
+    p = p <= 0 ? 0 : (p >= 1 ? 1 : p);
+    var front = p >= 0.5;
+    if (!front) drawBack(c, x, y, w, h, seed);
+    else drawFront(c, r, x, y, w, h, seed, p >= 1 ? 1 : (p - 0.5) / 0.5);
+    XY.gacha10.paintFlipFx(c, x, y, w, h, p);
+  }
+  XY.gacha10.paintFlipFx = function (c, x, y, w, h, p) {
+    if (p > 0.08 && p < 0.92) inkBloom(c, x, y, w, h, p);
+  }
+  XY.gacha10.timing = { intro: GACHA_INTRO, step: GACHA_STEP, flip: GACHA_FLIP, total: GACHA_INTRO + 10 * GACHA_STEP };
+  XY.gacha10.cardAt = function (elapsed, i) {
+    var start = GACHA_INTRO + i * GACHA_STEP;
+    if (elapsed < start) return 0;
+    return Math.min(1, (elapsed - start) / GACHA_FLIP);
+  };
+  XY.gacha10.focusOf = function (elapsed) {
+    if (elapsed <= GACHA_INTRO) return 0;
+    return Math.max(0, Math.min(9, Math.floor((elapsed - GACHA_INTRO) / GACHA_STEP)));
+  };
+  if (!XY.gacha10._swipe) {
+    XY.gacha10._swipe = true;
+    var gDown = null;
+    window.addEventListener('pointerdown', function (e) {
+      if (!XY.gacha10.blocking || !XY.gacha10.blocking()) return;
+      gDown = { x: e.clientX, y: e.clientY };
+    }, true);
+    window.addEventListener('pointerup', function (e) {
+      if (!gDown) return;
+      var dx = e.clientX - gDown.x, dy = e.clientY - gDown.y;
+      gDown = null;
+      if (Math.abs(dx) < 42 || Math.abs(dx) < Math.abs(dy) * 1.15) return;
+      if (XY.gacha10.nudge) XY.gacha10.nudge(dx < 0 ? 1 : -1);
+    }, true);
+  }
+  XY.gacha10.paint = function (c, st, a) {
+    var v = XY.gacha10.view(a); if (!v || !v.rec) return;
+    var cw = st.cw, ch = st.ch, land = cw >= 780 && cw > ch && ch >= 520, rec = v.rec, rows = rec.rows || [];
+    var elapsed = typeof XY.gacha10.freeze === 'number' ? XY.gacha10.freeze : Math.max(0, (a.rt || 0) - (v.t0 || 0));
+    var nu = 0, nd = 0, i;
+    rows.forEach(function (r) { if (XY.bgArt) { try { XY.bgArt(r.id); } catch (e) {} } xAv(r.id); if (r.kind === 'unlock') nu++; else nd++; });
+    if (v.phase !== 'result' && !v.hold && XY.gacha10.freeze == null && elapsed >= XY.gacha10.timing.total) v.phase = 'result';
+    if (VU.paperBg) VU.paperBg(c, { cw: cw, ch: ch }, { rgb: '201,162,74', rgb2: '184,50,42', seed: 21 });
+    else { c.fillStyle = '#f6efe0'; c.fillRect(0, 0, cw, ch); }
+    VU.seal(c, 14, 10, land ? 46 : 40, land ? 46 : 40, '抽', RED, land ? 24 : 20);
+    var stage = v.phase !== 'result';
+    var focus = v.hold && v.focus != null ? v.focus : XY.gacha10.focusOf(elapsed);
+    if (!v.hold) v.focus = focus;
+    kt(c, stage ? '天机十连' : '十连结果', 70, land ? 26 : 24, land ? 30 : 24, '#2b1c08', 'left', cw - 160);
+    kt(c, stage ? ('第 ' + (focus + 1) + ' / ' + rows.length + ' 张 · 已写入存档') : ('解锁 ' + nu + ' 人 · 重复 ' + nd + ' 张 · 只此一次'), 70, land ? 52 : 46, land ? 14 : 12, SOFT, 'left', cw - 90, false);
+    st.hit(0, 0, cw, ch, 'gachaHold');
+    function skipBtn(x, y, w, label) { st.btn(x, y, w, 48, label, 'gachaSkip', { sz: land ? 20 : 18, rgb: '58,50,38' }); }
+    function ackBtn(x, y, w) { st.btn(x, y, w, 48, '收下', 'gachaAck', { pri: true, col: RED, sz: land ? 22 : 18 }); }
+    function arrow(x, y, label, dir, off) { st.btn(x, y, 52, 48, label, dir < 0 ? 'gachaPrev' : 'gachaNext', { off: off, sz: 26 }); }
+    function layCard(x, y, cw0, ch0) {
+      var b = XY.gacha10.cardSize(cw0, ch0);
+      return { x: Math.round(x + (cw0 - b.w) / 2), y: Math.round(y + (ch0 - b.h) / 2), w: b.w, h: b.h };
+    }
+    if (!land && stage) {
+      var maxW = Math.min(cw - 96, 440), maxH = Math.max(180, ch - 188);
+      var b = XY.gacha10.cardSize(maxW, maxH), by = 72;
+      if (by + b.h > ch - 78) b = XY.gacha10.cardSize(maxW, Math.max(140, ch - 78 - by));
+      var bx = Math.round((cw - b.w) / 2);
+      var p = v.hold ? 1 : XY.gacha10.cardAt(elapsed, focus);
+      var row = rows[focus] || rows[0];
+      if (row) flipCard(c, row, bx, by, b.w, b.h, 11 + focus * 17, p);
+      var dotsY = by + b.h + 16;
+      for (i = 0; i < rows.length; i++) {
+        c.beginPath();
+        c.arc(cw / 2 + (i - (rows.length - 1) / 2) * 16, dotsY, i === focus ? 4.5 : 3, 0, Math.PI * 2);
+        c.fillStyle = i === focus ? RED : 'rgba(58,50,38,0.35)';
+        c.fill();
+      }
+      var foot = ch - 16 - 48;
+      arrow(10, foot, '‹', -1, focus <= 0);
+      arrow(cw - 62, foot, '›', 1, focus >= rows.length - 1);
+      skipBtn((cw - Math.min(168, cw - 150)) / 2, foot, Math.min(168, cw - 150), v.hold ? '看总览' : '跳过');
+      return;
+    }
+    if (!land && !stage) {
+      var gap = 10, pad = 12, foot = ch - 12 - 48;
+      var hintLines = ch < 480 ? 1 : 2, hintLh = 15;
+      var hintBase = foot - 10 - hintLines * hintLh;
+      var header = 64, cardLimit = hintBase - 26;
+      var availH = Math.max(72, cardLimit - header);
+      var nRows = (availH - gap) / 2 >= 168 ? 2 : 1;
+      var per = nRows * 2, pages = Math.max(1, Math.ceil(rows.length / per));
+      v.pages = pages;
+      var page = Math.max(0, Math.min(pages - 1, v.page || 0));
+      v.page = page;
+      var slice = rows.slice(page * per, page * per + per);
+      var shown = Math.max(1, Math.ceil(slice.length / 2));
+      var cardW = Math.floor((cw - pad * 2 - gap) / 2);
+      var cardH = Math.min(Math.floor((availH - gap * (shown - 1)) / shown), Math.floor(cardW * 1.55));
+      var gridW = 2 * cardW + gap, gridH = shown * cardH + gap * (shown - 1);
+      var x0 = Math.round((cw - gridW) / 2);
+      var y0 = header + Math.max(0, Math.floor((cardLimit - header - gridH) / 2));
+      slice.forEach(function (r, k) {
+        var col = k % 2, rr = Math.floor(k / 2);
+        var x = x0 + col * (cardW + gap), y = y0 + rr * (cardH + gap);
+        if (slice.length % 2 === 1 && k === slice.length - 1) x = Math.round((cw - cardW) / 2);
+        var laid = layCard(x, y, cardW, cardH);
+        flipCard(c, r, laid.x, laid.y, laid.w, laid.h, 30 + (page * per + k) * 13, 1);
+      });
+      c.save();
+      c.fillStyle = '#f6efe0';
+      c.fillRect(0, hintBase - 14, cw, ch - (hintBase - 14));
+      c.restore();
+      if (VU.wrap) VU.wrap(c, '重复卡计入角色卡，凑够 2 / 5 / 10 / 20 / 40 张升级。没出现的仍然锁定。左右滑看其余。', pad, hintBase, cw - pad * 2, hintLh, 13, SOFT, false, hintLines);
+      kt(c, (page + 1) + ' / ' + pages, cw - 18, 28, 13, SOFT, 'right', 70, false);
+      arrow(10, foot, '‹', -1, page <= 0);
+      arrow(cw - 62, foot, '›', 1, page >= pages - 1);
+      ackBtn((cw - Math.min(180, cw - 150)) / 2, foot, Math.min(180, cw - 150));
+      return;
+    }
+    var headerD = 74, footD = ch - 12 - 48, gapD = 12, padD = 28;
+    var colsD = 5, rowsD = 2;
+    var availW = cw - padD * 2, availH = Math.max(120, footD - 78 - headerD);
+    var cardWd = Math.floor((availW - gapD * (colsD - 1)) / colsD);
+    var cardHd = Math.floor((availH - gapD) / rowsD);
+    var gridWd = colsD * cardWd + gapD * (colsD - 1);
+    var x0d = Math.round((cw - gridWd) / 2), y0d = headerD;
+    rows.forEach(function (r, idx) {
+      var col = idx % colsD, rr = Math.floor(idx / colsD);
+      var x = x0d + col * (cardWd + gapD), y = y0d + rr * (cardHd + gapD);
+      var laidD = layCard(x, y, cardWd, cardHd);
+      var p = stage ? XY.gacha10.cardAt(elapsed, idx) : 1;
+      flipCard(c, r, laidD.x, laidD.y, laidD.w, laidD.h, 21 + idx * 13, p);
+    });
+    var hint = stage ? '依次翻开。跳过直接看总览，不会重抽。' : ('重复卡计入角色卡，凑够 2 / 5 / 10 / 20 / 40 张升到 Lv1~5。没出现的仍然锁定。');
+    if (VU.wrap) VU.wrap(c, hint, padD, footD - 32, cw - padD * 2, 16, 13, SOFT, false, 1);
+    var bwd = Math.min(240, cw * 0.2);
+    if (stage) skipBtn((cw - bwd) / 2, footD, bwd, '跳过');
+    else ackBtn((cw - bwd) / 2, footD, bwd);
+  };
+
 
   DP.draw = function (c, G, a) {
     var st = VU.begin(c, a), cw = st.cw, ch = st.ch, land = (cw >= 600 && cw > ch * 1.1) || (cw >= 480 && cw > ch * 1.5), tiny = land && ch <= 360, cmp = tiny || (!land && ch < 720);
@@ -22181,7 +22630,7 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
       kt(c, '携带常驻', 14, stripY + 9, 13, RED, 'left', 80);
       out = carryStrip(c, st, a, tl, 12, stripY + labH, cw - 24, cols, cellW, cellH, d, 0);
       geo.tiles = nt; geo.strip = { y: stripY, h: labH + cellH };
-      var note = XY.TEST_BUILD ? '测试版：' + XY.SPECIALS.length + ' 位全可选 · 不写存档' : '标准版：Phyrex 开局可用 · 其他靠角色卡';
+      var note = XY.TEST_BUILD ? '测试版：' + XY.SPECIALS.length + ' 位全可选 · 不写存档' : '没抽到的要集齐 ' + XY.SP_LV_AT[0] + ' 张角色卡';
       c.font = '12px ' + KAI; var nw0 = Math.min(cw * 0.3, c.measureText(note).width);
       kt(c, carryInfo(a, out), 84, stripY + 9, 12, INK, 'left', cw - 84 - nw0 - 30, false);
       kt(c, note, cw - 14, stripY + 9, 11.5, SOFT, 'right', cw * 0.3, false);
@@ -22207,7 +22656,7 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
     } else {
       // —— 竖屏：自下而上排：底栏小入口 → 头像 → 出发 → 反派 / 重开；自上而下：竖卡 → 说明；中间剩下的放立绘
       var mg = 12, linkY = ch - 6 - 44;
-      var lb = [['排行榜', 'menuBoard'], ['灵石商店', 'menuShop'], [XY.version.name() + ' ⇄', 'toggleVer']], lw3 = (cw - 2 * mg - 12) / 3;
+      var lb = [['排行榜', 'menuBoard'], ['灵石商店', 'menuShop']]; if (XY.version && XY.version.showToggle && XY.version.showToggle()) lb.push([XY.version.name() + ' ⇄', 'toggleVer']); var lw3 = (cw - 2 * mg - 6 * (lb.length - 1)) / lb.length;
       VU.washE(c, cw / 2, linkY + 22, cw * 0.6, 34, '250,244,228', 0.8);
       lb.forEach(function (b, k) { weak(mg + k * (lw3 + 6), linkY, lw3, b[0], b[1]); });
       tl = tiles(a, cmp); nt = tl.length;
@@ -22219,7 +22668,7 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
       kt(c, '携带常驻', mg + 2, stripYp + 10, 13, RED, 'left', 80);
       out = carryStrip(c, st, a, tl, mg, stripYp + labHp, cw - 2 * mg, cols, cellW, cellH, d, rg);
       kt(c, carryInfo(a, out), mg + 2, stripYp + 27, 11.5, INK, 'left', cw - 2 * mg - 4, false);
-      kt(c, XY.TEST_BUILD ? '测试版 · 全可选' : '标准版', cw - mg - 2, stripYp + 10, 11, SOFT, 'right', 110, false);
+      kt(c, XY.TEST_BUILD ? '测试版 · 全可选' : '集齐 ' + XY.SP_LV_AT[0] + ' 张解锁', cw - mg - 2, stripYp + 10, 11, SOFT, 'right', 120, false);
       geo.tiles = nt; geo.strip = { y: stripYp, h: stripH };
       gh = Math.round(Math.max(54, Math.min(84, 62 * s))); gw = Math.min(cw - 2 * mg - 20, Math.round(330 * s)); gx = (cw - gw) / 2; gy = stripYp - 14 - gh;
       var sy3 = gy - 8 - 44;
@@ -22243,10 +22692,12 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
     var moreW = 58, moreX = cw - 10 - moreW;
     sbtn(moreX, 6, moreW, 44, '更多', 'menuHub', { pri: true, col: RED, sz: 17, stack: false });
     geo.more = { x: moreX, y: 6, w: moreW, h: 44 };
+    var cloudW = (XY.account && XY.account.barWidth) ? XY.account.barWidth(cw) : 0;
     var hx = moreX - 6;
+    if (cloudW >= 132 && XY.account && XY.account.paintBar) { hx -= cloudW; XY.account.paintBar(c, st, hx, 6, cloudW, 44); hx -= 4; }
     if (land) {
       VU.washE(c, cw - 170, 28, 220, 30, '250,244,228', 0.85);
-      var hb = [['灵石商店', 'menuShop', cw < 700 ? 82 : 92], ['排行榜', 'menuBoard', cw < 700 ? 70 : 80], [XY.version.name() + ' ⇄', 'toggleVer', cw < 700 ? 92 : 100]];
+      var hb = [['灵石商店', 'menuShop', cw < 700 ? 82 : 92], ['排行榜', 'menuBoard', cw < 700 ? 70 : 80]]; if (XY.version && XY.version.showToggle && XY.version.showToggle()) hb.push([XY.version.name() + ' ⇄', 'toggleVer', cw < 700 ? 92 : 100]);
       hb.forEach(function (b) { hx -= b[2]; weak(hx, 6, b[2], b[0], b[1]); hx -= 4; });
     }
     var tw0 = hx - x0 - 8;
@@ -22254,8 +22705,10 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
     taper(c, x0 - 2, 41, x0 + Math.min(Math.max(40, tw0), 74), 2.4, 0.5);
     if (tw0 > 120) kt(c, '灵石 ' + S.data.lingshi + (XY.TEST_BUILD ? ' · 测试版' : ''), x0 + 74, 31, 12, '#8a5a12', 'left', tw0 - 78, false);
 
+    if (!(XY.account && XY.account.holdGacha && XY.account.holdGacha()) && XY.gacha10 && XY.gacha10.paint) XY.gacha10.paint(c, st, a);
     geo.jt = '取经之旅 · 第 ' + a.levelId + ' 关：' + XY.journey.status(a.levelId).text;
     var mm = a.menuMsg; if (mm && a.rt < mm.until) { var vm = VU.msg; VU.msg = { text: mm.text, bad: !!mm.bad, until: mm.until }; VU.toast(c, st, a, land ? top : top); VU.msg = vm; }
+    if (XY.account && XY.account.paintModal) XY.account.paintModal(c, st, a);
     st.end();
   };
   var oldDraw = XY.screens.draw;
@@ -22537,7 +22990,7 @@ if(leaf===0){K.t(XY.fmtTime(G.t),x+4,y+9,32,T.ink,'left',true);y+=47;para('等�
 else if(leaf===1){[G.quests.main].concat(G.quests.sides).forEach(function(q,i){var rw=q.def.reward||{},r=q.done?[(rw.card?'法宝':''),(rw.lingshi?'灵石 +'+rw.lingshi:''),(rw.shard?'碎片 +'+rw.shard:'')].filter(Boolean).join(' · '):'未完成';para((i?'支线':'主线')+' · '+q.def.short+'　'+(q.done?'✔ ':'✘ ')+r,q.done?'#2f663a':T.inkSoft);});}
 else if(leaf===2){para('法宝 '+(G.cardLog||[]).length+' 张 · 灵石 +'+XY.fmtNum((G.run&&G.run.clearGain)||0),'#8a5a12');var sp=G.spGot||[];if(sp.length){var per=(!port&&H<450)?2:4,from=P.pager(sp.length,per,'end-drops',x,H-174,w),rh=(!port&&H<450)?36:46;sp.slice(from,from+per).forEach(function(g,i){var d=XY.SP_BY[g.id],cy=y+i*rh+15;XY.hud2.face(c,{id:g.id,def:d},x+20,cy,15,a.rt);K.tf(d.name+' ×1',x+47,cy,w-52,14,T.ink,'left',true,11);});}}else{var nu=(rep.newUnlocks||[]).map(function(id){return XY.UNLOCK_BY[id].name;});para(nu.length?'新解锁：'+nu.join('、'):'本局没有新解锁');}
 var jn=G.mod?'非官方玩法包：不发奖励，不记通关，不影响存档':G.dungeon?(win?'洞府副本不计入取经之旅（首通奖励已发）':'副本失败不扣任何东西'):win?(G.levelId<XY.LEVEL_COUNT?'全队成长已存档，第 '+(G.levelId+1)+' 关已解锁':'取经之旅：三关全部走完！成长已存档'):'之前积累保留，再来回到本关开始状态（'+XY.journey.status(G.levelId).text+'）';K.lines(jn,x,H-125,w,12,17,win?'#2f663a':T.inkSoft,3,false);
-var hasNext=win&&!G.dungeon&&!G.mod&&G.levelId<XY.LEVEL_COUNT,A=hasNext?[['下一关','nextLevel',true],['再来 · R','restart'],['首页','home']]:!win?[['再来 · R','restart',true],['换角色','repick'],['首页','home']]:[['再来 · R','restart',true],['首页','home']];if(win&&G.bossOffer&&XY.bossfight&&XY.bossfight.launch)A.splice(hasNext?1:0,0,['Boss 战','bossGo']);var bw=(w-12)/A.length;A.forEach(function(b,i){K.btn(x+i*bw,H-65+[0,4,1,3][i],bw-5,44,b[0],b[1],null,{primary:!!b[2],size:14});});K.msg(x+w,H-9,'right',w);K.btn(port?W-180:24,port?144:H-55,156,44,XY.TEST_BUILD?'测试版 · 切标准版':'标准版 · 切测试版','toggleVer',null,{size:12});P.end(c);};
+var hasNext=win&&!G.dungeon&&!G.mod&&G.levelId<XY.LEVEL_COUNT,A=hasNext?[['下一关','nextLevel',true],['再来 · R','restart'],['首页','home']]:!win?[['再来 · R','restart',true],['换角色','repick'],['首页','home']]:[['再来 · R','restart',true],['首页','home']];if(win&&G.bossOffer&&XY.bossfight&&XY.bossfight.launch)A.splice(hasNext?1:0,0,['Boss 战','bossGo']);var bw=(w-12)/A.length;A.forEach(function(b,i){K.btn(x+i*bw,H-65+[0,4,1,3][i],bw-5,44,b[0],b[1],null,{primary:!!b[2],size:14});});K.msg(x+w,H-9,'right',w);if(XY.version&&XY.version.showToggle&&XY.version.showToggle())K.btn(port?W-180:24,port?144:H-55,156,44,'测试版 · 切标准版','toggleVer',null,{size:12});P.end(c);};
 })();
 /* DOM卷面：不同内容保留真实表单与滚动，但不再套设置App卡壳。 */
 (function(){var st=document.createElement('style');st.id='folio3-dom';st.textContent=`
@@ -22931,8 +23384,9 @@ X.step=function(g,dt){if(!g._simRandom)return step.apply(this,arguments);var sel
     if (XY.audio) { XY.audio.init(); if (XY.audio.bgmStart) XY.audio.bgmStart('play'); } if (XY.sfx) XY.sfx('start');
   }
   function openDeparture() {
-    if (XY.lazy && XY.lazy.on) XY.lazy.enter(function () { app.screen = 'levels'; });
-    else app.screen = 'levels';
+    var go = function () { app.screen = 'levels'; if (XY.gacha10 && XY.gacha10.ensure) XY.gacha10.ensure(); };
+    if (XY.lazy && XY.lazy.on) XY.lazy.enter(go);
+    else go();
   }
   function goHome() { abandon(); app.retStack = []; app.dungeonId = null; app.modId = null; app.villain = false; app.lair = null; fresh(); app.screen = 'start'; if (XY.audio && XY.audio.bgmStart) XY.audio.bgmStart('menu'); }
   function toMenu() { app.dungeonId = null; app.modId = null; app.villain = false; app.lair = null; fresh(); app.screen = (app.retStack && app.retStack.length) ? app.retStack.pop() : 'start'; app.confirm = null; if (XY.audio && XY.audio.bgmStart) XY.audio.bgmStart('menu'); }     // v0.8.7b：返回回到“上一页”（出发页进的洞府阁 / 商店 / 排行榜 / 反派，返回都回出发页；栈空 = 首页）     // 从子界面回主菜单（刷新预览里的皮肤）
@@ -22984,7 +23438,11 @@ X.step=function(g,dt){if(!g._simRandom)return step.apply(this,arguments);var sel
       if (k === 'Enter' || k === 'Space') openDeparture();
       return;
     }
-    if (s === 'levels') { if (k === 'Escape') toMenu(); else if (k === 'Enter') { var dp = XY.depart; if (dp && dp.kind === 'dungeon' && XY.save.dngUnlocked(dp.id)) startGame(null, dp.id); else startGame(app.levelId); } return; }
+    if (s === 'levels') {
+      if (XY.gacha10 && XY.gacha10.ensure && XY.gacha10.ensure().show) { if (k === 'ArrowLeft' || k === 'ArrowRight') { if (XY.gacha10.nudge) XY.gacha10.nudge(k === 'ArrowRight' ? 1 : -1); return; } if (k === 'Escape' || k === 'Enter' || k === 'Space') XY.gacha10.key(); return; }
+      if (k === 'Escape') toMenu(); else if (k === 'Enter') { var dp = XY.depart; if (dp && dp.kind === 'dungeon' && XY.save.dngUnlocked(dp.id)) startGame(null, dp.id); else startGame(app.levelId); }
+      return;
+    }
     if (s === 'villain') { XY.villainUI.key(k, app); return; }
     if (s === 'board') { XY.boardUI.key(k, app); return; }
     if (s === 'hub') { XY.hubUI.key(k, app); return; }
@@ -23217,15 +23675,15 @@ X.step=function(g,dt){if(!g._simRandom)return step.apply(this,arguments);var sel
         case 'guest': XY.guest.summon(G); break;
         case 'helpClose': G.helpClosed = true; app.helpOn = false; break;                 // 点操作说明框：收起（按 H 再打开）
         case 'levelSel': if (XY.save.levelUnlocked(h.n)) app.levelId = h.n; else msg('先通关上一关', true); break;
-        case 'levelGo': startGame(h.n); break;
+        case 'levelGo': if (XY.gacha10 && XY.gacha10.blocking && XY.gacha10.blocking()) break; startGame(h.n); break;
         case 'menuDungeon': app.screen = 'dungeon'; if (XY.villainUI && XY.villainUI.tipDom) XY.villainUI.tipDom('dungeon'); break;
         case 'menuMods': XY.modsUI.open(app.screen); break;                        // v0.8.7 Bot 启动：导入玩法（DOM 浮层）
         case 'bossGo': if (XY.bossfight && XY.bossfight.launch) XY.bossfight.launch(G && G.bossOffer || { kind: 'menu' }); break;
         case 'menuBoss': if (XY.chain09 && !XY.chain09.unlocked('bossfight')) msg('先通关一个洞府副本', true); else if (XY.bossfight && XY.bossfight.open) { if (XY.bossfight.open({ kind: 'menu' }) === false) msg('Boss 战暂时打不开', true); } break;          // v0.8.6 挂点（入口默认隐藏）
         case 'menuVillain': if (XY.chain09 && !XY.chain09.unlocked('villain')) msg('先打赢牛魔王 Boss 战', true); else if (XY.villain && XY.villain.open) XY.villain.open({ kind: 'menu' }); break;
-        case 'dungeonGo': if (XY.save.dngUnlocked(h.id)) startGame(null, h.id); else msg('先通关第 1 关一次', true); break;
+        case 'dungeonGo': if (XY.gacha10 && XY.gacha10.blocking && XY.gacha10.blocking()) break; if (XY.save.dngUnlocked(h.id)) startGame(null, h.id); else msg('先通关第 1 关一次', true); break;
         case 'menuLevels': openDeparture(); break;
-        case 'xchar': XY.xcharUI.open(app.screen); break;                       // v0.8.1：自建角色（DOM 浮层）
+        case 'xchar': if (XY.save.xcharOpen && !XY.save.xcharOpen()) { msg('通关第 1 关后才能自建角色', true); break; } XY.xcharUI.open(app.screen); break;
         case 'menuShop': app.screen = 'shop'; break;
         case 'nextLevel': app.levelId = Math.min(XY.LEVEL_COUNT, G.levelId + 1); app.screen = 'levels'; msg('通关啦！下一关前可以换常驻角色（点下面的角色），选好点「出发！」', false); break;   // v0.5：每次通关后有一次换人的机会
         case 'repick': app.dungeonId = null; app.levelId = G.levelId; app.screen = 'levels'; msg('可以换一位常驻角色再来这一关，选好点「出发！」', false); break;
@@ -23242,6 +23700,12 @@ X.step=function(g,dt){if(!g._simRandom)return step.apply(this,arguments);var sel
         case 'shopBuySol': var ss = XY.shop.buySol(h.t); msg(ss.reason, !ss.ok); break;
         case 'shopRoll': var sr2 = XY.shop.reroll(); msg(sr2.reason, !sr2.ok); break;
         case 'lockedSlot': msg('暂未开放', false); break;
+        case 'xcharLocked': msg('通关第 1 关后才能自建角色。已经建好的角色还在，通关后就能带。', true); break;
+        case 'gachaHold': break;
+        case 'gachaPrev': if (XY.gacha10 && XY.gacha10.nudge) XY.gacha10.nudge(-1); break;
+        case 'gachaNext': if (XY.gacha10 && XY.gacha10.nudge) XY.gacha10.nudge(1); break;
+        case 'gachaSkip': if (XY.gacha10) XY.gacha10.key(); break;
+        case 'gachaAck': if (XY.gacha10) XY.gacha10.ack(); break;
         case 'carryPick': var cp = XY.save.setCarry(h.id); msg(cp.reason, !cp.ok); break;
       }
       return;
@@ -23510,6 +23974,750 @@ window.XY_LAZY_CHUNKS = [{"id": "ui", "src": "chunks/ui-008ff700a700.js", "bytes
     show('正在展开行囊…');
     L.start().then(function () { if (panel) { panel.remove(); panel = null; } next(); }, function (e) { show('行囊载入失败，尚未出发。请检查离线文件后重试。' + e.message, function () { L.enter(next); }); });
   };
+})();
+
+</script>
+
+<script>
+/* ---- js/cloud.js ---- */
+/* Google 登录、云存档、服务端首次十连。
+ * 没登录、没网：继续用本地存档，不挡开局。
+ * 两边都有进度时必须让玩家选，不静默覆盖。
+ * 已登录的十连只走 draw_first_ten。清本地档不能重抽：服务端结果会替换本地那次，并退回已经发出的角色卡。
+ * 没登录才用 XY.gacha10.roll（每个本地存档一次）。登录后断网也不改在本机新抽。
+ * 这里只有可公开的 URL 和 publishable / anon key。 */
+(function () {
+  'use strict';
+  var XY = window.XY;
+  if (!XY || !XY.save || !XY.gacha10) return;
+  var URL = 'https://ftorjdmbbagzwojamtnj.supabase.co';
+  var PUB = 'sb_publishable_oUR3b8V6A69bU1JrmfEAzA_vgXQXMKB';
+  var ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ0b3JqZG1iYmFnendvamFtdG5qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQyNDMyMTksImV4cCI6MjEwOTgxOTIxOX0.zwmP89BMJSJTBwKRuipZOq9Jwz4WAAcFFRGi6TLGdqQ';
+  var NONE = { show: false, fresh: false, rec: null };
+  var session = null, uid = null, profile = null, avatarImg = null;
+  var choice = null, swapNote = null, expectVer = null, reconciled = false, applying = false;
+  var drawDone = false, drawBusy = false, inflight = false, queued = false, timer = null;
+  var authGate = false, real = null, libP = null, lastDraw = null;
+  var stub = { on: false, spec: null, remote: null, drew: false, results: null };
+  var calls = [];
+
+  function toast(text, bad) {
+    var a = window.__xy && window.__xy.app;
+    if (!a) return;
+    a.menuMsg = { text: text, bad: !!bad, until: (a.rt || 0) + 3.4 };
+  }
+  function metaOf(user) {
+    var m = (user && user.user_metadata) || {};
+    return {
+      name: m.full_name || m.name || (user && user.email ? String(user.email).split('@')[0] : '') || '已登录',
+      email: (user && user.email) || '',
+      avatar: m.avatar_url || m.picture || ''
+    };
+  }
+  function setAvatar(url) {
+    avatarImg = null;
+    if (!url) return;
+    var im = new Image();
+    if (/^https?:/i.test(url)) im.crossOrigin = 'anonymous';
+    im.onload = function () { if (im.naturalWidth) avatarImg = im; };
+    im.onerror = function () { avatarImg = null; };
+    im.src = url;
+    if (im.complete && im.naturalWidth) avatarImg = im;
+  }
+  function applyProfile(user, row) {
+    var m = metaOf(user);
+    profile = {
+      name: (row && row.display_name) || m.name,
+      email: m.email,
+      avatar: (row && row.avatar_url) || m.avatar
+    };
+    setAvatar(profile.avatar);
+  }
+  function progress(d) {
+    if (!d || typeof d !== 'object') return false;
+    var st = d.stats || {}, k, n = 0;
+    if ((st.runs | 0) > 0 || (st.wins | 0) > 0 || (st.kills | 0) > 0) return true;
+    if ((d.lingshi | 0) > 0 || (d.shards | 0) > 0) return true;
+    if (d.gacha10 && d.gacha10.pulls && d.gacha10.pulls.length) return true;
+    if (d.tutorial && d.tutorial.done) return true;
+    if (d.deck && d.deck.join && d.deck.join(',') !== 'jingubang,jindouyun,huoyan') return true;
+    for (k in (d.levels || {})) if (d.levels[k] && (d.levels[k].cleared || d.levels[k].best)) return true;
+    for (k in (d.dng || {})) if (d.dng[k] && d.dng[k].cleared) return true;
+    for (k in ((d.sp && d.sp.cards) || {})) if ((d.sp.cards[k] | 0) > 0) return true;
+    for (k in (d.cards || {})) n++;
+    return n > 3;
+  }
+  function sig(d) {
+    d = d || {};
+    return JSON.stringify({
+      runs: d.stats && d.stats.runs, wins: d.stats && d.stats.wins, kills: d.stats && d.stats.kills,
+      lingshi: d.lingshi | 0, gacha: d.gacha10 && d.gacha10.pulls, sp: d.sp && d.sp.cards, levels: d.levels, deck: d.deck
+    });
+  }
+  function clockOf(d) {
+    var when = d && d.updatedAt ? new Date(d.updatedAt) : null;
+    if (!when || isNaN(when.getTime())) return '还没有';
+    return (when.getMonth() + 1) + '月' + when.getDate() + '日 ' + when.getHours() + ':' + (when.getMinutes() < 10 ? '0' : '') + when.getMinutes();
+  }
+  function saveFacts(d) {
+    d = d || {};
+    var st = d.stats || {}, cards = (d.sp && d.sp.cards) || {}, n = 0, k;
+    for (k in cards) if ((cards[k] | 0) > 0) n++;
+    return { runs: st.runs | 0, wins: st.wins | 0, lingshi: d.lingshi | 0, cards: n, time: clockOf(d) };
+  }
+  function kaiFam() { return (XY.menu && XY.menu.KAI) || '"STKaiti","KaiTi","楷体","Noto Serif CJK SC","Source Han Serif SC",serif'; }
+  function kai(c, s, x, y, sz, col, al, maxW) {
+    s = String(s);
+    c.font = 'bold ' + sz + 'px ' + kaiFam();
+    if (maxW) { var w = c.measureText(s).width; if (w > maxW && w > 0) { sz = Math.max(11, sz * maxW / w); c.font = 'bold ' + sz + 'px ' + kaiFam(); } }
+    c.fillStyle = col; c.textAlign = al || 'center'; c.textBaseline = 'middle';
+    c.fillText(s, x, y);
+  }
+  function phrase(c, word, num, cx, y, numSz, maxW) {
+    var fam = kaiFam(), ws = Math.round(numSz * 0.42), gap = Math.round(numSz * 0.28);
+    c.font = 'bold ' + numSz + 'px ' + fam;
+    var nw = c.measureText(String(num)).width;
+    c.font = 'bold ' + ws + 'px ' + fam;
+    var ww = c.measureText(word).width, total = ww + gap + nw, scale = maxW && total > maxW ? maxW / total : 1;
+    var nSz = Math.max(20, numSz * scale), wSz = Math.max(13, ws * scale), g2 = gap * scale;
+    c.font = 'bold ' + nSz + 'px ' + fam; nw = c.measureText(String(num)).width;
+    c.font = 'bold ' + wSz + 'px ' + fam; ww = c.measureText(word).width;
+    var x0 = cx - (ww + g2 + nw) / 2;
+    c.fillStyle = '#6a5340'; c.textAlign = 'left'; c.textBaseline = 'middle';
+    c.font = 'bold ' + wSz + 'px ' + fam; c.fillText(word, x0, y + Math.max(1, nSz * 0.06));
+    c.fillStyle = '#1a120c'; c.font = 'bold ' + nSz + 'px ' + fam; c.fillText(String(num), x0 + ww + g2, y);
+  }
+  function redGo(c, st, x, y, w, h, label, act, ex) {
+    var hv = st.over && st.over(x, y, w, h), oy = hv ? -2 : 0, rr = Math.min(18, h * 0.32), R = XY.R;
+    c.save();
+    c.shadowColor = 'rgba(176,42,28,0.4)'; c.shadowBlur = 16; c.shadowOffsetY = 4;
+    var gr = c.createLinearGradient(0, y, 0, y + h);
+    gr.addColorStop(0, hv ? '#e2553a' : '#d7432a');
+    gr.addColorStop(1, hv ? '#c13620' : '#b3301c');
+    R.rrect(c, x, y + oy, w, h, rr); c.fillStyle = gr; c.fill();
+    c.restore();
+    c.save(); c.lineWidth = 1.6; c.strokeStyle = 'rgba(255,214,150,0.85)';
+    R.rrect(c, x + 3, y + 3 + oy, w - 6, h - 6, Math.max(6, rr - 3)); c.stroke(); c.restore();
+    kai(c, label, x + w / 2, y + h / 2 + oy, Math.min(22, Math.round(h * 0.4)), '#fff8e8', 'center', w - 18);
+    st.hit(x, y, w, h, act, ex);
+  }
+  function payload() {
+    var d;
+    try { d = JSON.parse(JSON.stringify(XY.save.data)); } catch (e) { return null; }
+    if (tooBig(d) && d.boards) d.boards.others = {};
+    if (tooBig(d)) return null;
+    return d;
+  }
+  function tooBig(d) {
+    var s = JSON.stringify(d), n = window.TextEncoder ? new TextEncoder().encode(s).length : s.length;
+    return n > 1000000;
+  }
+  function note(op, extra) { var row = { op: op }; if (extra) for (var k in extra) row[k] = extra[k]; calls.push(row); }
+
+  function sbSelect(table) {
+    if (stub.on) {
+      if (table === 'saves') {
+        note('selectSave');
+        if (stub.spec && stub.spec.failSelect) return Promise.resolve({ data: null, error: { message: 'offline' } });
+        var row = stub.remote ? { data: stub.remote.data, version: stub.remote.version, game_version: stub.remote.game_version || '0.8.7', updated_at: stub.remote.updated_at } : null;
+        return Promise.resolve({ data: row, error: null });
+      }
+      note('selectProfile');
+      var u = stub.spec && stub.spec.user || {};
+      return Promise.resolve({ data: { display_name: u.name || '', avatar_url: u.avatar || '' }, error: null });
+    }
+    var q = table === 'saves' ? 'data, version, game_version, updated_at' : 'display_name, avatar_url, created_at';
+    return real.from(table).select(q).maybeSingle();
+  }
+  function sbSave(data, expected, game) {
+    if (stub.on) {
+      note('save', { expected: expected, runs: data && data.stats && data.stats.runs, lingshi: data && data.lingshi });
+      var cur = stub.remote ? stub.remote.version : 0;
+      if (expected !== cur) {
+        return Promise.resolve({ data: { conflict: true, version: cur, data: stub.remote ? stub.remote.data : null, game_version: game, updated_at: stub.remote && stub.remote.updated_at }, error: null });
+      }
+      var next = cur + 1;
+      stub.remote = { version: next, data: JSON.parse(JSON.stringify(data)), game_version: game, updated_at: new Date().toISOString() };
+      return Promise.resolve({ data: { conflict: false, version: next, data: stub.remote.data, game_version: game, updated_at: stub.remote.updated_at }, error: null });
+    }
+    return real.rpc('save_game', { p_data: data, p_expected_version: expected, p_game_version: game || null });
+  }
+  function sbDraw() {
+    if (stub.on) {
+      note('draw');
+      if (stub.spec && stub.spec.failDraw) return Promise.resolve({ data: null, error: { message: 'offline' } });
+      if (!stub.results) {
+        var pool = (XY.SPECIALS || []).map(function (d) { return d.id; }), i;
+        stub.results = [];
+        for (i = 0; i < 10; i++) stub.results.push(pool[i % pool.length] || 'phyrex');
+      }
+      var already = stub.drew;
+      stub.drew = true;
+      lastDraw = { already_drawn: already, results: stub.results.slice() };
+      return Promise.resolve({ data: lastDraw, error: null });
+    }
+    return real.rpc('draw_first_ten');
+  }
+
+  function adopt(data, version) {
+    if (!data || typeof data !== 'object') return false;
+    applying = true;
+    try {
+      var d = JSON.parse(JSON.stringify(data));
+      d.mode = XY.TEST_BUILD ? 'test' : 'std';
+      window.localStorage.setItem(XY.save.KEY, JSON.stringify(d));
+      XY.save.load();
+      expectVer = version;
+    } catch (e) {
+      toast('云端存档没能读进来，本机档还在', true);
+      applying = false;
+      return false;
+    }
+    applying = false;
+    return true;
+  }
+  function openChoice(kind, remoteData, version, updated) {
+    choice = { kind: kind, remoteData: remoteData, version: version, updated: updated };
+  }
+  function tick() {
+    if (!session || choice || !reconciled || drawDone === true || drawDone === 'err') return;
+    startDraw();
+  }
+  function push(expected, opts) {
+    opts = opts || {};
+    if (applying || !session || choice) return Promise.resolve(false);
+    if (!reconciled && !opts.force) return Promise.resolve(false);
+    if (inflight) { queued = true; return Promise.resolve(false); }
+    var data = payload();
+    if (!data) { toast('存档太大，没有上传。本机档还在', true); return Promise.resolve(false); }
+    var exp = expected != null ? expected : expectVer;
+    if (exp == null) return Promise.resolve(false);
+    inflight = true;
+    return sbSave(data, exp, XY.VERSION).then(function (res) {
+      inflight = false;
+      var body = res && res.data;
+      if (!res || res.error || !body) { toast('云端没保存上，本机档还在', true); return false; }
+      if (body.conflict) {
+        if ((!body.data || !progress(body.data)) && opts.force && !opts.retried && body.version != null) {
+          return push(body.version, { force: true, retried: true });
+        }
+        reconciled = true;
+        openChoice('conflict', body.data, body.version, body.updated_at);
+        toast('云端存档和这台设备对不上，没有覆盖', true);
+        return false;
+      }
+      if (body.version != null) expectVer = body.version;
+      if (queued) { queued = false; return push(); }
+      return true;
+    }, function () {
+      inflight = false;
+      toast('云端没保存上，本机档还在', true);
+      return false;
+    });
+  }
+  function schedule() {
+    if (applying || !session || choice || !reconciled || expectVer == null) return;
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(function () { timer = null; push(); }, 900);
+  }
+  function pushSoon() {
+    if (timer) { clearTimeout(timer); timer = null; }
+    push();
+  }
+  function reconcile() {
+    return sbSelect('saves').then(function (res) {
+      if (!session) return;
+      if (!res || res.error) {
+        reconciled = true;
+        drawDone = 'err';
+        toast('云端暂时连不上，先用本机存档', true);
+        return;
+      }
+      var row = res.data, remote = row && row.data, ver = row ? (row.version || 0) : 0;
+      if (!remote || !progress(remote)) {
+        if (!progress(XY.save.data) && remote) { expectVer = ver; reconciled = true; tick(); return; }
+        return push(row ? ver : 0, { force: true }).then(function (ok) {
+          if (!session || choice) return;
+          reconciled = true;
+          if (ok !== false) tick();
+        });
+      }
+      if (!progress(XY.save.data)) { adopt(remote, ver); reconciled = true; tick(); return; }
+      if (sig(XY.save.data) === sig(remote)) { expectVer = ver; reconciled = true; tick(); return; }
+      openChoice('merge', remote, ver, row.updated_at);
+      reconciled = true;
+    }, function () {
+      reconciled = true;
+      drawDone = 'err';
+      toast('云端暂时连不上，先用本机存档', true);
+    });
+  }
+  function loadProfile(user) {
+    applyProfile(user, null);
+    sbSelect('profiles').then(function (res) {
+      if (session && res && res.data) applyProfile(session.user, res.data);
+    }, function () {});
+  }
+  function onSession(sess, force) {
+    if (!sess || !sess.user) return;
+    var id = sess.user.id || 'user';
+    session = sess;
+    authGate = false;
+    if (!force && uid === id && reconciled) return;
+    uid = id;
+    choice = null;
+    swapNote = null;
+    drawDone = false;
+    drawBusy = false;
+    reconciled = false;
+    expectVer = null;
+    loadProfile(sess.user);
+    reconcile();
+  }
+  function onSignedOut() {
+    session = null; uid = null; profile = null; avatarImg = null; choice = null; swapNote = null;
+    expectVer = null; reconciled = false; drawDone = false; drawBusy = false; authGate = false;
+  }
+  function samePulls(a, b) {
+    return !!(a && b && a.length === b.length && a.join('\n') === b.join('\n'));
+  }
+  function revertRows(rows) {
+    (rows || []).forEach(function (r) {
+      var n = r.add || 0;
+      if (!n || !r.id) return;
+      XY.save.addSpCard(r.id, -n);
+      var cur = XY.save.spCards(r.id);
+      if (cur < 0) XY.save.addSpCard(r.id, -cur);
+    });
+  }
+  function backLines(rows) {
+    var bag = {}, order = [], i, r;
+    for (i = 0; i < (rows || []).length; i++) {
+      r = rows[i];
+      if (!r || !r.add || !r.id) continue;
+      if (bag[r.id] == null) { bag[r.id] = 0; order.push(r.id); }
+      bag[r.id] += r.add;
+    }
+    return order.map(function (id) {
+      var d = XY.SP_BY && XY.SP_BY[id];
+      return (d && d.name ? d.name : id) + '  −' + bag[id] + ' 张';
+    });
+  }
+  function applyDraw(body) {
+    var pulls = (body && body.results) || [];
+    if (pulls.length !== 10) throw new Error('draw');
+    lastDraw = { already_drawn: !!body.already_drawn, results: pulls.slice() };
+    var prev = XY.save.data && XY.save.data.gacha10;
+    var same = prev && samePulls(prev.pulls, pulls);
+    var backed = [];
+    if (prev && prev.granted && prev.rows && !same) {
+      backed = backLines(prev.rows);
+      revertRows(prev.rows);
+    }
+    if (!same && prev && prev.pulls && prev.pulls.length === 10) swapNote = { back: backed, ack: false };
+    else if (same) swapNote = null;
+    if (same && prev.granted) {
+      prev.server = true;
+      if (!prev.acked) prev._flip = true;
+      return;
+    }
+    var bag = {};
+    (XY.SPECIALS || []).forEach(function (s) { bag[s.id] = XY.save.spCards(s.id); });
+    var rec = { seed: 'srv', pulls: pulls.slice(), rows: XY.gacha10.plan(pulls, bag), granted: false, acked: false, at: Date.now(), server: true };
+    if (!(swapNote && !swapNote.ack)) rec._flip = true;
+    XY.save.data.gacha10 = rec;
+    XY.gacha10.grant(rec);
+    if (XY.bgArt) pulls.forEach(function (id) { try { XY.bgArt(id); } catch (e) {} });
+  }
+  function startDraw() {
+    if (drawBusy || drawDone === true || drawDone === 'err' || !session || choice) return;
+    drawBusy = true;
+    sbDraw().then(function (res) {
+      drawBusy = false;
+      if (!session) return;
+      var body = res && res.data;
+      if (!res || res.error || !body || !body.results || body.results.length !== 10) {
+        drawDone = 'err';
+        toast('云端十连没连上。这次不会改在本机重抽。', true);
+        return;
+      }
+      try { applyDraw(body); drawDone = true; }
+      catch (e) { drawDone = 'err'; toast('云端十连没能记进存档', true); }
+    }, function () {
+      drawBusy = false;
+      drawDone = 'err';
+      toast('云端十连没连上。这次不会改在本机重抽。', true);
+    });
+  }
+
+  function hasToken() {
+    try {
+      var i, k;
+      for (i = 0; i < localStorage.length; i++) {
+        k = localStorage.key(i) || '';
+        if (k.indexOf('sb-') === 0 && k.indexOf('auth-token') > 0 && localStorage.getItem(k)) return true;
+      }
+    } catch (e) {}
+    return false;
+  }
+  function loadLib() {
+    if (window.XY_supabaseCreate) return Promise.resolve(window.XY_supabaseCreate);
+    if (window.supabase && window.supabase.createClient) return Promise.resolve(function (url, key, opt) { return window.supabase.createClient(url, key, opt); });
+    if (libP) return libP;
+    libP = new Promise(function (ok, bad) {
+      var done = false;
+      function finish(err) { if (done) return; done = true; if (err) { libP = null; bad(err); } else ok(window.XY_supabaseCreate); }
+      var s = document.createElement('script');
+      s.type = 'module';
+      s.textContent = "import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'; window.XY_supabaseCreate = createClient; window.dispatchEvent(new Event('xy-supabase-ready'));";
+      window.addEventListener('xy-supabase-ready', function () { finish(window.XY_supabaseCreate ? null : new Error('empty')); }, { once: true });
+      s.onerror = function () { finish(new Error('load')); };
+      document.head.appendChild(s);
+      setTimeout(function () { finish(window.XY_supabaseCreate ? null : new Error('timeout')); }, 8000);
+    });
+    return libP;
+  }
+  function clientOf(create) {
+    if (real) return real;
+    var keys = [PUB, ANON], i, last;
+    for (i = 0; i < keys.length; i++) {
+      try { real = create(URL, keys[i], { auth: { persistSession: true, detectSessionInUrl: true } }); return real; }
+      catch (e) { last = e; real = null; }
+    }
+    throw last || new Error('client');
+  }
+  function boot() {
+    if (stub.on || !hasToken()) return;
+    authGate = true;
+    loadLib().then(function (create) {
+      var sb = clientOf(create);
+      sb.auth.getSession().then(function (r) {
+        var sess = r && r.data && r.data.session;
+        if (sess) onSession(sess);
+        else authGate = false;
+      }, function () { authGate = false; });
+      sb.auth.onAuthStateChange(function (ev, sess) {
+        if (sess) onSession(sess);
+        else if (ev === 'SIGNED_OUT') onSignedOut();
+      });
+    }, function () { authGate = false; });
+    setTimeout(function () { if (authGate && !session) authGate = false; }, 4000);
+  }
+
+  var oldFlush = XY.save.flush;
+  XY.save.flush = function () { oldFlush(); try { schedule(); } catch (e) {} };
+  var oldCommit = XY.save.commitRun;
+  XY.save.commitRun = function (G, result) {
+    var rep = oldCommit(G, result);
+    try { pushSoon(); } catch (e) {}
+    return rep;
+  };
+  var oldEnsure = XY.gacha10.ensure;
+  XY.gacha10.ensure = function () {
+    if (choice || (authGate && !session)) return NONE;
+    if (session && !reconciled) return NONE;
+    if (session && drawDone !== true && drawDone !== 'err') { startDraw(); return NONE; }
+    if (swapNote && !swapNote.ack) return NONE;
+    if (session && drawDone === 'err') {
+      var rec0 = XY.save.data && XY.save.data.gacha10;
+      if (!(rec0 && rec0.pulls && rec0.pulls.length === 10)) return NONE;
+    }
+    var pack = oldEnsure();
+    if (pack && pack.rec && pack.rec._flip) { pack.fresh = true; pack.rec._flip = false; }
+    return pack;
+  };
+  var oldBlock = XY.gacha10.blocking;
+  XY.gacha10.blocking = function () {
+    if (choice || (swapNote && !swapNote.ack)) return true;
+    if (authGate && !session) return true;
+    if (session && !reconciled) return true;
+    if (session && drawDone !== true && drawDone !== 'err') return true;
+    return oldBlock();
+  };
+
+  function gateOpen() { return authGate && !session; }
+  function shortName() {
+    var n = (profile && profile.name) || '已登录';
+    return n.length > 8 ? n.slice(0, 8) + '…' : n;
+  }
+  function drawAvatar(c, x, y, s) {
+    var VU = XY.villainUI;
+    c.save();
+    c.beginPath(); c.arc(x + s / 2, y + s / 2, s / 2, 0, Math.PI * 2);
+    c.fillStyle = '#f6efdc'; c.fill(); c.lineWidth = 1.4; c.strokeStyle = '#8a7a58'; c.stroke();
+    if (avatarImg && avatarImg.complete && avatarImg.naturalWidth) {
+      c.save(); c.beginPath(); c.arc(x + s / 2, y + s / 2, s / 2 - 1.2, 0, Math.PI * 2); c.clip();
+      c.drawImage(avatarImg, x, y, s, s); c.restore();
+    } else if (VU) VU.txt(c, shortName().charAt(0), x + s / 2, y + s / 2 + 1, 14, '#3a3226', 'center', true);
+    c.restore();
+  }
+  function paintBar(c, st, x, y, w, h) {
+    var VU = XY.villainUI;
+    if (!VU || w < 132) return;
+    h = Math.max(44, h || 44);
+    if (!session) {
+      st.btn(x, y, w, h, '用 Google 登录', 'cloudLogin', { sz: w < 156 ? 14 : 16, rgb: '58,42,28', strong: true, vh: Math.max(36, h - 8) });
+      return;
+    }
+    if (VU.washE) VU.washE(c, x + w * 0.42, y + h / 2, w * 0.55, h * 0.42, '58,42,28', 0.22);
+    drawAvatar(c, x + 6, y + (h - 30) / 2, 30);
+    kai(c, shortName(), x + 42, y + h / 2 + 1, 16, '#2b1c08', 'left', w - 42 - 62);
+    st.btn(x + w - 58, y, 56, h, '退出', 'cloudLogout', { seal: true, pri: true, col: '#b8322a', sz: 15, stack: false, rot: -0.05 });
+  }
+  function paintHub(c, st) {
+    if (!session) return;
+    var w = st.cw >= 720 ? 240 : Math.min(210, st.cw - 108);
+    if (w < 140) return;
+    paintBar(c, st, st.cw - 10 - w, 6, w, 44);
+  }
+  function paintModal(c, st) {
+    if (!XY.villainUI) return;
+    if (choice) paintChoice(c, st);
+    else if (swapNote && !swapNote.ack) paintSwap(c, st);
+  }
+  function paintChoice(c, st) {
+    var VU = XY.villainUI, cw = st.cw, ch = st.ch, narrow = cw < 700;
+    var numSz = narrow ? 26 : 40, phraseH = numSz + (narrow ? 8 : 16);
+    var slipHead = narrow ? 58 : 84, slipFoot = narrow ? 22 : 32;
+    var cardH = slipHead + phraseH * 3 + slipFoot;
+    var stack = narrow || cw < 860;
+    var bw = narrow ? cw - 14 : Math.min(840, Math.max(560, Math.round(cw * 0.46)));
+    if (!narrow && bw > cw - 48) bw = cw - 48;
+    var pad = narrow ? 14 : 22;
+    var gap = stack ? 12 : 36;
+    var colW = stack ? bw - pad * 2 : Math.floor((bw - pad * 2 - gap) / 2);
+    if (colW < 150) { stack = true; colW = bw - pad * 2; }
+    var explainH = (narrow ? 22 : 26) * 3;
+    var headH = pad + (narrow ? 30 : 38) + 10 + 20 + 8 + explainH + 6;
+    var cardsBlock = stack ? cardH * 2 + 16 : cardH;
+    var btnH = 56, btnGap = narrow ? 12 : 20;
+    var bh = headH + cardsBlock + 18 + btnH + pad;
+    var topKeep = narrow ? 88 : 24, botKeep = narrow ? 188 : 10, avail = ch - topKeep - botKeep, guard = 0;
+    while (bh > avail && numSz > 20 && guard++ < 8) {
+      numSz -= 2;
+      phraseH = numSz + 6;
+      cardH = slipHead + phraseH * 3 + slipFoot;
+      cardsBlock = stack ? cardH * 2 + 16 : cardH;
+      bh = headH + cardsBlock + 18 + btnH + pad;
+    }
+    var x = narrow ? Math.round((cw - bw) / 2) : Math.round(Math.max(18, Math.min(cw * 0.04, cw * 0.52 - bw)));
+    var y = narrow ? topKeep : Math.round(Math.max(24, (ch - bh) / 2));
+    if (y + bh > ch - botKeep) y = Math.max(8, ch - botKeep - bh);
+    var conflict = choice.kind === 'conflict';
+    st.hit(0, 0, cw, ch, 'cloudNoop');
+    c.save(); c.fillStyle = 'rgba(48,36,24,0.38)'; c.fillRect(0, 0, cw, ch); c.restore();
+    if (VU.washE) VU.washE(c, x + bw * 0.2, y + 36, bw * 0.35, 40, '90,60,30', 0.12);
+    VU.drawTag(c, x, y, bw, bh, '', '#3a3226', { fill: '#fcf6e8', seed: 17, cutK: 0.12 });
+    st.hit(x, y, bw, bh, 'cloudNoop');
+    var cursor = y + pad + (narrow ? 16 : 20);
+    kai(c, conflict ? '云端存档更新了' : '两份存档都有进度', x + pad, cursor, narrow ? 26 : 34, '#2b1c08', 'left', bw - pad * 2);
+    if (VU.brush) VU.brush(c, x + pad, cursor + (narrow ? 16 : 20), narrow ? 120 : 168, 5, 0.4, 9);
+    cursor += (narrow ? 34 : 42);
+    var who = ((profile && profile.name) || '') + (profile && profile.email ? '  ·  ' + profile.email : '');
+    if (who) { kai(c, who, x + pad, cursor, narrow ? 14 : 16, '#5c4a38', 'left', bw - pad * 2); cursor += narrow ? 22 : 26; }
+    var explain = conflict
+      ? '保存时对不上云端的版本。云端这份还在，没有被盖掉。再选一次。'
+      : '两边都有取经进度。选一张留下来，另一张不会被悄悄盖掉。';
+    if (VU.wrap) cursor += VU.wrap(c, explain, x + pad, cursor, bw - pad * 2, narrow ? 22 : 26, narrow ? 15 : 17, '#3a3226', false, 3) + 8;
+    function slipCard(px, py, title, sealCh, data, ver, rot, seed) {
+      var f = saveFacts(data);
+      c.save();
+      c.translate(px + colW / 2, py + cardH / 2); c.rotate(rot); c.translate(-(px + colW / 2), -(py + cardH / 2));
+      if (VU.washE) VU.washE(c, px + colW * 0.78, py + 34, colW * 0.42, 26, '58,42,28', 0.2);
+      VU.drawTag(c, px, py, colW, cardH, '', '#4a3828', { fill: '#fffaf0', seed: seed, cutK: 0.22 });
+      VU.drawSeal(c, px + 10, py + 10, narrow ? 32 : 36, narrow ? 32 : 36, sealCh, { style: 'solid', col: '#b8322a', sz: narrow ? 16 : 18, rot: -0.06, stack: false, seed: seed });
+      kai(c, title, px + (narrow ? 48 : 54), py + (narrow ? 26 : 28), narrow ? 20 : 26, '#2b1c08', 'left', colW - (narrow ? 62 : 70));
+      if (VU.brush) VU.brush(c, px + (narrow ? 48 : 54), py + (narrow ? 42 : 46), Math.min(colW * 0.42, 130), 3.5, 0.45, seed);
+      var cy = px + colW / 2, yy = py + slipHead + phraseH * 0.35;
+      phrase(c, '通关', f.wins, cy, yy, numSz, colW - 28);
+      phrase(c, '灵石', f.lingshi, cy, yy + phraseH, numSz, colW - 28);
+      phrase(c, '角色卡', f.cards, cy, yy + phraseH * 2, numSz, colW - 28);
+      kai(c, '开局 ' + f.runs + ' 次　' + f.time + (ver ? '　版本 ' + ver : ''), px + colW / 2, py + slipHead + phraseH * 3 + slipFoot * 0.45, narrow ? 12 : 14, '#7a654e', 'center', colW - 20);
+      c.restore();
+    }
+    slipCard(x + pad, cursor, '这台设备', '本', XY.save.data, '', stack ? -0.01 : -0.018, 21);
+    slipCard(stack ? x + pad : x + pad + colW + gap, stack ? cursor + cardH + 16 : cursor + 6, '云端', '云', choice.remoteData, choice.version != null ? String(choice.version) : '', stack ? 0.008 : 0.014, 33);
+    var btnW = Math.floor((bw - pad * 2 - btnGap) / 2), by = y + bh - pad - btnH;
+    redGo(c, st, x + pad, by, btnW, btnH, '留这台设备', 'cloudPick', { which: 'local' });
+    redGo(c, st, x + pad + btnW + btnGap, by, btnW, btnH, '用云端这份', 'cloudPick', { which: 'cloud' });
+  }
+  function paintSwap(c, st) {
+    var VU = XY.villainUI, cw = st.cw, ch = st.ch, narrow = cw < 700;
+    var lines = (swapNote && swapNote.back) || [];
+    var lineH = narrow ? 28 : 34, titleSz = narrow ? 26 : 34;
+    var bw = narrow ? cw - 16 : Math.min(680, Math.round(cw * 0.4));
+    var listH = Math.max(lineH, Math.min(lines.length, 8) * lineH);
+    var bh = Math.min(ch - 16, (narrow ? 20 : 28) + titleSz + 36 + 78 + listH + 20 + 56 + 24);
+    var topKeep = narrow ? 92 : 20, botKeep = narrow ? 210 : 12;
+    if (bh > ch - topKeep - botKeep) bh = ch - topKeep - botKeep;
+    var x = narrow ? Math.round((cw - bw) / 2) : Math.round(Math.max(18, Math.min(cw * 0.06, cw * 0.46 - bw)));
+    var y = narrow ? topKeep : Math.round(Math.max(20, (ch - bh) / 2));
+    if (y + bh > ch - botKeep) y = Math.max(8, ch - botKeep - bh);
+    var pad = narrow ? 16 : 26;
+    st.hit(0, 0, cw, ch, 'cloudNoop');
+    c.save(); c.fillStyle = 'rgba(48,36,24,0.42)'; c.fillRect(0, 0, cw, ch); c.restore();
+    VU.drawTag(c, x, y, bw, bh, '', '#3a3226', { fill: '#fcf6e8', seed: 29, cutK: 0.14 });
+    st.hit(x, y, bw, bh, 'cloudNoop');
+    var cursor = y + pad + titleSz * 0.45;
+    kai(c, '角色卡已按账号改回', x + pad, cursor, titleSz, '#2b1c08', 'left', bw - pad * 2);
+    if (VU.brush) VU.brush(c, x + pad, cursor + titleSz * 0.45, narrow ? 140 : 180, 5, 0.42, 12);
+    cursor += titleSz * 0.7 + 16;
+    var explain = lines.length
+      ? '这台设备先抽的十连，和账号不是同一组。以账号那次为准，多发的角色卡已经退回。'
+      : '这台设备上的十连和账号不是同一组。改用账号的结果，本机没有多发角色卡。';
+    if (VU.wrap) cursor += VU.wrap(c, explain, x + pad, cursor, bw - pad * 2, narrow ? 22 : 26, narrow ? 15 : 17, '#3a3226', false, 3) + 10;
+    var i, room = Math.max(1, Math.floor((y + bh - pad - 56 - 12 - cursor) / lineH));
+    var show = lines.slice(0, room);
+    for (i = 0; i < show.length; i++) {
+      if (VU.washE && i % 2 === 0) VU.washE(c, x + pad + 70, cursor, 90, 10, '58,42,28', 0.12);
+      kai(c, show[i], x + pad + (i % 2) * 18, cursor, narrow ? 16 : 20, '#8d3b2c', 'left', bw - pad * 2 - 24);
+      cursor += lineH;
+    }
+    if (lines.length > show.length) kai(c, '还有 ' + (lines.length - show.length) + ' 项', x + pad, cursor, 14, '#7a654e', 'left', bw - pad * 2);
+    var btnW = Math.min(narrow ? bw - pad * 2 : 280, bw - pad * 2), btnH = 56;
+    redGo(c, st, x + (bw - btnW) / 2, y + bh - pad - btnH, btnW, btnH, '知道了', 'cloudSwapOk', null);
+  }
+
+  var CL = XY.account = {
+    signedIn: function () { return !!session; },
+    name: function () { return (profile && profile.name) || ''; },
+    email: function () { return (profile && profile.email) || ''; },
+    holdGacha: function () { return !!choice || !!(swapNote && !swapNote.ack); },
+    ackSwap: function () {
+      if (swapNote) swapNote.ack = true;
+      var rec = XY.save.data && XY.save.data.gacha10;
+      if (rec && !rec.acked) rec._flip = true;
+    },
+    barWidth: function (cw) {
+      if (cw >= 1000) return 240;
+      if (cw >= 720) return 210;
+      var room = cw - 10 - 58 - 6 - (cw < 520 ? 168 : 200);
+      if (room < 132) return 0;
+      return Math.min(176, room);
+    },
+    paintBar: paintBar,
+    paintHub: paintHub,
+    paintModal: paintModal,
+    signIn: function () {
+      if (session) return;
+      if (stub.on) {
+        var u = (stub.spec && stub.spec.user) || { name: '取经人', email: '' };
+        onSession({ user: { id: 'stub-user', email: u.email || '', user_metadata: { full_name: u.name || '取经人', avatar_url: u.avatar || '' } } }, true);
+        return;
+      }
+      toast('正在打开 Google…');
+      loadLib().then(function (create) {
+        var sb = clientOf(create);
+        return sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin + window.location.pathname } });
+      }).then(function (res) {
+        if (res && res.error) toast('Google 登录没打开，先用本机存档', true);
+      }, function () { toast('登录组件没加载好，先用本机存档', true); });
+    },
+    signOut: function () {
+      if (!session && !stub.on) return;
+      if (!stub.on && real && real.auth) { try { real.auth.signOut(); } catch (e) {} }
+      onSignedOut();
+      toast('已退出，继续用本机存档');
+    },
+    choose: function (which) {
+      if (!choice) return Promise.resolve(CL.debug.state());
+      var picked = choice;
+      choice = null;
+      if (which === 'cloud') {
+        adopt(picked.remoteData, picked.version);
+        reconciled = true;
+        drawDone = false;
+        drawBusy = false;
+        tick();
+        return whenIdle();
+      }
+      return push(picked.version, { force: true }).then(function (ok) {
+        if (!choice && ok) {
+          reconciled = true;
+          drawDone = false;
+          drawBusy = false;
+          tick();
+        }
+        return whenIdle();
+      });
+    },
+
+    debug: {
+      prepare: function (spec) { prepare(spec); onSignedOut(); stub.on = true; },
+      install: function (spec) {
+        prepare(spec);
+        var u = (spec && spec.user) || { name: '取经人', email: 'traveler@example.com' };
+        onSession({ user: { id: 'stub-user', email: u.email || '', user_metadata: { full_name: u.name || '取经人', avatar_url: u.avatar || '' } } }, true);
+        return whenIdle();
+      },
+      signOut: function () { CL.signOut(); },
+      pullAgain: function () { drawDone = false; drawBusy = false; startDraw(); return whenIdle(); },
+      setRemote: function (remote) {
+        stub.remote = {
+          version: remote.version || 0,
+          data: remote.data ? JSON.parse(JSON.stringify(remote.data)) : null,
+          updated_at: new Date().toISOString(),
+          game_version: '0.8.7'
+        };
+      },
+      wait: function () { return whenIdle(); },
+      state: function () {
+        return {
+          signedIn: !!session, name: CL.name(), email: CL.email(), choice: choice && choice.kind, version: expectVer,
+          notice: (swapNote && !swapNote.ack) ? (swapNote.back || []).slice() : null,
+          reconciled: reconciled, draw: drawDone, calls: calls.slice(), lastDraw: lastDraw,
+          remoteVersion: stub.remote && stub.remote.version,
+          remoteRuns: stub.remote && stub.remote.data && stub.remote.data.stats && stub.remote.data.stats.runs,
+          remoteLingshi: stub.remote && stub.remote.data && stub.remote.data.lingshi
+        };
+      },
+      calls: function () { return calls.slice(); }
+    }
+  };
+  function prepare(spec) {
+    stub.on = true;
+    stub.spec = spec || {};
+    stub.remote = spec && spec.remote ? {
+      version: spec.remote.version || 0,
+      data: spec.remote.data,
+      updated_at: spec.remote.updated_at || new Date().toISOString(),
+      game_version: '0.8.7'
+    } : null;
+    stub.drew = false;
+    stub.results = spec && spec.draw && spec.draw.results ? spec.draw.results.slice() : null;
+    calls.length = 0;
+    lastDraw = null;
+  }
+  function idle() {
+    if (gateOpen()) return false;
+    if (!session) return true;
+    if (!reconciled || inflight || drawBusy) return false;
+    if (choice) return true;
+    return drawDone === true || drawDone === 'err';
+  }
+  function whenIdle() {
+    return new Promise(function (ok) {
+      var t0 = Date.now();
+      (function spin() {
+        if (idle() || Date.now() - t0 > 5000) ok(CL.debug.state());
+        else setTimeout(spin, 20);
+      })();
+    });
+  }
+  if (XY.hubUI && XY.hubUI.act) {
+    var oldAct = XY.hubUI.act;
+    XY.hubUI.act = function (h, p, a) {
+      if (!h) return oldAct(h, p, a);
+      if (h.act === 'cloudLogin') { CL.signIn(); return true; }
+      if (h.act === 'cloudLogout') { CL.signOut(); return true; }
+      if (h.act === 'cloudPick') { CL.choose(h.which); return true; }
+      if (h.act === 'cloudSwapOk') { CL.ackSwap(); return true; }
+      if (h.act === 'cloudPrivacy') { try { window.open('privacy.html', '_blank'); } catch (e) {} return true; }
+      if (h.act === 'cloudNoop') return true;
+      return oldAct(h, p, a);
+    };
+  }
+  try { boot(); } catch (e) {}
 })();
 
 </script>
