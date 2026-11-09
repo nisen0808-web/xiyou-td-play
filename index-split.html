@@ -2124,6 +2124,19 @@ XY.TRAITS = {
       var g = XY.save.data && XY.save.data.gacha10;
       return !!(g && g.pulls && g.pulls.length === 10 && !g.acked);
     },
+    nudge: function (dir) {
+      if (!gachaView || !gachaView.rec) return;
+      var n = (gachaView.rec.rows && gachaView.rec.rows.length) || 10;
+      if (gachaView.phase === 'result') {
+        var pages = gachaView.pages || 1;
+        gachaView.page = Math.max(0, Math.min(pages - 1, (gachaView.page || 0) + (dir || 0)));
+        return;
+      }
+      var cur = gachaView.focus;
+      if (cur == null) cur = 0;
+      gachaView.focus = Math.max(0, Math.min(n - 1, cur + dir));
+      gachaView.hold = true;
+    },
     key: function () {
       var pack = XY.gacha10.ensure();
       if (!pack.show) return;
@@ -22207,7 +22220,7 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
     else if (owned) { var _fr = XY.VD && XY.VD.activeFrame && XY.VD.activeFrame(); if (_fr) XY.VD.drawFrame(c, cx, cy, r, _fr); }
     if ('filter' in c) c.filter = 'none';
     c.globalAlpha = 1;
-    if (!owned) { var lk = Math.max(16, Math.round(d * 0.42)); VU.drawSeal(c, cx + r * 0.28, cy + r * 0.22, lk, lk, '锁', { style: 'solid', col: RED, sz: Math.round(lk * 0.6), rot: -0.08, stack: false }); }
+    if (!owned) { var lk = Math.max(18, Math.round(d * 0.46)); VU.drawSeal(c, cx + r * 0.42, cy - r * 0.55, lk, lk, '锁', { style: 'solid', col: RED, sz: Math.round(lk * 0.62), rot: -0.06, stack: false }); }
     if (on && owned) onMark();
     var nm = !tl.xc && stageName(id), nmH = Math.min(nh * 1.05, 17);
     if (nm && nm.img) { var nw = nm.w * nmH / nm.h, k2 = Math.min(1, (w - 10) / nw); c.save(); c.globalAlpha = owned ? (on ? 1 : 0.9) : 0.4; c.drawImage(nm.img, cx - nw * k2 / 2, ny - nmH * k2 / 2, nw * k2, nmH * k2); c.restore(); }
@@ -22303,90 +22316,274 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
     return out;
   }
 
-  /* 十连浮层：浅色宣纸、枯笔卡框、朱印。翻卡只在本页刚抽出时播放；刷新直接给结果。 */
-  function gachaPortrait(c, id, x, y, w, h) {
-    var im = (XY.bgArt && XY.bgArt(id)) || xAv(id), dw, dh, s;
+  /* 十连浮层：竖版水墨卡。约 7 秒依次翻开；手机一次只放大一张，可左右滑，翻完再给总览。
+   * 结果在翻牌前已经写入存档。刷新不重播，直接看总览。 */
+  var GACHA_INTRO = 0.5, GACHA_STEP = 0.68, GACHA_FLIP = 0.5;
+  function gachaHash(n) { var s = Math.sin(n * 12.9898) * 43758.5453; return s - Math.floor(s); }
+  function gachaEase(p) { p = Math.max(0, Math.min(1, p)); return p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2; }
+  function gachaName(id) { return (XY.SP_BY[id] && XY.SP_BY[id].name) || id; }
+  function tornPath(c, x, y, w, h, seed) {
+    var n = 12, i, p, jx, jy;
+    c.beginPath();
+    for (i = 0; i <= n; i++) {
+      p = i / n; jy = (gachaHash(seed + i * 3) - 0.5) * 7;
+      if (!i) c.moveTo(x + w * p, y + jy * 0.35);
+      else c.lineTo(x + w * p, y + (i === n ? 0 : jy));
+    }
+    for (i = 1; i <= n; i++) {
+      p = i / n; jx = (gachaHash(seed + 50 + i * 3) - 0.5) * 7;
+      c.lineTo(x + w + (i === n ? 0 : jx), y + h * p);
+    }
+    for (i = n - 1; i >= 0; i--) {
+      p = i / n; jy = (gachaHash(seed + 90 + i * 3) - 0.5) * 7;
+      c.lineTo(x + w * p, y + h + (i ? jy : 0));
+    }
+    for (i = n - 1; i >= 1; i--) {
+      p = i / n; jx = (gachaHash(seed + 130 + i * 3) - 0.5) * 7;
+      c.lineTo(x + jx, y + h * p);
+    }
+    c.closePath();
+  }
+  function gachaPaper(c, x, y, w, h, seed) {
+    var i, grd;
+    c.save();
+    c.fillStyle = 'rgba(58,50,38,0.13)';
+    tornPath(c, x + 4, y + 6, w, h, seed + 2); c.fill();
+    tornPath(c, x, y, w, h, seed);
+    grd = c.createLinearGradient(x, y, x + w * 0.15, y + h);
+    grd.addColorStop(0, '#fffdf8'); grd.addColorStop(0.5, '#f7efdc'); grd.addColorStop(1, '#efe1c4');
+    c.fillStyle = grd; c.fill();
+    c.save();
+    tornPath(c, x, y, w, h, seed); c.clip();
+    c.strokeStyle = 'rgba(70,54,32,0.2)'; c.lineWidth = 1.2; c.lineCap = 'round';
+    for (i = 0; i < 5; i++) {
+      var x1 = x + w * (0.15 + 0.7 * gachaHash(seed + i * 7));
+      var y1 = y + h * (0.12 + 0.72 * gachaHash(seed + i * 7 + 2));
+      var len = 16 + 36 * gachaHash(seed + i * 7 + 4);
+      var ang = (gachaHash(seed + i * 7 + 6) - 0.5) * 2.4;
+      c.beginPath();
+      c.moveTo(x1, y1);
+      c.lineTo(x1 + Math.cos(ang) * len, y1 + Math.sin(ang) * len);
+      c.stroke();
+    }
+    if (VU.washE) {
+      VU.washE(c, x + w * 0.22, y + h * 0.16, w * 0.42, h * 0.16, '110,86,48', 0.07);
+      VU.washE(c, x + w * 0.78, y + h * 0.78, w * 0.36, h * 0.18, '150,48,36', 0.05);
+    }
+    c.restore();
+    c.strokeStyle = 'rgba(36,28,22,0.9)';
+    c.lineWidth = Math.max(1.8, Math.min(w, h) * 0.011);
+    c.lineJoin = 'round';
+    tornPath(c, x, y, w, h, seed); c.stroke();
+    c.globalAlpha = 0.32; c.lineWidth = Math.max(0.9, Math.min(w, h) * 0.005);
+    tornPath(c, x + 3.5, y + 3.5, w - 7, h - 7, seed + 6); c.stroke();
+    c.restore();
+  }
+  function gachaPortraitFit(c, id, x, y, w, h) {
+    var im = (XY.bgArt && XY.bgArt(id)) || xAv(id), iw, ih, s, dw, dh;
     c.save();
     c.beginPath(); c.rect(x, y, w, h); c.clip();
-    c.fillStyle = '#f6f0e2'; c.fillRect(x, y, w, h);
-    if (im && im.naturalWidth) {
-      s = Math.max(w / im.naturalWidth, h / im.naturalHeight);
-      dw = im.naturalWidth * s; dh = im.naturalHeight * s;
+    c.fillStyle = '#f4ead4'; c.fillRect(x, y, w, h);
+    if (im && (im.naturalWidth || im.width)) {
+      iw = im.naturalWidth || im.width; ih = im.naturalHeight || im.height;
+      s = Math.min(w / iw, h / ih); dw = iw * s; dh = ih * s;
       c.drawImage(im, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
     } else {
-      var nm0 = (XY.SP_BY[id] && XY.SP_BY[id].name) || '?';
       c.fillStyle = '#241c16'; c.textAlign = 'center'; c.textBaseline = 'middle';
-      c.font = 'bold ' + Math.round(h * 0.38) + 'px ' + KAI;
-      c.fillText(nm0.charAt(0), x + w / 2, y + h / 2);
+      c.font = 'bold ' + Math.round(Math.min(w, h) * 0.28) + 'px ' + KAI;
+      c.fillText(gachaName(id).charAt(0), x + w / 2, y + h / 2);
     }
     c.restore();
   }
-  function gachaCard(c, x, y, w, h, seed) {
+  function inkBloom(c, x, y, w, h, p) {
+    var a;
+    if (!VU.washE || p <= 0.02 || p >= 0.98) return;
+    a = Math.sin(Math.max(0, Math.min(1, p)) * Math.PI);
+    VU.washE(c, x + w * 0.5, y + h * 0.46, w * (0.25 + 0.85 * p), h * (0.16 + 0.5 * p), '42,34,26', 0.26 * a);
+    VU.washE(c, x + w * 0.48, y + h * 0.4, w * (0.12 + 0.4 * p), h * (0.08 + 0.28 * p), '168,42,32', 0.34 * a);
+  }
+  function goldBrush(c, x, y, w, h, p, seed) {
+    var k, i, y0, len, a;
+    if (p < 0.48) return;
+    k = Math.min(1, (p - 0.48) / 0.35);
+    a = 0.8 * (k < 0.75 ? 1 : Math.max(0, 1 - (k - 0.75) / 0.25));
+    if (a <= 0.02) return;
     c.save();
-    c.fillStyle = 'rgba(58,50,38,0.10)'; c.fillRect(x + 3, y + 4, w, h);
-    c.fillStyle = '#fffdf6'; c.fillRect(x, y, w, h);
-    c.strokeStyle = '#241c16'; c.lineWidth = 1.8; c.strokeRect(x + 0.8, y + 0.8, w - 1.6, h - 1.6);
-    c.globalAlpha = 0.28; c.lineWidth = 1;
-    c.beginPath(); c.moveTo(x + 4, y + 5); c.lineTo(x + w * 0.46, y + 3.2); c.moveTo(x + w - 5, y + h - 4); c.lineTo(x + w * 0.5, y + h - 2.4); c.stroke();
+    c.strokeStyle = '#7a5a22'; c.lineCap = 'round'; c.globalAlpha = a;
+    for (i = 0; i < 3; i++) {
+      y0 = y + h * (0.28 + i * 0.16);
+      len = w * (0.42 + 0.28 * gachaHash(seed + i)) * k;
+      c.lineWidth = 2.4 - i * 0.45;
+      c.beginPath();
+      c.moveTo(x + w * 0.14, y0);
+      c.quadraticCurveTo(x + w * 0.38, y0 - 8 + i * 3, x + w * 0.14 + len, y0 + 1.5);
+      c.stroke();
+      c.globalAlpha = a * 0.4;
+      c.beginPath();
+      c.moveTo(x + w * 0.14 + len * 0.72, y0 - 1);
+      c.lineTo(x + w * 0.14 + len * 0.72 + 14 * k, y0 + 1);
+      c.stroke();
+      c.globalAlpha = a;
+    }
     c.restore();
-    if (VU.washE) VU.washE(c, x + w * 0.22, y + h * 0.16, w * 0.4, h * 0.18, '201,162,74', 0.09);
+  }
+  function drawBack(c, x, y, w, h, seed) {
+    var ss, i, cx, cy, rx;
+    gachaPaper(c, x, y, w, h, seed);
+    c.save();
+    c.strokeStyle = 'rgba(36,28,22,0.28)'; c.lineWidth = 1.3;
+    for (i = 0; i < 4; i++) {
+      cx = x + w * (0.28 + 0.44 * gachaHash(seed + i));
+      cy = y + h * (0.18 + 0.5 * gachaHash(seed + 15 + i));
+      rx = Math.min(w, h) * (0.08 + 0.06 * gachaHash(seed + 30 + i));
+      c.beginPath(); c.ellipse(cx, cy, rx, rx * 0.66, gachaHash(seed + i), 0, Math.PI * 2); c.stroke();
+    }
+    c.restore();
+    ss = Math.min(w, h) * 0.28;
+    VU.drawSeal(c, x + (w - ss) / 2, y + h * 0.34, ss, ss, '封', { style: 'solid', col: RED, sz: Math.round(ss * 0.5), rot: -0.05, stack: false, seed: 40 + seed });
+    kt(c, '天机', x + w / 2, y + h * 0.74, Math.max(18, Math.min(32, w * 0.13)), '#2b1c08', 'center', w - 24);
+  }
+  function drawFront(c, r, x, y, w, h, seed, sealP) {
+    var band = Math.max(52, Math.min(84, h * 0.18)), picH = Math.max(24, h - band - 18);
+    var ms = Math.round(Math.max(34, Math.min(w * 0.3, h * 0.16, 62)));
+    var drop = sealP >= 1 ? 0 : (1 - gachaEase(Math.max(0, (sealP - 0.15) / 0.7)));
+    var sy = y + 10 - drop * Math.min(56, h * 0.1);
+    gachaPaper(c, x, y, w, h, seed);
+    gachaPortraitFit(c, r.id, x + 12, y + 12, w - 24, picH);
+    if (r.kind === 'unlock') goldBrush(c, x, y, w, h, sealP, seed);
+    VU.drawSeal(c, x + w - ms - 12, sy, ms, ms, r.kind === 'unlock' ? '得' : '复', { style: 'solid', col: r.kind === 'unlock' ? RED : '#5a5146', sz: Math.round(ms * 0.56), rot: -0.07 - drop * 0.25, stack: false, seed: 80 + seed });
+    kt(c, gachaName(r.id), x + w / 2, y + h - band + band * 0.38, Math.max(16, Math.min(28, w * 0.14)), '#2b1c08', 'center', w - 18);
+    kt(c, r.text || '', x + w / 2, y + h - band * 0.28, Math.max(12, Math.min(16, w * 0.075)), r.kind === 'unlock' ? RED : SOFT, 'center', w - 16, false);
+  }
+  function flipCard(c, r, x, y, w, h, seed, p) {
+    var e = p <= 0 ? 0 : (p >= 1 ? 1 : gachaEase(p));
+    var front = e >= 0.5;
+    var sx = (p <= 0 || p >= 1) ? 1 : Math.max(0.045, Math.abs(Math.cos(e * Math.PI)));
+    if (p > 0 && p < 1) {
+      inkBloom(c, x, y, w, h, p);
+      var spl = Math.sin(Math.max(0, Math.min(1, p)) * Math.PI), sk;
+      c.save(); c.fillStyle = 'rgba(36,28,22,' + (0.45 * spl).toFixed(3) + ')';
+      for (sk = 0; sk < 9; sk++) {
+        var ang = sk / 9 * Math.PI * 2 + seed;
+        var rad = Math.max(w, h) * (0.22 + 0.16 * gachaHash(seed + sk));
+        c.beginPath();
+        c.arc(x + w / 2 + Math.cos(ang) * rad, y + h * 0.42 + Math.sin(ang) * rad * 0.62, 1.6 + 5 * gachaHash(seed + 40 + sk) * spl, 0, Math.PI * 2);
+        c.fill();
+      }
+      c.restore();
+    }
+    c.save();
+    c.translate(x + w / 2, y + h / 2); c.scale(sx, 1); c.translate(-(x + w / 2), -(y + h / 2));
+    if (!front) drawBack(c, x, y, w, h, seed);
+    else drawFront(c, r, x, y, w, h, seed, Math.max(0, (e - 0.5) * 2));
+    c.restore();
+  }
+  XY.gacha10.timing = { intro: GACHA_INTRO, step: GACHA_STEP, flip: GACHA_FLIP, total: GACHA_INTRO + 10 * GACHA_STEP };
+  XY.gacha10.cardAt = function (elapsed, i) {
+    var start = GACHA_INTRO + i * GACHA_STEP;
+    if (elapsed < start) return 0;
+    return Math.min(1, (elapsed - start) / GACHA_FLIP);
+  };
+  XY.gacha10.focusOf = function (elapsed) {
+    if (elapsed <= GACHA_INTRO) return 0;
+    return Math.max(0, Math.min(9, Math.floor((elapsed - GACHA_INTRO) / GACHA_STEP)));
+  };
+  if (!XY.gacha10._swipe) {
+    XY.gacha10._swipe = true;
+    var gDown = null;
+    window.addEventListener('pointerdown', function (e) {
+      if (!XY.gacha10.blocking || !XY.gacha10.blocking()) return;
+      gDown = { x: e.clientX, y: e.clientY };
+    }, true);
+    window.addEventListener('pointerup', function (e) {
+      if (!gDown) return;
+      var dx = e.clientX - gDown.x, dy = e.clientY - gDown.y;
+      gDown = null;
+      if (Math.abs(dx) < 42 || Math.abs(dx) < Math.abs(dy) * 1.15) return;
+      if (XY.gacha10.nudge) XY.gacha10.nudge(dx < 0 ? 1 : -1);
+    }, true);
   }
   XY.gacha10.paint = function (c, st, a) {
     var v = XY.gacha10.view(a); if (!v || !v.rec) return;
-    var cw = st.cw, ch = st.ch, land = cw >= 720, rec = v.rec, rows = rec.rows || [], i;
+    var cw = st.cw, ch = st.ch, land = cw >= 780 && cw > ch, rec = v.rec, rows = rec.rows || [];
     var elapsed = typeof XY.gacha10.freeze === 'number' ? XY.gacha10.freeze : Math.max(0, (a.rt || 0) - (v.t0 || 0));
-    var cols = land ? 5 : 2, rowsN = Math.ceil(10 / cols);
-    var header = land ? 78 : 68, footer = land ? 118 : 150, gap = land ? 12 : 8, pad = land ? 28 : 12;
-    var availW = cw - pad * 2, availH = Math.max(80, ch - header - footer);
-    var cardW = Math.floor((availW - gap * (cols - 1)) / cols);
-    var cardH = Math.floor((availH - gap * (rowsN - 1)) / rowsN);
-    var gridW = cols * cardW + (cols - 1) * gap, gridH = rowsN * cardH + (rowsN - 1) * gap;
-    var x0 = Math.round((cw - gridW) / 2), y0 = Math.round(header + Math.max(0, (availH - gridH) / 2));
+    var nu = 0, nd = 0, i;
+    rows.forEach(function (r) { if (XY.bgArt) { try { XY.bgArt(r.id); } catch (e) {} } xAv(r.id); if (r.kind === 'unlock') nu++; else nd++; });
+    if (v.phase !== 'result' && !v.hold && XY.gacha10.freeze == null && elapsed >= XY.gacha10.timing.total) v.phase = 'result';
     if (VU.paperBg) VU.paperBg(c, { cw: cw, ch: ch }, { rgb: '201,162,74', rgb2: '184,50,42', seed: 21 });
-    else { c.fillStyle = '#f7f1e4'; c.fillRect(0, 0, cw, ch); }
-    VU.seal(c, 16, 12, land ? 48 : 42, land ? 48 : 42, '抽', RED, land ? 26 : 22);
-    kt(c, v.phase === 'result' ? '十连结果' : '天机十连', 74, land ? 28 : 26, land ? 32 : 24, '#2b1c08', 'left', cw - 120);
-    kt(c, '每位取经人只此一次 · 结果已写入存档', 74, land ? 54 : 50, land ? 14 : 12, SOFT, 'left', cw - 100, false);
-    rows.forEach(function (r, i) {
-      if (XY.bgArt) { try { XY.bgArt(r.id); } catch (e) {} }
-      xAv(r.id);
-      var col = i % cols, row = Math.floor(i / cols);
-      var x = x0 + col * (cardW + gap), y = y0 + row * (cardH + gap);
-      var delay = 0.22 + i * 0.18, p = v.phase === 'result' ? 1 : (elapsed < delay ? 0 : Math.min(1, (elapsed - delay) / 0.42));
-      var e = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
-      var front = v.phase === 'result' || e >= 0.5;
-      var sx = v.phase === 'result' ? 1 : Math.max(0.045, Math.abs(Math.cos(e * Math.PI)));
-      if (p > 0 && p < 1 && VU.washE) VU.washE(c, x + cardW / 2, y + cardH / 2, cardW * 0.72, cardH * 0.48, '184,50,42', 0.16 * Math.sin(p * Math.PI));
-      c.save();
-      c.translate(x + cardW / 2, y + cardH / 2); c.scale(sx, 1); c.translate(-(x + cardW / 2), -(y + cardH / 2));
-      gachaCard(c, x, y, cardW, cardH, i);
-      var band = Math.max(30, Math.min(52, Math.round(cardH * 0.30)));
-      var picH = Math.max(24, cardH - band - 8);
-      if (!front) {
-        var ss = Math.min(cardW, picH) * 0.46;
-        VU.drawSeal(c, x + (cardW - ss) / 2, y + (picH - ss) / 2 + 6, ss, ss, '封', { style: 'solid', col: RED, sz: Math.round(ss * 0.46), rot: -0.06, stack: false });
-        kt(c, '天机', x + cardW / 2, y + cardH - band * 0.55, Math.max(12, Math.min(16, cardW * 0.12)), INK, 'center', cardW - 10);
-      } else {
-        gachaPortrait(c, r.id, x + 6, y + 6, cardW - 12, picH);
-        var mark = r.kind === 'unlock' ? '得' : '复';
-        var ms = Math.max(16, Math.min(26, cardW * 0.16));
-        VU.drawSeal(c, x + cardW - ms - 8, y + 8, ms, ms, mark, { style: 'solid', col: r.kind === 'unlock' ? RED : '#6d6455', sz: Math.round(ms * 0.62), rot: 0.06, stack: false });
-        var nm = (XY.SP_BY[r.id] && XY.SP_BY[r.id].name) || r.id;
-        kt(c, nm, x + cardW / 2, y + cardH - band + band * 0.28, Math.max(12, Math.min(18, cardW * 0.11)), '#2b1c08', 'center', cardW - 12);
-        kt(c, r.text || '', x + cardW / 2, y + cardH - band * 0.28, Math.max(10, Math.min(13, cardW * 0.075)), r.kind === 'unlock' ? RED : SOFT, 'center', cardW - 10, false);
-      }
-      c.restore();
-    });
-    var nu = 0, nd = 0;
-    rows.forEach(function (r) { if (r.kind === 'unlock') nu++; else nd++; });
-    var by = ch - 14 - 48, hint = v.phase === 'result'
-      ? ('解锁 ' + nu + ' 人，重复 ' + nd + ' 张。重复卡计入该角色的角色卡，凑够 2 / 5 / 10 / 20 / 40 张升到 Lv1~5。没出现的仍然锁定。')
-      : '翻开十张特殊角色卡。跳过也不会重抽，刷新之后直接看这次的结果。';
-    if (VU.wrap) VU.wrap(c, hint, pad, by - (land ? 44 : 74), cw - pad * 2, land ? 16 : 15, land ? 13 : 12, SOFT, false, land ? 2 : 3);
+    else { c.fillStyle = '#f6efe0'; c.fillRect(0, 0, cw, ch); }
+    VU.seal(c, 14, 10, land ? 46 : 40, land ? 46 : 40, '抽', RED, land ? 24 : 20);
+    var stage = v.phase !== 'result';
+    var focus = v.hold && v.focus != null ? v.focus : XY.gacha10.focusOf(elapsed);
+    if (!v.hold) v.focus = focus;
+    kt(c, stage ? '天机十连' : '十连结果', 70, land ? 26 : 24, land ? 30 : 24, '#2b1c08', 'left', cw - 160);
+    kt(c, stage ? ('第 ' + (focus + 1) + ' / ' + rows.length + ' 张 · 已写入存档') : ('解锁 ' + nu + ' 人 · 重复 ' + nd + ' 张 · 只此一次'), 70, land ? 52 : 46, land ? 14 : 12, SOFT, 'left', cw - 90, false);
     st.hit(0, 0, cw, ch, 'gachaHold');
-    var bw = Math.min(land ? 280 : cw - 28, cw - 28), bx = (cw - bw) / 2;
-    if (v.phase === 'result') st.btn(bx, by, bw, 48, '收下', 'gachaAck', { pri: true, col: RED, sz: land ? 22 : 18 });
-    else st.btn(bx, by, bw, 48, '跳过', 'gachaSkip', { sz: land ? 20 : 17, rgb: '58,50,38' });
+    function skipBtn(x, y, w, label) { st.btn(x, y, w, 48, label, 'gachaSkip', { sz: land ? 20 : 18, rgb: '58,50,38' }); }
+    function ackBtn(x, y, w) { st.btn(x, y, w, 48, '收下', 'gachaAck', { pri: true, col: RED, sz: land ? 22 : 18 }); }
+    function arrow(x, y, label, dir, off) { st.btn(x, y, 52, 48, label, dir < 0 ? 'gachaPrev' : 'gachaNext', { off: off, sz: 26 }); }
+    if (!land && stage) {
+      var bw = Math.min(cw - 128, 420), bh = Math.min(ch - 196, Math.round(bw * 1.48));
+      var bx = Math.round((cw - bw) / 2), by = 78;
+      var p = v.hold ? 1 : XY.gacha10.cardAt(elapsed, focus);
+      var row = rows[focus] || rows[0];
+      if (row) flipCard(c, row, bx, by, bw, bh, 11 + focus * 17, p);
+      var dotsY = by + bh + 16;
+      for (i = 0; i < rows.length; i++) {
+        c.beginPath();
+        c.arc(cw / 2 + (i - (rows.length - 1) / 2) * 16, dotsY, i === focus ? 4.5 : 3, 0, Math.PI * 2);
+        c.fillStyle = i === focus ? RED : 'rgba(58,50,38,0.35)';
+        c.fill();
+      }
+      var foot = ch - 16 - 48;
+      arrow(10, foot, '‹', -1, focus <= 0);
+      arrow(cw - 62, foot, '›', 1, focus >= rows.length - 1);
+      skipBtn((cw - Math.min(168, cw - 150)) / 2, foot, Math.min(168, cw - 150), v.hold ? '看总览' : '跳过');
+      return;
+    }
+    if (!land && !stage) {
+      var per = 4, pages = Math.max(1, Math.ceil(rows.length / per));
+      v.pages = pages;
+      var page = Math.max(0, Math.min(pages - 1, v.page || 0));
+      v.page = page;
+      var slice = rows.slice(page * per, page * per + per);
+      var gap = 10, pad = 14, header = 70, foot = ch - 16 - 48;
+      var hintY = foot - 52;
+      var availH = hintY - header - 8, cols = 2, nRows = Math.ceil(slice.length / cols);
+      var cardW = Math.floor((cw - pad * 2 - gap) / 2);
+      var cardH = Math.floor((availH - gap * (nRows - 1)) / Math.max(1, nRows));
+      var gridW = cols * cardW + gap, x0 = Math.round((cw - gridW) / 2);
+      slice.forEach(function (r, k) {
+        var col = k % cols, rr = Math.floor(k / cols);
+        var x = x0 + col * (cardW + gap), y = header + rr * (cardH + gap);
+        if (slice.length < 3 && col === 0 && slice.length % 2 === 1 && k === slice.length - 1) x = Math.round((cw - cardW) / 2);
+        flipCard(c, r, x, y, cardW, cardH, 30 + (page * per + k) * 13, 1);
+      });
+      if (VU.wrap) VU.wrap(c, '重复卡计入角色卡，凑够 2 / 5 / 10 / 20 / 40 张升级。没出现的仍然锁定。左右滑看其余。', pad, hintY, cw - pad * 2, 16, 13, SOFT, false, 2);
+      kt(c, (page + 1) + ' / ' + pages, cw - 18, 28, 13, SOFT, 'right', 70, false);
+      arrow(10, foot, '‹', -1, page <= 0);
+      arrow(cw - 62, foot, '›', 1, page >= pages - 1);
+      ackBtn((cw - Math.min(180, cw - 150)) / 2, foot, Math.min(180, cw - 150));
+      return;
+    }
+    var headerD = 74, footD = ch - 16 - 48, gapD = 12, padD = 28;
+    var colsD = 5, rowsD = 2;
+    var availW = cw - padD * 2, availH = footD - 56 - headerD;
+    var cardWd = Math.floor((availW - gapD * (colsD - 1)) / colsD);
+    var cardHd = Math.floor((availH - gapD) / rowsD);
+    var gridWd = colsD * cardWd + gapD * (colsD - 1);
+    var x0d = Math.round((cw - gridWd) / 2), y0d = headerD;
+    rows.forEach(function (r, idx) {
+      var col = idx % colsD, rr = Math.floor(idx / colsD);
+      var x = x0d + col * (cardWd + gapD), y = y0d + rr * (cardHd + gapD);
+      var p = stage ? XY.gacha10.cardAt(elapsed, idx) : 1;
+      flipCard(c, r, x, y, cardWd, cardHd, 21 + idx * 13, p);
+    });
+    var hint = stage ? '依次翻开。跳过直接看总览，不会重抽。' : ('重复卡计入角色卡，凑够 2 / 5 / 10 / 20 / 40 张升到 Lv1~5。没出现的仍然锁定。');
+    if (VU.wrap) VU.wrap(c, hint, padD, footD - 32, cw - padD * 2, 16, 13, SOFT, false, 1);
+    var bwd = Math.min(240, cw * 0.2);
+    if (stage) skipBtn((cw - bwd) / 2, footD, bwd, '跳过');
+    else ackBtn((cw - bwd) / 2, footD, bwd);
   };
 
 
@@ -23218,7 +23415,7 @@ X.step=function(g,dt){if(!g._simRandom)return step.apply(this,arguments);var sel
       return;
     }
     if (s === 'levels') {
-      if (XY.gacha10 && XY.gacha10.ensure && XY.gacha10.ensure().show) { if (k === 'Escape' || k === 'Enter' || k === 'Space') XY.gacha10.key(); return; }
+      if (XY.gacha10 && XY.gacha10.ensure && XY.gacha10.ensure().show) { if (k === 'ArrowLeft' || k === 'ArrowRight') { if (XY.gacha10.nudge) XY.gacha10.nudge(k === 'ArrowRight' ? 1 : -1); return; } if (k === 'Escape' || k === 'Enter' || k === 'Space') XY.gacha10.key(); return; }
       if (k === 'Escape') toMenu(); else if (k === 'Enter') { var dp = XY.depart; if (dp && dp.kind === 'dungeon' && XY.save.dngUnlocked(dp.id)) startGame(null, dp.id); else startGame(app.levelId); }
       return;
     }
@@ -23481,6 +23678,8 @@ X.step=function(g,dt){if(!g._simRandom)return step.apply(this,arguments);var sel
         case 'lockedSlot': msg('暂未开放', false); break;
         case 'xcharLocked': msg('通关第 1 关后才能自建角色。已经建好的角色还在，通关后就能带。', true); break;
         case 'gachaHold': break;
+        case 'gachaPrev': if (XY.gacha10 && XY.gacha10.nudge) XY.gacha10.nudge(-1); break;
+        case 'gachaNext': if (XY.gacha10 && XY.gacha10.nudge) XY.gacha10.nudge(1); break;
         case 'gachaSkip': if (XY.gacha10) XY.gacha10.key(); break;
         case 'gachaAck': if (XY.gacha10) XY.gacha10.ack(); break;
         case 'carryPick': var cp = XY.save.setCarry(h.id); msg(cp.reason, !cp.ok); break;

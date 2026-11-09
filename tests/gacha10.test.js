@@ -219,17 +219,83 @@ async function frames(page, n) {
     await page.screenshot({ path: file });
     console.log('shot', file, JSON.stringify(info));
   }
-  // 截图用一份还没点过「收下」的新档，才能看到翻卡
+  // 同一份存档、同一组牌：结果页 → 收下 → 出发页。出发页的锁必须和结果页的「解锁」一致。
+  function expectRoster(rows, label) {
+    rows.forEach(function (r) {
+      if (r.pulled !== r.owned) fail(label + ' ' + r.name + ' 结果' + (r.pulled ? '解锁' : '未抽到') + ' 但出发页' + (r.owned ? '没锁' : '还挂着锁'));
+      if (r.locked !== !r.owned) fail(label + ' lock flag ' + r.name);
+    });
+  }
   await page.evaluate(function () { XY.save.reset(); window.__xy.app.screen = 'levels'; XY.gacha10.ensure(); });
   await page.waitForFunction(function () {
     var g = XY.save.data.gacha10;
     if (!g || !g.pulls) return false;
     return g.pulls.every(function (id) { var im = XY.bgArt(id); return im && im.naturalWidth > 0; });
   }, { timeout: 15000 }).catch(function () { console.log('portrait wait timed out, shooting anyway'); });
-  await shot('desktop-flip', 1920, 1080, 'flip', 1.2);
-  await shot('desktop-result', 1920, 1080, 'result', 99);
-  await shot('mobile-flip', 390, 844, 'flip', 1.2);
-  await shot('mobile-result', 390, 844, 'result', 99);
+  var rosterOf = function () {
+    var unlock = {};
+    (XY.save.data.gacha10.rows || []).forEach(function (r) { if (r.kind === 'unlock') unlock[r.id] = r.text; });
+    return {
+      seed: XY.save.data.gacha10.seed,
+      pulls: XY.save.data.gacha10.pulls.slice(),
+      acked: !!XY.save.data.gacha10.acked,
+      rows: XY.SPECIALS.map(function (d) {
+        return { id: d.id, name: d.name, pulled: !!unlock[d.id], text: unlock[d.id] || '', owned: XY.save.spOwned(d.id), locked: !XY.save.spOwned(d.id), cards: XY.save.spCards(d.id) };
+      })
+    };
+  };
+  var beforeShot = await page.evaluate(rosterOf);
+  expectRoster(beforeShot.rows, '结果页');
+  if (beforeShot.acked) fail('result shot already acked');
+  var timing = await page.evaluate(function () { return XY.gacha10.timing; });
+  if (!(timing.total >= 6 && timing.total <= 8)) fail('flip duration ' + timing.total);
+  var midAt = await page.evaluate(function () {
+    var rows = XY.save.data.gacha10.rows, i, pick = 4, t = XY.gacha10.timing;
+    for (i = 2; i < rows.length; i++) if (rows[i].kind === 'unlock') { pick = i; break; }
+    return t.intro + pick * t.step + t.flip * 0.6;
+  });
+  await shot('desktop-start', 1920, 1080, 'flip', 0.15);
+  await shot('desktop-mid', 1920, 1080, 'flip', midAt);
+  await shot('desktop-overview', 1920, 1080, 'result', null);
+  await shot('mobile-start', 390, 844, 'flip', 0.15);
+  await shot('mobile-mid', 390, 844, 'flip', midAt);
+  await shot('mobile-overview', 390, 844, 'result', null);
+  var nudged = await page.evaluate(function () {
+    var v = XY.gacha10.view(window.__xy.app);
+    v.phase = 'flip'; v.hold = false; v.focus = 1;
+    XY.gacha10.nudge(1);
+    v = XY.gacha10.view(window.__xy.app);
+    var out = { focus: v.focus, hold: !!v.hold };
+    v.phase = 'result'; v.pages = 3; v.page = 0;
+    XY.gacha10.nudge(1);
+    v = XY.gacha10.view(window.__xy.app);
+    out.page = v.page;
+    return out;
+  });
+  if (nudged.focus !== 2 || !nudged.hold || nudged.page !== 1) fail('nudge ' + JSON.stringify(nudged));
+  var still = await page.evaluate(rosterOf);
+  if (still.seed !== beforeShot.seed || still.pulls.join(',') !== beforeShot.pulls.join(',')) fail('screenshots changed the pull');
+  expectRoster(still.rows, '截完结果');
+  await page.evaluate(function () { XY.gacha10.ack(); window.__xy.app.screen = 'levels'; });
+  await frames(page, 3);
+  var afterShot = await page.evaluate(rosterOf);
+  if (afterShot.seed !== beforeShot.seed || afterShot.pulls.join(',') !== beforeShot.pulls.join(',')) fail('收下换了一组牌');
+  if (afterShot.acked !== true) fail('depart shot not acked');
+  expectRoster(afterShot.rows, '出发页');
+  beforeShot.rows.forEach(function (a, i) {
+    var b = afterShot.rows[i];
+    if (a.id !== b.id || a.owned !== b.owned || a.cards !== b.cards) fail('收下改变了 ' + a.name + ' 的解锁');
+  });
+  console.log('same save', beforeShot.rows.map(function (r) { return r.name + (r.owned ? '=开' : '=锁'); }).join(' '));
+  await shot('desktop-depart-after', 1920, 1080, 'result', 99);
+  await shot('mobile-depart-after', 390, 844, 'result', 99);
+  var departStill = await page.evaluate(function () {
+    return { show: XY.gacha10.blocking(), seed: XY.save.data.gacha10.seed, owned: XY.SPECIALS.filter(function (d) { return XY.save.spOwned(d.id); }).map(function (d) { return d.id; }) };
+  });
+  if (departStill.show) fail('depart still showing gacha');
+  if (departStill.seed !== beforeShot.seed) fail('depart seed drifted');
+  var ownedIds = beforeShot.rows.filter(function (r) { return r.owned; }).map(function (r) { return r.id; }).join(',');
+  if (departStill.owned.join(',') !== ownedIds) fail('depart owned set changed');
 
   await browser.close();
   srv.close();
