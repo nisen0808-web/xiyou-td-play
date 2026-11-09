@@ -9092,8 +9092,9 @@ XY.TRAITS = {
     }
     // 名字（操控中的更醒目，头顶带小三角）
     // v0.8.1：名牌延后到所有英雄画完再画（flushHeroNames），避开其他角色的身体 / 血条 / 命令标签和别的名牌，也不会被后画的角色盖住
-    heroBodies.push({ h: h, x0: x - Math.max(rr * 1.15, tall ? 30 : 0), x1: x + Math.max(rr * 1.15, tall ? 30 : 0), y0: y - (tall ? tr : r) - 2, y1: y + r + 12 });
-    heroNames.push({ h: h, s: d.name + (h.sp ? ' Lv' + d.lv : ''), x: x, y: clash ? y + r + (h.sp ? 47 : 34) : y - tr - (isC ? 17 : 13), sz: isC ? 15 : 13, col: isC ? '#b8300f' : T.ink, dir: clash ? 1 : -1, mark: isC && !clash, a: c.globalAlpha, tri: Math.sin(rt * 6) * 2 });
+    heroBodies.push({ h: h, x0: x - Math.max(rr * 1.15, tall ? 30 : 0), x1: x + Math.max(rr * 1.15, tall ? 30 : 0), y0: Math.min(y - (tall ? tr : r) - 2, h._wildTop == null ? 1e9 : h._wildTop), y1: y + r + 12 });
+    var nameY = clash ? y + r + (h.sp ? 47 : 34) : y - tr - (isC ? 17 : 13); if (!clash && h._wildTop != null) nameY = Math.min(nameY, h._wildTop - (isC ? 18 : 14));
+    heroNames.push({ h: h, s: d.name + (h.sp ? ' Lv' + d.lv : ''), x: x, y: nameY, sz: isC ? 15 : 13, col: isC ? '#b8300f' : T.ink, dir: clash ? 1 : -1, mark: isC && !clash, a: c.globalAlpha, tri: Math.sin(rt * 6) * 2 });
   }
   var heroBodies = [], heroNames = [];
   function flushHeroNames(c) {                                  // 名牌防叠：名字优先在头顶；候选只有「头顶 / 左右小幅错开 / 稍高」，最大偏离约半个人物高度，不放脚下。严格避开别的名牌 / 命令标签，和身体只轻微让一让
@@ -11688,6 +11689,8 @@ XY.TRAITS = {
   M.poseFolder = function (h) { return (h.id === 'horse' && h.def && h.def.form === 'human') ? 'dragon' : h.id; };
   M.poseHero = function (c, h, rt, x, y, r) {
     if (!M.poseOwns(h)) return false;
+    // 倒地仍用旧 ko。新图集就绪后，待机 / 出招交给 chibi 多帧；走路和蓄力也回到 chibi 的旧帧。
+    if (!h.down && XY.chibi && XY.chibi.useWild && XY.chibi.useWild(h)) return false;
     var id = M.poseFolder(h), face = Math.cos(h.face || 0) >= 0 ? 1 : -1;
     var want = h.down ? 'ko' : (h.hurtT > 0 ? 'hit' : (h.dash ? 'charge' : (h.atkT > 0 ? 'attack' : (h.moving ? 'stance' : ((Math.floor(rt * 1.25 + (h.bob || 0)) % 2) ? 'idle' : 'stance')))));
     var got = resolvePose(id, want);
@@ -11799,6 +11802,7 @@ XY.TRAITS = {
 
 
 
+<script src="assets/wild/wild-anim.js"></script>
 <script>
 /* ---- js/chibi.js ---- */
 /* v0.7 操控角色的 Q 版多帧渲染。
@@ -11833,7 +11837,7 @@ XY.TRAITS = {
   S.forget = function (id) { delete imgs[id]; if (XY._cbMenu) delete XY._cbMenu[id]; for (var k in tints) if (k.indexOf(id + '~') === 0 ) delete tints[k]; };   // v0.8.1：自建角色重做精灵时清缓存
   S.has = function (id) { return !!(XY.CHIBI && XY.CHIBI[id]) && !(XY.isHidden && XY.isHidden(id)); };
   S.preload = function () { if (XY.CHIBI) for (var k in XY.CHIBI) if (!(XY.isHidden && XY.isHidden(k))) load(k); };
-  S.ready = function (h) { var k = XY.chibiKey(h); return S.has(k) && ok(load(k)); };
+  S.ready = function (h) { var k = XY.chibiKey(h); if (S.useWild(h)) return true; return S.has(k) && ok(load(k)); };
 
   function tint(key, set, i, e, f) {
     var ck = key + '~' + (e.ink ? 'ink' : 'plain') + '~' + set + '~' + i, t = tints[ck];
@@ -11842,6 +11846,52 @@ XY.TRAITS = {
     var x = t.getContext('2d'); x.drawImage(e.img, f[0], f[1], f[2], f[3], 0, 0, f[2], f[3]);
     x.globalCompositeOperation = 'source-atop'; x.fillStyle = 'rgba(255,50,40,0.6)'; x.fillRect(0, 0, f[2], f[3]);
     return t;
+  }
+
+  /* 狂野水墨多帧：待机按 animation.json 的 cycle / pingpong 播，出招 8 帧约 667ms，播完回待机。
+   * 走路（2–5）和蓄力（6）仍用旧图集。币圈老司机没有出招包，出招那一下留旧的第 7 帧。
+   * 伤害仍在攻击冷却被重置的那一瞬结算；出招动画从这一瞬开始，命中帧约在 250ms。 */
+  var WILD_STAND = 192;
+  S.wildOff = false;
+  S.useWild = function (h) {
+    if (S.wildOff || !h || !XY.wildAnim || !XY.wildAnim.ready) return false;
+    if (h.id === 'horse' && h.def && h.def.form === 'human') return false;
+    return XY.wildAnim.ready(XY.chibiKey(h), 'idle');
+  };
+  S.wildState = function (h, rt, key) {
+    var W = XY.wildAnim;
+    if (!W || !W.knows || !W.knows(key)) return null;
+    if (h._wildFreeze) return h._wSt || { mode: 'idle', t: 0 };
+    var prev = h._wAtkSeen, edge = false;
+    if (prev != null && h.atkMax > 0.25 && (h.atkT || 0) > prev + 0.15) edge = true;
+    if (h.dash && !h._wDashSeen) edge = true;
+    h._wAtkSeen = h.atkT; h._wDashSeen = !!h.dash;
+    var dt = h._wRt == null ? 0 : (rt - h._wRt) * 1000;
+    if (!(dt >= 0)) dt = 0;
+    if (dt > 200) dt = 200;
+    h._wRt = rt;
+    var atk = W.ready(key, 'attack') ? W.clip(key, 'attack') : null;
+    h._wSt = W.step(h._wSt, dt, edge, atk);
+    if (h._wIdleT == null) h._wIdleT = Math.abs((h.bob || 0) * 1000) % 8000;
+    else h._wIdleT += dt;
+    return h._wSt;
+  };
+  function wildTint(key, clipName, i, im, sx, sy, cw, ch) {
+    var ck = key + '~wild~' + clipName + '~' + i, t = tints[ck];
+    if (t) return t;
+    t = tints[ck] = document.createElement('canvas'); t.width = cw; t.height = ch;
+    var g = t.getContext('2d'); g.drawImage(im, sx, sy, cw, ch, 0, 0, cw, ch);
+    g.globalCompositeOperation = 'source-atop'; g.fillStyle = 'rgba(255,50,40,0.6)'; g.fillRect(0, 0, cw, ch);
+    return t;
+  }
+  function drawWildFrame(c, key, clipName, index, k, tinted) {
+    var W = XY.wildAnim, clip = W.clip(key, clipName), im = W.img(key, clipName);
+    if (!clip || !im || index < 0 || index >= clip.frameCount) return null;
+    var cw = clip.cell[0], ch = clip.cell[1], col = index % clip.cols, row = (index / clip.cols) | 0;
+    var sx = col * cw, sy = row * ch;
+    var src = tinted ? wildTint(key, clipName, index, im, sx, sy, cw, ch) : im;
+    c.drawImage(src, tinted ? 0 : sx, tinted ? 0 : sy, cw, ch, -clip.anchor[0] * k, -clip.anchor[1] * k, cw * k, ch * k);
+    return clip;
   }
 
   /* 选动画：返回 {anim, i(帧号), mix(待机交叉淡化的 B 帧透明度)} */
@@ -11857,22 +11907,52 @@ XY.TRAITS = {
   };
 
   S.draw = function (c, G, h, rt, x, y, r) {
-    var key = XY.chibiKey(h), e = load(key); if (!ok(e)) return false;
-    if (h.ultInk) return true;                                     // 大招水墨精灵（ultink.js）在场：本体由它画，这里不重复画
-    var d = e.d, k = r * DRAW_H / e.stand * (d.sz || 1);       // 烘焙时已统一到 120px 站高
+    var key = XY.chibiKey(h), e = load(key), oldOk = ok(e);
+    if (!oldOk && !S.useWild(h)) return false;
+    if (h.ultInk) { h._wildTop = null; return true; }            // 大招水墨精灵（ultink.js）在场：本体由它画，这里不重复画
+    var d = e && e.d, sz = (d && d.sz) || 1;
+    var kWild = r * DRAW_H / WILD_STAND * sz, kOld = e ? r * DRAW_H / e.stand * sz : kWild;
     var a = S.pick(h, rt), cs = Math.cos(h.face || 0);
     var fl = face[h.i]; if (fl === undefined || Math.abs(cs) > 0.25) fl = face[h.i] = cs < 0;
-    var set = fl && d.L ? d.L : d.fr, mir = fl && !d.L;
-    var moving = a.anim === 'walk', foot = y + r * 0.85;
-    var bobY = moving ? -Math.abs(Math.sin(rt * 10 + (h.bob || 0))) * r * 0.14 : -Math.sin(rt * 2.4 + (h.bob || 0)) * r * 0.025;
-    var lean = moving ? (fl ? -0.05 : 0.05) * Math.sin(rt * 10 + (h.bob || 0)) : 0;
+    var set = d ? (fl && d.L ? d.L : d.fr) : null, mir = !!(fl && !(d && d.L));
+    var st = S.wildState(h, rt, key);
+    var charging = a.anim === 'atk' && a.i === 6;
+    var walking = a.anim === 'walk' || (a.anim === 'hit' && h.moving);
+    var legacyStrike = a.anim === 'atk' && a.i === 7 && !(XY.wildAnim && XY.wildAnim.clip(key, 'attack'));
+    var wildKind = null;
+    if (!h.ultPose && st && S.useWild(h)) {
+      if (st.mode === 'attack') wildKind = 'attack';
+      else if (!walking && !charging && !legacyStrike) wildKind = 'idle';
+    }
+    var moving = !wildKind && a.anim === 'walk', foot = y + r * 0.85;
+    var bobY = wildKind ? 0 : (moving ? -Math.abs(Math.sin(rt * 10 + (h.bob || 0))) * r * 0.14 : -Math.sin(rt * 2.4 + (h.bob || 0)) * r * 0.025);
+    var lean = wildKind ? 0 : (moving ? (fl ? -0.05 : 0.05) * Math.sin(rt * 10 + (h.bob || 0)) : 0);
     var sy = 1, sx = 1;
-    if (a.anim === 'idle') { var br = Math.sin(rt * 2.4 + (h.bob || 0)); sy = 1 + br * 0.012; sx = 1 - br * 0.008; }
-    var hitX = 0;
-    if (a.anim === 'hit') { hitX = Math.sin(rt * 90) * r * 0.12; sy = 0.95; sx = 1.04; }
+    if (!wildKind && a.anim === 'idle') { var br = Math.sin(rt * 2.4 + (h.bob || 0)); sy = 1 + br * 0.012; sx = 1 - br * 0.008; }
+    var hitX = 0, hurt = h.hurtT > 0.05;
+    if (hurt) { hitX = Math.sin(rt * 90) * r * 0.12; if (!wildKind) { sy = 0.95; sx = 1.04; } }
     c.save();
     c.imageSmoothingEnabled = true; c.imageSmoothingQuality = 'high';
     c.translate(x + hitX, foot + bobY); c.rotate(lean); c.scale(sx * (mir ? -1 : 1), sy);
+    h._wildTop = null;
+    if (wildKind) {
+      var wt = wildKind === 'attack' ? (st.t || 0) : (h._wIdleT || 0);
+      var clip = XY.wildAnim.clip(key, wildKind);
+      var fr = clip ? XY.wildAnim.frameAt(clip, wt) : null;
+      var drawn = fr && drawWildFrame(c, key, wildKind, fr.index, kWild, hurt);
+      if (drawn) {
+        h._wildTop = foot + bobY - drawn.anchor[1] * kWild;
+        c.restore(); c.globalAlpha = 1;
+        var animName = wildKind === 'attack' ? 'atk' : 'idle';
+        S.stats[animName]++; S.drawn++;
+        S.last = { id: key, anim: wildKind === 'attack' ? 'wild-atk' : 'wild-idle', frame: fr.index, left: !!fl, hero: h.i, t: rt, ink: true, wild: true };
+        (S.lastBy || (S.lastBy = {}))[h.i] = S.last;
+        S.frames[key + ':' + S.last.anim + ':' + fr.index] = 1;
+        return true;
+      }
+    }
+    if (!oldOk || !set) { c.restore(); c.globalAlpha = 1; return false; }
+    var k = kOld;
     function one(i, alpha, tinted) {
       var f = set[i]; if (!f) return;
       var dw = f[2] * k, dh = f[3] * k;
@@ -11880,10 +11960,10 @@ XY.TRAITS = {
       c.drawImage(tinted ? tint(key, fl && d.L ? 'L' : 'R', i, e, f) : e.img, tinted ? 0 : f[0], tinted ? 0 : f[1], f[2], f[3], -f[4] * k, -f[5] * k, dw, dh);
     }
     if (a.anim === 'idle') { one(0, 1); one(1, a.mix); S.frames[key + ':idle:1'] = 1; }
-    else { one(a.i, 1); if (a.anim === 'hit') one(a.i, 1, true); }
+    else { one(a.i, 1); if (a.anim === 'hit' || hurt) one(a.i, 1, true); }
     c.restore(); c.globalAlpha = 1;
     S.stats[a.anim]++; S.drawn++;
-    S.last = { id: key, anim: a.anim, frame: a.i, left: fl, hero: h.i, t: rt, ink: !!e.ink };
+    S.last = { id: key, anim: a.anim, frame: a.i, left: !!fl, hero: h.i, t: rt, ink: !!e.ink };
     (S.lastBy || (S.lastBy = {}))[h.i] = S.last;                  // v0.8.1：每个角色最近一次画的帧（所有英雄都画 Q 版后，S.last 只是“最后画的那个”）
     S.frames[key + ':' + a.anim + ':' + a.i] = 1;
     return true;
@@ -20329,6 +20409,27 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
     if (!o) { o = NIU[name] = new Image(); o.src = 'bossfight/assets/spr/niumo/' + name + '.webp'; }
     return o.complete && o.naturalWidth ? o : null;
   }
+  function drawNiumoWild(c, h, rt, x, y, r, face) {
+    var W = XY.wildAnim;
+    if (!W || !W.ready || !W.frameAt || !W.ready('niumo', 'idle')) return false;
+    if (h.down || h.dash || h.moving) return false;
+    var prev = h._nAtkSeen;
+    if (prev != null && h.atkMax > 0.25 && (h.atkT || 0) > prev + 0.15 && W.ready('niumo', 'attack')) {
+      h._nAtk0 = rt; h._nAtkDur = ((W.clip('niumo', 'attack').durationMs || 667) / 1000);
+    }
+    h._nAtkSeen = h.atkT;
+    var clipName = 'idle', tMs = rt * 1000 + (h.bob || 0) * 800;
+    if (h.hurtT > 0.05 && W.ready('niumo', 'hit')) { clipName = 'hit'; tMs = Math.max(0, 0.2 - h.hurtT) * 1000; }
+    else if (h._nAtk0 != null && rt - h._nAtk0 < (h._nAtkDur || 0) && W.ready('niumo', 'attack')) { clipName = 'attack'; tMs = (rt - h._nAtk0) * 1000; }
+    var clip = W.clip('niumo', clipName), im = W.img('niumo', clipName);
+    if (!clip || !im || !im.naturalWidth) return false;
+    var fr = W.frameAt(clip, tMs), cw = clip.cell[0], ch = clip.cell[1], col = fr.index % clip.cols, row = (fr.index / clip.cols) | 0;
+    var k = r * 3.15 / ((W.data && W.data.stand) || 192);
+    c.save(); c.imageSmoothingEnabled = true; c.translate(x, y + r * 0.9); c.scale(-face, 1);
+    c.drawImage(im, col * cw, row * ch, cw, ch, -clip.anchor[0] * k, -clip.anchor[1] * k, cw * k, ch * k);
+    c.restore();
+    return true;
+  }
   VU.drawNiumo = function (c, G, h, rt) {
     var x = h.x, y = h.y, r = h.def.r, face = Math.cos(h.face || 0) >= 0 ? 1 : -1;
     var pose = 'idle_a';
@@ -20342,7 +20443,8 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
     c.save();
     c.fillStyle = 'rgba(58,50,38,0.22)'; c.beginPath(); c.ellipse(x, y + r * 0.9, r * 1.15, r * 0.36, 0, 0, PI2); c.fill();
     if (G.ctrl === h.i && !h.down) { c.strokeStyle = '#7a4fc0'; c.lineWidth = 3; c.globalAlpha = 0.85; c.beginPath(); c.ellipse(x, y + r * 0.85, r * 1.45, r * 0.5, 0, 0, PI2); c.stroke(); c.globalAlpha = 1; }
-    if (im && !h.down) {
+    if (drawNiumoWild(c, h, rt, x, y, r, face)) { /* 新图集未到时上面直接返回 false，仍走下面的旧 webp */ }
+    else if (im && !h.down) {
       var bh = r * 3.15, bw = bh * im.naturalWidth / im.naturalHeight, bob = h.moving ? Math.sin(rt * 10) * 2 : Math.sin(rt * 2) * 1.2;
       c.save(); c.translate(x, y + r * 0.9 + bob); c.scale(face, 1); c.drawImage(im, -bw / 2, -bh, bw, bh); c.restore();
     } else if (h.down && im) {
@@ -22922,6 +23024,7 @@ X.step=function(g,dt){if(!g._simRandom)return step.apply(this,arguments);var sel
   // 中途放弃（回首页 / 重开）也记一局：时间和击杀照算
   function abandon() { if (G && !G.committed && G.t > 3 && (app.screen === 'play' || app.screen === 'pause')) XY.save.commitRun(G, 'abandon'); }
   function startGame(levelId, dungeonId) {
+    if (XY.wildAnim && XY.wildAnim.arm) XY.wildAnim.arm();
     abandon(); app.retStack = [];
     if (typeof levelId === 'number') { app.levelId = levelId; app.dungeonId = null; app.modId = null; app.villain = false; app.lair = null; }      // 点选关出发 = 普通关；副本入口传 dungeonId；R / 再来一局 保持上一次的选择
     if (dungeonId && XY.dungeonOf(dungeonId) && XY.save.dngUnlocked(dungeonId)) { app.dungeonId = dungeonId; app.modId = null; }
@@ -22937,8 +23040,8 @@ X.step=function(g,dt){if(!g._simRandom)return step.apply(this,arguments);var sel
   function goHome() { abandon(); app.retStack = []; app.dungeonId = null; app.modId = null; app.villain = false; app.lair = null; fresh(); app.screen = 'start'; if (XY.audio && XY.audio.bgmStart) XY.audio.bgmStart('menu'); }
   function toMenu() { app.dungeonId = null; app.modId = null; app.villain = false; app.lair = null; fresh(); app.screen = (app.retStack && app.retStack.length) ? app.retStack.pop() : 'start'; app.confirm = null; if (XY.audio && XY.audio.bgmStart) XY.audio.bgmStart('menu'); }     // v0.8.7b：返回回到“上一页”（出发页进的洞府阁 / 商店 / 排行榜 / 反派，返回都回出发页；栈空 = 首页）     // 从子界面回主菜单（刷新预览里的皮肤）
   // v0.9 反派关 / 洞府验关：从反派首页 / 洞府设计页出发（只用方向键）
-  function startVillain() { abandon(); app.retStack = []; app.dungeonId = null; app.modId = null; app.lair = null; app.villain = true; app.levelId = 1; fresh(); app.screen = 'play'; acc = 0; app.confirm = null; if (XY.audio) { XY.audio.init(); if (XY.audio.bgmStart) XY.audio.bgmStart('play'); } if (XY.sfx) XY.sfx('start'); }
-  function startLair(opts) { abandon(); app.retStack = []; app.dungeonId = null; app.modId = null; app.villain = false; app.lair = opts; app.levelId = 1; fresh(); app.screen = 'play'; acc = 0; app.confirm = null; if (XY.audio) { XY.audio.init(); if (XY.audio.bgmStart) XY.audio.bgmStart('play'); } if (XY.sfx) XY.sfx('start'); }
+  function startVillain() { if (XY.wildAnim && XY.wildAnim.arm) XY.wildAnim.arm(); abandon(); app.retStack = []; app.dungeonId = null; app.modId = null; app.lair = null; app.villain = true; app.levelId = 1; fresh(); app.screen = 'play'; acc = 0; app.confirm = null; if (XY.audio) { XY.audio.init(); if (XY.audio.bgmStart) XY.audio.bgmStart('play'); } if (XY.sfx) XY.sfx('start'); }
+  function startLair(opts) { if (XY.wildAnim && XY.wildAnim.arm) XY.wildAnim.arm(); abandon(); app.retStack = []; app.dungeonId = null; app.modId = null; app.villain = false; app.lair = opts; app.levelId = 1; fresh(); app.screen = 'play'; acc = 0; app.confirm = null; if (XY.audio) { XY.audio.init(); if (XY.audio.bgmStart) XY.audio.bgmStart('play'); } if (XY.sfx) XY.sfx('start'); }
   function msg(text, bad) { app.menuMsg = { text: text, bad: !!bad, until: app.rt + 3 }; }
 
   function pause() { if (app.screen === 'play' && G.mode === 'play') { app.partyPanel = false; app.screen = 'pause'; } }   // 正式暂停菜单优先：队伍面板先收起，不抢点击

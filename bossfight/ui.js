@@ -44,6 +44,10 @@
       jobs.push(loadImg('assets/mink-elite.webp').then(function (i) { MINK = i; }),
         Promise.resolve().then(function () { MINK_META = window.BF_MINK_META; }),
         (document.fonts && document.fonts.load ? document.fonts.load('40px "Ma Shan Zheng"', '胜败破招暴击0123456789') : Promise.resolve()));
+      if (window.XY && XY.wildAnim && XY.wildAnim.arm) {
+        XY.wildAnim.base = '../assets/wild/';
+        jobs.push(XY.wildAnim.arm().catch(function () { return null; }));
+      }
       return Promise.all(jobs);
     });
     if (window.BFUI) window.BFUI.ready = ready; return ready;
@@ -223,7 +227,7 @@
     o = o || {}; G.runId = ++runSerial; var partner = o.partner || G.partner; G.partner = partner;
     G.F = BF.newFight({ partner: partner, summon: o.summon || null, seed: o.seed || (Math.random() * 99999 | 0) + 1 });
     G.fx = []; G.calls = []; G.shake = 0; G.stop = 0; G.slow = 0; G.endT = 0; G.introT = o.skipIntro ? 0 : 1.7; G.lane = { wukong: 0, partner: 1 }; G.t = 0; G.mode = 'fight'; G.vt = G.vt || 0; TR = {}; HST = {}; WT = {}; VP = {}; G.V = null; G.pos = null; G.shown = false; G.flash = 0; G.wuUlt = 0; G.bossBig = 0; G.bossHit = 0; G.hp = null; G.dmgAgg = {};
-    $('pick').classList.remove('on'); $('res').classList.remove('on');
+    $('pick').classList.remove('on'); $('res').classList.remove('on'); WLAT = {};
     setTimeout(function () { loadMids('wukong'); loadMids('niumo'); loadMids(partner); }, 700);   // 中间帧：开战后台再载，不占首屏体积
   }
   function trackHero(h, dt) {
@@ -287,8 +291,50 @@
     c.fillStyle = g; c.beginPath(); c.arc(0, 0, rx, 0, 7); c.fill();
     c.globalAlpha *= .75; var g2 = c.createRadialGradient(0, 0, 0, 0, 0, rx * .5); g2.addColorStop(0, 'rgba(14,9,3,.85)'); g2.addColorStop(1, 'rgba(14,9,3,0)'); c.fillStyle = g2; c.beginPath(); c.arc(0, 0, rx * .5, 0, 7); c.fill(); c.restore();   // 脚下一小团更深的接触影
   }
+  /* 狂野水墨：待机 / 普攻（牛魔王还有受击）按 animation.json 播。片段没载入就返回 false，下面仍画旧 webp。 */
+  var WLAT = {}, WHOLD = { stance: 1, idle: 1, idle_a: 1, idle_b: 1, idle2: 1, attack: 1, attack_a: 1, attack_b: 1, attack_c: 1, swing: 1, swing_a: 1, swing_b: 1, smash: 1, smash_a: 1 };
+  function paintWild(c, id, clipName, tMs, cx, gyy, fh, p) {
+    var W = XY.wildAnim, clip = W.clip(id, clipName), im = W.img(id, clipName);
+    if (!clip || !im || !im.naturalWidth) return false;
+    var fr = W.frameAt(clip, tMs);
+    if (fr.index < 0 || fr.index >= clip.frameCount) return false;
+    var cw = clip.cell[0], chh = clip.cell[1], col = fr.index % clip.cols, row = (fr.index / clip.cols) | 0;
+    var stand = (W.data && W.data.stand) || 192, body = p.fitH || fh * (SZ[id] || 1) * 0.74, k = body / stand;
+    var ax = clip.anchor[0], ay = clip.anchor[1], fl0 = p.fs != null ? p.fs : (p.flip ? -1 : 1), fl = p.fs != null ? turnW(fl0) : fl0, al = p.alpha == null ? 1 : p.alpha;
+    if (Math.abs(fl) < .05) return true;
+    var face = (id === 'niumo' ? -1 : 1) * (fl < 0 ? -1 : 1), ref = p.fitH || fh;
+    if (!p.noShadow) drawShadow(c, cx, gyy, Math.min(body * .55, ref * .5), fh, p, al, face);
+    var tx = cx + (p.dx || 0), ty = gyy + (p.dy || 0) - (p.lift || 0) * fh, mirror = id === 'niumo' ? -1 : 1;
+    c.save(); c.globalAlpha = al; c.imageSmoothingEnabled = true;
+    c.translate(tx, ty); c.rotate(p.rot || 0); c.transform(1, 0, (p.skew || 0) * fl, 1, 0, 0); c.scale(fl * mirror * (p.sx || 1), p.sy || 1);
+    c.drawImage(im, col * cw, row * chh, cw, chh, -ax * k, -ay * k, cw * k, chh * k);
+    c.restore();
+    return true;
+  }
+  function drawWildPose(c, id, pose, cx, gyy, fh, p) {
+    var W = window.XY && XY.wildAnim;
+    if (!W || !W.poseClip || !W.frameAt || !W.ready) return false;
+    var vt = VT(), want = W.poseClip(id, pose), atk = W.ready(id, 'attack') ? W.clip(id, 'attack') : null;
+    if (!p.key) {
+      if (want === 'attack' && atk) return paintWild(c, id, 'attack', 250, cx, gyy, fh, p);
+      if (want === 'hit' && W.ready(id, 'hit')) return paintWild(c, id, 'hit', vt * 1000, cx, gyy, fh, p);
+      if (want === 'idle' && W.ready(id, 'idle')) return paintWild(c, id, 'idle', vt * 1000, cx, gyy, fh, p);
+      return false;
+    }
+    if (pose && !WHOLD[pose]) delete WLAT[p.key];
+    var lat = WLAT[p.key];
+    if (atk && want === 'attack') { if (!lat || vt < lat.t0 || (vt - lat.t0) * 1000 > atk.durationMs + 40) lat = WLAT[p.key] = { t0: vt }; }
+    if (lat && atk && WHOLD[pose] && (vt - lat.t0) * 1000 < atk.durationMs) return paintWild(c, id, 'attack', (vt - lat.t0) * 1000, cx, gyy, fh, p);
+    if (want === 'hit' && W.ready(id, 'hit')) return paintWild(c, id, 'hit', vt * 1000, cx, gyy, fh, p);
+    if (want === 'idle' && W.ready(id, 'idle')) {
+      var off = 0, i; for (i = 0; i < id.length; i++) off = (off + id.charCodeAt(i) * 97) % 5000;
+      return paintWild(c, id, 'idle', vt * 1000 + off, cx, gyy, fh, p);
+    }
+    return false;
+  }
   function drawSpr1(c, id, pose, cx, gyy, fh, p) {
-    p = p || {}; var im = spr(id, pose), m = SMETA[id] && (SMETA[id][pose] && has(id, pose) ? SMETA[id][pose] : SMETA[id].stance); if (!im || !im.naturalWidth || !m) { if (SMETA[id] && !/^ret/.test(pose)) inkBlob(c, cx + (p.dx || 0), gyy, (p.fitH || fh * (SZ[id] || 1) * .74), p.alpha); return; }
+    p = p || {}; if (drawWildPose(c, id, pose, cx, gyy, fh, p)) return;
+    var im = spr(id, pose), m = SMETA[id] && (SMETA[id][pose] && has(id, pose) ? SMETA[id][pose] : SMETA[id].stance); if (!im || !im.naturalWidth || !m) { if (SMETA[id] && !/^ret/.test(pose)) inkBlob(c, cx + (p.dx || 0), gyy, (p.fitH || fh * (SZ[id] || 1) * .74), p.alpha); return; }
     var k = p.fitH ? p.fitH / m.h : fh * (SZ[id] || 1) * 0.74 / 480, w = m.w * k, h = m.h * k, fl0 = p.fs != null ? p.fs : (p.flip ? -1 : 1), fl = p.fs != null ? turnW(fl0) : fl0, al = p.alpha == null ? 1 : p.alpha; if (Math.abs(fl) < .05) return;
     var face = (id === 'niumo' ? -1 : 1) * (fl < 0 ? -1 : 1), afl = Math.abs(fl), ref = p.fitH || fh;
     if (!p.noShadow) drawShadow(c, cx, gyy, w, fh, p, al, face);
@@ -374,6 +420,7 @@
     if (st === 'jump') P.air = Math.max(0, -(P.dy)) ; if (st === 'hurt' || st === 'ko') P.air = Math.max(0, -(P.dy));                                  // 朝左时，前冲/后仰这些“朝前”的量跟着翻
     if (g && (st === 'idle' || st === 'walk') && !(F_over_win()) && P.pose !== 'block' && !(h.w && G.wuUlt > 0)) { P.dy -= g.bob; P.rot += g.lean; P.skew = 0; P.pose = g.m > .4 && g.up ? 'leap' : 'stance'; P.fd = .07; if (g.m > .4 && g.up) P.sy = 1; P.gh = g.m > .9 && Math.abs(g.vs) > 230 * S ? 2 : P.gh; }
     if (!(st === 'hurt' || st === 'ko' || st === 'cast')) P.skew += lagSkew('h' + h.id);
+    if (G.poseLock) { P.pose = G.poseLock; P.dy = 0; P.rot = 0; P.skew = 0; }
     return P;
   }
   function F_over_win() { var F = G.F; return !!(F.over && F.over.win); }
@@ -414,6 +461,7 @@
     if (g && (b.st === 'idle' || b.st === 'recover') && b.hp > 0) { P.dy -= g.bob * 1.25; P.rot += g.lean * .8; P.skew = 0; P.fd = .09; }
     if (b.hp > 0) P.skew += lagSkew('boss') * .7;
     P.air = Math.max(0, -(P.dy) - (b.st === 'tele' ? 0 : 0)); if (b.st !== 'charge' && b.st !== 'shot' && b.st !== 'final' && b.st !== 'spin') P.air = 0;
+    if (G.bossPoseLock) { P.pose = G.bossPoseLock; P.dy = 0; P.rot = 0; P.skew = 0; }
     return P;
   }
   function bossPose0(b) {
