@@ -10,7 +10,8 @@ var manifest = JSON.parse(fs.readFileSync(path.join(__dirname, '../assets/wild/m
 
 test('manifest loads animation data for every battle character', function () {
   var ids = wild.ingest(manifest);
-  assert.deepEqual(ids, ROSTER);
+  ROSTER.forEach(function (id) { assert.ok(ids.indexOf(id) >= 0, id); });
+  assert.ok(ids.indexOf('niumo') >= 0);
   ROSTER.forEach(function (id) {
     assert.equal(wild.api.knows(id), true);
     var idle = wild.api.clip(id, 'idle');
@@ -19,11 +20,8 @@ test('manifest loads animation data for every battle character', function () {
     assert.equal(idle.durationsMs.length, idle.frameCount, id + ' idle frames');
     assert.equal(idle.durationMs, wild.sum(idle.durationsMs));
     assert.ok(fs.existsSync(path.join(__dirname, '../assets/wild', idle.file)), idle.file);
+    if (id === 'wujing') assert.equal(idle.frameCount, 17);
     var attack = wild.api.clip(id, 'attack');
-    if (id === 'laosiji') {
-      assert.equal(attack, null);
-      return;
-    }
     assert.equal(attack.loopPolicy, 'oneshot');
     assert.equal(attack.frameCount, 8);
     assert.equal(attack.durationsMs.length, 8);
@@ -39,12 +37,6 @@ test('attack plays once, hit frame lands at 250ms, then idle', function () {
   ROSTER.forEach(function (id) {
     var attack = wild.api.clip(id, 'attack');
     var state = wild.step({ mode: 'idle', t: 40 }, 16, true, attack);
-    if (id === 'laosiji') {
-      assert.equal(state.mode, 'idle', 'laosiji stays idle without an attack clip');
-      state = wild.step(state, 800, true, null);
-      assert.equal(state.mode, 'idle');
-      return;
-    }
     assert.equal(state.mode, 'attack');
     assert.equal(state.t, 0);
     var atHit = wild.step(state, attack.hit.atMs, false, attack);
@@ -63,7 +55,7 @@ test('attack plays once, hit frame lands at 250ms, then idle', function () {
 
 test('pending.json can replace wujing idle and add laosiji attack', function () {
   var data = JSON.parse(JSON.stringify(manifest));
-  assert.equal(data.ids.laosiji.attack, undefined);
+  assert.equal(data.ids.laosiji.attack.file, 'laosiji-attack.webp');
   wild.mergePending(data, {
     ids: {
       wujing: { idle: { file: 'wujing-idle-next.webp', loopPolicy: 'cycle', durationsMs: [100, 100, 100, 100], frameCount: 4, anchor: [1, 2], cell: [3, 4], cols: 2 } },

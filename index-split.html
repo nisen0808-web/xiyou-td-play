@@ -11904,9 +11904,9 @@ XY.TRAITS = {
     var W = XY.wildAnim, clip = W.clip(key, clipName), im = W.img(key, clipName);
     if (!clip || !im || index < 0 || index >= clip.frameCount) return null;
     var cw = clip.cell[0], ch = clip.cell[1], col = index % clip.cols, row = (index / clip.cols) | 0;
-    var sx = col * cw, sy = row * ch;
+    var sx = col * cw, sy = row * ch, kk = k * (clip.fit || 1);
     var src = tinted ? wildTint(key, clipName, index, im, sx, sy, cw, ch) : im;
-    c.drawImage(src, tinted ? 0 : sx, tinted ? 0 : sy, cw, ch, -clip.anchor[0] * k, -clip.anchor[1] * k, cw * k, ch * k);
+    c.drawImage(src, tinted ? 0 : sx, tinted ? 0 : sy, cw, ch, -clip.anchor[0] * kk, -clip.anchor[1] * kk, cw * kk, ch * kk);
     return clip;
   }
 
@@ -20433,13 +20433,15 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
     }
     h._nAtkSeen = h.atkT;
     var clipName = 'idle', tMs = rt * 1000 + (h.bob || 0) * 800;
-    if (h.hurtT > 0.05 && W.ready('niumo', 'hit')) { clipName = 'hit'; tMs = Math.max(0, 0.2 - h.hurtT) * 1000; }
+    if (h.hurtT > 0.05 && !h._nHit0 && W.ready('niumo', 'hit')) h._nHit0 = rt;
+    if (!(h.hurtT > 0) && h._nHit0 && rt - h._nHit0 > 0.45) h._nHit0 = 0;
+    if (h._nHit0 && W.ready('niumo', 'hit') && rt - h._nHit0 < ((W.clip('niumo', 'hit').durationMs || 417) / 1000)) { clipName = 'hit'; tMs = (rt - h._nHit0) * 1000; }
     else if (h._nAtk0 != null && rt - h._nAtk0 < (h._nAtkDur || 0) && W.ready('niumo', 'attack')) { clipName = 'attack'; tMs = (rt - h._nAtk0) * 1000; }
     var clip = W.clip('niumo', clipName), im = W.img('niumo', clipName);
     if (!clip || !im || !im.naturalWidth) return false;
     var fr = W.frameAt(clip, tMs), cw = clip.cell[0], ch = clip.cell[1], col = fr.index % clip.cols, row = (fr.index / clip.cols) | 0;
-    var k = r * 3.15 / ((W.data && W.data.stand) || 192);
-    c.save(); c.imageSmoothingEnabled = true; c.translate(x, y + r * 0.9); c.scale(-face, 1);
+    var k = r * 3.15 / (clip.stand || 480) * (clip.fit || 1);
+    c.save(); c.imageSmoothingEnabled = true; c.translate(x, y + r * 0.9); c.scale(face, 1);
     c.drawImage(im, col * cw, row * ch, cw, ch, -clip.anchor[0] * k, -clip.anchor[1] * k, cw * k, ch * k);
     c.restore();
     return true;

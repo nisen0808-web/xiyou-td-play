@@ -185,6 +185,7 @@
     var F = G.F, S = G.S, gy = G.gy, bv = bossVis(), hv, h;
     switch (e.k) {
       case 'hit': {
+        G._niumoHit0 = VT();
         var by = e.by, col = (by && BF.SP[by] ? BF.SP[by].color : '#ef8a3c'); var y = bodyY(bv.sc) + (rnd() - .5) * 30 * S;
         dmgText('boss', bv.x, y - 30 * S, e.dmg, '', e.big ? '#e0301a' : '#2f2a1f', e.big ? 46 : 26, e.big);
         inkBurst(bv.x - 20 * S, y, (e.big ? 80 : 40) * S, col, e.big ? 14 : 8, .55);
@@ -227,7 +228,7 @@
     o = o || {}; G.runId = ++runSerial; var partner = o.partner || G.partner; G.partner = partner;
     G.F = BF.newFight({ partner: partner, summon: o.summon || null, seed: o.seed || (Math.random() * 99999 | 0) + 1 });
     G.fx = []; G.calls = []; G.shake = 0; G.stop = 0; G.slow = 0; G.endT = 0; G.introT = o.skipIntro ? 0 : 1.7; G.lane = { wukong: 0, partner: 1 }; G.t = 0; G.mode = 'fight'; G.vt = G.vt || 0; TR = {}; HST = {}; WT = {}; VP = {}; G.V = null; G.pos = null; G.shown = false; G.flash = 0; G.wuUlt = 0; G.bossBig = 0; G.bossHit = 0; G.hp = null; G.dmgAgg = {};
-    $('pick').classList.remove('on'); $('res').classList.remove('on'); WLAT = {};
+    $('pick').classList.remove('on'); $('res').classList.remove('on'); WLAT = {}; HLAT = {};
     setTimeout(function () { loadMids('wukong'); loadMids('niumo'); loadMids(partner); }, 700);   // 中间帧：开战后台再载，不占首屏体积
   }
   function trackHero(h, dt) {
@@ -292,21 +293,22 @@
     c.globalAlpha *= .75; var g2 = c.createRadialGradient(0, 0, 0, 0, 0, rx * .5); g2.addColorStop(0, 'rgba(14,9,3,.85)'); g2.addColorStop(1, 'rgba(14,9,3,0)'); c.fillStyle = g2; c.beginPath(); c.arc(0, 0, rx * .5, 0, 7); c.fill(); c.restore();   // 脚下一小团更深的接触影
   }
   /* 狂野水墨：待机 / 普攻（牛魔王还有受击）按 animation.json 播。片段没载入就返回 false，下面仍画旧 webp。 */
-  var WLAT = {}, WHOLD = { stance: 1, idle: 1, idle_a: 1, idle_b: 1, idle2: 1, attack: 1, attack_a: 1, attack_b: 1, attack_c: 1, swing: 1, swing_a: 1, swing_b: 1, smash: 1, smash_a: 1 };
+  var WLAT = {}, HLAT = {}, WHOLD = { stance: 1, idle: 1, idle_a: 1, idle_b: 1, idle2: 1, attack: 1, attack_a: 1, attack_b: 1, attack_c: 1, swing: 1, swing_a: 1, swing_b: 1, smash: 1, smash_a: 1 };
   function paintWild(c, id, clipName, tMs, cx, gyy, fh, p) {
     var W = XY.wildAnim, clip = W.clip(id, clipName), im = W.img(id, clipName);
     if (!clip || !im || !im.naturalWidth) return false;
     var fr = W.frameAt(clip, tMs);
     if (fr.index < 0 || fr.index >= clip.frameCount) return false;
     var cw = clip.cell[0], chh = clip.cell[1], col = fr.index % clip.cols, row = (fr.index / clip.cols) | 0;
-    var stand = (W.data && W.data.stand) || 192, body = p.fitH || fh * (SZ[id] || 1) * 0.74, k = body / stand;
+    var body = p.fitH || fh * (SZ[id] || 1) * 0.74, standPx = clip.stand || (id === 'niumo' ? 480 : ((W.data && W.data.stand) || 192));
+    var k = body / standPx * (clip.fit || 1);
     var ax = clip.anchor[0], ay = clip.anchor[1], fl0 = p.fs != null ? p.fs : (p.flip ? -1 : 1), fl = p.fs != null ? turnW(fl0) : fl0, al = p.alpha == null ? 1 : p.alpha;
     if (Math.abs(fl) < .05) return true;
-    var face = (id === 'niumo' ? -1 : 1) * (fl < 0 ? -1 : 1), ref = p.fitH || fh;
+    var face = (fl < 0 ? -1 : 1), ref = p.fitH || fh;
     if (!p.noShadow) drawShadow(c, cx, gyy, Math.min(body * .55, ref * .5), fh, p, al, face);
-    var tx = cx + (p.dx || 0), ty = gyy + (p.dy || 0) - (p.lift || 0) * fh, mirror = id === 'niumo' ? -1 : 1;
+    var tx = cx + (p.dx || 0), ty = gyy + (p.dy || 0) - (p.lift || 0) * fh;
     c.save(); c.globalAlpha = al; c.imageSmoothingEnabled = true;
-    c.translate(tx, ty); c.rotate(p.rot || 0); c.transform(1, 0, (p.skew || 0) * fl, 1, 0, 0); c.scale(fl * mirror * (p.sx || 1), p.sy || 1);
+    c.translate(tx, ty); c.rotate(p.rot || 0); c.transform(1, 0, (p.skew || 0) * fl, 1, 0, 0); c.scale(fl * (p.sx || 1), p.sy || 1);
     c.drawImage(im, col * cw, row * chh, cw, chh, -ax * k, -ay * k, cw * k, chh * k);
     c.restore();
     return true;
@@ -317,7 +319,7 @@
     var vt = VT(), want = W.poseClip(id, pose), atk = W.ready(id, 'attack') ? W.clip(id, 'attack') : null;
     if (!p.key) {
       if (want === 'attack' && atk) return paintWild(c, id, 'attack', 250, cx, gyy, fh, p);
-      if (want === 'hit' && W.ready(id, 'hit')) return paintWild(c, id, 'hit', vt * 1000, cx, gyy, fh, p);
+      if (want === 'hit' && W.ready(id, 'hit')) return paintWild(c, id, 'hit', (W.clip(id, 'hit').hit || {}).atMs || 167, cx, gyy, fh, p);
       if (want === 'idle' && W.ready(id, 'idle')) return paintWild(c, id, 'idle', vt * 1000, cx, gyy, fh, p);
       return false;
     }
@@ -325,7 +327,11 @@
     var lat = WLAT[p.key];
     if (atk && want === 'attack') { if (!lat || vt < lat.t0 || (vt - lat.t0) * 1000 > atk.durationMs + 40) lat = WLAT[p.key] = { t0: vt }; }
     if (lat && atk && WHOLD[pose] && (vt - lat.t0) * 1000 < atk.durationMs) return paintWild(c, id, 'attack', (vt - lat.t0) * 1000, cx, gyy, fh, p);
-    if (want === 'hit' && W.ready(id, 'hit')) return paintWild(c, id, 'hit', vt * 1000, cx, gyy, fh, p);
+    if (want === 'hit' && W.ready(id, 'hit')) {
+      var hc = W.clip(id, 'hit'), hk = p.key, hlat = HLAT[hk];
+      if (!hlat || vt < hlat.t0 || (vt - hlat.t0) * 1000 > hc.durationMs + 40) hlat = HLAT[hk] = { t0: vt };
+      return paintWild(c, id, 'hit', Math.min(hc.durationMs, (vt - hlat.t0) * 1000), cx, gyy, fh, p);
+    }
     if (want === 'idle' && W.ready(id, 'idle')) {
       var off = 0, i; for (i = 0; i < id.length; i++) off = (off + id.charCodeAt(i) * 97) % 5000;
       return paintWild(c, id, 'idle', vt * 1000 + off, cx, gyy, fh, p);
@@ -461,6 +467,7 @@
     if (g && (b.st === 'idle' || b.st === 'recover') && b.hp > 0) { P.dy -= g.bob * 1.25; P.rot += g.lean * .8; P.skew = 0; P.fd = .09; }
     if (b.hp > 0) P.skew += lagSkew('boss') * .7;
     P.air = Math.max(0, -(P.dy) - (b.st === 'tele' ? 0 : 0)); if (b.st !== 'charge' && b.st !== 'shot' && b.st !== 'final' && b.st !== 'spin') P.air = 0;
+    if (G._niumoHit0 != null && b.hp > 0 && (VT() - G._niumoHit0) < 0.42 && (b.st === 'idle' || b.st === 'recover')) P.pose = 'hit';
     if (G.bossPoseLock) { P.pose = G.bossPoseLock; P.dy = 0; P.rot = 0; P.skew = 0; }
     return P;
   }
