@@ -9003,28 +9003,24 @@ XY.TRAITS = {
   var cloudNow = false;
     /* 沙僧骷髅念珠：深墨珠串、枯笔飞白描边、浓淡墨小骷髅。不是白圆片，也没有彩色光晕。 */
   function drawInkBeads(c, x, y, n, R, br, orbit) {
-    var IP = XY.INKP, INK = IP ? IP.INK : '24,20,16', i, a, bx, by, a2, x2, y2, wash, s;
-    c.save();
+    var INK = (XY.INKP && XY.INKP.INK) || '24,20,16', i, a, bx, by, a2, x2, y2, vis, inkA;
+    c.save(); c.lineCap = 'round';
     for (i = 0; i < n; i++) {
-      a = orbit + i / n * PI2; a2 = orbit + (i + 0.72) / n * PI2;
+      a = orbit + i / n * PI2; a2 = orbit + (i + 0.7) / n * PI2;
       bx = x + Math.cos(a) * R; by = y + Math.sin(a) * R; x2 = x + Math.cos(a2) * R; y2 = y + Math.sin(a2) * R;
-      if (IP) IP.stroke(c, bx, by, x2, y2, 1.05, INK, 0.48, i * 19 + 4, 0.35);
+      if (XY.INKP) XY.INKP.stroke(c, bx, by, x2, y2, 1.6, INK, 0.85, i * 13 + 1, 0.2);
     }
     for (i = 0; i < n; i++) {
       a = orbit + i / n * PI2; bx = x + Math.cos(a) * R; by = y + Math.sin(a) * R;
-      wash = 0.18 + (i % 4) * 0.08;
-      var vis = Math.max(br * 1.45, 18);
-      if (IP) IP.blot(c, bx, by, vis * 0.78, INK, wash, i * 11 + 3, 1, 0.92);
-      c.save(); c.translate(bx, by);
-      c.strokeStyle = 'rgba(' + INK + ',' + (0.62 + (i % 3) * 0.1) + ')'; c.lineCap = 'round';
-      for (s = 0; s < 3; s++) {
-        c.lineWidth = 1.3 + (s === 1 ? 0.8 : 0);
-        c.beginPath(); c.arc(0, 0, vis * (0.58 + s * 0.05), a + s * 1.7, a + s * 1.7 + 1.05); c.stroke();
-      }
-      c.fillStyle = 'rgba(' + INK + ',' + (0.82 + (i % 2) * 0.12) + ')';
-      c.beginPath(); c.ellipse(-vis * 0.22, -vis * 0.1, vis * 0.16, vis * 0.2, 0, 0, PI2); c.ellipse(vis * 0.22, -vis * 0.1, vis * 0.15, vis * 0.18, 0, 0, PI2); c.fill();
-      c.beginPath(); c.moveTo(0, vis * 0.02); c.lineTo(-vis * 0.08, vis * 0.22); c.lineTo(vis * 0.08, vis * 0.22); c.closePath(); c.fill();
-      c.lineWidth = 1.1; c.beginPath(); c.moveTo(-vis * 0.2, vis * 0.36); c.lineTo(-vis * 0.06, vis * 0.3); c.moveTo(vis * 0.06, vis * 0.36); c.lineTo(vis * 0.2, vis * 0.3); c.stroke();
+      vis = Math.max(br * 1.35, 17); inkA = 0.72 + (i % 3) * 0.1;
+      c.save(); c.translate(bx, by); c.rotate(i * 0.4);
+      c.strokeStyle = 'rgba(' + INK + ',' + inkA + ')'; c.lineWidth = 2.4;
+      c.beginPath(); c.arc(0, 0, vis * 0.78, 0.55, 6.0); c.stroke();
+      c.lineWidth = 1.3; c.globalAlpha = 0.55; c.beginPath(); c.arc(vis * 0.06, vis * 0.04, vis * 0.7, 1.1, 2.6); c.stroke();
+      c.globalAlpha = 1; c.lineWidth = 1.8; c.beginPath(); c.arc(0, vis * 0.18, vis * 0.55, 0.35, 2.8); c.stroke();
+      c.fillStyle = 'rgba(' + INK + ',' + inkA + ')';
+      c.beginPath(); c.arc(-vis * 0.22, -vis * 0.02, vis * 0.13, 0, PI2); c.arc(vis * 0.24, -vis * 0.02, vis * 0.12, 0, PI2); c.fill();
+      c.beginPath(); c.moveTo(0, vis * 0.1); c.lineTo(-vis * 0.08, vis * 0.28); c.lineTo(vis * 0.08, vis * 0.28); c.closePath(); c.fill();
       c.restore();
     }
     c.lineCap = 'butt'; c.restore();
@@ -12371,12 +12367,10 @@ XY.chibi.portrait = function (c, id, x, foot, h, alpha) {
           c.beginPath(); c.moveTo(p.pts[0], p.pts[1]); for (var j = 2; j < p.pts.length; j += 2) c.lineTo(p.pts[j], p.pts[j + 1]); c.stroke();
           c.globalAlpha = a * 0.9; c.strokeStyle = 'rgb(' + INK + ')'; c.lineWidth = p.w * 0.55 + 0.4;
           c.beginPath(); c.moveTo(p.pts[0], p.pts[1]); for (j = 2; j < p.pts.length; j += 2) c.lineTo(p.pts[j], p.pts[j + 1]); c.stroke(); break;
-        case 'glow':                                                                    // 弹丸拖尾：一小团洇开的墨 + 墨点
-          c.globalAlpha = a * 0.32; c.fillStyle = 'rgb(' + inkc(p.col) + ')'; c.beginPath(); c.ellipse(p.x, p.y, p.r * (1.5 - k * 0.4), p.r * (1.1 - k * 0.3), p.sd, 0, PI2); c.fill();
-          c.globalAlpha = a * 0.55; c.fillStyle = 'rgb(' + INK + ')'; c.beginPath(); c.arc(p.x, p.y, p.r * 0.32 * (1 - k * 0.4), 0, PI2); c.fill(); break;
-        case 'ember':                                                                   // 火星：墨点 + 点缀色晕
-          c.globalAlpha = a * 0.3; c.fillStyle = 'rgb(' + inkc(p.col) + ')'; c.beginPath(); c.arc(p.x, p.y, p.r * 1.8 * (1 - k * 0.5), 0, PI2); c.fill();
-          c.globalAlpha = a * 0.85; c.fillStyle = k < 0.4 ? 'rgb(' + inkc('#e0a020') + ')' : 'rgb(' + INK + ')'; c.beginPath(); c.arc(p.x, p.y, p.r * 0.8 * (1 - k * 0.6), 0, PI2); c.fill(); break;
+        case 'glow':
+          IP.blot(c, p.x, p.y, p.r * 1.1, INK, a * 0.4, p.sd, 1, 0.8); break;
+        case 'ember':
+          IP.blot(c, p.x, p.y, p.r * 0.9, INK, a * 0.75, p.sd, 1, 1); break;
         case 'coin':                                                                    // Phyrex 的小 BTC 币（官方图标，只有他有）；加墨线圈边，光晕改成金墨洇
           c.globalAlpha = a * 0.3; c.fillStyle = 'rgb(' + inkc('#e0a020') + ')'; c.beginPath(); c.arc(p.x, p.y, p.r * 1.6, 0, PI2); c.fill();
           c.globalAlpha = a; c.save(); c.translate(p.x, p.y); c.scale(Math.abs(cos(p.a * 1.7)) * 0.8 + 0.2, 1);
@@ -13327,12 +13321,12 @@ XY.chibi.portrait = function (c, id, x, foot, h, alpha) {
   }
   // 冷却念珠：就绪 = 技能色实珠；冷却中 = 灰珠 + 墨色扇形 + 秒数
   function bead(c, sk, x, y, isz) {
-    var frac = sk.off ? 1 : Math.max(0, Math.min(1, sk.rem / (sk.max || 1))), rdy = frac <= 0.001;
-    c.fillStyle = sk.off ? '#d8d5cc' : sk.color; c.beginPath(); c.arc(x, y, isz / 2, 0, PI2); c.fill();
-    if (!rdy) { c.fillStyle = 'rgba(40,36,28,0.45)'; c.beginPath(); c.moveTo(x, y); c.arc(x, y, isz / 2, -Math.PI / 2, -Math.PI / 2 + PI2 * frac); c.closePath(); c.fill(); }
-    c.lineWidth = sk.kind === 'ult' ? 1.5 : 0.9; c.strokeStyle = 'rgba(50,38,22,0.7)'; c.beginPath(); c.arc(x, y, isz / 2, 0, PI2); c.stroke();
-    if (!rdy) { if (isz >= 11) XY.R.txt(c, String(Math.ceil(sk.rem)), x, y + 0.5, isz < 13 ? 7 : 8, '#fff', 'center', true); }
-    else if (!(XY.ICONINK && XY.ICONINK.draw(c, sk.name, x, y, isz * 1.2)) && isz >= 11) XY.R.txt(c, sk.name.charAt(0), x, y, 7, '#fff', 'center', true);
+    var frac = sk.off ? 1 : Math.max(0, Math.min(1, sk.rem / (sk.max || 1))), rdy = frac <= 0.001, INK = (XY.INKP && XY.INKP.INK) || '36,28,22';
+    c.lineWidth = sk.kind === 'ult' ? 1.7 : 1.15; c.strokeStyle = 'rgba(' + INK + ',' + (rdy ? 0.9 : 0.4) + ')'; c.lineCap = 'round';
+    c.beginPath(); c.arc(x, y, isz / 2, rdy ? 0.4 : -Math.PI / 2, rdy ? 5.2 : -Math.PI / 2 + PI2 * Math.max(0.08, 1 - frac)); c.stroke();
+    c.lineCap = 'butt';
+    if (!rdy) { if (isz >= 11) XY.R.txt(c, String(Math.ceil(sk.rem)), x, y + 0.5, isz < 13 ? 7 : 8, '#2a2218', 'center', true); }
+    else if (!(XY.ICONINK && XY.ICONINK.draw(c, sk.name, x, y, isz * 1.2)) && isz >= 11) XY.R.txt(c, sk.name.charAt(0), x, y, 7, '#2a2218', 'center', true);
     return rdy;
   }
   // 念珠挂在头像左侧（130°→250°，不够再挂外一圈）；按方框不相叠来排，挂不下就把珠子缩小（最小 6）
