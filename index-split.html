@@ -9470,7 +9470,7 @@ XY.TRAITS = {
     for (i = 0; i < G.texts.length; i++) {
       var t = G.texts[i], a = 1 - Math.pow(t.t / t.max, 3);
       c.globalAlpha = Math.max(0, a);
-      var col = t.color ? t.color : t.kind === 'crit' ? '#e8590c' : (t.kind === 'hurt' ? '#d62828' : (t.kind === 'heal' ? '#2e9e4f' : (t.kind === 'coin' ? '#b8860b' : '#3a3226')));
+      var col = t.color ? t.color : t.kind === 'crit' ? '#6e342c' : (t.kind === 'hurt' ? '#6e342c' : (t.kind === 'heal' ? '#6e342c' : (t.kind === 'coin' ? '#5c4632' : '#3a3226')));
       otxt(c, t.s, t.x, t.y, t.pop ? t.size * (1 + 0.6 * Math.max(0, 1 - t.t / 0.18)) : t.size, col, 'center', true);
     }
     c.globalAlpha = 1;
@@ -9597,7 +9597,7 @@ XY.TRAITS = {
     panel(c, 12, tpy, 214, 50, 12, tflash ? '#fff0ec' : undefined);
     txt(c, '师傅 唐僧', 24, tpy + 15, 14, T.ink, 'left', true);
     txt(c, tg.inv > 0 && G.t < C.TANG_START_INV + 0.5 ? '开局保护 ' + Math.ceil(tg.inv) + ' 秒' : (tg.down ? '阵亡' : '只有 1 点血'), 214, tpy + 15, 12, tg.inv > 0 ? '#a8700a' : '#b5503a', 'right', true);
-    bar(c, 22, tpy + 28, 190, 14, tg.down ? 0 : 1, tg.inv > 0 && G.t < C.TANG_START_INV + 0.5 ? '#e8c050' : '#e0533d', 'rgba(255,255,255,0.8)');
+    bar(c, 22, tpy + 28, 190, 14, tg.down ? 0 : 1, tg.inv > 0 && G.t < C.TANG_START_INV + 0.5 ? '#8a6a44' : '#3a2e26', '#efe6d4');
     txt(c, tdanger ? (G.breach ? '妖怪闯进营地！' : '有东西逼近师父！') : '被碰到 / 被打中一下就输', 117, tpy + 35, 10.5, '#fff', 'center', true);
     if (tdanger) { c.strokeStyle = tflash ? '#e0533d' : '#f0a090'; c.lineWidth = 3; rrect(c, 12, tpy, 214, 50, 12); c.stroke(); }
     // 驻守加成状态
@@ -10893,7 +10893,7 @@ XY.TRAITS = {
     T.txt(c, '师傅 唐僧', 24, tpy + 15, 14, T.T.ink, 'left', true);
     var inv = tg.inv > 0 && G.t < C.TANG_START_INV + 0.5;
     T.txt(c, inv ? '开局保护 ' + Math.ceil(tg.inv) + ' 秒' : (tg.down ? '阵亡' : '只有 1 点血'), 214, tpy + 15, 12, inv ? '#a8700a' : '#b5503a', 'right', true);
-    T.bar(c, 22, tpy + 28, 190, 14, tg.down ? 0 : 1, inv ? '#e8c050' : '#e0533d', 'rgba(255,255,255,0.8)');
+    T.bar(c, 22, tpy + 28, 190, 14, tg.down ? 0 : 1, inv ? '#8a6a44' : '#3a2e26', '#efe6d4');
     if (tdg) T.txt(c, G.breach ? '妖怪闯进营地！' : '有东西逼近师父！', 117, tpy + 35, 10.5, '#fff', 'center', true);          // 平时不再常驻写“被碰到就输”（只在危险时提示）
     if (tdg) { c.strokeStyle = tflash ? '#e0533d' : '#f0a090'; c.lineWidth = 3; T.rrect(c, 12, tpy, 214, 50, 12); c.stroke(); }
     // 路程 / 休息状态（固定占 166~210）：路线进度条 + 休息倒计时

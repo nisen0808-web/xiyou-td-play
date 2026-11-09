@@ -141,7 +141,15 @@
   function inkBurst(x, y, sz, col, n, a) { fxAdd({ k: 'ink', x: x, y: y, sz: sz, col: col || '#2f2a1f', max: .5, seed: rnd() * 99, n: n || 14, a: a || .85 }); }
   function stain(x, y, sz, a) { fxAdd({ k: 'stain', x: x, y: y + 2 * G.S, sz: sz, a: a || .16, max: .9, seed: (rnd() * 999) | 0 }); }
   function ring(x, y, sz, col, max, lw) { fxAdd({ k: 'ring', x: x, y: y, sz: sz, col: col, max: max || .5, lw: lw || 5 * G.S }); }
-  function text(x, y, s, col, size, max, out) { fxAdd({ k: 'txt', x: x, y: y, s: s, col: col, size: size * G.S, max: max || .9, out: out || '#fffaf0' }); }
+  function inkFloat(col) {
+    var c = String(col || '').toLowerCase();
+    if (c === '#5c4034' || c === '#3fae66' || c === '#5cb85c' || c === '#2f7d3b') return '#6e342c';
+    if (c === '#c8341f' || c === '#e0452e' || c === '#e0533d' || c === '#d23a2a') return '#6e342c';
+    if (c === '#b8863b' || c === '#e6c474' || c === '#d8a93a' || c === '#e0a415' || c === '#f0b429') return '#5c4632';
+    if (c === '#3f8fd0' || c === '#4a90d9' || c === '#8b3fa8' || c === '#7a2b8e') return '#2a2218';
+    return col || '#2a2218';
+  }
+  function text(x, y, s, col, size, max, out) { fxAdd({ k: 'txt', x: x, y: y, s: s, col: inkFloat(col), size: size * G.S, max: max || .9, out: out || '#f6f0e4' }); }
   /* ---------- 体重：落地 / 受击 / 起步 的挤压回弹（按角色 key 记在 WT 里，drawSpr 里套到 sx/sy 上；影子也跟着变） ---------- */
   var WT = {};
   function wk(key) { return WT[key] || (WT[key] = { lt: -9, la: 0, ht: -9, ha: 0, gt: -9, ga: 0, air: 0, va: 0, x: 0, vx: 0, t0: 0, init: 0 }); }
@@ -208,14 +216,14 @@
       case 'chargego': dust(bv.x, gy, 10, 56 * S); stain(bv.x, gy, 90 * S, .18); wkick('boss', 'go', 1); break;
       case 'meleehit': { var fx0 = bv.x + e.face * 120 * S; slash(fx0, bodyY(bv.sc) + (e.n === 2 ? 40 : 20) * S, e.face < 0 ? (e.n === 2 ? 3.6 : 2.6) : (e.n === 2 ? -.5 : .5), 200 * S, '#2f2a1f', 20 * S); dust(fx0, gy, 6, 40 * S); stain(fx0, gy, 80 * S, .16); wkick('boss', 'land', e.n === 2 ? .9 : .6); G.shake = Math.max(G.shake, (e.n === 2 ? 6 : 4) * S); break; }
       case 'spinhit': ring(bv.x, gy, BF.K.SPIN_R * G.V.k * 1.7, '#2f2a1f', .5, 8 * S); dust(bv.x, gy, 8, 48 * S); wkick('boss', 'land', .5); G.shake = Math.max(G.shake, 5 * S); break;
-      case 'interrupt': text(bv.x, bodyY(bv.sc) - G.fh * .55, '打断！', '#2f8a62', 40, 1.1); ring(bv.x, bodyY(bv.sc), 140 * S, '#2f8a62', .6, 6 * S); break;
+      case 'interrupt': text(bv.x, bodyY(bv.sc) - G.fh * .55, '打断！', '#5c4034', 40, 1.1); ring(bv.x, bodyY(bv.sc), 140 * S, '#5c4034', .6, 6 * S); break;
       case 'finalhit': ring(bv.x, gy, G.W * .5, '#c8341f', .9, 12 * S); dust(bv.x, gy, 22, 90 * S); stain(bv.x, gy, 160 * S, .22); wkick('boss', 'land', 1.2); G.shake = 22 * S; G.stop = .1; G.flash = .4; G.flashC = '#ffd9a0'; break;
       case 'guards': ring(bv.x, bodyY(bv.sc), 170 * S, '#7a2b8e', .7); break;
       case 'flames': dust(bv.x - 60 * S, gy, 8, 46 * S, '150,110,70'); stain(bv.x - 60 * S, gy, 110 * S, .2); wkick('boss', 'land', 1); ring(bv.x - 60 * S, gy, 150 * S, '#7a5a30', .5, 6 * S); G.shake = Math.max(G.shake, 6 * S); break;
-      case 'dodge': h = heroById(e.id); if (h) { hv = heroVis(h); text(hv.x, bodyY(hv.sc) - 60 * S, '闪', '#2f8a62', 34, .7); } break;
+      case 'dodge': h = heroById(e.id); if (h) { hv = heroVis(h); text(hv.x, bodyY(hv.sc) - 60 * S, '闪', '#5c4034', 34, .7); } break;
       case 'trait': h = heroById(e.id); if (h) { hv = heroVis(h); if (!G.F.over) text(hv.x, bodyY(hv.sc) - 90 * S, e.name, '#b8863b', 22, 1.3); ring(hv.x, bodyY(hv.sc), 110 * S, h.color, .6); } break;
       case 'wuult': G.wuUlt = .9; hv = heroVis(F.heroes[0]); text(hv.x, bodyY(hv.sc) - 100 * S, '如意金箍棒', '#c8341f', 26, 1.2); break;
-      case 'heal': h = heroById(e.id); if (h) { hv = heroVis(h); text(hv.x, bodyY(hv.sc) - 50 * S, '+' + e.amt, '#2f8a62', 22, .9); } break;
+      case 'heal': h = heroById(e.id); if (h) { hv = heroVis(h); text(hv.x, bodyY(hv.sc) - 50 * S, '+' + e.amt, '#5c4034', 22, .9); } break;
       case 'shot': { hv = null; var hh = heroById(e.id); if (hh) { hv = heroVis(hh); fxAdd({ k: 'shot', x0: hv.x + 40 * S, y0: bodyY(hv.sc) + hv.dy, x1: bv.x - 30 * S, y1: bodyY(bv.sc), col: e.color, max: Math.max(.1, e.t) }); } break; }
       case 'summon': G.sumShake = 0; break;
       case 'leave': break;
