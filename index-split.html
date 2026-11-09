@@ -57,13 +57,13 @@ window.XY_AVATAR_FILES = ["diaoyulao", "haiteng", "heyuxi", "kuanggong", "laosij
 var XY = window.XY = window.XY || {};
 
 XY.VERSION = '0.8.7';
-// 测试版开关：打开时 12 位特殊角色开局全部可选（默认 Lv1，不写入存档）；网址加 ?test=0 或 build.sh 的 TEST_BUILD=0 关闭
+// 测试版开关：公开入口默认关闭。网址加 ?test=1 才进入测试版（全角色可选、单独存档）；?test=0 / ?normal=1 回到标准版
 // 版本开关（测试版 / 标准版）现在存在存档里：见 meta.js 的 XY.TEST_BUILD / XY.version
 XY.TEST_LV = 5;     // 测试版里特殊角色的角色卡等级（5 = 卡牌等级上限 XY.CARD_MAXLV，也是 SP_MAX_LV；隐藏角色不受影响）
 
 /* ---------- 全局常量 ---------- */
 XY.C = {
-  TEST_DEFAULT: true,     // 打开网页默认进测试版（三关全开 / 全员 Lv98 差一只怪满级 / 特殊角色 Lv5 / 单独存档）；改成 false = 默认普通版；网址 ?normal=1 随时回普通版、?test=1 进测试版
+  TEST_DEFAULT: false,    // 公开入口默认标准版（新档特殊角色全锁、第 1 关从 Lv1 打）。?test=1 才进测试版
   WORLD_W: 5120,          // 地图宽（v0.4：东西向长图，营地在东、关口在西）
   WORLD_H: 3200,          // 地图高
   STEP: 1 / 60,           // 固定逻辑步长（秒）
@@ -394,7 +394,7 @@ XY.TRAITS = {
     if (ss === 'std' || ss === 'test') return ss;
     if (/[?&](normal=1|test=0)(&|#|$)/.test(q)) return 'std';
     if (/[?&]test=1(&|#|$)/.test(q)) return 'test';
-    return XY.C && XY.C.TEST_DEFAULT === false ? 'std' : 'test';
+    return XY.C && XY.C.TEST_DEFAULT === true ? 'test' : 'std';
   }
   var MODE = resolveMode(), KEY = MODE === 'test' ? KEY_TEST : KEY_STD;
   var DEFAULT_MODE = MODE;
@@ -515,11 +515,12 @@ XY.TRAITS = {
       stats: { runs: 0, wins: 0, kills: 0, bestTime: 0, totalTime: 0, bossKills: 0, sideDone: 0 },
       cards: {}, deck: [], dex: {}, unlocks: {}, skins: {}, party: { horse: 'horse' },
       levels: {}, dng: {}, routes: { N: 0, S: 0 }, lingshi: 0, shards: 0, questsDone: {},   // v0.4：关卡进度、灵石（货币）、皮肤碎片、已完成过的支线
-      sp: { cards: { phyrex: 2 }, chosen: 'phyrex', shop: null, shopGen: 0 },   // v0.5：新存档直接有 2 张 Phyrex 卡（=解锁 Lv1）并已选为常驻角色（标准版的特殊角色状态）
-      spT: { cards: { phyrex: 2 }, chosen: 'phyrex', shop: null, shopGen: 0 },  // v0.5：测试版的特殊角色状态（和标准版分开存，互不污染）
+      sp: { cards: {}, chosen: null, shop: null, shopGen: 0 },   // 公开新档：特殊角色一张都没有。出发页十连抽到的才解锁
+      spT: { cards: {}, chosen: null, shop: null, shopGen: 0 },  // 测试版特殊角色状态（和标准版分开存）。测试版仍按 TEST_LV 全可选，不靠这叠卡
       mode: DEFAULT_MODE,                                                       // v0.5：版本开关 'test'（测试版，默认）/ 'std'（标准版）
       sold: { cards: { arrow: 1, heal: 1 } },                                   // v0.5：天兵卡
       tutorial: { done: false, grow: false },
+      gacha10: null,                                                             // 出发页十连：抽出即写入；null = 这个存档还没抽
       journey: { entry: {}, legacy: false },                                     // 取经之旅：每关入场快照（见 journey.js）
       villain: { series: { niumo: villainSeriesDefault() } },          // v0.8.6 预留：反派模式按 Boss 系列分钱包 / 已得 / 局数 / 通关数（牛魔王是第一个系列；v0.9.0 启用）
       tips: { seen: {}, cut: false },
@@ -570,8 +571,9 @@ XY.TRAITS = {
       d.journey = { entry: {}, legacy: anyClear };   // 旧档：已通关的老玩家用补偿快照，不从零打后面的关
     }
     if (d.mode !== 'std' && d.mode !== 'test') d.mode = DEFAULT_MODE;
-    if (!record(d.spT)) d.spT = { cards: { phyrex: 2 }, chosen: 'phyrex', shop: null, shopGen: 0 };
-    if (!record(d.spT.cards)) d.spT.cards = { phyrex: 2 };
+    if (!record(d.spT)) d.spT = { cards: {}, chosen: null, shop: null, shopGen: 0 };
+    if (!record(d.spT.cards)) d.spT.cards = {};
+    if (d.gacha10 === undefined) d.gacha10 = null;
     if (!record(d.sold) || !record(d.sold.cards)) d.sold = base.sold;
     if (!record(d.tutorial)) d.tutorial = { done: false, grow: false };
     if (typeof d.tutorial.done !== 'boolean') d.tutorial.done = false;
@@ -753,7 +755,7 @@ XY.TRAITS = {
   XY.version = {
     mode: function () { return XY.TEST_BUILD ? 'test' : 'std'; },
     name: function (m) { return (m || XY.version.mode()) === 'test' ? '测试版' : '标准版'; },
-    desc: function (m) { return (m || XY.version.mode()) === 'test' ? '三关全开 · 全员满级差一只怪 · 特殊角色 Lv5 · 单独存档' : '只有 Phyrex 开局可用 · 其他人靠角色卡解锁'; },
+    desc: function (m) { return (m || XY.version.mode()) === 'test' ? '三关全开 · 全员满级差一只怪 · 特殊角色 Lv5 · 单独存档' : '新档特殊角色未解锁 · 出发页可十连一次'; },
     set: function (m) {                                  // 切换版本 = 换一份存档（先把当前这份写好）；同一标签页刷新后保持
       m = m === 'std' ? 'std' : 'test';
       if (S.data && m !== MODE) {
@@ -762,6 +764,7 @@ XY.TRAITS = {
       }
       S.data.mode = m; return XY.version.mode();
     },
+    showToggle: function () { return !!XY.TEST_BUILD; },   // 公开标准版不放切换按钮；?test=1 进来之后才能切回
     toggle: function () { return XY.version.set(XY.TEST_BUILD ? 'std' : 'test'); }
   };
   S.load();
@@ -1995,13 +1998,13 @@ XY.TRAITS = {
   /* ---------- 存档：角色卡张数 / 携带 ---------- */
   function sd() {
     var d = XY.save.data, key = XY.TEST_BUILD ? 'spT' : 'sp';     // 测试版 / 标准版各存一份，互不污染
-    if (!d[key] || typeof d[key] !== 'object') d[key] = { cards: key === 'spT' ? { phyrex: 2 } : {}, chosen: key === 'spT' ? 'phyrex' : null, shop: null, shopGen: 0 };
+    if (!d[key] || typeof d[key] !== 'object') d[key] = { cards: {}, chosen: null, shop: null, shopGen: 0 };
     if (!d[key].cards) d[key].cards = {};
     return d[key];
   }
   XY.spLevelOf = function (n) { var l = 0; XY.SP_LV_AT.forEach(function (a, i) { if (n >= a) l = i + 1; }); return l; };
   XY.save.spCards = function (id) { return sd().cards[id] || 0; };
-  // 测试版（XY.TEST_BUILD，默认开）：12 位特殊角色开局全部可选，等级至少 XY.TEST_LV（不写入存档）
+  // 测试版（仅 ?test=1 / 存档 mode=test）：12 位特殊角色开局全部可选，等级至少 XY.TEST_LV（不写入存档）
   XY.save.spLevel = function (id) { if (XY.isHidden(id) || !XY.SP_BY[id]) return 0; return Math.max(XY.spLevelOf(XY.save.spCards(id)), XY.TEST_BUILD ? XY.TEST_LV : 0); };
   XY.save.spOwned = function (id) { return XY.save.spLevel(id) >= 1; };
   XY.save.spRealOwned = function (id) { return XY.spLevelOf(XY.save.spCards(id)) >= 1; };
@@ -2019,7 +2022,8 @@ XY.TRAITS = {
   XY.save.setCarry = function (id) {
     if (!id) { sd().chosen = null; XY.save.touch(); return { ok: true, reason: '这一关不带常驻角色' }; }
     if (!XY.SP_BY[id]) return { ok: false, reason: '没有这个角色' };
-    if (!XY.save.spOwned(id)) return { ok: false, reason: '还没解锁：集齐 ' + XY.SP_LV_AT[0] + ' 张角色卡（掉落或商店购买）' };
+    if (typeof id === 'string' && id.indexOf('x_') === 0 && XY.save.xcharOpen && !XY.save.xcharOpen()) return { ok: false, reason: '通关第 1 关后才能携带自建角色' };
+    if (!XY.save.spOwned(id)) return { ok: false, reason: '未解锁：集齐 ' + XY.SP_LV_AT[0] + ' 张「' + XY.SP_BY[id].name + '」角色卡（掉落或灵石商店）' };
     sd().chosen = id; XY.save.touch(); return { ok: true, reason: '本关常驻：' + XY.SP_BY[id].name };
   };
   // 测试版“一击满级”：只在测试版、只对本局常驻的特殊角色；师徒五人不受影响（队伍等级 G.level 不动）。
@@ -2042,6 +2046,109 @@ XY.TRAITS = {
   XY.spNext = function (id) {
     var n = XY.save.spCards(id), lv = XY.spLevelOf(n);
     return lv >= 5 ? null : { need: XY.SP_LV_AT[lv], have: n, lv: lv + 1 };
+  };
+
+  /* ---------- 出发页十连（每个存档一次）----------
+   * 第一次进入出发页就定下 10 张特殊角色卡并立刻写入存档。
+   * 刷新、关闭、跳过都用同一组结果，不会重抽。
+   * 抽到的角色：第一张把角色卡补到解锁（2 张 = Lv1），之后每张重复 +1，够 5/10/20/40 张就升级。
+   * 没抽到的仍锁，靠掉落或灵石商店凑 2 张。 */
+  var gachaMint = null, gachaView = null;
+  function gachaBag() {
+    var d = XY.save.data, key = XY.TEST_BUILD ? 'spT' : 'sp', src = d && d[key] && d[key].cards, o = {}, k;
+    if (src) for (k in src) o[k] = src[k] || 0;
+    return o;
+  }
+  XY.gacha10 = {
+    roll: function (rnd) {
+      rnd = rnd || Math.random;
+      var pool = XY.SPECIALS.map(function (d) { return d.id; }), out = [], i;
+      if (!pool.length) return out;
+      for (i = 0; i < 10; i++) out.push(pool[Math.floor(rnd() * pool.length)]);
+      return out;
+    },
+    plan: function (pulls, cards) {
+      var bag = {}, seen = {}, rows = [], k;
+      cards = cards || {};
+      for (k in cards) bag[k] = cards[k] || 0;
+      (pulls || []).forEach(function (id) {
+        var had = bag[id] || 0, owned = XY.spLevelOf(had) >= 1, n = (seen[id] = (seen[id] || 0) + 1);
+        var add, kind, text, beforeLv, afterLv;
+        if (!owned && n === 1) {
+          add = Math.max(XY.SP_LV_AT[0] - had, 1);
+          kind = 'unlock';
+          text = '解锁 · 计入 ' + add + ' 张';
+        } else {
+          add = 1;
+          beforeLv = XY.spLevelOf(had);
+          afterLv = XY.spLevelOf(had + add);
+          kind = afterLv > beforeLv ? 'up' : 'dup';
+          text = afterLv > beforeLv ? ('重复 · 升到 Lv' + afterLv) : '重复 · 角色卡 +1';
+        }
+        bag[id] = had + add;
+        rows.push({ id: id, add: add, kind: kind, text: text, cards: bag[id], lv: XY.spLevelOf(bag[id]) });
+      });
+      return rows;
+    },
+    grant: function (rec) {
+      if (!rec || rec.granted) return;
+      (rec.rows || []).forEach(function (r) { XY.save.addSpCard(r.id, r.add); });
+      rec.granted = true;
+      XY.save.flush();
+    },
+    ensure: function () {
+      var d = XY.save.data, rec;
+      if (!d) return { show: false, fresh: false, rec: null };
+      rec = d.gacha10;
+      if (rec && rec.pulls && rec.pulls.length === 10) {
+        if (!rec.rows) rec.rows = XY.gacha10.plan(rec.pulls, rec.granted ? {} : gachaBag());
+        if (!rec.granted) XY.gacha10.grant(rec);
+        return { show: !rec.acked, fresh: gachaMint === rec.seed, rec: rec };
+      }
+      var seed = ((Date.now() ^ ((Math.random() * 0x7fffffff) | 0)) >>> 0) || 1;
+      var pulls = XY.gacha10.roll(XY.seeded(seed));
+      rec = { seed: seed, pulls: pulls, rows: XY.gacha10.plan(pulls, gachaBag()), granted: false, acked: false, at: Date.now() };
+      d.gacha10 = rec;
+      gachaMint = seed;
+      XY.gacha10.grant(rec);
+      if (XY.bgArt) pulls.forEach(function (id) { try { XY.bgArt(id); } catch (e) {} });
+      return { show: true, fresh: true, rec: rec };
+    },
+    ack: function () {
+      var g = XY.save.data && XY.save.data.gacha10;
+      if (g) g.acked = true;
+      gachaView = null;
+      if (XY.save.flush) XY.save.flush();
+    },
+    blocking: function () {
+      var g = XY.save.data && XY.save.data.gacha10;
+      return !!(g && g.pulls && g.pulls.length === 10 && !g.acked);
+    },
+    key: function () {
+      var pack = XY.gacha10.ensure();
+      if (!pack.show) return;
+      if (!gachaView || gachaView.seed !== pack.rec.seed) gachaView = { seed: pack.rec.seed, phase: 'flip', t0: 0, rec: pack.rec };
+      if (gachaView.phase === 'flip') gachaView.phase = 'result';
+      else XY.gacha10.ack();
+    },
+    view: function (a) {
+      var pack = XY.gacha10.ensure();
+      if (!pack.show) { gachaView = null; return null; }
+      if (!gachaView || gachaView.seed !== pack.rec.seed) {
+        gachaView = { seed: pack.rec.seed, phase: pack.fresh ? 'flip' : 'result', t0: a && a.rt || 0, rec: pack.rec };
+      }
+      gachaView.rec = pack.rec;
+      return gachaView;
+    },
+    freeze: null
+  };
+  XY.save.xcharOpen = function () {
+    if (XY.TEST_BUILD) return true;
+    var d = XY.save.data;
+    if (!d) return false;
+    if (d.stats && d.stats.wins > 0) return true;
+    var lv = d.levels && d.levels[1];
+    return !!(lv && lv.cleared);
   };
 
   // 等级加成：Lv2 +25%，Lv3 +50%，Lv4 +75%，Lv5 +100%（属性）；Lv2 起解锁特性；Lv3 大招 +30%；Lv4 开第 3 条分支；Lv5 特性 CD −25% + 觉醒外观
@@ -16901,7 +17008,7 @@ XY.chibi.portrait = function (c, id, x, foot, h, alpha) {
     var cy = y0 + ch + 14, ph = 214;
     panel(c, 30, cy, W - 60, ph, 14, app._bgId ? 'rgba(255,252,242,0.78)' : 'rgba(255,252,242,0.98)', '#c9a24a');
     var cur = S.carryId();
-    txt(c, XY.TEST_BUILD ? '携带常驻角色（测试版：' + XY.SPECIALS.length + ' 位全可选 · 打死第一只怪就满级，不写入存档）' : '携带常驻角色（标准版：只有 Phyrex 开局可用 · 其他人靠角色卡解锁）', 46, cy + 22, 16, T.ink, 'left', true);
+    txt(c, XY.TEST_BUILD ? '携带常驻角色（测试版：' + XY.SPECIALS.length + ' 位全可选 · 打死第一只怪就满级，不写入存档）' : '携带常驻角色（没抽到的要集齐 ' + XY.SP_LV_AT[0] + ' 张角色卡）', 46, cy + 22, 16, T.ink, 'left', true);
     txt(c, cur ? '本关：' + XY.SP_BY[cur].name + ' Lv' + S.spLevel(cur) + ' · ' + XY.synText(cur) : '本关：不带', W - 46, cy + 22, 15, cur ? '#2f7d3b' : T.inkSoft, 'right', true);
     var ids = XY.SPECIALS.map(function (d) { return d.id; }), sw = Math.floor((W - 60 - 32 - 4 * 12) / 13), k;
     var none = !cur;
@@ -17812,6 +17919,7 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
 
   /* ---------- 版本 / 测试版开关（菜单、选关页、组牌页共用）：小药丸 + 滑块 ---------- */
   M.verSwitch = function (c, app, x, y, w, h) {
+    if (XY.version && XY.version.showToggle && !XY.version.showToggle()) return;
     var test = XY.TEST_BUILD, hov = over(app, x, y, w, h), flash = app.verFlash && app.rt < app.verFlash, kr = h / 2 - 4;
     c.save();
     if (hov || flash) { c.shadowColor = test ? 'rgba(74,127,201,0.45)' : 'rgba(67,160,71,0.45)'; c.shadowBlur = 10; }
@@ -18604,7 +18712,7 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
     // —— 携带常驻角色
     var cy = carY, cols = port ? 5 : Math.max(5, Math.floor(carW / 66)), gap = 6, tw = (carW - (cols - 1) * gap) / cols, th = port ? 86 : 78, js = XY.journey.status(app.levelId);
     K.t('携带常驻角色', carX + 2, cy + 10, 15, '#b8300f', 'left', true);
-    K.tf(XY.TEST_BUILD ? '测试版：全员可选、不写存档' : (carW < 340 ? '标准版 · 其他靠角色卡' : '标准版：Phyrex 开局可用 · 其他靠角色卡'), carX + carW - 2, cy + 10, carW - 130, 12, T.inkSoft, 'right', false, 11);
+    K.tf(XY.TEST_BUILD ? '测试版：全员可选、不写存档' : (carW < 340 ? '没抽到的仍锁' : '没抽到的要集齐 ' + XY.SP_LV_AT[0] + ' 张角色卡'), carX + carW - 2, cy + 10, carW - 130, 12, T.inkSoft, 'right', false, 11);
     cy += 24;
     var tiles = [{ id: null }].concat(ids.map(function (id) { return { id: id }; })), XC = XY.xchar, rec = XC && (XC.get(cur) || XC.list[0]);
     if (rec) tiles.push({ id: rec.id, xc: true, rec: rec }); if (!XC || !rec || (XC.list && XC.MAX && XC.list.length < XC.MAX)) tiles.push({ id: '_xc', xc: true, rec: null }); tiles.push({ id: '_q' });   // 已有自建角色时，没满额就仍留一个「＋自建」空位
@@ -21758,7 +21866,7 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
     /* 第三项：0 淡赭墨条 · 1 浓墨条 · 2 朱红浓条 · 3 淡朱墨条 · 9 朱砂细边印（危险） */
     return [
       { name: '修行', col: '#b8322a', items: [['卡牌组牌', 'menuDeck', 1], ['灵石商店', 'menuShop', 0], ['图鉴', 'menuDex', 0], ['解锁皮肤', 'menuUnlock', 0], [nx ? '自建角色 ' + nx + '/' + XY.xchar.MAX : '自建角色', 'xchar', 0]] },
-      { name: '杂务', col: '#7a4a32', items: [['导入玩法', 'menuMods', 0], ['玩法速览', 'hubHow', 0], ['新手教程', 'menuTutorial', 0], ['引路码', 'refOpen', 3], ['版本：' + XY.version.name() + ' ⇄', 'toggleVer', 1], ['重置存档', 'menuReset', 9]] }
+      { name: '杂务', col: '#7a4a32', items: [['导入玩法', 'menuMods', 0], ['玩法速览', 'hubHow', 0], ['新手教程', 'menuTutorial', 0], ['引路码', 'refOpen', 3], (XY.version && XY.version.showToggle && XY.version.showToggle() ? ['版本：' + XY.version.name() + ' ⇄', 'toggleVer', 1] : null), ['重置存档', 'menuReset', 9]].filter(function (it) { return it; }) }
     ];
   }
   var RGB = ['150,108,62', '58,50,38', '184,50,42', '168,70,52'], YJ = [0, 3, 1, 4, 2], XJ = [0, 6, 2, 8, 4];
@@ -22085,8 +22193,13 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
     }
     if (id === '_q') { c.globalAlpha = 0.7; ring(true, 'rgba(58,50,38,0.3)'); kt(c, '？', cx, cy, r * 0.9, 'rgba(109,100,85,0.6)', 'center'); c.restore(); hit('lockedSlot'); return; }
     if (id === null) { ring(true, on ? RED : 'rgba(58,50,38,0.55)', on ? 2 : 1.5); kt(c, '不带', cx, cy, Math.min(15, r * 0.62), on ? RED : INK, 'center', d - 6); label('独行', on ? RED : SOFT, on); if (on) onMark(); c.restore(); hit('carryPick', { id: null }); return; }
-    if (tl.xc && !tl.rec) { ring(true, 'rgba(58,50,38,0.5)'); kt(c, '＋', cx, cy, r * 0.95, RED, 'center'); label('自建', INK); c.restore(); hit('xchar'); return; }
-    var def = XY.SP_BY[id], owned = tl.xc ? true : S.spOwned(id), lv = tl.xc ? XC.LV : S.spLevel(id);
+    if (tl.xc && !tl.rec) {
+      var createOpen = !S.xcharOpen || S.xcharOpen();
+      ring(true, 'rgba(58,50,38,0.5)');
+      if (!createOpen) { kt(c, '锁', cx, cy - 1, Math.min(18, r * 0.7), RED, 'center'); label('通关解锁', SOFT); c.restore(); hit('xcharLocked'); return; }
+      kt(c, '＋', cx, cy, r * 0.95, RED, 'center'); label('自建', INK); c.restore(); hit('xchar'); return;
+    }
+    var def = XY.SP_BY[id], xcLock = !!(tl.xc && tl.rec && S.xcharOpen && !S.xcharOpen()), owned = xcLock ? false : (tl.xc ? true : S.spOwned(id)), lv = tl.xc ? XC.LV : S.spLevel(id);
     if (!owned) { c.globalAlpha = 0.5; if ('filter' in c) c.filter = 'grayscale(1)'; }
     c.save(); c.fillStyle = 'rgba(58,50,38,0.14)'; c.beginPath(); c.arc(cx + 1, cy + 2, r + 1, 0, PI2); c.fill(); c.restore();
     var usedX = !tl.xc && xDisc(c, id, cx, cy, r, false);
@@ -22094,11 +22207,13 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
     else if (owned) { var _fr = XY.VD && XY.VD.activeFrame && XY.VD.activeFrame(); if (_fr) XY.VD.drawFrame(c, cx, cy, r, _fr); }
     if ('filter' in c) c.filter = 'none';
     c.globalAlpha = 1;
-    if (on) onMark();
+    if (!owned) { var lk = Math.max(16, Math.round(d * 0.42)); VU.drawSeal(c, cx + r * 0.28, cy + r * 0.22, lk, lk, '锁', { style: 'solid', col: RED, sz: Math.round(lk * 0.6), rot: -0.08, stack: false }); }
+    if (on && owned) onMark();
     var nm = !tl.xc && stageName(id), nmH = Math.min(nh * 1.05, 17);
     if (nm && nm.img) { var nw = nm.w * nmH / nm.h, k2 = Math.min(1, (w - 10) / nw); c.save(); c.globalAlpha = owned ? (on ? 1 : 0.9) : 0.4; c.drawImage(nm.img, cx - nw * k2 / 2, ny - nmH * k2 / 2, nw * k2, nmH * k2); c.restore(); }
     else label(tl.xc ? (tl.rec && tl.rec.name) || '自建' : def.name, owned ? INK : 'rgba(58,50,38,0.5)');
     c.restore();
+    if (!owned && tl.xc) { hit('xcharLocked'); return; }
     hit('carryPick', { id: id });
     if (hv) out.hover = id;
   }
@@ -22171,7 +22286,10 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
 
   function carryInfo(a, out) {
     var cur = S.carryId(), sd = out.hover && XY.SP_BY[out.hover];
-    if (sd) return sd.name + '（' + sd.handle + '）· ' + sd.role + ' · 大招 ' + sd.ult;
+    if (sd) {
+      if (!S.spOwned(out.hover)) return sd.name + ' · 未解锁 · 集齐 ' + XY.SP_LV_AT[0] + ' 张角色卡（关卡掉落或灵石商店）';
+      return sd.name + '（' + sd.handle + '）· ' + sd.role + ' · 大招 ' + sd.ult;
+    }
     if (cur && XY.SP_BY[cur]) { var t = XY.synText(cur); return XY.SP_BY[cur].name + ' Lv' + S.spLevel(cur) + ' · ' + XY.SP_BY[cur].role + (t ? ' · ' + t : ''); }
     return '本关：不带常驻角色';
   }
@@ -22184,6 +22302,93 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
     }
     return out;
   }
+
+  /* 十连浮层：浅色宣纸、枯笔卡框、朱印。翻卡只在本页刚抽出时播放；刷新直接给结果。 */
+  function gachaPortrait(c, id, x, y, w, h) {
+    var im = (XY.bgArt && XY.bgArt(id)) || xAv(id), dw, dh, s;
+    c.save();
+    c.beginPath(); c.rect(x, y, w, h); c.clip();
+    c.fillStyle = '#f6f0e2'; c.fillRect(x, y, w, h);
+    if (im && im.naturalWidth) {
+      s = Math.max(w / im.naturalWidth, h / im.naturalHeight);
+      dw = im.naturalWidth * s; dh = im.naturalHeight * s;
+      c.drawImage(im, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
+    } else {
+      var nm0 = (XY.SP_BY[id] && XY.SP_BY[id].name) || '?';
+      c.fillStyle = '#241c16'; c.textAlign = 'center'; c.textBaseline = 'middle';
+      c.font = 'bold ' + Math.round(h * 0.38) + 'px ' + KAI;
+      c.fillText(nm0.charAt(0), x + w / 2, y + h / 2);
+    }
+    c.restore();
+  }
+  function gachaCard(c, x, y, w, h, seed) {
+    c.save();
+    c.fillStyle = 'rgba(58,50,38,0.10)'; c.fillRect(x + 3, y + 4, w, h);
+    c.fillStyle = '#fffdf6'; c.fillRect(x, y, w, h);
+    c.strokeStyle = '#241c16'; c.lineWidth = 1.8; c.strokeRect(x + 0.8, y + 0.8, w - 1.6, h - 1.6);
+    c.globalAlpha = 0.28; c.lineWidth = 1;
+    c.beginPath(); c.moveTo(x + 4, y + 5); c.lineTo(x + w * 0.46, y + 3.2); c.moveTo(x + w - 5, y + h - 4); c.lineTo(x + w * 0.5, y + h - 2.4); c.stroke();
+    c.restore();
+    if (VU.washE) VU.washE(c, x + w * 0.22, y + h * 0.16, w * 0.4, h * 0.18, '201,162,74', 0.09);
+  }
+  XY.gacha10.paint = function (c, st, a) {
+    var v = XY.gacha10.view(a); if (!v || !v.rec) return;
+    var cw = st.cw, ch = st.ch, land = cw >= 720, rec = v.rec, rows = rec.rows || [], i;
+    var elapsed = typeof XY.gacha10.freeze === 'number' ? XY.gacha10.freeze : Math.max(0, (a.rt || 0) - (v.t0 || 0));
+    var cols = land ? 5 : 2, rowsN = Math.ceil(10 / cols);
+    var header = land ? 78 : 68, footer = land ? 118 : 150, gap = land ? 12 : 8, pad = land ? 28 : 12;
+    var availW = cw - pad * 2, availH = Math.max(80, ch - header - footer);
+    var cardW = Math.floor((availW - gap * (cols - 1)) / cols);
+    var cardH = Math.floor((availH - gap * (rowsN - 1)) / rowsN);
+    var gridW = cols * cardW + (cols - 1) * gap, gridH = rowsN * cardH + (rowsN - 1) * gap;
+    var x0 = Math.round((cw - gridW) / 2), y0 = Math.round(header + Math.max(0, (availH - gridH) / 2));
+    if (VU.paperBg) VU.paperBg(c, { cw: cw, ch: ch }, { rgb: '201,162,74', rgb2: '184,50,42', seed: 21 });
+    else { c.fillStyle = '#f7f1e4'; c.fillRect(0, 0, cw, ch); }
+    VU.seal(c, 16, 12, land ? 48 : 42, land ? 48 : 42, '抽', RED, land ? 26 : 22);
+    kt(c, v.phase === 'result' ? '十连结果' : '天机十连', 74, land ? 28 : 26, land ? 32 : 24, '#2b1c08', 'left', cw - 120);
+    kt(c, '每位取经人只此一次 · 结果已写入存档', 74, land ? 54 : 50, land ? 14 : 12, SOFT, 'left', cw - 100, false);
+    rows.forEach(function (r, i) {
+      if (XY.bgArt) { try { XY.bgArt(r.id); } catch (e) {} }
+      xAv(r.id);
+      var col = i % cols, row = Math.floor(i / cols);
+      var x = x0 + col * (cardW + gap), y = y0 + row * (cardH + gap);
+      var delay = 0.22 + i * 0.18, p = v.phase === 'result' ? 1 : (elapsed < delay ? 0 : Math.min(1, (elapsed - delay) / 0.42));
+      var e = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
+      var front = v.phase === 'result' || e >= 0.5;
+      var sx = v.phase === 'result' ? 1 : Math.max(0.045, Math.abs(Math.cos(e * Math.PI)));
+      if (p > 0 && p < 1 && VU.washE) VU.washE(c, x + cardW / 2, y + cardH / 2, cardW * 0.72, cardH * 0.48, '184,50,42', 0.16 * Math.sin(p * Math.PI));
+      c.save();
+      c.translate(x + cardW / 2, y + cardH / 2); c.scale(sx, 1); c.translate(-(x + cardW / 2), -(y + cardH / 2));
+      gachaCard(c, x, y, cardW, cardH, i);
+      var band = Math.max(30, Math.min(52, Math.round(cardH * 0.30)));
+      var picH = Math.max(24, cardH - band - 8);
+      if (!front) {
+        var ss = Math.min(cardW, picH) * 0.46;
+        VU.drawSeal(c, x + (cardW - ss) / 2, y + (picH - ss) / 2 + 6, ss, ss, '封', { style: 'solid', col: RED, sz: Math.round(ss * 0.46), rot: -0.06, stack: false });
+        kt(c, '天机', x + cardW / 2, y + cardH - band * 0.55, Math.max(12, Math.min(16, cardW * 0.12)), INK, 'center', cardW - 10);
+      } else {
+        gachaPortrait(c, r.id, x + 6, y + 6, cardW - 12, picH);
+        var mark = r.kind === 'unlock' ? '得' : '复';
+        var ms = Math.max(16, Math.min(26, cardW * 0.16));
+        VU.drawSeal(c, x + cardW - ms - 8, y + 8, ms, ms, mark, { style: 'solid', col: r.kind === 'unlock' ? RED : '#6d6455', sz: Math.round(ms * 0.62), rot: 0.06, stack: false });
+        var nm = (XY.SP_BY[r.id] && XY.SP_BY[r.id].name) || r.id;
+        kt(c, nm, x + cardW / 2, y + cardH - band + band * 0.28, Math.max(12, Math.min(18, cardW * 0.11)), '#2b1c08', 'center', cardW - 12);
+        kt(c, r.text || '', x + cardW / 2, y + cardH - band * 0.28, Math.max(10, Math.min(13, cardW * 0.075)), r.kind === 'unlock' ? RED : SOFT, 'center', cardW - 10, false);
+      }
+      c.restore();
+    });
+    var nu = 0, nd = 0;
+    rows.forEach(function (r) { if (r.kind === 'unlock') nu++; else nd++; });
+    var by = ch - 14 - 48, hint = v.phase === 'result'
+      ? ('解锁 ' + nu + ' 人，重复 ' + nd + ' 张。重复卡计入该角色的角色卡，凑够 2 / 5 / 10 / 20 / 40 张升到 Lv1~5。没出现的仍然锁定。')
+      : '翻开十张特殊角色卡。跳过也不会重抽，刷新之后直接看这次的结果。';
+    if (VU.wrap) VU.wrap(c, hint, pad, by - (land ? 44 : 74), cw - pad * 2, land ? 16 : 15, land ? 13 : 12, SOFT, false, land ? 2 : 3);
+    st.hit(0, 0, cw, ch, 'gachaHold');
+    var bw = Math.min(land ? 280 : cw - 28, cw - 28), bx = (cw - bw) / 2;
+    if (v.phase === 'result') st.btn(bx, by, bw, 48, '收下', 'gachaAck', { pri: true, col: RED, sz: land ? 22 : 18 });
+    else st.btn(bx, by, bw, 48, '跳过', 'gachaSkip', { sz: land ? 20 : 17, rgb: '58,50,38' });
+  };
+
 
   DP.draw = function (c, G, a) {
     var st = VU.begin(c, a), cw = st.cw, ch = st.ch, land = (cw >= 600 && cw > ch * 1.1) || (cw >= 480 && cw > ch * 1.5), tiny = land && ch <= 360, cmp = tiny || (!land && ch < 720);
@@ -22207,7 +22412,7 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
       kt(c, '携带常驻', 14, stripY + 9, 13, RED, 'left', 80);
       out = carryStrip(c, st, a, tl, 12, stripY + labH, cw - 24, cols, cellW, cellH, d, 0);
       geo.tiles = nt; geo.strip = { y: stripY, h: labH + cellH };
-      var note = XY.TEST_BUILD ? '测试版：' + XY.SPECIALS.length + ' 位全可选 · 不写存档' : '标准版：Phyrex 开局可用 · 其他靠角色卡';
+      var note = XY.TEST_BUILD ? '测试版：' + XY.SPECIALS.length + ' 位全可选 · 不写存档' : '没抽到的要集齐 ' + XY.SP_LV_AT[0] + ' 张角色卡';
       c.font = '12px ' + KAI; var nw0 = Math.min(cw * 0.3, c.measureText(note).width);
       kt(c, carryInfo(a, out), 84, stripY + 9, 12, INK, 'left', cw - 84 - nw0 - 30, false);
       kt(c, note, cw - 14, stripY + 9, 11.5, SOFT, 'right', cw * 0.3, false);
@@ -22233,7 +22438,7 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
     } else {
       // —— 竖屏：自下而上排：底栏小入口 → 头像 → 出发 → 反派 / 重开；自上而下：竖卡 → 说明；中间剩下的放立绘
       var mg = 12, linkY = ch - 6 - 44;
-      var lb = [['排行榜', 'menuBoard'], ['灵石商店', 'menuShop'], [XY.version.name() + ' ⇄', 'toggleVer']], lw3 = (cw - 2 * mg - 12) / 3;
+      var lb = [['排行榜', 'menuBoard'], ['灵石商店', 'menuShop']]; if (XY.version && XY.version.showToggle && XY.version.showToggle()) lb.push([XY.version.name() + ' ⇄', 'toggleVer']); var lw3 = (cw - 2 * mg - 6 * (lb.length - 1)) / lb.length;
       VU.washE(c, cw / 2, linkY + 22, cw * 0.6, 34, '250,244,228', 0.8);
       lb.forEach(function (b, k) { weak(mg + k * (lw3 + 6), linkY, lw3, b[0], b[1]); });
       tl = tiles(a, cmp); nt = tl.length;
@@ -22245,7 +22450,7 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
       kt(c, '携带常驻', mg + 2, stripYp + 10, 13, RED, 'left', 80);
       out = carryStrip(c, st, a, tl, mg, stripYp + labHp, cw - 2 * mg, cols, cellW, cellH, d, rg);
       kt(c, carryInfo(a, out), mg + 2, stripYp + 27, 11.5, INK, 'left', cw - 2 * mg - 4, false);
-      kt(c, XY.TEST_BUILD ? '测试版 · 全可选' : '标准版', cw - mg - 2, stripYp + 10, 11, SOFT, 'right', 110, false);
+      kt(c, XY.TEST_BUILD ? '测试版 · 全可选' : '集齐 ' + XY.SP_LV_AT[0] + ' 张解锁', cw - mg - 2, stripYp + 10, 11, SOFT, 'right', 120, false);
       geo.tiles = nt; geo.strip = { y: stripYp, h: stripH };
       gh = Math.round(Math.max(54, Math.min(84, 62 * s))); gw = Math.min(cw - 2 * mg - 20, Math.round(330 * s)); gx = (cw - gw) / 2; gy = stripYp - 14 - gh;
       var sy3 = gy - 8 - 44;
@@ -22272,7 +22477,7 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
     var hx = moreX - 6;
     if (land) {
       VU.washE(c, cw - 170, 28, 220, 30, '250,244,228', 0.85);
-      var hb = [['灵石商店', 'menuShop', cw < 700 ? 82 : 92], ['排行榜', 'menuBoard', cw < 700 ? 70 : 80], [XY.version.name() + ' ⇄', 'toggleVer', cw < 700 ? 92 : 100]];
+      var hb = [['灵石商店', 'menuShop', cw < 700 ? 82 : 92], ['排行榜', 'menuBoard', cw < 700 ? 70 : 80]]; if (XY.version && XY.version.showToggle && XY.version.showToggle()) hb.push([XY.version.name() + ' ⇄', 'toggleVer', cw < 700 ? 92 : 100]);
       hb.forEach(function (b) { hx -= b[2]; weak(hx, 6, b[2], b[0], b[1]); hx -= 4; });
     }
     var tw0 = hx - x0 - 8;
@@ -22280,6 +22485,7 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
     taper(c, x0 - 2, 41, x0 + Math.min(Math.max(40, tw0), 74), 2.4, 0.5);
     if (tw0 > 120) kt(c, '灵石 ' + S.data.lingshi + (XY.TEST_BUILD ? ' · 测试版' : ''), x0 + 74, 31, 12, '#8a5a12', 'left', tw0 - 78, false);
 
+    if (XY.gacha10 && XY.gacha10.paint) XY.gacha10.paint(c, st, a);
     geo.jt = '取经之旅 · 第 ' + a.levelId + ' 关：' + XY.journey.status(a.levelId).text;
     var mm = a.menuMsg; if (mm && a.rt < mm.until) { var vm = VU.msg; VU.msg = { text: mm.text, bad: !!mm.bad, until: mm.until }; VU.toast(c, st, a, land ? top : top); VU.msg = vm; }
     st.end();
@@ -22563,7 +22769,7 @@ if(leaf===0){K.t(XY.fmtTime(G.t),x+4,y+9,32,T.ink,'left',true);y+=47;para('等�
 else if(leaf===1){[G.quests.main].concat(G.quests.sides).forEach(function(q,i){var rw=q.def.reward||{},r=q.done?[(rw.card?'法宝':''),(rw.lingshi?'灵石 +'+rw.lingshi:''),(rw.shard?'碎片 +'+rw.shard:'')].filter(Boolean).join(' · '):'未完成';para((i?'支线':'主线')+' · '+q.def.short+'　'+(q.done?'✔ ':'✘ ')+r,q.done?'#2f663a':T.inkSoft);});}
 else if(leaf===2){para('法宝 '+(G.cardLog||[]).length+' 张 · 灵石 +'+XY.fmtNum((G.run&&G.run.clearGain)||0),'#8a5a12');var sp=G.spGot||[];if(sp.length){var per=(!port&&H<450)?2:4,from=P.pager(sp.length,per,'end-drops',x,H-174,w),rh=(!port&&H<450)?36:46;sp.slice(from,from+per).forEach(function(g,i){var d=XY.SP_BY[g.id],cy=y+i*rh+15;XY.hud2.face(c,{id:g.id,def:d},x+20,cy,15,a.rt);K.tf(d.name+' ×1',x+47,cy,w-52,14,T.ink,'left',true,11);});}}else{var nu=(rep.newUnlocks||[]).map(function(id){return XY.UNLOCK_BY[id].name;});para(nu.length?'新解锁：'+nu.join('、'):'本局没有新解锁');}
 var jn=G.mod?'非官方玩法包：不发奖励，不记通关，不影响存档':G.dungeon?(win?'洞府副本不计入取经之旅（首通奖励已发）':'副本失败不扣任何东西'):win?(G.levelId<XY.LEVEL_COUNT?'全队成长已存档，第 '+(G.levelId+1)+' 关已解锁':'取经之旅：三关全部走完！成长已存档'):'之前积累保留，再来回到本关开始状态（'+XY.journey.status(G.levelId).text+'）';K.lines(jn,x,H-125,w,12,17,win?'#2f663a':T.inkSoft,3,false);
-var hasNext=win&&!G.dungeon&&!G.mod&&G.levelId<XY.LEVEL_COUNT,A=hasNext?[['下一关','nextLevel',true],['再来 · R','restart'],['首页','home']]:!win?[['再来 · R','restart',true],['换角色','repick'],['首页','home']]:[['再来 · R','restart',true],['首页','home']];if(win&&G.bossOffer&&XY.bossfight&&XY.bossfight.launch)A.splice(hasNext?1:0,0,['Boss 战','bossGo']);var bw=(w-12)/A.length;A.forEach(function(b,i){K.btn(x+i*bw,H-65+[0,4,1,3][i],bw-5,44,b[0],b[1],null,{primary:!!b[2],size:14});});K.msg(x+w,H-9,'right',w);K.btn(port?W-180:24,port?144:H-55,156,44,XY.TEST_BUILD?'测试版 · 切标准版':'标准版 · 切测试版','toggleVer',null,{size:12});P.end(c);};
+var hasNext=win&&!G.dungeon&&!G.mod&&G.levelId<XY.LEVEL_COUNT,A=hasNext?[['下一关','nextLevel',true],['再来 · R','restart'],['首页','home']]:!win?[['再来 · R','restart',true],['换角色','repick'],['首页','home']]:[['再来 · R','restart',true],['首页','home']];if(win&&G.bossOffer&&XY.bossfight&&XY.bossfight.launch)A.splice(hasNext?1:0,0,['Boss 战','bossGo']);var bw=(w-12)/A.length;A.forEach(function(b,i){K.btn(x+i*bw,H-65+[0,4,1,3][i],bw-5,44,b[0],b[1],null,{primary:!!b[2],size:14});});K.msg(x+w,H-9,'right',w);if(XY.version&&XY.version.showToggle&&XY.version.showToggle())K.btn(port?W-180:24,port?144:H-55,156,44,'测试版 · 切标准版','toggleVer',null,{size:12});P.end(c);};
 })();
 /* DOM卷面：不同内容保留真实表单与滚动，但不再套设置App卡壳。 */
 (function(){var st=document.createElement('style');st.id='folio3-dom';st.textContent=`
@@ -22957,8 +23163,9 @@ X.step=function(g,dt){if(!g._simRandom)return step.apply(this,arguments);var sel
     if (XY.audio) { XY.audio.init(); if (XY.audio.bgmStart) XY.audio.bgmStart('play'); } if (XY.sfx) XY.sfx('start');
   }
   function openDeparture() {
-    if (XY.lazy && XY.lazy.on) XY.lazy.enter(function () { app.screen = 'levels'; });
-    else app.screen = 'levels';
+    var go = function () { app.screen = 'levels'; if (XY.gacha10 && XY.gacha10.ensure) XY.gacha10.ensure(); };
+    if (XY.lazy && XY.lazy.on) XY.lazy.enter(go);
+    else go();
   }
   function goHome() { abandon(); app.retStack = []; app.dungeonId = null; app.modId = null; app.villain = false; app.lair = null; fresh(); app.screen = 'start'; if (XY.audio && XY.audio.bgmStart) XY.audio.bgmStart('menu'); }
   function toMenu() { app.dungeonId = null; app.modId = null; app.villain = false; app.lair = null; fresh(); app.screen = (app.retStack && app.retStack.length) ? app.retStack.pop() : 'start'; app.confirm = null; if (XY.audio && XY.audio.bgmStart) XY.audio.bgmStart('menu'); }     // v0.8.7b：返回回到“上一页”（出发页进的洞府阁 / 商店 / 排行榜 / 反派，返回都回出发页；栈空 = 首页）     // 从子界面回主菜单（刷新预览里的皮肤）
@@ -23010,7 +23217,11 @@ X.step=function(g,dt){if(!g._simRandom)return step.apply(this,arguments);var sel
       if (k === 'Enter' || k === 'Space') openDeparture();
       return;
     }
-    if (s === 'levels') { if (k === 'Escape') toMenu(); else if (k === 'Enter') { var dp = XY.depart; if (dp && dp.kind === 'dungeon' && XY.save.dngUnlocked(dp.id)) startGame(null, dp.id); else startGame(app.levelId); } return; }
+    if (s === 'levels') {
+      if (XY.gacha10 && XY.gacha10.ensure && XY.gacha10.ensure().show) { if (k === 'Escape' || k === 'Enter' || k === 'Space') XY.gacha10.key(); return; }
+      if (k === 'Escape') toMenu(); else if (k === 'Enter') { var dp = XY.depart; if (dp && dp.kind === 'dungeon' && XY.save.dngUnlocked(dp.id)) startGame(null, dp.id); else startGame(app.levelId); }
+      return;
+    }
     if (s === 'villain') { XY.villainUI.key(k, app); return; }
     if (s === 'board') { XY.boardUI.key(k, app); return; }
     if (s === 'hub') { XY.hubUI.key(k, app); return; }
@@ -23243,15 +23454,15 @@ X.step=function(g,dt){if(!g._simRandom)return step.apply(this,arguments);var sel
         case 'guest': XY.guest.summon(G); break;
         case 'helpClose': G.helpClosed = true; app.helpOn = false; break;                 // 点操作说明框：收起（按 H 再打开）
         case 'levelSel': if (XY.save.levelUnlocked(h.n)) app.levelId = h.n; else msg('先通关上一关', true); break;
-        case 'levelGo': startGame(h.n); break;
+        case 'levelGo': if (XY.gacha10 && XY.gacha10.blocking && XY.gacha10.blocking()) break; startGame(h.n); break;
         case 'menuDungeon': app.screen = 'dungeon'; if (XY.villainUI && XY.villainUI.tipDom) XY.villainUI.tipDom('dungeon'); break;
         case 'menuMods': XY.modsUI.open(app.screen); break;                        // v0.8.7 Bot 启动：导入玩法（DOM 浮层）
         case 'bossGo': if (XY.bossfight && XY.bossfight.launch) XY.bossfight.launch(G && G.bossOffer || { kind: 'menu' }); break;
         case 'menuBoss': if (XY.chain09 && !XY.chain09.unlocked('bossfight')) msg('先通关一个洞府副本', true); else if (XY.bossfight && XY.bossfight.open) { if (XY.bossfight.open({ kind: 'menu' }) === false) msg('Boss 战暂时打不开', true); } break;          // v0.8.6 挂点（入口默认隐藏）
         case 'menuVillain': if (XY.chain09 && !XY.chain09.unlocked('villain')) msg('先打赢牛魔王 Boss 战', true); else if (XY.villain && XY.villain.open) XY.villain.open({ kind: 'menu' }); break;
-        case 'dungeonGo': if (XY.save.dngUnlocked(h.id)) startGame(null, h.id); else msg('先通关第 1 关一次', true); break;
+        case 'dungeonGo': if (XY.gacha10 && XY.gacha10.blocking && XY.gacha10.blocking()) break; if (XY.save.dngUnlocked(h.id)) startGame(null, h.id); else msg('先通关第 1 关一次', true); break;
         case 'menuLevels': openDeparture(); break;
-        case 'xchar': XY.xcharUI.open(app.screen); break;                       // v0.8.1：自建角色（DOM 浮层）
+        case 'xchar': if (XY.save.xcharOpen && !XY.save.xcharOpen()) { msg('通关第 1 关后才能自建角色', true); break; } XY.xcharUI.open(app.screen); break;
         case 'menuShop': app.screen = 'shop'; break;
         case 'nextLevel': app.levelId = Math.min(XY.LEVEL_COUNT, G.levelId + 1); app.screen = 'levels'; msg('通关啦！下一关前可以换常驻角色（点下面的角色），选好点「出发！」', false); break;   // v0.5：每次通关后有一次换人的机会
         case 'repick': app.dungeonId = null; app.levelId = G.levelId; app.screen = 'levels'; msg('可以换一位常驻角色再来这一关，选好点「出发！」', false); break;
@@ -23268,6 +23479,10 @@ X.step=function(g,dt){if(!g._simRandom)return step.apply(this,arguments);var sel
         case 'shopBuySol': var ss = XY.shop.buySol(h.t); msg(ss.reason, !ss.ok); break;
         case 'shopRoll': var sr2 = XY.shop.reroll(); msg(sr2.reason, !sr2.ok); break;
         case 'lockedSlot': msg('暂未开放', false); break;
+        case 'xcharLocked': msg('通关第 1 关后才能自建角色。已经建好的角色还在，通关后就能带。', true); break;
+        case 'gachaHold': break;
+        case 'gachaSkip': if (XY.gacha10) XY.gacha10.key(); break;
+        case 'gachaAck': if (XY.gacha10) XY.gacha10.ack(); break;
         case 'carryPick': var cp = XY.save.setCarry(h.id); msg(cp.reason, !cp.ok); break;
       }
       return;
