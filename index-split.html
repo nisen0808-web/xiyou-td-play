@@ -57,13 +57,13 @@ window.XY_AVATAR_FILES = ["diaoyulao", "haiteng", "heyuxi", "kuanggong", "laosij
 var XY = window.XY = window.XY || {};
 
 XY.VERSION = '0.8.7';
-// 测试版开关：打开时 12 位特殊角色开局全部可选（默认 Lv1，不写入存档）；网址加 ?test=0 或 build.sh 的 TEST_BUILD=0 关闭
-// 版本开关（测试版 / 标准版）现在存在存档里：见 meta.js 的 XY.TEST_BUILD / XY.version
-XY.TEST_LV = 5;     // 测试版里特殊角色的角色卡等级（5 = 卡牌等级上限 XY.CARD_MAXLV，也是 SP_MAX_LV；隐藏角色不受影响）
+// 全开开关：打开时 12 位特殊角色开局全部可选（默认 Lv1，不写入存档）；网址加 ?test=0 或 build.sh 的 TEST_BUILD=0 关闭
+// 版本开关（全开 / 标准版）现在存在存档里：见 meta.js 的 XY.TEST_BUILD / XY.version
+XY.TEST_LV = 5;     // 全开里特殊角色的角色卡等级（5 = 卡牌等级上限 XY.CARD_MAXLV，也是 SP_MAX_LV；隐藏角色不受影响）
 
 /* ---------- 全局常量 ---------- */
 XY.C = {
-  TEST_DEFAULT: true,     // 打开网页默认进测试版（三关全开 / 全员 Lv98 差一只怪满级 / 特殊角色 Lv5 / 单独存档）；改成 false = 默认普通版；网址 ?normal=1 随时回普通版、?test=1 进测试版
+  TEST_DEFAULT: true,     // 打开网页默认进全开（三关全开 / 全员 Lv98 差一只怪满级 / 特殊角色 Lv5 / 单独存档）；改成 false = 默认普通版；网址 ?normal=1 随时回普通版、?test=1 进全开
   WORLD_W: 5120,          // 地图宽（v0.4：东西向长图，营地在东、关口在西）
   WORLD_H: 3200,          // 地图高
   STEP: 1 / 60,           // 固定逻辑步长（秒）
@@ -386,8 +386,8 @@ XY.TRAITS = {
  * ============================================================ */
 (function () {
   var XY = window.XY;
-  var KEY_STD = 'xiyou_survivors_save', KEY_TEST = 'xiyou_survivors_save_test';     // 测试版和普通版各用一把存档钥匙：测试版永远不会碰普通版的存档
-  // 进入哪个版本：同一标签页里切换过 > 网址 ?normal=1（或 ?test=0）= 普通版 / ?test=1 = 测试版 > C.TEST_DEFAULT（默认 true：直接打开就是测试版）
+  var KEY_STD = 'xiyou_survivors_save', KEY_TEST = 'xiyou_survivors_save_test';     // 全开和普通版各用一把存档钥匙：全开永远不会碰普通版的存档
+  // 进入哪个版本：同一标签页里切换过 > 网址 ?normal=1（或 ?test=0）= 普通版 / ?test=1 = 全开 > C.TEST_DEFAULT（默认 true：直接打开就是全开）
   function resolveMode() {
     var q = (window.location && window.location.search) || '', ss = null;
     try { ss = window.sessionStorage.getItem('xy_mode'); } catch (e) { ss = null; }
@@ -398,7 +398,7 @@ XY.TRAITS = {
   }
   var MODE = resolveMode(), KEY = MODE === 'test' ? KEY_TEST : KEY_STD;
   var DEFAULT_MODE = MODE;
-  var SCHEMA = 5;   // v0.8.8：5 = 反派系列块补全（villain.series[系列] 加 wallet{yaojin,yaodan}/mats/evo/t3Seen/pity/traps/stage，旧的数字钱包迁成妖金）。   // v0.5：4 = 新增 mode（版本开关）+ spT（测试版特殊角色状态）。   // v0.5：3 = 新增 journey（取经之旅成长存档）。   // v0.5：2 = 新增 sp 默认（2 张 Phyrex + 已选）、sold（天兵卡）、tutorial；旧档升级不丢任何进度
+  var SCHEMA = 5;   // v0.8.8：5 = 反派系列块补全（villain.series[系列] 加 wallet{yaojin,yaodan}/mats/evo/t3Seen/pity/traps/stage，旧的数字钱包迁成妖金）。   // v0.5：4 = 新增 mode（版本开关）+ spT（全开特殊角色状态）。   // v0.5：3 = 新增 journey（取经之旅成长存档）。   // v0.5：2 = 新增 sp 默认（2 张 Phyrex + 已选）、sold（天兵卡）、tutorial；旧档升级不丢任何进度
 
   /* ---------- 皮肤（每位英雄一套换装）和变体角色 ---------- */
   XY.SKINS = {
@@ -516,8 +516,8 @@ XY.TRAITS = {
       cards: {}, deck: [], dex: {}, unlocks: {}, skins: {}, party: { horse: 'horse' },
       levels: {}, dng: {}, routes: { N: 0, S: 0 }, lingshi: 0, shards: 0, questsDone: {},   // v0.4：关卡进度、灵石（货币）、皮肤碎片、已完成过的支线
       sp: { cards: { phyrex: 2 }, chosen: 'phyrex', shop: null, shopGen: 0 },   // v0.5：新存档直接有 2 张 Phyrex 卡（=解锁 Lv1）并已选为常驻角色（标准版的特殊角色状态）
-      spT: { cards: { phyrex: 2 }, chosen: 'phyrex', shop: null, shopGen: 0 },  // v0.5：测试版的特殊角色状态（和标准版分开存，互不污染）
-      mode: DEFAULT_MODE,                                                       // v0.5：版本开关 'test'（测试版，默认）/ 'std'（标准版）
+      spT: { cards: { phyrex: 2 }, chosen: 'phyrex', shop: null, shopGen: 0 },  // v0.5：全开的特殊角色状态（和标准版分开存，互不污染）
+      mode: DEFAULT_MODE,                                                       // v0.5：版本开关 'test'（全开，默认）/ 'std'（标准版）
       sold: { cards: { arrow: 1, heal: 1 } },                                   // v0.5：天兵卡
       tutorial: { done: false, grow: false },
       journey: { entry: {}, legacy: false },                                     // 取经之旅：每关入场快照（见 journey.js）
@@ -746,13 +746,13 @@ XY.TRAITS = {
     return d;
   };
 
-  /* ---- 版本开关（单文件，不用构建参数）：XY.TEST_BUILD 是存档 mode 的读写口；测试版 / 标准版各有一份特殊角色状态 ---- */
+  /* ---- 版本开关（单文件，不用构建参数）：XY.TEST_BUILD 是存档 mode 的读写口；全开 / 标准版各有一份特殊角色状态 ---- */
   Object.defineProperty(XY, 'TEST_BUILD', { configurable: true, enumerable: true,
     get: function () { return MODE === 'test'; },
     set: function (v) { if (S.data) XY.version.set(v ? 'test' : 'std'); else MODE = v ? 'test' : 'std'; } });
   XY.version = {
     mode: function () { return XY.TEST_BUILD ? 'test' : 'std'; },
-    name: function (m) { return (m || XY.version.mode()) === 'test' ? '测试版' : '标准版'; },
+    name: function (m) { return (m || XY.version.mode()) === 'test' ? '全开' : '标准版'; },
     desc: function (m) { return (m || XY.version.mode()) === 'test' ? '三关全开 · 全员满级差一只怪 · 特殊角色 Lv5 · 单独存档' : '只有 Phyrex 开局可用 · 其他人靠角色卡解锁'; },
     set: function (m) {                                  // 切换版本 = 换一份存档（先把当前这份写好）；同一标签页刷新后保持
       m = m === 'std' ? 'std' : 'test';
@@ -1935,7 +1935,7 @@ XY.TRAITS = {
     }
    }
   ];
-  // ===== 隐藏名单（v0.5）：qinbafrank / TraderS 暂时隐藏——数据和代码都在，但选角 / 掉落 / 商店 / 图鉴 / 测试版开局全部不出现，头像也不打进 dist。
+  // ===== 隐藏名单（v0.5）：qinbafrank / TraderS 暂时隐藏——数据和代码都在，但选角 / 掉落 / 商店 / 图鉴 / 全开开局全部不出现，头像也不打进 dist。
   //       v0.6：Cato 也先隐藏（含 Cato 的协同技「双水合流」一起隐藏）。
   //       要恢复：把 window.XY_HIDDEN_SPECIALS 设成 []，或网址加 ?hidden=0（build.sh 同步读本行的名单决定内联哪些头像）
   XY.HIDDEN_SPECIALS = /[?&]hidden=0/.test((window.location && window.location.search) || '') ? [] : (window.XY_HIDDEN_SPECIALS || ['qinba', 'traders18', 'cato']);
@@ -1994,14 +1994,14 @@ XY.TRAITS = {
 
   /* ---------- 存档：角色卡张数 / 携带 ---------- */
   function sd() {
-    var d = XY.save.data, key = XY.TEST_BUILD ? 'spT' : 'sp';     // 测试版 / 标准版各存一份，互不污染
+    var d = XY.save.data, key = XY.TEST_BUILD ? 'spT' : 'sp';     // 全开 / 标准版各存一份，互不污染
     if (!d[key] || typeof d[key] !== 'object') d[key] = { cards: key === 'spT' ? { phyrex: 2 } : {}, chosen: key === 'spT' ? 'phyrex' : null, shop: null, shopGen: 0 };
     if (!d[key].cards) d[key].cards = {};
     return d[key];
   }
   XY.spLevelOf = function (n) { var l = 0; XY.SP_LV_AT.forEach(function (a, i) { if (n >= a) l = i + 1; }); return l; };
   XY.save.spCards = function (id) { return sd().cards[id] || 0; };
-  // 测试版（XY.TEST_BUILD，默认开）：12 位特殊角色开局全部可选，等级至少 XY.TEST_LV（不写入存档）
+  // 全开（XY.TEST_BUILD，默认开）：12 位特殊角色开局全部可选，等级至少 XY.TEST_LV（不写入存档）
   XY.save.spLevel = function (id) { if (XY.isHidden(id) || !XY.SP_BY[id]) return 0; return Math.max(XY.spLevelOf(XY.save.spCards(id)), XY.TEST_BUILD ? XY.TEST_LV : 0); };
   XY.save.spOwned = function (id) { return XY.save.spLevel(id) >= 1; };
   XY.save.spRealOwned = function (id) { return XY.spLevelOf(XY.save.spCards(id)) >= 1; };
@@ -2022,7 +2022,7 @@ XY.TRAITS = {
     if (!XY.save.spOwned(id)) return { ok: false, reason: '还没解锁：集齐 ' + XY.SP_LV_AT[0] + ' 张角色卡（掉落或商店购买）' };
     sd().chosen = id; XY.save.touch(); return { ok: true, reason: '本关常驻：' + XY.SP_BY[id].name };
   };
-  // 测试版“一击满级”：只在测试版、只对本局常驻的特殊角色；师徒五人不受影响（队伍等级 G.level 不动）。
+  // 全开“一击满级”：只在全开、只对本局常驻的特殊角色；师徒五人不受影响（队伍等级 G.level 不动）。
   // 满级 = 角色卡 Lv5（它自己的上限：数值 +100%、特性、第 3 分支、觉醒外观）+ 角色等级 99（G.spHeroLv，Phyrex 变身要它）。只改本局，不写存档。
   XY.SP_MAX_LV = 5; XY.HERO_MAXLV = 99; XY.instMaxOn = !window.XY_NO_INSTMAX;     // instMaxOn：平衡 probe 把它关掉
   XY.version.instantMax = function (G) {
@@ -2032,11 +2032,11 @@ XY.TRAITS = {
     h.def = XY.specialDef(G.special, XY.SP_MAX_LV);
     if (XY.recalcAll) XY.recalcAll(G);
     if (!h.down) h.hp = h.maxHp;                         // 角色一击满级 = 这个角色升级：回满血
-    XY.banner(G, '测试版：' + XY.SP_BY[G.special].name + ' 一击满级！（角色卡 Lv' + XY.SP_MAX_LV + ' · 角色等级 ' + XY.HERO_MAXLV + '）', 3.2);
+    XY.banner(G, XY.SP_BY[G.special].name + ' 一击满级！（角色卡 Lv' + XY.SP_MAX_LV + ' · 角色等级 ' + XY.HERO_MAXLV + '）', 3.2);
     XY.ring(G, h.x, h.y, 90, h.def.color, 0.7, true); XY.ring(G, h.x, h.y, 150, '#ffd54a', 1.0, false); if (XY.anim) XY.anim.maxLevel(G, h);
     return true;
   };
-  XY.spHeroLv = function (G) { return G.instMax ? XY.HERO_MAXLV : Math.min(XY.HERO_MAXLV, G.level || 1); };   // 特殊角色的“角色等级”：测试版一击满级后是 99，否则就是队伍等级
+  XY.spHeroLv = function (G) { return G.instMax ? XY.HERO_MAXLV : Math.min(XY.HERO_MAXLV, G.level || 1); };   // 特殊角色的“角色等级”：全开一击满级后是 99，否则就是队伍等级
 
   // 下一级还差几张
   XY.spNext = function (id) {
@@ -3100,7 +3100,7 @@ XY.TRAITS = {
     LEGACY_LV: LEGACY_LV,
     // 开始第 n 关该用的快照（null = 从零开始）
     entryFor: function (n) {
-      if (XY.TEST_BUILD && C.TEST_LV98 !== false) return JR.testEntry(n);      // 测试版：每关都从“全队 Lv98、差一只怪升 99”开局，不看存档快照
+      if (XY.TEST_BUILD && C.TEST_LV98 !== false) return JR.testEntry(n);      // 全开：每关都从“全队 Lv98、差一只怪升 99”开局，不看存档快照
       var j = J(), e = j.entry[n];
       if (e) return e;
       if (n > 1 && j.legacy && XY.save.levelUnlocked(n)) {
@@ -3810,7 +3810,7 @@ XY.TRAITS = {
     e.dead = true; G.kills++;
     if (e.affix) XY.affixDeath(G, e);
     if (XY.syn && o && o.src && o.src.sk) XY.syn.onKill(G, e, o.src);
-    if (XY.version && XY.version.instantMax) XY.version.instantMax(G);     // 测试版：打死第一只怪，当前特殊角色直接满级（标准版什么都不发生）
+    if (XY.version && XY.version.instantMax) XY.version.instantMax(G);     // 全开：打死第一只怪，当前特殊角色直接满级（标准版什么都不发生）
     var d = e.def;
     if (XY.sfx) XY.sfx(d.elite || d.etower ? 'elite' : 'kill');
     G.killsBy[e.type] = (G.killsBy[e.type] || 0) + 1; XY.save.addKill(e.type);   // 图鉴击杀数（存档）
@@ -7581,7 +7581,7 @@ XY.TRAITS = {
     var h = ph(G); if (!h) return { ok: false, reason: '只有 Phyrex 能变身' };
     if (h.down) return { ok: false, reason: 'Phyrex 已阵亡' };
     if (h.xf > 0) return { ok: false, reason: '正在变身中' };
-    var rl = XY.spHeroLv ? XY.spHeroLv(G) : G.level;      // 角色等级：测试版一击满级后是 99，否则就是队伍等级
+    var rl = XY.spHeroLv ? XY.spHeroLv(G) : G.level;      // 角色等级：全开一击满级后是 99，否则就是队伍等级
     if (rl < C.PH_XF_LEVEL) return { ok: false, reason: '队伍等级到 ' + C.PH_XF_LEVEL + ' 级才能变身（现在 ' + rl + ' 级）' };
     if (h.xfCd > 0) return { ok: false, reason: '变身冷却中（还要 ' + Math.ceil(h.xfCd) + ' 秒）' };
     return { ok: true, reason: '' };
@@ -7845,7 +7845,7 @@ XY.TRAITS = {
   XY.save.solCards = function (t) { return sdat().cards[t] || 0; };
   XY.save.solLevel = function (t) {
     var l = XY.solLevelOf(XY.save.solCards(t));
-    if (XY.TEST_BUILD) l = Math.max(l, 1);      // 测试版：所有天兵种类开局可用（至少 Lv1）
+    if (XY.TEST_BUILD) l = Math.max(l, 1);      // 全开：所有天兵种类开局可用（至少 Lv1）
     return l;
   };
   XY.save.solOwned = function (t) { return XY.save.solLevel(t) >= 1; };
@@ -9594,7 +9594,7 @@ XY.TRAITS = {
 
     // 造塔预览 / 选中的塔：升级按钮（点击操作，不用热键）
     var tcx = G.view.w / 2 - G.cam.x, tcy = G.view.h / 2 - G.cam.y;
-    if (app.build && app.mouse && G.mode === 'play') {
+    if (app.build && app.mouse && G.mode === 'play' && !G.td) {
       var bd0 = XY.TOWERS[app.build], mxw = app.mouse.x - tcx, myw = app.mouse.y - tcy, why = XY.towerBlock(G, app.build, mxw, myw);
       c.save(); c.globalAlpha = 0.85;
       c.beginPath(); c.arc(app.mouse.x, app.mouse.y, bd0.range, 0, PI2); c.fillStyle = why ? 'rgba(220,80,60,0.08)' : 'rgba(80,170,90,0.10)'; c.fill();
@@ -9604,7 +9604,7 @@ XY.TRAITS = {
       c.restore();
       txt(c, why ? '✘ ' + why : '✔ 点击放置 ' + bd0.name + '（' + bd0.cost + ' 金币）', app.mouse.x, app.mouse.y - 40, 13, why ? '#b8300f' : '#2f7d3b', 'center', true);
     }
-    if (app.selTower && G.towers.indexOf(app.selTower) >= 0) {
+    if (app.selTower && G.towers.indexOf(app.selTower) >= 0 && !G.td) {
       var st = app.selTower, sd = XY.TOWERS[st.type], sx = st.x + tcx, sy = st.y + tcy, ss = XY.towerStat(G, st);
       c.beginPath(); c.arc(sx, sy, ss.range, 0, PI2); c.lineWidth = 2; c.strokeStyle = 'rgba(232,137,43,0.8)'; c.setLineDash([6, 5]); c.stroke(); c.setLineDash([]);
       var pw = 158, ph = 62, px2 = Math.max(6, Math.min(W - pw - 6, sx - pw / 2)), py2 = Math.max(60, sy - 40 - ph);
@@ -11213,7 +11213,7 @@ XY.TRAITS = {
     }
     // 造塔预览 / 天兵落点预览 / 选中的塔
     var tcx = G.view.w / 2 - G.cam.x, tcy = G.view.h / 2 - G.cam.y;
-    if (app.build && app.mouse && G.mode === 'play') {
+    if (app.build && app.mouse && G.mode === 'play' && !G.td) {
       var bd0 = XY.TOWERS[app.build], mxw = app.mouse.x - tcx, myw = app.mouse.y - tcy, why = XY.towerBlock(G, app.build, mxw, myw);
       c.save(); c.globalAlpha = 0.85; c.beginPath(); c.arc(app.mouse.x, app.mouse.y, bd0.range, 0, 6.3); c.fillStyle = why ? 'rgba(220,80,60,0.08)' : 'rgba(80,170,90,0.10)'; c.fill();
       c.lineWidth = 2; c.strokeStyle = why ? '#d9503c' : '#4aa35a'; c.setLineDash([6, 5]); c.stroke(); c.setLineDash([]);
@@ -11225,7 +11225,7 @@ XY.TRAITS = {
       c.beginPath(); c.arc(app.mouse.x, app.mouse.y, 320, 0, 6.3); c.fill(); c.stroke(); c.setLineDash([]); c.restore();
       T.otxt(c, '点击降下天兵（免费，每关一次）· 右键取消', app.mouse.x, app.mouse.y - 12, 14, '#3d6aa8', 'center', true);
     }
-    if (app.selTower && G.towers.indexOf(app.selTower) >= 0) {
+    if (app.selTower && G.towers.indexOf(app.selTower) >= 0 && !G.td) {
       var st = app.selTower, sd = XY.TOWERS[st.type], sx = st.x + tcx, sy = st.y + tcy, ss = XY.towerStat(G, st);
       c.beginPath(); c.arc(sx, sy, ss.range, 0, 6.3); c.lineWidth = 2; c.strokeStyle = 'rgba(232,137,43,0.8)'; c.setLineDash([6, 5]); c.stroke(); c.setLineDash([]);
       var sb = XY.solBuff(G, st), tr0 = C.SOLBUFF.treat, mobT = app.zoom < 0.75, u = mobT ? Math.min(2.4, 1.2 / app.zoom) : 1;   // 手机：整块浮窗放大，按钮 ≥ 40 CSS 像素
@@ -13532,7 +13532,7 @@ XY.chibi.portrait = function (c, id, x, foot, h, alpha) {
   XY.VILLAIN_SERIES = XY.VILLAIN_SERIES || { niumo: { id: 'niumo', name: '牛魔王', order: 1, enabled: true } };
   /* 解锁链（用户确认）：基础关 → 副本 → Boss 战 → 反派模式。条件做成可配置表：改这张表就能改解锁条件，存档记录每一环是否通过（data.chain）。
    *   need.kind：'level'（通关第 id 关）/ 'dungeon'（通关任意洞府副本）/ 'boss'（打赢 id 系列的 Boss，id 如 'niumo'）
-   *   测试版（XY.TEST_BUILD）全部开放。反派模式按 Boss 系列分钱包 / 进度：data.villain.series[系列] = { wallet:{yaojin,yaodan}, got, runs, cleared, mats, evo, t3Seen, pity, traps, stage }（见 meta.js villainSeriesDefault），牛魔王 niumo 是第一个。 */
+   *   全开（XY.TEST_BUILD）全部开放。反派模式按 Boss 系列分钱包 / 进度：data.villain.series[系列] = { wallet:{yaojin,yaodan}, got, runs, cleared, mats, evo, t3Seen, pity, traps, stage }（见 meta.js villainSeriesDefault），牛魔王 niumo 是第一个。 */
   XY.CHAIN09 = XY.CHAIN09 || [
     { id: 'dungeon', name: '洞府副本', need: { kind: 'level', id: 1 }, hint: '通关第 1 关一次' },
     { id: 'bossfight', name: 'Boss 战', need: { kind: 'dungeon' }, hint: '通关任意一个洞府副本' },
@@ -13540,7 +13540,7 @@ XY.chibi.portrait = function (c, id, x, foot, h, alpha) {
   ];
   var CH = XY.chain09 = {
     by: function (id) { return XY.CHAIN09.filter(function (z) { return z.id === id; })[0] || null; },
-    passed: function (need) {                                              // 条件本身是否满足（只读存档，不看测试版）
+    passed: function (need) {                                              // 条件本身是否满足（只读存档，不看全开）
       var d = XY.save && XY.save.data; if (!d || !need) return false;
       if (need.kind === 'level') return !!(d.levels && d.levels[need.id] && d.levels[need.id].cleared);
       if (need.kind === 'dungeon') return !!(d.dng && Object.keys(d.dng).some(function (k) { return d.dng[k] && d.dng[k].cleared; }));
@@ -13697,7 +13697,7 @@ XY.chibi.portrait = function (c, id, x, foot, h, alpha) {
 /* ---- js/auto.js ---- */
 /* ============================================================
  * auto.js —— v0.9「尽量只用方向键」：自动加点 / 自动犒赏天兵（F）/ 自动召唤特殊人物（G）/ 法宝三选一自动选推荐
- * 偏好存在 localStorage（xy_auto_v1），测试版和普通版共用；暂停页里有四个开关。
+ * 偏好存在 localStorage（xy_auto_v1），全开和普通版共用；暂停页里有四个开关。
  * 默认：加点、犒赏、召唤、选卡都关。只有玩家自己打开才生效，刷新后保持。缺字段或坏值按关。手动按键（F / G / 1 2 3）照旧可用。
  * ============================================================ */
 (function () {
@@ -16875,7 +16875,7 @@ XY.chibi.portrait = function (c, id, x, foot, h, alpha) {
     var cy = y0 + ch + 14, ph = 214;
     panel(c, 30, cy, W - 60, ph, 14, app._bgId ? 'rgba(255,252,242,0.78)' : 'rgba(255,252,242,0.98)', '#c9a24a');
     var cur = S.carryId();
-    txt(c, XY.TEST_BUILD ? '携带常驻角色（测试版：' + XY.SPECIALS.length + ' 位全可选 · 打死第一只怪就满级，不写入存档）' : '携带常驻角色（标准版：只有 Phyrex 开局可用 · 其他人靠角色卡解锁）', 46, cy + 22, 16, T.ink, 'left', true);
+    txt(c, XY.TEST_BUILD ? '携带常驻角色（全开：' + XY.SPECIALS.length + ' 位全可选 · 打死第一只怪就满级，不写入存档）' : '携带常驻角色（标准版：只有 Phyrex 开局可用 · 其他人靠角色卡解锁）', 46, cy + 22, 16, T.ink, 'left', true);
     txt(c, cur ? '本关：' + XY.SP_BY[cur].name + ' Lv' + S.spLevel(cur) + ' · ' + XY.synText(cur) : '本关：不带', W - 46, cy + 22, 15, cur ? '#2f7d3b' : T.inkSoft, 'right', true);
     var ids = XY.SPECIALS.map(function (d) { return d.id; }), sw = Math.floor((W - 60 - 32 - 4 * 12) / 13), k;
     var none = !cur;
@@ -17063,7 +17063,7 @@ XY.chibi.portrait = function (c, id, x, foot, h, alpha) {
     verBtn(c, app, px + pw - 214, py + 14, 200, 48); if (app.menuMsg && app.rt < app.menuMsg.until) txt(c, app.menuMsg.text, W / 2, py + ph - 9, 13, '#2f7d3b', 'center', true);
     var nu = (rep.newUnlocks || []).map(function (id) { return XY.UNLOCK_BY[id].name; });
     if (nu.length) { txt(c, '★ 新解锁：' + nu.join('、'), W / 2, y, 14, '#2f7d3b', 'center', true); }
-    var jn = G.mod ? '非官方玩法包：只能玩，不发任何奖励，不记通关，不影响存档' : G.dungeon ? (win ? '洞府副本不计入取经之旅：第 1 关和后面的进度都没有变（首通奖励已发）' : '副本失败不扣任何东西，再来一局就是了') : win ? (G.levelId < XY.LEVEL_COUNT ? '取经之旅：全队 Lv' + G.level + '、技能和法宝已存档，带进第 ' + (G.levelId + 1) + ' 关（阵亡的师徒也会带着等级回来）' : '取经之旅：三关全部走完！成长已存档') : '失败不会清掉之前的积累：再来一局会回到本关开始时的状态（' + XY.journey.status(G.levelId).text + '）';
+    var jn = G.mod ? '非官方玩法包：只能玩，不发任何奖励，不记通关，不影响存档' : G.dungeon ? (win ? '洞府副本不计入取经之旅：第 1 关和后面的进度都没有变（首通奖励已发）' : '副本失败不扣任何东西，再来一局就是了') : win ? (G.levelId < XY.LEVEL_COUNT ? '取经之旅：全队 Lv' + G.level + '、技能和法宝已存档，带进第 ' + (G.levelId + 1) + ' 关（阵亡的师徒也会带着等级回来）' : '取经之旅：全部关卡走完！成长已存档') : '失败不会清掉之前的积累：再来一局会回到本关开始时的状态（' + XY.journey.status(G.levelId).text + '）';
     txt(c, jn, W / 2, py + ph - 92, 13, win ? '#2f7d3b' : T.inkSoft, 'center', win);
     var by = py + ph - 74, hasNext = win && !G.dungeon && !G.mod && G.levelId < XY.LEVEL_COUNT;
     if (hasNext) { R.btn(c, app, px + 24, by, 190, 52, '下一关（可换角色）', 'nextLevel', { primary: true }); R.btn(c, app, px + 225, by, 190, 52, '再来一局（R）', 'restart'); R.btn(c, app, px + 426, by, 190, 52, '回到首页', 'home'); }
@@ -17784,7 +17784,7 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
     c.fillStyle = RED; R.rrect(c, x, y + 27, Math.min(46, w), 4, 2); c.fill();
   };
 
-  /* ---------- 版本 / 测试版开关（菜单、选关页、组牌页共用）：小药丸 + 滑块 ---------- */
+  /* ---------- 版本 / 全开开关（菜单、选关页、组牌页共用）：小药丸 + 滑块 ---------- */
   M.verSwitch = function (c, app, x, y, w, h) {
     var test = XY.TEST_BUILD, hov = over(app, x, y, w, h), flash = app.verFlash && app.rt < app.verFlash, kr = h / 2 - 4;
     c.save();
@@ -18424,7 +18424,7 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
       y += 30;
     }
     if (nu.length) { text(c, '★ 新解锁：' + nu.join('、'), cx, y + 8, 14, '#2f7d3b', 'center', true); y += 26; }
-    var jn = G.mod ? '非官方玩法包：只能玩，不发任何奖励，不记通关，不影响存档' : G.dungeon ? (win ? '洞府副本不计入取经之旅：第 1 关和后面的进度都没有变（首通奖励已发）' : '副本失败不扣任何东西，再来一局就是了') : win ? (G.levelId < XY.LEVEL_COUNT ? '取经之旅：全队 Lv' + G.level + '、技能和法宝已存档，带进第 ' + (G.levelId + 1) + ' 关（阵亡的师徒也会带着等级回来）' : '取经之旅：三关全部走完！成长已存档') : '失败不会清掉之前的积累：再来一局会回到本关开始时的状态（' + XY.journey.status(G.levelId).text + '）';
+    var jn = G.mod ? '非官方玩法包：只能玩，不发任何奖励，不记通关，不影响存档' : G.dungeon ? (win ? '洞府副本不计入取经之旅：第 1 关和后面的进度都没有变（首通奖励已发）' : '副本失败不扣任何东西，再来一局就是了') : win ? (G.levelId < XY.LEVEL_COUNT ? '取经之旅：全队 Lv' + G.level + '、技能和法宝已存档，带进第 ' + (G.levelId + 1) + ' 关（阵亡的师徒也会带着等级回来）' : '取经之旅：全部关卡走完！成长已存档') : '失败不会清掉之前的积累：再来一局会回到本关开始时的状态（' + XY.journey.status(G.levelId).text + '）';
     var by = py + ph - 76;
     if (bo) { ov.btn(c, app, cx - 190, by - 98, 380, 46, '挑战 牛魔王 · Boss 战', 'bossGo', { size: 19, sp: 3 }); }
     R.wrap(c, jn, cx, by - 22, pw - 90, 12.5, 18, win ? '#2f7d3b' : INK2, 2);
@@ -18578,7 +18578,7 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
     // —— 携带常驻角色
     var cy = carY, cols = port ? 5 : Math.max(5, Math.floor(carW / 66)), gap = 6, tw = (carW - (cols - 1) * gap) / cols, th = port ? 86 : 78, js = XY.journey.status(app.levelId);
     K.t('携带常驻角色', carX + 2, cy + 10, 15, '#b8300f', 'left', true);
-    K.tf(XY.TEST_BUILD ? '测试版：全员可选、不写存档' : (carW < 340 ? '标准版 · 其他靠角色卡' : '标准版：Phyrex 开局可用 · 其他靠角色卡'), carX + carW - 2, cy + 10, carW - 130, 12, T.inkSoft, 'right', false, 11);
+    K.tf(XY.TEST_BUILD ? '全开：全员可选、不写存档' : (carW < 340 ? '标准版 · 其他靠角色卡' : '标准版：Phyrex 开局可用 · 其他靠角色卡'), carX + carW - 2, cy + 10, carW - 130, 12, T.inkSoft, 'right', false, 11);
     cy += 24;
     var tiles = [{ id: null }].concat(ids.map(function (id) { return { id: id }; })), XC = XY.xchar, rec = XC && (XC.get(cur) || XC.list[0]);
     if (rec) tiles.push({ id: rec.id, xc: true, rec: rec }); if (!XC || !rec || (XC.list && XC.MAX && XC.list.length < XC.MAX)) tiles.push({ id: '_xc', xc: true, rec: null }); tiles.push({ id: '_q' });   // 已有自建角色时，没满额就仍留一个「＋自建」空位
@@ -21715,7 +21715,7 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
  *  两组：修行（卡牌组牌 / 灵石商店 / 图鉴 / 解锁皮肤 / 自建角色）· 杂务（导入玩法 / 玩法速览 / 新手教程 / 版本 / 重置存档）。
  *  按钮是毛笔墨条（长短、起笔位置各不同）+ 朱红印章，不是一列同样的框；每个点击框 ≥ 44 CSS px。
  *  按钮的 act 全部沿用原来的（menuDeck / menuShop / menuDex / menuUnlock / xchar / menuDungeon / menuBoss / menuVillain / menuBoard / menuMods / menuTutorial / toggleVer / menuReset），
- *  所以点它们的处理逻辑一个字没改，只是挪了位置；Boss 战 / 反派模式仍按 XY.chain09.visible（测试版开关 + 解锁链）决定出不出现。
+ *  所以点它们的处理逻辑一个字没改，只是挪了位置；Boss 战 / 反派模式仍按 XY.chain09.visible（全开开关 + 解锁链）决定出不出现。
  * ============================================================ */
 (function () {
   'use strict';
@@ -22181,7 +22181,7 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
       kt(c, '携带常驻', 14, stripY + 9, 13, RED, 'left', 80);
       out = carryStrip(c, st, a, tl, 12, stripY + labH, cw - 24, cols, cellW, cellH, d, 0);
       geo.tiles = nt; geo.strip = { y: stripY, h: labH + cellH };
-      var note = XY.TEST_BUILD ? '测试版：' + XY.SPECIALS.length + ' 位全可选 · 不写存档' : '标准版：Phyrex 开局可用 · 其他靠角色卡';
+      var note = XY.TEST_BUILD ? '全开：' + XY.SPECIALS.length + ' 位全可选 · 不写存档' : '标准版：Phyrex 开局可用 · 其他靠角色卡';
       c.font = '12px ' + KAI; var nw0 = Math.min(cw * 0.3, c.measureText(note).width);
       kt(c, carryInfo(a, out), 84, stripY + 9, 12, INK, 'left', cw - 84 - nw0 - 30, false);
       kt(c, note, cw - 14, stripY + 9, 11.5, SOFT, 'right', cw * 0.3, false);
@@ -22219,7 +22219,7 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
       kt(c, '携带常驻', mg + 2, stripYp + 10, 13, RED, 'left', 80);
       out = carryStrip(c, st, a, tl, mg, stripYp + labHp, cw - 2 * mg, cols, cellW, cellH, d, rg);
       kt(c, carryInfo(a, out), mg + 2, stripYp + 27, 11.5, INK, 'left', cw - 2 * mg - 4, false);
-      kt(c, XY.TEST_BUILD ? '测试版 · 全可选' : '标准版', cw - mg - 2, stripYp + 10, 11, SOFT, 'right', 110, false);
+      kt(c, XY.TEST_BUILD ? '全开 · 全可选' : '标准版', cw - mg - 2, stripYp + 10, 11, SOFT, 'right', 110, false);
       geo.tiles = nt; geo.strip = { y: stripYp, h: stripH };
       gh = Math.round(Math.max(54, Math.min(84, 62 * s))); gw = Math.min(cw - 2 * mg - 20, Math.round(330 * s)); gx = (cw - gw) / 2; gy = stripYp - 14 - gh;
       var sy3 = gy - 8 - 44;
@@ -22252,7 +22252,7 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
     var tw0 = hx - x0 - 8;
     kt(c, '出发', x0, 25, narrow ? 26 : 30, '#2b1c08', 'left', Math.max(40, tw0));
     taper(c, x0 - 2, 41, x0 + Math.min(Math.max(40, tw0), 74), 2.4, 0.5);
-    if (tw0 > 120) kt(c, '灵石 ' + S.data.lingshi + (XY.TEST_BUILD ? ' · 测试版' : ''), x0 + 74, 31, 12, '#8a5a12', 'left', tw0 - 78, false);
+    if (tw0 > 120) kt(c, '灵石 ' + S.data.lingshi + (XY.TEST_BUILD ? ' · 全开' : ''), x0 + 74, 31, 12, '#8a5a12', 'left', tw0 - 78, false);
 
     geo.jt = '取经之旅 · 第 ' + a.levelId + ' 关：' + XY.journey.status(a.levelId).text;
     var mm = a.menuMsg; if (mm && a.rt < mm.until) { var vm = VU.msg; VU.msg = { text: mm.text, bad: !!mm.bad, until: mm.until }; VU.toast(c, st, a, land ? top : top); VU.msg = vm; }
@@ -22536,8 +22536,8 @@ function para(s,col){y=K.lines(s,x+5,y,w-10,13,18,col||T.ink,16,false)+12;}
 if(leaf===0){K.t(XY.fmtTime(G.t),x+4,y+9,32,T.ink,'left',true);y+=47;para('等级 '+G.level+' 级 · 击杀 '+G.kills+' 只 · 镇灭洞府 '+G.dens.filter(function(d){return !d.alive;}).length+'/'+G.dens.length);para('阵亡英雄：'+(dead.join('、')||'无'));if(!win&&G.ending&&(G.ending.why||G.ending.reason))para('死因：'+(G.ending.why||G.ending.reason),'#a42d19');if(si&&si.tip)para(si.tip,'#8a5a12');}
 else if(leaf===1){[G.quests.main].concat(G.quests.sides).forEach(function(q,i){var rw=q.def.reward||{},r=q.done?[(rw.card?'法宝':''),(rw.lingshi?'灵石 +'+rw.lingshi:''),(rw.shard?'碎片 +'+rw.shard:'')].filter(Boolean).join(' · '):'未完成';para((i?'支线':'主线')+' · '+q.def.short+'　'+(q.done?'✔ ':'✘ ')+r,q.done?'#2f663a':T.inkSoft);});}
 else if(leaf===2){para('法宝 '+(G.cardLog||[]).length+' 张 · 灵石 +'+XY.fmtNum((G.run&&G.run.clearGain)||0),'#8a5a12');var sp=G.spGot||[];if(sp.length){var per=(!port&&H<450)?2:4,from=P.pager(sp.length,per,'end-drops',x,H-174,w),rh=(!port&&H<450)?36:46;sp.slice(from,from+per).forEach(function(g,i){var d=XY.SP_BY[g.id],cy=y+i*rh+15;XY.hud2.face(c,{id:g.id,def:d},x+20,cy,15,a.rt);K.tf(d.name+' ×1',x+47,cy,w-52,14,T.ink,'left',true,11);});}}else{var nu=(rep.newUnlocks||[]).map(function(id){return XY.UNLOCK_BY[id].name;});para(nu.length?'新解锁：'+nu.join('、'):'本局没有新解锁');}
-var jn=G.mod?'非官方玩法包：不发奖励，不记通关，不影响存档':G.dungeon?(win?'洞府副本不计入取经之旅（首通奖励已发）':'副本失败不扣任何东西'):win?(G.levelId<XY.LEVEL_COUNT?'全队成长已存档，第 '+(G.levelId+1)+' 关已解锁':'取经之旅：三关全部走完！成长已存档'):'之前积累保留，再来回到本关开始状态（'+XY.journey.status(G.levelId).text+'）';K.lines(jn,x,H-125,w,12,17,win?'#2f663a':T.inkSoft,3,false);
-var hasNext=win&&!G.dungeon&&!G.mod&&G.levelId<XY.LEVEL_COUNT,A=hasNext?[['下一关','nextLevel',true],['再来 · R','restart'],['首页','home']]:!win?[['再来 · R','restart',true],['换角色','repick'],['首页','home']]:[['再来 · R','restart',true],['首页','home']];if(win&&G.bossOffer&&XY.bossfight&&XY.bossfight.launch)A.splice(hasNext?1:0,0,['Boss 战','bossGo']);var bw=(w-12)/A.length;A.forEach(function(b,i){K.btn(x+i*bw,H-65+[0,4,1,3][i],bw-5,44,b[0],b[1],null,{primary:!!b[2],size:14});});K.msg(x+w,H-9,'right',w);K.btn(port?W-180:24,port?144:H-55,156,44,XY.TEST_BUILD?'测试版 · 切标准版':'标准版 · 切测试版','toggleVer',null,{size:12});P.end(c);};
+var jn=G.mod?'非官方玩法包：不发奖励，不记通关，不影响存档':G.dungeon?(win?'洞府副本不计入取经之旅（首通奖励已发）':'副本失败不扣任何东西'):win?(G.levelId<XY.LEVEL_COUNT?'全队成长已存档，第 '+(G.levelId+1)+' 关已解锁':'取经之旅：全部关卡走完！成长已存档'):'之前积累保留，再来回到本关开始状态（'+XY.journey.status(G.levelId).text+'）';K.lines(jn,x,H-125,w,12,17,win?'#2f663a':T.inkSoft,3,false);
+var hasNext=win&&!G.dungeon&&!G.mod&&G.levelId<XY.LEVEL_COUNT,A=hasNext?[['下一关','nextLevel',true],['再来 · R','restart'],['首页','home']]:!win?[['再来 · R','restart',true],['换角色','repick'],['首页','home']]:[['再来 · R','restart',true],['首页','home']];if(win&&G.bossOffer&&XY.bossfight&&XY.bossfight.launch)A.splice(hasNext?1:0,0,['Boss 战','bossGo']);var bw=(w-12)/A.length;A.forEach(function(b,i){K.btn(x+i*bw,H-65+[0,4,1,3][i],bw-5,44,b[0],b[1],null,{primary:!!b[2],size:14});});K.msg(x+w,H-9,'right',w);K.btn(port?W-180:24,port?144:H-55,156,44,XY.TEST_BUILD?'全开 · 切标准版':'标准版 · 切全开','toggleVer',null,{size:12});P.end(c);};
 })();
 /* DOM卷面：不同内容保留真实表单与滚动，但不再套设置App卡壳。 */
 (function(){var st=document.createElement('style');st.id='folio3-dom';st.textContent=`
@@ -23513,5 +23513,7 @@ window.XY_LAZY_CHUNKS = [{"id": "ui", "src": "chunks/ui-008ff700a700.js", "bytes
 })();
 
 </script>
+<script src="js/tdline-rules.js"></script>
+<script src="js/tdline.js"></script>
 </body>
 </html>
