@@ -6651,7 +6651,7 @@ XY.TRAITS = {
     c.restore();
   }
   // 图鉴 / 小图标：type 'bat' | 'owl'
-  F.icon = function (c, type, x, y, r, sil, rt) { if (type === 'bat') bat(c, x, y, r * 1.1, rt || 0, 0, null, sil); else owl(c, x, y + r * 0.1, r * 0.95, rt || 0, 0, null, sil, 1); };
+  F.icon = function (c, type, x, y, r, sil, rt) { if ((type === 'bat' || type === 'owl') && XY.MINK && XY.MINK.flyIcon && XY.MINK.flyIcon(c, type, x, y, r, sil)) return; if (type === 'bat' || type === 'owl') return; if (type === 'bat') bat(c, x, y, r * 1.1, rt || 0, 0, null, sil); else owl(c, x, y + r * 0.1, r * 0.95, rt || 0, 0, null, sil, 1); };
 
   // 地面层：影子 + 俯冲落点圈（在单位下面画）
   F.drawGround = function (c, G, rt) {
@@ -6674,9 +6674,9 @@ XY.TRAITS = {
       e = G.enemies[i]; if (!e.fly || e.dead || !inView(G, e.x, e.y, 60)) continue;
       lift = F.LIFT + (e.fs === 'aim' ? -3 : 0) + sin(rt * 3 + e.wob) * 2; if (e.fs === 'dive') lift = F.LIFT * 0.5;
       look = (e.th ? e.th.x : G.camp.x) > e.x ? 1 : -1;
-      var tint = e.flash > 0 ? '#ffffff' : (e.enraged ? '#8a3a3a' : null);
       c.globalAlpha = e.fs === 'recover' ? 0.8 : 1;
-      if (e.type === 'bat') bat(c, e.x, e.y - lift, e.r * 1.15, rt, e.wob, tint, false); else owl(c, e.x, e.y - lift, e.r * 1.1, rt, e.wob, tint, false, look);
+      var flew = XY.MINK && XY.MINK.fly && XY.MINK.fly(c, e, rt, e.x, e.y - lift, look);
+      if (!flew && e.type !== 'bat' && e.type !== 'owl') { var tint = e.flash > 0 ? '#ffffff' : (e.enraged ? '#8a3a3a' : null); if (e.type === 'bat') bat(c, e.x, e.y - lift, e.r * 1.15, rt, e.wob, tint, false); else owl(c, e.x, e.y - lift, e.r * 1.1, rt, e.wob, tint, false, look); }
       c.globalAlpha = 1;
       if (e.slowT > 0) { c.strokeStyle = 'rgba(74,144,217,0.75)'; c.lineWidth = 2; c.beginPath(); c.ellipse(e.x, e.y + e.r * 0.5, e.r * 1.1, e.r * 0.4, 0, 0, PI2); c.stroke(); }
       if (e.stunT > 0) { c.fillStyle = '#e0a415'; c.font = 'bold 12px sans-serif'; c.textAlign = 'center'; c.fillText('★ ★', e.x, e.y - lift - e.r * 1.6); }
@@ -8916,6 +8916,7 @@ XY.TRAITS = {
         if (!G._lod && e.elem) { c.fillStyle = XY.ELEMS[e.elem] ? XY.ELEMS[e.elem].color : '#999'; var ex1 = e.x - e.r - 2, ey1 = e.y - tp * 0.9; c.beginPath(); c.moveTo(ex1, ey1 - 4); c.lineTo(ex1 + 3.6, ey1); c.lineTo(ex1, ey1 + 4); c.lineTo(ex1 - 3.6, ey1); c.closePath(); c.fill(); }
         return;
       }
+      if (XY.MINK_DATA && XY.MINK_DATA[e.type]) { if (e.slowT > 0 || e.burnT > 0 || e.stunT > 0 || (e.type !== 'small' && e.hp < e.maxHp)) drawEnemyStatus(c, e, e.r * 1.6); return; }
       var sp = enemySprite(e, look, e.flash > 0), bob = Math.sin(rt * 8 + e.wob) * 1.2;
       if (!G._lod && XY.anim && !(e.stunT > 0)) {                  // 走路挤压（以脚底为轴；可见怪 > 120 时关掉，只留上下晃）
         var sq2 = XY.anim.squash(true, rt, e.wob || 0), fy = e.y + e.r * 0.8;
@@ -8947,8 +8948,13 @@ XY.TRAITS = {
     var th = e.toCamp || !e.th ? G.camp : e.th, look = th.x > x ? 1 : -1;
     var bob = baked ? 0 : Math.sin(rt * 8 + e.wob) * 1.2;
     if (XY.MA) {                                               // v0.6.4：不再用圆圈——BOSS / 精英 / 小怪都是有轮廓的造型
+      if (d.denBoss && XY.MINK && XY.MINK.bfBoss && XY.MINK.bfBoss(c, e, rt)) { var btop = e.r * 2.7; drawEnemyStatus2(c, e, btop); if (e.hp < e.maxHp) bar(c, x - r, y - btop - 4, r * 2, 5, e.hp / e.maxHp, '#e0533d', 'rgba(255,255,255,0.85)'); return; }
+      if (d.denBoss && XY.MINK && XY.MINK.boss && XY.MINK.boss(c, G, e, rt)) { drawEnemyStatus2(c, e, XY.MINK.top(e)); if (e.hp < e.maxHp) bar(c, x - r, y - XY.MINK.top(e) - 6, r * 2, 5, e.hp / e.maxHp, '#e0533d', 'rgba(255,255,255,0.85)'); return; }
+      if (d.denBoss && ((e.type === 'boss') || (XY.MINK && XY.MINK.denPose && XY.MINK.denPose(e.type)) || (XY.MINK_DATA && XY.MINK_DATA[e.type]))) { drawEnemyStatus2(c, e, e.r * 2.2); return; }
       if (d.denBoss && XY.MA.hasFigure(e)) { XY.MA.boss(c, G, e, rt); drawEnemyStatus2(c, e, XY.MA.topOf(e)); return; }
-      if (d.elite && !d.boss) { XY.MA.elite(c, G, e, rt); var etp = XY.MINK && XY.MINK.has('elite') ? XY.MINK.top(e) : r * 2.1; drawEnemyStatus2(c, e, etp + r * 0.1); if (e.hp < e.maxHp || true) bar(c, x - r, y - etp - 6, r * 2, 5, e.hp / e.maxHp, '#e0533d', 'rgba(255,255,255,0.85)'); return; }
+      if (d.elite && !d.boss && XY.MINK && XY.MINK.elite && XY.MINK.elite(c, G, e, rt)) { var etp0 = XY.MINK.top(e); drawEnemyStatus2(c, e, etp0 + r * 0.1); bar(c, x - r, y - etp0 - 6, r * 2, 5, e.hp / e.maxHp, '#e0533d', 'rgba(255,255,255,0.85)'); return; }
+      if (d.elite && !d.boss && XY.MINK_DATA && XY.MINK_DATA.elite) { drawEnemyStatus2(c, e, r * 2.1); bar(c, x - r, y - r * 2.2, r * 2, 5, e.hp / e.maxHp, '#e0533d', 'rgba(255,255,255,0.85)'); return; }
+      if (d.elite && !d.boss) { XY.MA.elite(c, G, e, rt); var etp = r * 2.1; drawEnemyStatus2(c, e, etp + r * 0.1); if (e.hp < e.maxHp || true) bar(c, x - r, y - etp - 6, r * 2, 5, e.hp / e.maxHp, '#e0533d', 'rgba(255,255,255,0.85)'); return; }
       if (e.type === 'small' || e.type === 'tank' || e.type === 'ranged' || e.type === 'shield') {
         c.fillStyle = 'rgba(70,50,30,0.16)'; c.beginPath(); c.ellipse(x, y + r * 0.8, r * 0.9, r * 0.35, 0, 0, PI2); c.fill();
         XY.MA.minion(c, e, look, fl); if (baked) return; drawEnemyStatus2(c, e, r * 1.6); return;
@@ -9026,7 +9032,7 @@ XY.TRAITS = {
       c.strokeStyle = d.color; c.lineWidth = 3.5; c.globalAlpha = 0.9;
       c.beginPath(); c.ellipse(x, y + r * 0.8, r * 1.35 + Math.sin(rt * 5) * 1.5, r * 0.6, 0, 0, PI2); c.stroke(); c.globalAlpha = 1;
     }
-    if (h.down) {                                            // 阵亡：留一块灰色墓碑，不再复活
+    if (h.down && !(XY.MINK && XY.MINK.poseOwns && XY.MINK.poseOwns(h))) {                                            // 有倒地立绘的角色留在下面画 ko；其余仍是墓碑
       c.fillStyle = 'rgba(70,50,30,0.15)'; c.beginPath(); c.ellipse(x, y + 12, 18, 6, 0, 0, PI2); c.fill();
       c.fillStyle = '#d6d3cb'; c.strokeStyle = '#8f8b80'; c.lineWidth = 2;
       c.beginPath(); c.moveTo(x - 13, y + 12); c.lineTo(x - 13, y - 8); c.arc(x, y - 8, 13, Math.PI, 0); c.lineTo(x + 13, y + 12); c.closePath(); c.fill(); c.stroke();
@@ -9047,21 +9053,25 @@ XY.TRAITS = {
     if (mnt) {                                                  // 骑乘：脚下是白龙马（跑动时有速度线和尘土），骑手抬高一点
       var hsOK = XY.chibi && XY.chibi.ready(mnt); ry = hsOK ? -r * 1.05 : -r * 0.55; var mr = mnt.def.r * 1.25, my = y + bob * 0.5 + r * 0.55;
       if (h.moving) { c.save(); c.strokeStyle = 'rgba(111,207,216,0.55)'; c.lineWidth = 3; c.lineCap = 'round'; var fa = h.face + Math.PI; for (var sl = 0; sl < 4; sl++) { var so = (sl - 1.5) * 9, sx0 = x + Math.cos(fa) * (r + 6) - Math.sin(fa) * so, sy0 = my + Math.sin(fa) * (r + 6) + Math.cos(fa) * so; c.beginPath(); c.moveTo(sx0, sy0); c.lineTo(sx0 + Math.cos(fa) * (22 + 8 * Math.sin(rt * 20 + sl)), sy0 + Math.sin(fa) * (22 + 8 * Math.sin(rt * 20 + sl))); c.stroke(); } c.restore(); for (var dp = 0; dp < 3; dp++) { var dph = (rt * 3 + dp / 3) % 1; c.fillStyle = 'rgba(190,170,130,' + (0.45 * (1 - dph)) + ')'; c.beginPath(); c.arc(x - Math.cos(h.face) * (8 + dph * 26) + (dp - 1) * 6, my + r * 0.7 - dph * 6, 3 + dph * 5, 0, PI2); c.fill(); } }
-      if (hsOK) { var mf = mnt.face, mm = mnt.moving, mhu = mnt.hurtT; mnt.face = h.face; mnt.moving = h.moving; mnt.hurtT = 0; XY.chibi.draw(c, G, mnt, rt, x, my, mr); mnt.face = mf; mnt.moving = mm; mnt.hurtT = mhu; }   // v0.8.1：骑乘时脚下是白龙马的全身精灵（骑手站在马背上方），不再是圆头像
-      else drawHeroShape(c, mnt.def, x, my, mr);
+      var horsePose = false;
+      if (XY.MINK && XY.MINK.poseHero) { var mf0 = mnt.face, mm0 = mnt.moving, mhu0 = mnt.hurtT; mnt.face = h.face; mnt.moving = h.moving; mnt.hurtT = 0; horsePose = XY.MINK.poseHero(c, mnt, rt, x, my, mr); mnt.face = mf0; mnt.moving = mm0; mnt.hurtT = mhu0; }
+      if (!horsePose && hsOK) { var mf = mnt.face, mm = mnt.moving, mhu = mnt.hurtT; mnt.face = h.face; mnt.moving = h.moving; mnt.hurtT = 0; XY.chibi.draw(c, G, mnt, rt, x, my, mr); mnt.face = mf; mnt.moving = mm; mnt.hurtT = mhu; }
+      else if (!horsePose && !(XY.CHIBI_INK && XY.CHIBI_INK.horse) && !(XY.CHIBI && XY.CHIBI.horse) && !(XY.MINK && XY.MINK.poseOwns && XY.MINK.poseOwns(mnt))) drawHeroShape(c, mnt.def, x, my, mr);
     }
-    var useCb = !(h.id === 'horse' && d.form === 'human') && XY.chibi && XY.chibi.ready(h);                           // v0.8.1：五位主角 + 特殊人物一律画成水墨全身精灵（以前只有被操控的那个是全身，其余是圆头像）；没有精灵 / 白龙马人形才回退圆头像
-    var rr = r * (h.xf > 0 ? 1.25 : 1), tr = useCb ? rr * 2.85 - ry : r;        // tr：头顶高度（Q 版比圆形头像高，名字 / 标记要抬高）
-    if (h.id === 'phyrex' && !useCb) { XY.phDrawHeroUnder(c, G, h, x, y + bob, r, rt); XY.R4.xfDraw = h.xf > 0; }
-    if (useCb) XY.chibi.draw(c, G, h, rt, x, y + ry, rr);
-    else {
+    var rr = r * (h.xf > 0 ? 1.25 : 1);
+    if (h.id === 'phyrex') { XY.phDrawHeroUnder(c, G, h, x, y + bob, r, rt); XY.R4.xfDraw = h.xf > 0; }
+    var posed = !!(XY.MINK && XY.MINK.poseHero && XY.MINK.poseHero(c, h, rt, x, y + bob + ry, rr));
+    var useCb = !posed && !(h.id === 'horse' && d.form === 'human') && XY.chibi && XY.chibi.ready(h);
+    var tall = useCb || posed, tr = tall ? rr * 2.85 - ry : r;
+    if (!posed && useCb) XY.chibi.draw(c, G, h, rt, x, y + ry, rr);
+    else if (!posed && !((XY.chibiKey && XY.CHIBI && XY.CHIBI[XY.chibiKey(h)]) || (XY.CHIBI_INK && XY.CHIBI_INK[h.id]) || (h.def && h.def.xid))) {
       var sq = XY.anim ? XY.anim.squash(h.moving, rt, h.bob || 0) : null;          // 待机呼吸 / 走路挤压（以脚底为轴）
       if (sq) { c.save(); c.translate(x, y + r * 0.85); c.scale(sq[0], sq[1]); c.translate(-x, -(y + r * 0.85)); }
       drawHeroShape(c, d, x, y + bob + ry, rr);
       if (sq) c.restore();
     }
     if (h.id === 'phyrex') { XY.R4.xfDraw = false; XY.phDrawHeroOver(c, G, h, x, y + bob - (useCb ? r * 0.5 : 0), r, rt); }
-    if (h.hurtT > 0 && !useCb) { c.fillStyle = 'rgba(255,60,40,' + (h.hurtT * 2) + ')'; c.beginPath(); c.arc(x, y + bob, r, 0, PI2); c.fill(); }
+    if (h.hurtT > 0 && !useCb && !posed) { c.fillStyle = 'rgba(255,60,40,' + (h.hurtT * 2) + ')'; c.beginPath(); c.arc(x, y + bob, r, 0, PI2); c.fill(); }
     if (h.inv > 0) { c.strokeStyle = 'rgba(255,215,80,0.85)'; c.lineWidth = 3; c.beginPath(); c.arc(x, y, r + 6 + Math.sin(rt * 20) * 1.5, 0, PI2); c.stroke(); }
     // 血条
     var bw = 44, f = h.hp / h.maxHp;
@@ -9082,7 +9092,7 @@ XY.TRAITS = {
     }
     // 名字（操控中的更醒目，头顶带小三角）
     // v0.8.1：名牌延后到所有英雄画完再画（flushHeroNames），避开其他角色的身体 / 血条 / 命令标签和别的名牌，也不会被后画的角色盖住
-    heroBodies.push({ h: h, x0: x - Math.max(rr * 1.15, useCb ? 30 : 0), x1: x + Math.max(rr * 1.15, useCb ? 30 : 0), y0: y - (useCb ? tr : r) - 2, y1: y + r + 12 });
+    heroBodies.push({ h: h, x0: x - Math.max(rr * 1.15, tall ? 30 : 0), x1: x + Math.max(rr * 1.15, tall ? 30 : 0), y0: y - (tall ? tr : r) - 2, y1: y + r + 12 });
     heroNames.push({ h: h, s: d.name + (h.sp ? ' Lv' + d.lv : ''), x: x, y: clash ? y + r + (h.sp ? 47 : 34) : y - tr - (isC ? 17 : 13), sz: isC ? 15 : 13, col: isC ? '#b8300f' : T.ink, dir: clash ? 1 : -1, mark: isC && !clash, a: c.globalAlpha, tri: Math.sin(rt * 6) * 2 });
   }
   var heroBodies = [], heroNames = [];
@@ -10145,8 +10155,8 @@ XY.TRAITS = {
     var ph = rt * 3 + t.sd;
     var bob = mv ? -Math.abs(Math.sin(rt * 11 + t.sd)) * 3.2 : Math.sin(ph) * 1.3, lunge = atk * 6 * f;
     var gy = y + 13;                                                        // 脚底
-    var inkd = XY.SINK && XY.SINK.draw(c, G, t, rt, f, mv, gy, sc, s.cd || 1);          // v0.8.0 水墨精灵；没有图（未解码 / 关掉）→ 退回下面的矢量画法
-    if (!inkd) {
+    var inkd = XY.SINK && XY.SINK.draw(c, G, t, rt, f, mv, gy, sc, s.cd || 1);          // 有水墨帧时不再退回矢量天兵
+    if (!inkd && !(XY.SINK_DATA && XY.SINK_DATA[t.type])) {
     c.fillStyle = 'rgba(80,60,30,0.22)'; c.beginPath(); c.ellipse(x, gy + 2, 15 * sc, 5, 0, 0, PI2); c.fill();
     c.save(); c.translate(x, gy); c.scale(sc, sc); c.translate(-x, -gy);
     c.lineJoin = 'round'; c.lineCap = 'round'; c.lineWidth = 1.8;
@@ -10243,6 +10253,7 @@ XY.TRAITS = {
     c.globalAlpha = bd ? 0.35 + 0.65 * k : 1;
     var ink = XY.MINK && XY.MINK.has('etower'), ty0 = ink ? 12 : 0;      // v0.8.0：水墨妖塔（比旧矢量塔高一点，名字 / 血条往上 / 下挪）
     if (ink) { XY.MINK.tower(c, G, e, rt); c.globalAlpha = 1; if (bd) { T.bar(c, x - 26, y + 26, 52, 6, k, '#8a5fc0', 'rgba(255,255,255,0.85)'); T.otxt(c, '妖塔建造中', x, y - 56 - ty0, 12, '#6b3fa0', 'center', true); } else { T.otxt(c, '妖塔', x, y - 56 - ty0, 12, '#6b3fa0', 'center', true); T.bar(c, x - 26, y + 26, 52, 6, e.hp / e.maxHp, '#e0533d', 'rgba(255,255,255,0.85)'); } return; }
+    if (XY.MINK_DATA && XY.MINK_DATA.etower) { c.globalAlpha = 1; T.otxt(c, bd ? '妖塔建造中' : '妖塔', x, y - 56, 12, '#6b3fa0', 'center', true); return; }
     c.fillStyle = 'rgba(70,40,90,0.25)'; c.beginPath(); c.ellipse(x, y + 20, 30, 9, 0, 0, PI2); c.fill();
     var g = c.createRadialGradient(x, y - 10, 4, x, y - 10, 60); g.addColorStop(0, 'rgba(160,100,220,0.35)'); g.addColorStop(1, 'rgba(160,100,220,0)'); c.fillStyle = g; c.beginPath(); c.arc(x, y - 10, 60, 0, PI2); c.fill();
     c.lineJoin = 'round'; c.lineWidth = 2.5; c.strokeStyle = '#3e1f6e';
@@ -11624,7 +11635,104 @@ XY.TRAITS = {
     return true;
   };
   M.TOWER_TOP = 70;
+  var BF = {};
+  function bf(id, pose) {
+    var k = id + '/' + pose, o = BF[k];
+    if (!o) { o = BF[k] = new Image(); o.src = 'bossfight/assets/spr/' + id + '/' + pose + '.webp'; }
+    return o.complete && o.naturalWidth ? o : null;
+  }
+  var DEN6 = { jin: 1, red: 1, yellow: 1, iron: 1, yumian: 1, chiyan: 1 };
+  var IDLE5 = { jin: 1, red: 1, yellow: 1, iron: 1, yumian: 1, chiyan: 1, bat: 1, owl: 1, tang: 1, bajie: 1, wujing: 1, horse: 1, dragon: 1 };
+  function metaPose(id, pose) { var bag = window.BF_SPR_META && window.BF_SPR_META[id]; return bag && bag[pose] ? bag[pose] : null; }
+  function allowPose(id, pose) {
+    if (window.BF_SPR_META && window.BF_SPR_META[id]) return !!window.BF_SPR_META[id][pose];
+    if (pose === 'idle') return !!IDLE5[id];
+    return true;
+  }
+  function resolvePose(id, want) {
+    var order = [want, 'idle', 'idle_b', 'idle_a', 'stance'], i, im;
+    for (i = 0; i < order.length; i++) {
+      if (!order[i] || !allowPose(id, order[i])) continue;
+      im = bf(id, order[i]);
+      if (im) return { pose: order[i], im: im };
+    }
+    return null;
+  }
+  function paintFoot(c, id, pose, im, bh, breathe) {
+    var bw = bh * im.naturalWidth / im.naturalHeight, m = metaPose(id, pose);
+    var ax = m && m.ax ? m.ax : im.naturalWidth / 2, k = bh / im.naturalHeight;
+    c.scale(1, 1 + (breathe || 0));
+    c.drawImage(im, -ax * k, -bh, bw, bh);
+  }
+  M.denPose = function (type) { return !!DEN6[type]; };
+  M.bfBoss = function (c, e, rt) {
+    var id = e.type === 'boss' ? 'niumo' : e.type;
+    if (id !== 'niumo' && !DEN6[id]) return false;
+    var ko = !!(e.dead || e.hp <= 0);
+    var want = id === 'niumo'
+      ? (ko ? 'ko' : (e.flash > 0 ? 'hit' : (e.atkT > 0 ? 'swing' : ((Math.floor(rt * 1.5) % 2) ? 'idle_b' : 'idle_a'))))
+      : (ko ? 'ko' : (e.flash > 0 ? 'hit' : (e.atkT > 0 ? 'attack' : ((Math.floor(rt * 1.25 + (e.wob || 0)) % 2) ? 'idle' : 'stance'))));
+    var got = resolvePose(id, want);
+    if (!got) return id !== 'niumo';
+    var face = (e.th && e.th.x < e.x) ? -1 : 1, bh = e.r * (ko ? 2.2 : 3.15);
+    var breathe = (!ko && !(e.flash > 0) && !(e.atkT > 0)) ? Math.sin(rt * 2.2 + (e.wob || 0)) * 0.028 : 0;
+    c.save();
+    c.fillStyle = 'rgba(58,50,38,0.2)'; c.beginPath(); c.ellipse(e.x, e.y + e.r * 0.85, e.r * 1.15, e.r * 0.34, 0, 0, PI2); c.fill();
+    c.translate(e.x, e.y + e.r * 0.92); c.scale(face, 1);
+    paintFoot(c, id, got.pose, got.im, bh, breathe);
+    c.restore();
+    return true;
+  };
+  var POSE = { wukong: 1, phyrex: 1, sisi: 1, laosiji: 1, kuanggong: 1, haiteng: 1, yuanzhang: 1, heyuxi: 1, diaoyulao: 1, martin: 1, tang: 1, bajie: 1, wujing: 1, horse: 1 };
+  M.poseOwns = function (h) { return !!(h && POSE[h.id] && !(h.def && h.def.xid)); };
+  M.poseFolder = function (h) { return (h.id === 'horse' && h.def && h.def.form === 'human') ? 'dragon' : h.id; };
+  M.poseHero = function (c, h, rt, x, y, r) {
+    if (!M.poseOwns(h)) return false;
+    var id = M.poseFolder(h), face = Math.cos(h.face || 0) >= 0 ? 1 : -1;
+    var want = h.down ? 'ko' : (h.hurtT > 0 ? 'hit' : (h.dash ? 'charge' : (h.atkT > 0 ? 'attack' : (h.moving ? 'stance' : ((Math.floor(rt * 1.25 + (h.bob || 0)) % 2) ? 'idle' : 'stance')))));
+    var got = resolvePose(id, want);
+    if (!got) return true;
+    var ko = !!h.down, bh = r * (ko ? 2.3 : 3.6) * (h.xf > 0 ? 1.25 : 1);
+    var breathe = (!ko && !(h.hurtT > 0) && !(h.atkT > 0) && !h.dash) ? Math.sin(rt * 2.2 + (h.bob || 0)) * 0.028 : 0;
+    c.save();
+    c.fillStyle = 'rgba(58,50,38,0.18)'; c.beginPath(); c.ellipse(x, y + r * 0.9, r * 1.05, r * 0.32, 0, 0, PI2); c.fill();
+    c.translate(x, y + r * 0.9); c.scale(face, 1);
+    paintFoot(c, id, got.pose, got.im, bh, breathe);
+    c.restore();
+    return true;
+  };
+  M.fly = function (c, e, rt, x, y, look) {
+    if (e.type !== 'bat' && e.type !== 'owl') return false;
+    var atk = e.fs === 'dive' || e.fs === 'aim', ko = e.hp <= 0;
+    var want = ko ? 'ko' : (e.flash > 0 ? 'hit' : (atk ? 'attack' : ((Math.floor(rt * 1.4 + (e.wob || 0)) % 2) ? 'idle' : 'stance')));
+    var got = resolvePose(e.type, want);
+    if (!got) return true;
+    var bh = Math.max(e.type === 'owl' ? 64 : 52, e.r * 5.2);
+    var breathe = (!ko && !atk && !(e.flash > 0)) ? Math.sin(rt * 2.6 + (e.wob || 0)) * 0.035 : 0;
+    c.save(); c.translate(x, y + bh * 0.42); c.scale(look || 1, 1);
+    paintFoot(c, e.type, got.pose, got.im, bh, breathe);
+    c.restore();
+    return true;
+  };
+  M.flyIcon = function (c, type, x, y, r) {
+    if (type !== 'bat' && type !== 'owl') return false;
+    var got = resolvePose(type, 'stance');
+    if (!got) return true;
+    var bh = Math.max(36, r * 2.3);
+    c.save(); c.translate(x, y + bh * 0.35);
+    paintFoot(c, type, got.pose, got.im, bh, 0);
+    c.restore();
+    return true;
+  };
+  M.dexPose = function (c, type, x, foot, bh) {
+    if (!DEN6[type] && type !== 'bat' && type !== 'owl') return false;
+    var got = resolvePose(type, 'stance');
+    if (!got) return true;
+    c.save(); c.translate(x, foot); paintFoot(c, type, got.pose, got.im, bh, 0); c.restore();
+    return true;
+  };
   if (XY.MINK_DATA) M.preload(); else setTimeout(function () { if (XY.MINK_DATA) M.preload(); }, 0);
+  if (!window.BF_SPR_META) { try { var mjs = document.createElement('script'); mjs.async = true; mjs.src = 'bossfight/meta.js'; document.head.appendChild(mjs); } catch (e) {} }
 })();
 
 </script>
@@ -16281,6 +16389,7 @@ XY.chibi.portrait = function (c, id, x, foot, h, alpha) {
   function drawEnemyIcon(c, type, x, y, r, sil, rt) {
     var d = XY.ENEMIES[type], col = sil ? '#aaa59a' : d.color, dk = sil ? '#85807a' : d.dark;
     if (d.fly && XY.fly) { XY.fly.icon(c, type, x, y, r, sil, rt); if (sil) txt(c, '？', x, y + 2, Math.round(r * 1.0), '#fff', 'center', true); return; }
+    if (XY.MINK && XY.MINK.denPose && XY.MINK.denPose(type) && XY.MINK.dexPose && XY.MINK.dexPose(c, type, x, y + r * 0.9, r * 2.8)) return;
     c.lineWidth = 3; c.strokeStyle = dk; c.fillStyle = col;
     if (type === 'elite' || type === 'boss') {
       c.beginPath(); c.moveTo(x - r * 0.7, y - r * 0.5); c.quadraticCurveTo(x - r * 1.3, y - r * 0.8, x - r * 1.1, y - r * 1.4); c.quadraticCurveTo(x - r * 0.6, y - r * 1.0, x - r * 0.3, y - r * 0.85); c.fill(); c.stroke();
@@ -18667,7 +18776,7 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
     function hero(id,x,y,r){var d=XY.SP_BY[id]?XY.specialDef(id,Math.max(1,S.spLevel(id))):XY.HEROES.filter(function(z){return z.id===id;})[0];if(d)XY.hud2.face(c,{id:id,def:d},x,y,r,app.rt);}
     if(tab==='enemy'){
       var ee=S.dexOf(sel),sn=ee&&ee.seen>0,dd=XY.ENEMIES[sel],bz=XY.BESTIARY[sel];title=sn?dd.name:'未曾相逢';sub=sn?'遇见 '+ee.seen+' · 击杀 '+ee.kills:'在战场相逢，才会记进此卷';
-      c.save();if(!sn){c.filter='brightness(0)';c.globalAlpha=.22;}var drawn=XY.MINK&&XY.MINK.portrait(c,sel,cx,foot,artH);c.restore();if(!drawn)hp.enemyIcon(c,sel,cx,foot-artH/2,Math.min(62,artH*.38),!sn,app.rt);
+      c.save();if(!sn){c.filter='brightness(0)';c.globalAlpha=.22;}var drawn=XY.MINK&&(XY.MINK.portrait(c,sel,cx,foot,artH)||(XY.MINK.dexPose&&XY.MINK.dexPose(c,sel,cx,foot,artH)));c.restore();if(!drawn)hp.enemyIcon(c,sel,cx,foot-artH/2,Math.min(62,artH*.38),!sn,app.rt);
       if(!sn)text='在战斗里遇到它，就会记进图鉴。还看不到详细信息。';
       else if(view===0)text=bz.desc;
       else if(view===1)text='生命 '+dd.hp+' · 速度 '+dd.speed+' · '+(dd.dive?'俯冲伤害 '+Math.round(dd.dmg*dd.dive.mul*10)/10:'碰撞伤害 '+dd.dmg)+(dd.range?' · 远程':'')+(dd.fly?' · 飞行':'')+'\n对付它：'+bz.tip+'\n掉落：'+bz.drop;
@@ -19986,9 +20095,9 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
     return o.complete && o.naturalWidth ? o : null;
   }
   VU.img = img;
-  function drawImg(c, path, x, y, w, h) {                       // 等比放进 (x,y,w,h)，底部居中；没加载好画一个淡墨圆
+  function drawImg(c, path, x, y, w, h) {                       // 等比放进 (x,y,w,h)，底部居中；没加载好先空着，不画圆头
     var i = img(path);
-    if (!i) { c.fillStyle = 'rgba(58,50,38,0.08)'; c.beginPath(); c.arc(x + w / 2, y + h / 2, Math.min(w, h) / 3, 0, PI2); c.fill(); return false; }
+    if (!i) return false;
     var k = Math.min(w / i.naturalWidth, h / i.naturalHeight), dw = i.naturalWidth * k, dh = i.naturalHeight * k;
     c.drawImage(i, x + (w - dw) / 2, y + h - dh, dw, dh); return true;
   }
@@ -20214,37 +20323,37 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
   }
 
   /* ---------- 战场：牛魔王 / 洞府 / 小妖 ---------- */
+  var NIU = {};
+  function niuSpr(name) {
+    var o = NIU[name];
+    if (!o) { o = NIU[name] = new Image(); o.src = 'bossfight/assets/spr/niumo/' + name + '.webp'; }
+    return o.complete && o.naturalWidth ? o : null;
+  }
   VU.drawNiumo = function (c, G, h, rt) {
-    var x = h.x, y = h.y, r = h.def.r, f = Math.cos(h.face || 0) >= 0 ? 1 : -1, bob = h.moving ? Math.sin(rt * 14) * 2 : Math.sin(rt * 3) * 1;
+    var x = h.x, y = h.y, r = h.def.r, face = Math.cos(h.face || 0) >= 0 ? 1 : -1;
+    var pose = 'idle_a';
+    if (h.down) pose = 'ko';
+    else if (h.hurtT > 0) pose = 'hit';
+    else if (h.dash) pose = 'rush';
+    else if (h.atkT > 0) pose = (Math.floor(rt * 8) % 2) ? 'swing_b' : 'swing';
+    else if (h.moving) pose = (Math.floor(rt * 6) % 2) ? 'idle_b' : 'stance';
+    else pose = (Math.floor(rt * 1.6) % 2) ? 'idle_b' : 'idle_a';
+    var im = niuSpr(pose) || niuSpr('stance') || niuSpr('idle_a');
     c.save();
-    c.fillStyle = 'rgba(58,50,38,0.22)'; c.beginPath(); c.ellipse(x, y + r * 0.9, r * 1.05, r * 0.38, 0, 0, PI2); c.fill();
-    if (h.down) { c.restore(); return; }
-    c.strokeStyle = '#7a4fc0'; c.lineWidth = 3.2; c.globalAlpha = 0.85; c.beginPath(); c.ellipse(x, y + r * 0.85, r * 1.35 + Math.sin(rt * 5) * 1.5, r * 0.55, 0, 0, PI2); c.stroke(); c.globalAlpha = 1;
-    if (h.dash) { c.strokeStyle = 'rgba(111,74,168,0.35)'; c.lineWidth = 12; c.lineCap = 'round'; c.beginPath(); c.moveTo(x - h.dash.dx * 90, y - h.dash.dy * 90); c.lineTo(x, y); c.stroke(); }
-    c.translate(x, y + bob); c.scale(f, 1);
-    // 混铁棍（普攻挥动）
-    var sw = h.atkMax ? Math.max(0, 1 - h.atkT / h.atkMax) : 0, ang = -0.9 + (h.atkT > 0 && h.atkMax ? Math.sin(sw * Math.PI) * 2.0 : 0);
-    c.save(); c.translate(r * 0.7, -r * 0.1); c.rotate(ang); c.strokeStyle = '#2d2a28'; c.lineWidth = 5; c.lineCap = 'round'; c.beginPath(); c.moveTo(0, 6); c.lineTo(0, -r * 1.9); c.stroke();
-    c.strokeStyle = '#d9b24a'; c.lineWidth = 2; c.beginPath(); c.moveTo(-3, -r * 1.7); c.lineTo(3, -r * 1.7); c.moveTo(-3, -r * 1.3); c.lineTo(3, -r * 1.3); c.stroke(); c.restore();
-    // 身子：深紫战袍 + 金腰带
-    c.fillStyle = '#4a3278'; c.strokeStyle = '#1f1530'; c.lineWidth = 2.2; c.lineJoin = 'round';
-    c.beginPath(); c.moveTo(-r * 0.95, r * 0.8); c.quadraticCurveTo(-r * 1.2, -r * 0.1, -r * 0.55, -r * 0.55); c.lineTo(r * 0.55, -r * 0.55); c.quadraticCurveTo(r * 1.2, -r * 0.1, r * 0.95, r * 0.8); c.closePath(); c.fill(); c.stroke();
-    c.fillStyle = '#d9b24a'; c.fillRect(-r * 0.8, r * 0.18, r * 1.6, r * 0.2); c.strokeRect(-r * 0.8, r * 0.18, r * 1.6, r * 0.2);
-    c.fillStyle = '#6b4aa6'; c.beginPath(); c.arc(-r * 0.75, -r * 0.35, r * 0.34, 0, PI2); c.arc(r * 0.75, -r * 0.35, r * 0.34, 0, PI2); c.fill(); c.stroke();     // 护肩
-    // 牛头：深褐 + 牛角 + 鼻环
-    c.fillStyle = '#5a4030'; c.beginPath(); c.ellipse(0, -r * 0.95, r * 0.62, r * 0.55, 0, 0, PI2); c.fill(); c.stroke();
-    c.fillStyle = '#c9a888'; c.beginPath(); c.ellipse(r * 0.08, -r * 0.72, r * 0.38, r * 0.26, 0, 0, PI2); c.fill(); c.stroke();
-    c.strokeStyle = '#f4ecd8'; c.lineWidth = 4; c.lineCap = 'round';
-    c.beginPath(); c.moveTo(-r * 0.45, -r * 1.35); c.quadraticCurveTo(-r * 1.1, -r * 1.55, -r * 0.95, -r * 2.0); c.moveTo(r * 0.45, -r * 1.35); c.quadraticCurveTo(r * 1.1, -r * 1.55, r * 0.95, -r * 2.0); c.stroke();
-    c.strokeStyle = '#1f1530'; c.lineWidth = 1.4; c.beginPath(); c.moveTo(-r * 0.45, -r * 1.35); c.quadraticCurveTo(-r * 1.1, -r * 1.55, -r * 0.95, -r * 2.0); c.moveTo(r * 0.45, -r * 1.35); c.quadraticCurveTo(r * 1.1, -r * 1.55, r * 0.95, -r * 2.0); c.stroke();
-    c.strokeStyle = '#d9b24a'; c.lineWidth = 2; c.beginPath(); c.arc(r * 0.1, -r * 0.55, r * 0.14, 0, PI2); c.stroke();
-    c.fillStyle = '#d62828'; c.beginPath(); c.arc(-r * 0.2, -r * 1.05, 2.4, 0, PI2); c.arc(r * 0.32, -r * 1.05, 2.4, 0, PI2); c.fill();
-    if (h.hurtT > 0) { c.fillStyle = 'rgba(214,40,40,' + Math.min(0.45, h.hurtT * 2) + ')'; c.beginPath(); c.ellipse(0, -r * 0.3, r * 1.1, r * 1.3, 0, 0, PI2); c.fill(); }
+    c.fillStyle = 'rgba(58,50,38,0.22)'; c.beginPath(); c.ellipse(x, y + r * 0.9, r * 1.15, r * 0.36, 0, 0, PI2); c.fill();
+    if (G.ctrl === h.i && !h.down) { c.strokeStyle = '#7a4fc0'; c.lineWidth = 3; c.globalAlpha = 0.85; c.beginPath(); c.ellipse(x, y + r * 0.85, r * 1.45, r * 0.5, 0, 0, PI2); c.stroke(); c.globalAlpha = 1; }
+    if (im && !h.down) {
+      var bh = r * 3.15, bw = bh * im.naturalWidth / im.naturalHeight, bob = h.moving ? Math.sin(rt * 10) * 2 : Math.sin(rt * 2) * 1.2;
+      c.save(); c.translate(x, y + r * 0.9 + bob); c.scale(face, 1); c.drawImage(im, -bw / 2, -bh, bw, bh); c.restore();
+    } else if (h.down && im) {
+      var kh = r * 2.2, kw = kh * im.naturalWidth / im.naturalHeight;
+      c.save(); c.translate(x, y + r * 0.85); c.scale(face, 1); c.drawImage(im, -kw / 2, -kh * 0.72, kw, kh); c.restore();
+    }
     c.restore();
-    if (h.inv > 0) { c.strokeStyle = 'rgba(255,215,80,0.85)'; c.lineWidth = 3; c.beginPath(); c.arc(x, y, r + 8 + Math.sin(rt * 20) * 1.5, 0, PI2); c.stroke(); }
-    var f2 = Math.max(0, h.hp / h.maxHp); R.bar(c, x - 26, y + r + 6, 52, 6, f2, R.hpColor(f2), 'rgba(255,255,255,0.85)');
-    R.otxt(c, '牛魔王 Lv' + G.level, x, y - r * 2.45 - 6, 13, '#4a2f8a', 'center', true);
-    if (G.lair && XY.heroCC) XY.heroCC.drawFlags && XY.heroCC.drawFlags(c, h, x, y, rt);
+    if (h.inv > 0 && !h.down) { c.strokeStyle = 'rgba(255,215,80,0.85)'; c.lineWidth = 3; c.beginPath(); c.arc(x, y, r + 8 + Math.sin(rt * 20) * 1.5, 0, PI2); c.stroke(); }
+    if (!h.down) { var f2 = Math.max(0, h.hp / h.maxHp); R.bar(c, x - 26, y + r + 8, 52, 6, f2, R.hpColor(f2), 'rgba(255,255,255,0.85)'); }
+    R.otxt(c, '牛魔王 Lv' + G.level, x, y - r * 2.7, 13, '#4a2f8a', 'center', true);
+    if (G.lair && XY.heroCC && XY.heroCC.drawFlags) XY.heroCC.drawFlags(c, h, x, y, rt);
   };
   VU.drawCave = function (c, G, rt) {
     var h = G.heroes[0], x = h.x, y = h.y, cp = G.camp, hurt = cp.hurtT > 0, pul = 0.5 + 0.5 * Math.sin(rt * 3);
@@ -20261,11 +20370,21 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
   };
   function C() { return XY.C; }
   VU.drawMinion = function (c, a, rt, G) {
-    var i = img('evo/small_0.webp'), w = 26, h = 34;
-    c.fillStyle = 'rgba(111,74,168,0.35)'; c.beginPath(); c.ellipse(a.x, a.y + 12, 13, 5, 0, 0, PI2); c.fill();
-    if (i) { c.save(); c.translate(a.x, a.y + 14); c.scale(Math.cos(a.face || 0) >= 0 ? 1 : -1, 1); c.drawImage(i, -w / 2, -h + Math.sin(rt * 9 + a.slot) * 1.5, w, h); c.restore(); }
-    else { c.fillStyle = '#7a5aa8'; c.beginPath(); c.arc(a.x, a.y, 9, 0, PI2); c.fill(); }
-    if (a.hp < a.maxHp) R.bar(c, a.x - 12, a.y + 17, 24, 3.5, a.hp / a.maxHp, '#8a63c8', 'rgba(255,255,255,0.8)');
+    var evo = 0; try { evo = (VD.ser().evo.small || 0) | 0; } catch (e) { evo = 0; }
+    var look = Math.cos(a.face || 0) >= 0 ? 1 : -1, drew = false;
+    if (!evo && XY.MINK && XY.MINK.minion) {
+      var fake = { type: 'small', x: a.x, y: a.y, r: 18, def: XY.ENEMIES.small, wob: a.slot || 0, flash: a.hurtT > 0 ? 1 : 0, atkT: a.atkT || 0, shootT: 0, stunT: 0, enraged: false, hp: a.hp, maxHp: a.maxHp, th: { x: a.x + look * 40, y: a.y } };
+      drew = XY.MINK.minion(c, G, fake, rt, look);
+    }
+    if (!drew) {
+      var i = img('evo/small_' + evo + '.webp') || (evo ? img('evo/small_0.webp') : null);
+      if (i) {
+        var bh = 72, bw = bh * i.naturalWidth / i.naturalHeight, foot = a.y + 20;
+        c.fillStyle = 'rgba(58,50,38,0.2)'; c.beginPath(); c.ellipse(a.x, foot - 2, 16, 5, 0, 0, PI2); c.fill();
+        c.save(); c.translate(a.x, foot + Math.sin(rt * 2 + (a.slot || 0)) * 1.2); c.scale(look, 1); c.drawImage(i, -bw / 2, -bh, bw, bh); c.restore();
+      }
+    }
+    if (a.hp < a.maxHp) R.bar(c, a.x - 16, a.y + 24, 32, 4, a.hp / a.maxHp, '#8a63c8', 'rgba(255,255,255,0.8)');
   };
 
   /* ---------- 反派关 HUD ---------- */
