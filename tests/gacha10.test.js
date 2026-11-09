@@ -249,16 +249,47 @@ async function frames(page, n) {
   if (beforeShot.acked) fail('result shot already acked');
   var timing = await page.evaluate(function () { return XY.gacha10.timing; });
   if (!(timing.total >= 6 && timing.total <= 8)) fail('flip duration ' + timing.total);
-  var midAt = await page.evaluate(function () {
+  var marks = await page.evaluate(function () {
     var rows = XY.save.data.gacha10.rows, i, pick = 4, t = XY.gacha10.timing;
     for (i = 2; i < rows.length; i++) if (rows[i].kind === 'unlock') { pick = i; break; }
-    return t.intro + pick * t.step + t.flip * 0.6;
+    var id = XY.save.data.gacha10.pulls[0], im = XY.bgArt(id);
+    var iw = im.naturalWidth, ih = im.naturalHeight, src = iw / ih, worst = 0;
+    [[320, 480], [140, 200], [90, 360], [500, 180]].forEach(function (wh) {
+      var b = XY.gacha10.portraitBox(iw, ih, 0, 0, wh[0], wh[1]);
+      worst = Math.max(worst, Math.abs(b.dw / b.dh - src) / src);
+    });
+    var scales = [0, 0.25, 0.6, 1].map(function (p) { return XY.gacha10.flipScale(p); });
+    var ratio = XY.gacha10.CARD_RATIO;
+    var cards = [[360, 800], [800, 200], [200, 200]].map(function (wh) {
+      var b = XY.gacha10.cardSize(wh[0], wh[1]);
+      return b.w / b.h;
+    });
+    return { midAt: t.intro + pick * t.step + t.flip * 0.6, doneAt: t.intro + pick * t.step + t.flip, worst: worst, scales: scales, cards: cards, ratio: ratio };
   });
+  if (marks.worst >= 0.02) fail('立绘宽高比偏差 ' + marks.worst);
+  if (marks.scales.some(function (s) { return Math.abs(s - 1) > 0.001; })) fail('翻牌缩放不是 1：' + marks.scales.join(','));
+  if (marks.cards.some(function (r) { return Math.abs(r - marks.ratio) > 0.001; })) fail('卡片宽高比不固定 ' + marks.cards.join(','));
+  var midAt = marks.midAt, doneAt = marks.doneAt;
+  var viewports = [[360, 640], [390, 844], [430, 932], [640, 360], [844, 390], [932, 430], [1920, 1080]];
+  for (var vi = 0; vi < viewports.length; vi++) {
+    var vw = viewports[vi][0], vh = viewports[vi][1], tag = vw + 'x' + vh;
+    await shot('mid-' + tag, vw, vh, 'flip', midAt);
+    var shown = await page.evaluate(function () {
+      var lp = XY.gacha10.lastPortrait;
+      if (!lp) return { ok: false, why: 'no portrait' };
+      var src = lp.iw / lp.ih, dst = lp.dw / lp.dh, dev = Math.abs(dst - src) / src;
+      return { ok: dev < 0.02, dev: dev, scale: XY.gacha10.flipScale(1) };
+    });
+    if (!shown.ok || Math.abs(shown.scale - 1) > 0.001) fail(tag + ' 立绘比例 ' + JSON.stringify(shown));
+    await shot('done-' + tag, vw, vh, 'flip', doneAt);
+    await shot('overview-' + tag, vw, vh, 'result', null);
+  }
   await shot('desktop-start', 1920, 1080, 'flip', 0.15);
   await shot('desktop-mid', 1920, 1080, 'flip', midAt);
   await shot('desktop-overview', 1920, 1080, 'result', null);
   await shot('mobile-start', 390, 844, 'flip', 0.15);
   await shot('mobile-mid', 390, 844, 'flip', midAt);
+  await shot('mobile-done', 390, 844, 'flip', doneAt);
   await shot('mobile-overview', 390, 844, 'result', null);
   var nudged = await page.evaluate(function () {
     var v = XY.gacha10.view(window.__xy.app);
