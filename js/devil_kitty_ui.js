@@ -232,21 +232,22 @@
     if (bare) {
       c.save();
       c.beginPath();
-      if (bare === 'field') {
-        c.moveTo(x, y);
-        c.lineTo(x + w, y);
-        c.lineTo(x + w, y + h * 0.58);
-        c.quadraticCurveTo(x + w * 0.82, y + h * 0.9, x + w * 0.5, y + h);
-        c.quadraticCurveTo(x + w * 0.18, y + h * 0.9, x, y + h * 0.58);
-        c.closePath();
-      } else c.rect(x, y, w, h);
+      c.rect(x, y, w, h);
       c.clip();
       if (im) drawContain(c, im, x, y, w, h);
       else cursive(c, '猫', x + w / 2, y + h / 2, Math.min(w, h) * 0.28, '#3a2a1c', 'center');
       c.globalCompositeOperation = 'destination-in';
-      var fade = c.createLinearGradient(x, y + h * 0.55, x, y + h);
+      var rg = c.createRadialGradient(x + w * 0.5, y + h * 0.42, Math.min(w, h) * 0.08, x + w * 0.5, y + h * 0.48, Math.max(w, h) * 0.78);
+      rg.addColorStop(0, 'rgba(0,0,0,1)');
+      rg.addColorStop(0.7, 'rgba(0,0,0,1)');
+      rg.addColorStop(0.9, 'rgba(0,0,0,0.35)');
+      rg.addColorStop(1, 'rgba(0,0,0,0)');
+      c.fillStyle = rg;
+      c.fillRect(x, y, w, h);
+      var fadeFrom = bare === 'field' ? 0.52 : 0.8;
+      var fade = c.createLinearGradient(x, y + h * fadeFrom, x, y + h);
       fade.addColorStop(0, 'rgba(0,0,0,1)');
-      fade.addColorStop(0.12, 'rgba(0,0,0,1)');
+      fade.addColorStop(bare === 'field' ? 0.28 : 0.55, 'rgba(0,0,0,0.85)');
       fade.addColorStop(1, 'rgba(0,0,0,0)');
       c.fillStyle = fade;
       c.fillRect(x, y, w, h);
@@ -302,7 +303,7 @@
       slowT: 0, slowF: 0, stunT: 0, dead: false, wob: 1,
       elem: 'water', markT: 0, toCamp: false, retarget: 0, th: null, shootT: 9,
       def: {
-        name: API.HERO, elite: true, boss: false, denBoss: false, etower: false, fly: false,
+        name: API.HERO, elite: false, boss: false, denBoss: false, etower: false, fly: false,
         hp: u.hp, dmg: 0, r: 30, speed: 62, color: '#241c18', dark: '#8d1f18',
         elem: 'water', dtype: 'magic', pdef: 0.08, mdef: 0.16, knockRes: 0.55,
         xp: 40, coin: 0, coinP: 0
@@ -318,6 +319,7 @@
     e.hp = Math.max(1, u.hp);
     e.maxHp = u.maxHp;
     e.def.name = u.phase >= 2 ? API.HERO2 : API.HERO;
+    e.def.elite = false;
     e.dkPhase = u.phase;
     if (u.dead) e.hp = 0;
   }
@@ -538,132 +540,306 @@
       hit(g.x, g.y, g.w, g.h, 'dkGear');
     }
   }
+  function spArt(id) {
+    if (!id || !XY.bgArt) return null;
+    try { return XY.bgArt(id); } catch (e) { return null; }
+  }
+  /* 未领取：可抽池每人一张。可见特殊角色 9 位，猫叔在隐藏名单里，不进十连。
+   * 以前用下标取余把池子凑成 10 张，会多画一张 Phyrex，那不是抽卡结果。
+   * 真正的十连（XY.gacha10.roll）允许重复：重复的角色卡会计入升级。已领取后按实际抽出的 10 张画，重复就重复。 */
+  function gachaPack() {
+    var g = XY.save.data && XY.save.data.gacha10;
+    var claimed = API.gachaClaimed(XY.save.data);
+    if (claimed && g && g.pulls && g.pulls.length) return { claimed: true, ids: g.pulls.slice() };
+    return { claimed: false, ids: (XY.SPECIALS || []).map(function (d) { return d.id; }) };
+  }
+  function inkWash(c, im, x, y, w, h, fallback) {
+    c.save();
+    c.beginPath();
+    c.rect(x, y, w, h);
+    c.clip();
+    c.fillStyle = '#f3ead6';
+    c.fillRect(x, y, w, h);
+    if (im) drawContain(c, im, x, y, w, h);
+    else if (fallback) cursive(c, fallback, x + w / 2, y + h * 0.46, Math.min(42, w * 0.34), '#3a2a1c', 'center');
+    c.globalCompositeOperation = 'destination-in';
+    var rg = c.createRadialGradient(x + w * 0.5, y + h * 0.4, Math.min(w, h) * 0.06, x + w * 0.5, y + h * 0.46, Math.max(w, h) * 0.68);
+    rg.addColorStop(0, 'rgba(0,0,0,1)');
+    rg.addColorStop(0.62, 'rgba(0,0,0,1)');
+    rg.addColorStop(0.86, 'rgba(0,0,0,0.4)');
+    rg.addColorStop(1, 'rgba(0,0,0,0)');
+    c.fillStyle = rg;
+    c.fillRect(x, y, w, h);
+    var lg = c.createLinearGradient(x, y + h * 0.72, x, y + h);
+    lg.addColorStop(0, 'rgba(0,0,0,1)');
+    lg.addColorStop(1, 'rgba(0,0,0,0)');
+    c.fillStyle = lg;
+    c.fillRect(x, y, w, h);
+    c.restore();
+    c.save();
+    c.strokeStyle = 'rgba(36,28,20,0.45)';
+    c.lineWidth = 1.3;
+    c.beginPath();
+    c.moveTo(x + w * 0.08, y + h * 0.06);
+    c.quadraticCurveTo(x + w * 0.4, y - h * 0.02, x + w * 0.78, y + h * 0.05);
+    c.moveTo(x + w * 0.12, y + h * 0.9);
+    c.quadraticCurveTo(x + w * 0.55, y + h * 1.02, x + w * 0.9, y + h * 0.82);
+    c.stroke();
+    c.restore();
+  }
+  function namePlate(c, s, x, y, maxW) {
+    var size = 16, font;
+    c.textAlign = 'center';
+    c.textBaseline = 'middle';
+    while (size > 10) {
+      font = 'bold ' + size + 'px KaiTi, STKaiti, "Noto Serif CJK SC", serif';
+      c.font = font;
+      if (c.measureText(s).width <= maxW - 12) break;
+      size -= 1;
+    }
+    var tw = Math.min(maxW, c.measureText(s).width + 16);
+    var th = size + 10;
+    rr(c, x - tw / 2, y - th / 2, tw, th, 2);
+    c.fillStyle = 'rgba(251,246,234,0.92)';
+    c.fill();
+    c.lineWidth = 1.1;
+    c.strokeStyle = '#2a2118';
+    c.stroke();
+    c.fillStyle = '#24180f';
+    c.fillText(s, x, y + 0.5);
+  }
+  function drawFan(c, ids, x, y, w, h, claimed) {
+    var n = ids.length;
+    if (!n || h < 40 || w < 40) return;
+    var mid = (n - 1) / 2, i, order = [];
+    for (i = 0; i < n; i++) order.push(i);
+    order.sort(function (a, b) { return Math.abs(b - mid) - Math.abs(a - mid); });
+    var maxW = Math.max(96, Math.min(w * 0.34, 200));
+    var plates = [];
+    c.save();
+    c.strokeStyle = 'rgba(42,33,24,0.18)';
+    c.lineWidth = 1.2;
+    c.beginPath();
+    c.arc(x + w * 0.5, y + h * 0.72, Math.min(w, h) * 0.62, Math.PI * 1.08, Math.PI * 1.92);
+    c.stroke();
+    c.restore();
+    order.forEach(function (idx) {
+      var t = mid === 0 ? 0 : (idx - mid) / mid;
+      var sc = 1 - Math.abs(t) * 0.22;
+      var cw = maxW * sc;
+      var ch = Math.min(h - 52, Math.max(cw * 1.42, h * 0.72));
+      var cx = x + w * 0.5 + t * (w * 0.48 - cw * 0.2) - cw / 2;
+      var cy = y + Math.abs(t) * Math.min(22, h * 0.04);
+      var id = ids[idx];
+      var d = XY.SP_BY && XY.SP_BY[id];
+      var nm = d ? d.name : (id || '随机');
+      c.save();
+      c.translate(cx + cw / 2, cy + ch * 0.55);
+      c.rotate(t * 0.16);
+      c.translate(-(cx + cw / 2), -(cy + ch * 0.55));
+      inkWash(c, spArt(id), cx, cy, cw, ch, nm.slice(0, 1));
+      if (claimed) kai(c, '已领', cx + cw / 2, cy + 14, 11, '#8d1f18', 'center', false);
+      c.restore();
+      plates.push({ nm: nm, x: cx + cw / 2, w: Math.max(cw + 8, 88) });
+    });
+    plates.sort(function (a, b) { return a.x - b.x; });
+    plates.forEach(function (p, i) {
+      namePlate(c, p.nm, p.x, y + h - 16 - (i % 2) * 22, Math.min(p.w + 28, w * 0.28));
+    });
+  }
+  function paintGacha(c, x, y, w, h, pack) {
+    cursive(c, '十连抽卡', x + 4, y + 16, 26, '#7d1c14', 'left');
+    kai(c, pack.claimed ? '已领取 · 按抽出的十张入册' : ('未领取 · 池中 ' + pack.ids.length + ' 位'), x + 4, y + 42, 14, '#5c4a36', 'left', false);
+    var top = y + 58;
+    var btnH = 48;
+    var fanH = Math.max(80, h - 58 - btnH - 8);
+    drawFan(c, pack.ids, x, top, w, fanH, pack.claimed);
+    var bw = Math.min(168, w - 8), bh = btnH, bx = x + 4, by = y + h - bh;
+    if (pack.claimed) {
+      rr(c, bx, by, bw, bh, 8);
+      c.fillStyle = '#efe6d2';
+      c.fill();
+      c.strokeStyle = '#8a7048';
+      c.stroke();
+      cursive(c, '已领取', bx + bw / 2, by + bh / 2, 24, '#6a5438', 'center');
+    } else {
+      redSeal(c, bx, by, bw, bh, '去抽卡');
+      hit(bx, by, bw, bh, 'dkDraw');
+    }
+  }
+  function paintStory(c, x, y, w, h) {
+    var stage = img('stage1', art.stage1 || 'stage1.webp');
+    var form = img('form', art.form || 'form.webp');
+    var mainW = Math.max(120, Math.min(w * 0.7, h * 0.62));
+    var mainH = h;
+    inkWash(c, stage, x + w - mainW, y, mainW, mainH, '猫');
+    var fw = Math.max(100, mainW * 0.78);
+    var fh = Math.max(120, h * 0.58);
+    if (fw > w * 0.62) fw = w * 0.62;
+    inkWash(c, form, x, y + h - fh, fw, fh, '化');
+    namePlate(c, API.HERO2, x + fw * 0.5, y + h - 22, fw - 8);
+    var lines = [
+      '休息后约二十秒登场。',
+      '邪气必杀之后，全场狂暴约四十五秒。',
+      '小怪约 ×1.5，洞主套用原有狂暴 ×2。',
+      '第一次倒下化成九尾咆哮。',
+      '只有击败「' + API.HERO2 + '」才掉落。',
+      '必得一张随机特殊角色卡，',
+      '并可能掉该角色的专属装备。',
+      '只在主线。没打败也不判负。'
+    ];
+    var tw = Math.min(250, Math.max(150, w * 0.46));
+    var th = 62 + lines.length * 17;
+    if (th > h * 0.62) th = h * 0.62;
+    var tx = x + Math.max(0, w * 0.34 - tw * 0.2);
+    if (tx + tw > x + w - 8) tx = x + w - tw - 8;
+    paper(c, tx, y + 6, tw, th);
+    cursive(c, API.HERO, tx + 14, y + 28, 26, '#24180f', 'left');
+    kai(c, API.HANDLE, tx + 14, y + 50, 13, '#8d1f18', 'left', false);
+    var i, yy = y + 72, limit = y + 6 + th - 12;
+    for (i = 0; i < lines.length && yy < limit; i++) {
+      kai(c, lines[i], tx + 14, yy, 13, '#3a2e22', 'left', false);
+      yy += 17;
+    }
+  }
   function paintPopup(c, app) {
     var W = app.lw, H = app.lh, port = H > W * 1.05 || W < 760;
     c.save();
     c.fillStyle = 'rgba(246,239,224,0.55)';
     c.fillRect(0, 0, W, H);
-    var m = port ? 12 : 36;
-    var x = m, y = port ? 18 : 28, w = W - m * 2, h = H - y - (port ? 16 : 24);
+    var m = port ? 10 : 28;
+    var x = m, y = port ? 12 : 18, w = W - m * 2, h = H - y - (port ? 12 : 16);
     paper(c, x, y, w, h);
-    latin(c, API.NAME, x + (port ? 24 : 36), y + (port ? 36 : 48), port ? 40 : 58, '#7d1c14', 'left');
-    cursive(c, API.SUB, x + (port ? 24 : 40), y + (port ? 68 : 86), port ? 22 : 28, '#3a2a1c', 'left');
-    redSeal(c, x + w - (port ? 78 : 92), y + 16, port ? 64 : 72, 48, '关');
-    hit(x + w - (port ? 78 : 92), y + 16, port ? 64 : 72, 48, 'dkClose');
+    latin(c, API.NAME, x + (port ? 18 : 28), y + (port ? 32 : 42), port ? 36 : 52, '#7d1c14', 'left');
+    cursive(c, API.SUB, x + (port ? 18 : 32), y + (port ? 60 : 78), port ? 20 : 24, '#3a2a1c', 'left');
+    redSeal(c, x + w - (port ? 74 : 88), y + 14, port ? 60 : 70, 46, '关');
+    hit(x + w - (port ? 74 : 88), y + 14, port ? 60 : 70, 46, 'dkClose');
     hit(0, 0, W, H, 'dkClose');
     hit(x, y, w, h, 'dkNoop');
-
+    var pack = gachaPack();
+    pack.ids.forEach(function (id) { spArt(id); });
     var on = eventOn();
-    var top = y + (port ? 96 : 118);
-    var gap = 16;
-    var colW, colH, lx, rx;
-    if (!on) {
-      lx = x + 20; colW = w - 40; colH = h - (top - y) - 24; rx = null;
-    } else if (port) {
-      colW = w - 40; colH = Math.floor((h - (top - y) - 36) / 2);
-      lx = x + 20; rx = lx;
+    var top = y + (port ? 84 : 102);
+    var bodyH = h - (top - y) - 12;
+    if (!on) paintGacha(c, x + 16, top, w - 32, bodyH, pack);
+    else if (port) {
+      var gh = Math.max(220, Math.floor(bodyH * 0.4));
+      paintGacha(c, x + 12, top, w - 24, gh, pack);
+      paintStory(c, x + 12, top + gh + 6, w - 24, bodyH - gh - 6);
     } else {
-      colW = Math.floor((w - 52) / 2); colH = h - (top - y) - 28;
-      lx = x + 18; rx = lx + colW + gap;
+      var lw = Math.floor((w - 40) * 0.48);
+      paintGacha(c, x + 16, top, lw, bodyH, pack);
+      paintStory(c, x + 24 + lw, top, w - lw - 40, bodyH);
     }
-    slip(c, app, lx, top, colW, colH, 'gacha');
-    if (on) slip(c, app, port ? rx : rx, port ? top + colH + 12 : top, colW, colH, 'cato');
     c.restore();
     boxes.popup = { x: x, y: y, w: w, h: h };
   }
-  function drawGachaCards(c, x, y, w, h, claimed) {
-    var pulls = claimed && XY.save.data && XY.save.data.gacha10 && XY.save.data.gacha10.pulls;
-    var src = (pulls && pulls.length) ? pulls : (XY.SPECIALS || []).map(function (d) { return d.id; });
-    if (!src.length) src = ['?'];
-    var list = [], i;
-    for (i = 0; i < 10; i++) list.push(src[i % src.length]);
-    var cols = 5, gap = 8, pad = 14;
-    var cw = Math.floor((w - pad * 2 - gap * (cols - 1)) / cols);
-    var ch = Math.floor((h - gap) / 2);
-    if (ch > cw * 1.45) ch = Math.floor(cw * 1.45);
-    for (i = 0; i < 10; i++) {
-      var cx = x + pad + (i % cols) * (cw + gap);
-      var cy = y + Math.floor(i / cols) * (ch + gap);
-      var id = list[i], d = XY.SP_BY && XY.SP_BY[id];
-      rr(c, cx, cy, cw, ch, 5);
-      var g = c.createLinearGradient(cx, cy, cx, cy + ch);
-      g.addColorStop(0, claimed ? '#fffaf0' : '#f6efe0');
-      g.addColorStop(1, claimed ? '#f3e6c8' : '#e7d7b4');
-      c.fillStyle = g;
-      c.fill();
-      c.strokeStyle = '#2a2118';
-      c.lineWidth = 1.15;
-      c.stroke();
-      c.strokeStyle = 'rgba(141,31,24,0.45)';
-      c.lineWidth = 1;
-      rr(c, cx + 3, cy + 3, cw - 6, ch - 6, 3);
-      c.stroke();
-      var nm = d ? d.name : '随机';
-      var face = d && XY.avatar ? XY.avatar(id) : null;
-      var r = Math.min(cw * 0.28, ch * 0.22, 22);
-      if (face) {
-        c.save();
-        c.beginPath();
-        c.arc(cx + cw / 2, cy + ch * 0.38, r, 0, Math.PI * 2);
-        c.clip();
-        c.drawImage(face, cx + cw / 2 - r, cy + ch * 0.38 - r, r * 2, r * 2);
-        c.restore();
-      } else {
-        cursive(c, claimed ? nm.slice(0, 1) : '背', cx + cw / 2, cy + ch * 0.4, Math.max(14, r), '#24180f', 'center');
-      }
-      kai(c, nm.length > 5 ? nm.slice(0, 4) : nm, cx + cw / 2, cy + ch - 16, Math.max(10, Math.min(13, cw * 0.22)), '#3a2e22', 'center', false);
-      kai(c, claimed ? '已领' : '未领', cx + cw / 2, cy + 12, 10, claimed ? '#2f663a' : '#8d1f18', 'center', false);
+  function paintIntro(c, app, run) {
+    var W = app.lw, H = app.lh, port = H > W * 1.05;
+    c.save();
+    c.fillStyle = 'rgba(246,239,224,0.72)';
+    c.fillRect(0, 0, W, H);
+    var m = port ? 8 : 16;
+    var x = m, y = m, w = W - m * 2, h = H - m * 2;
+    paper(c, x, y, w, h);
+    latin(c, API.NAME, x + w / 2, y + (port ? 36 : 44), port ? 40 : 56, '#7d1c14', 'center');
+    cursive(c, API.SUB + ' · ' + API.HERO + ' 登场', x + w / 2, y + (port ? 70 : 86), port ? 20 : 24, '#3a2a1c', 'center');
+    var py = y + (port ? 88 : 100);
+    var availW = w - 24, availH = h - (py - y) - 8;
+    var im0 = img('stage1', art.stage1 || 'stage1.webp');
+    var dw = availW, dh = availH;
+    if (im0 && im0.naturalWidth) {
+      var ir = im0.naturalWidth / im0.naturalHeight;
+      dh = availH; dw = dh * ir;
+      if (dw > availW) { dw = availW; dh = dw / ir; }
     }
+    var dx = x + (w - dw) / 2, dy = py + Math.max(0, (availH - dh) / 2);
+    portrait(c, 'stage1', dx, dy, dw, dh, true);
+    namePlate(c, API.HERO + '  ' + API.HANDLE, x + w / 2, dy + dh - 26, Math.min(dw - 12, 340));
+    c.restore();
   }
-  function slip(c, app, x, y, w, h, kind) {
-    rr(c, x, y, w, h, 6);
-    c.fillStyle = '#fbf6ea';
-    c.fill();
-    c.strokeStyle = 'rgba(42,33,24,0.45)';
-    c.lineWidth = 1.2;
+  function paintForm(c, app, run) {
+    var W = app.lw, H = app.lh, port = H > W;
+    c.save();
+    c.fillStyle = 'rgba(246,239,224,0.55)';
+    c.fillRect(0, 0, W, H);
+    inkBurst(c, W / 2, H / 2, Math.min(W, H) * 0.42, run.formLeft);
+    var vw = W - (port ? 12 : 36);
+    var vh = vw * 960 / 720;
+    var maxH = H - (port ? 16 : 20);
+    if (vh > maxH) { vh = maxH; vw = vh * 720 / 960; }
+    var x = (W - vw) / 2, y = Math.max(6, (H - vh) / 2);
+    c.fillStyle = '#f4ead2';
+    c.fillRect(x - 12, y - 8, vw + 24, vh + 16);
+    var drawn = false;
+    c.save();
+    c.beginPath();
+    c.rect(x, y, vw, vh);
+    c.clip();
+    if (vid && vid.readyState >= 2 && vid.currentTime > 0.04) {
+      try { c.drawImage(vid, x, y, vw, vh); drawn = true; } catch (e) { drawn = false; }
+    }
+    if (!drawn) {
+      var fr = frameAtRun(run);
+      if (fr) drawContain(c, fr, x, y, vw, vh);
+      else portrait(c, 'form', x, y, vw, vh, true);
+    }
+    c.globalCompositeOperation = 'destination-in';
+    var eg = c.createLinearGradient(x, y + vh * 0.86, x, y + vh);
+    eg.addColorStop(0, 'rgba(0,0,0,1)');
+    eg.addColorStop(1, 'rgba(0,0,0,0.15)');
+    c.fillStyle = eg;
+    c.fillRect(x, y, vw, vh);
+    var sg = c.createLinearGradient(x, y, x + vw, y);
+    sg.addColorStop(0, 'rgba(0,0,0,0)');
+    sg.addColorStop(0.06, 'rgba(0,0,0,1)');
+    sg.addColorStop(0.94, 'rgba(0,0,0,1)');
+    sg.addColorStop(1, 'rgba(0,0,0,0)');
+    c.fillStyle = sg;
+    c.fillRect(x, y, vw, vh);
+    c.restore();
+    latin(c, API.NAME, W / 2, y + 28, port ? 28 : 40, '#7d1c14', 'center');
+    namePlate(c, API.HERO2, W / 2, y + vh - 36, Math.min(320, vw - 24));
+    var bw = 120, bh = 46, bx = W - bw - 16, by = H - bh - 12;
+    redSeal(c, bx, by, bw, bh, '跳过');
+    hit(bx, by, bw, bh, 'dkSkip');
+    hit(0, 0, W, H, 'dkSkip');
+    c.restore();
+  }
+  function inkBurst(c, x, y, r, t) {
+    c.save();
+    c.translate(x, y);
+    c.strokeStyle = 'rgba(30,24,18,0.35)';
+    c.lineWidth = 2;
+    var i;
+    for (i = 0; i < 9; i++) {
+      c.beginPath();
+      c.arc(0, 0, r * (0.25 + (i % 5) * 0.12), i, i + 1.4);
+      c.stroke();
+    }
+    c.strokeStyle = 'rgba(166,40,28,' + (0.25 + 0.25 * Math.sin((t || 0) * 6)) + ')';
+    c.lineWidth = 1.5;
+    for (i = 0; i < 6; i++) {
+      c.beginPath();
+      c.moveTo(0, 0);
+      c.lineTo(Math.cos(i) * r * 0.8, Math.sin(i * 1.3) * r * 0.55);
+      c.stroke();
+    }
+    c.restore();
+  }
+  function cracks(c, x, y, w, h, k) {
+    c.save();
+    c.strokeStyle = 'rgba(166,40,28,' + (0.35 + 0.4 * k) + ')';
+    c.lineWidth = 1.6;
+    c.beginPath();
+    c.moveTo(x + w * 0.5, y + h * 0.2);
+    c.lineTo(x + w * 0.62, y + h * 0.45);
+    c.lineTo(x + w * 0.48, y + h * 0.7);
+    c.moveTo(x + w * 0.62, y + h * 0.45);
+    c.lineTo(x + w * 0.78, y + h * 0.58);
     c.stroke();
-    if (kind === 'gacha') {
-      cursive(c, '十连抽卡', x + 18, y + 28, 26, '#7d1c14', 'left');
-      var claimed = API.gachaClaimed(XY.save.data);
-      kai(c, claimed ? '已领取 · 这十张已经入册' : '未领取 · 可抽角色', x + 18, y + 54, 14, '#5c4a36', 'left', false);
-      drawGachaCards(c, x, y + 70, w, Math.max(120, h - 168), claimed);
-      var bw = Math.min(220, w - 36), bh = 52, bx = x + 18, by = y + h - 68;
-      if (claimed) {
-        rr(c, bx, by, bw, bh, 8);
-        c.fillStyle = '#efe6d2';
-        c.fill();
-        c.strokeStyle = '#8a7048';
-        c.stroke();
-        cursive(c, '已领取', bx + bw / 2, by + bh / 2, 28, '#6a5438', 'center');
-      } else {
-        redSeal(c, bx, by, bw, bh, '去抽卡');
-        hit(bx, by, bw, bh, 'dkDraw');
-      }
-    } else {
-      cursive(c, API.HERO, x + 18, y + 28, 28, '#24180f', 'left');
-      kai(c, API.HANDLE, x + 18, y + 54, 13, '#8d1f18', 'left', false);
-      var pw = Math.min(148, w * 0.42), ph = Math.min(h - 36, pw * 1.25);
-      portrait(c, 'stage1', x + w - pw - 16, y + 16, pw, ph, true);
-      var lines = [
-        '取经路休息后约二十秒登场。',
-        '先演邪气必杀，再让全场狂暴。',
-        '小怪攻速、移速、伤害约 ×1.5，',
-        '洞主套用原有狂暴 ×2，约四十五秒。',
-        '第一次倒下会化成九尾咆哮。',
-        '只有击败「' + API.HERO2 + '」才掉落。',
-        '必得一张随机特殊角色卡，',
-        '并有机会掉该角色的专属装备。',
-        '只在主线关。没打败也不判负。'
-      ];
-      var i, yy = y + 84;
-      for (i = 0; i < lines.length && yy < y + h - 18; i++) {
-        kai(c, lines[i], x + 16, yy, 14, '#3a2e22', 'left', false);
-        yy += 20;
-      }
-      kai(c, '变身形象：九尾咆哮。', x + 16, y + h - 16, 12, '#8a7048', 'left', false);
-    }
+    c.restore();
   }
-
   function paintGear(c, app) {
     var W = app.lw, H = app.lh, port = H > W * 1.05;
     c.save();
@@ -768,8 +944,8 @@
     var e2 = G.dkUnit;
     if (e2 && !e2.dead && run.unit && !run.unit.dead && run.introLeft <= 0 && run.formLeft <= 0) {
       var q = w2s(G, app, e2.x, e2.y);
-      var ph = run.unit.phase >= 2 ? 146 : 112, pw = Math.round(ph * 0.58);
-      var px = q.x - pw / 2, py = q.y - ph + 10;
+      var ph = run.unit.phase >= 2 ? 228 : 168, pw = Math.round(ph * (run.unit.phase >= 2 ? 0.84 : 0.7));
+      var px = q.x - pw / 2, py = q.y - ph * 0.78;
       portrait(c, run.unit.phase >= 2 ? 'form' : 'stage1', px, py, pw, ph, 'field');
       var label = run.unit.phase >= 2 ? API.HERO2 : API.HERO;
       var plate = { x: q.x - 74, y: py - 42, w: 148, h: 34 };
@@ -777,8 +953,9 @@
       var byB = Math.max(120, Math.min(app.lh * 0.18, 240)), bhB = 64;
       function overB(p) { return p.x < bxB + bwB && p.x + p.w > bxB && p.y < byB + bhB && p.y + p.h > byB; }
       if (overB(plate)) {
-        plate.x = Math.min(app.lw - plate.w - 8, px + pw + 6);
-        if (overB(plate)) plate.x = Math.max(8, px - plate.w - 6);
+        plate.y = byB;
+        plate.x = bxB + bwB + 10;
+        if (plate.x + plate.w > app.lw - 8) plate.x = Math.max(8, bxB - plate.w - 10);
         if (overB(plate)) plate.y = byB + bhB + 8;
       }
       if (plate.y < 70) plate.y = py + 8;
@@ -799,84 +976,6 @@
       cursive(c, '掉落', app.lw / 2 - 150, app.lh * 0.18 + 22, 18, '#7d1c14', 'left');
       kai(c, '角色卡 · ' + G.dkDrops.cardName + (G.dkDrops.gearName ? '  ·  ' + G.dkDrops.gearName : ''), app.lw / 2 - 150, app.lh * 0.18 + 44, 14, '#24180f', 'left', false);
     }
-  }
-  function paintIntro(c, app, run) {
-    var W = app.lw, H = app.lh;
-    c.save();
-    c.fillStyle = 'rgba(246,239,224,0.78)';
-    c.fillRect(0, 0, W, H);
-    var w = Math.min(520, W - 28), h = Math.min(640, H - 28);
-    var x = (W - w) / 2, y = (H - h) / 2;
-    paper(c, x, y, w, h);
-    latin(c, API.NAME, x + w / 2, y + 46, Math.min(64, w * 0.14), '#7d1c14', 'center');
-    cursive(c, API.SUB + ' · ' + API.HERO + ' 登场', x + w / 2, y + 84, 22, '#3a2a1c', 'center');
-    var ph = Math.min(360, h - 180), pw = Math.min(240, w - 80);
-    portrait(c, 'stage1', x + (w - pw) / 2, y + 108, pw, ph, false);
-    kai(c, API.HERO, x + w / 2, y + h - 52, 22, '#24180f', 'center');
-    kai(c, API.HANDLE, x + w / 2, y + h - 28, 13, '#8d1f18', 'center', false);
-    c.restore();
-  }
-  function paintForm(c, app, run) {
-    var W = app.lw, H = app.lh, port = H > W;
-    c.save();
-    c.fillStyle = 'rgba(246,239,224,0.8)';
-    c.fillRect(0, 0, W, H);
-    inkBurst(c, W / 2, H / 2, Math.min(W, H) * 0.45, run.formLeft);
-    var maxH = H - (port ? 120 : 90);
-    var vh = Math.min(maxH, port ? W * 0.92 * 960 / 720 : H * 0.72);
-    var vw = vh * 720 / 960;
-    var x = (W - vw) / 2, y = port ? 56 : 36;
-    paper(c, x - 12, y - 12, vw + 24, vh + 24);
-    var drawn = false;
-    if (vid && vid.readyState >= 2 && vid.currentTime > 0.04) {
-      try { c.drawImage(vid, x, y, vw, vh); drawn = true; } catch (e) { drawn = false; }
-    }
-    if (!drawn) {
-      var fr = frameAtRun(run);
-      if (fr) drawContain(c, fr, x, y, vw, vh);
-      else portrait(c, 'form', x, y, vw, vh, true);
-    }
-    latin(c, API.NAME, W / 2, port ? 28 : 22, port ? 28 : 36, '#7d1c14', 'center');
-    cursive(c, API.HERO2, W / 2, y + vh + (port ? 28 : 22), port ? 22 : 26, '#24180f', 'center');
-    var bw = 120, bh = 48, bx = W / 2 - bw / 2, by = Math.min(H - 58, y + vh + 48);
-    redSeal(c, bx, by, bw, bh, '跳过');
-    hit(bx, by, bw, bh, 'dkSkip');
-    hit(0, 0, W, H, 'dkSkip');
-    c.restore();
-  }
-  function inkBurst(c, x, y, r, t) {
-    c.save();
-    c.translate(x, y);
-    c.strokeStyle = 'rgba(30,24,18,0.35)';
-    c.lineWidth = 2;
-    var i;
-    for (i = 0; i < 9; i++) {
-      c.beginPath();
-      c.arc(0, 0, r * (0.25 + (i % 5) * 0.12), i, i + 1.4);
-      c.stroke();
-    }
-    c.strokeStyle = 'rgba(166,40,28,' + (0.25 + 0.25 * Math.sin((t || 0) * 6)) + ')';
-    c.lineWidth = 1.5;
-    for (i = 0; i < 6; i++) {
-      c.beginPath();
-      c.moveTo(0, 0);
-      c.lineTo(Math.cos(i) * r * 0.8, Math.sin(i * 1.3) * r * 0.55);
-      c.stroke();
-    }
-    c.restore();
-  }
-  function cracks(c, x, y, w, h, k) {
-    c.save();
-    c.strokeStyle = 'rgba(166,40,28,' + (0.35 + 0.4 * k) + ')';
-    c.lineWidth = 1.6;
-    c.beginPath();
-    c.moveTo(x + w * 0.5, y + h * 0.2);
-    c.lineTo(x + w * 0.62, y + h * 0.45);
-    c.lineTo(x + w * 0.48, y + h * 0.7);
-    c.moveTo(x + w * 0.62, y + h * 0.45);
-    c.lineTo(x + w * 0.78, y + h * 0.58);
-    c.stroke();
-    c.restore();
   }
   function paintPause(c, app) {
     var W = app.lw, H = app.lh, w = Math.min(300, W - 24), h = 56;

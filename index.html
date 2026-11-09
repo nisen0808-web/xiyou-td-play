@@ -8985,22 +8985,29 @@ XY.BGS1={"src": "data:image/webp;base64,UklGRtT1GgBXRUJQVlA4IMj1GgCQwWGdASoAEAAK
       return;
     }
     if (G.station) {
-      var pu = 0.5 + 0.5 * Math.sin(rt * 3);
-      var gr = c.createRadialGradient(x, y, 20, x, y, C.STATION_R + 20);
-      gr.addColorStop(0, 'rgba(255,232,130,' + (0.45 + 0.15 * pu) + ')'); gr.addColorStop(1, 'rgba(255,232,130,0)');
-      c.fillStyle = gr; c.beginPath(); c.arc(x, y, C.STATION_R + 20, 0, PI2); c.fill();
-      c.strokeStyle = 'rgba(230,170,20,' + (0.55 + 0.3 * pu) + ')'; c.lineWidth = 4;
-      c.beginPath(); c.arc(x, y - 6, 92 + pu * 3, Math.PI * 1.1, Math.PI * 1.9); c.stroke();   // 护盾弧
-      otxt(c, '唐僧驻守：营地回血 ↑  防御 ↑', x, y - 98, 14, '#a8700a', 'center', true);
+      var pu = 0.5 + 0.5 * Math.sin(rt * 2.2);
+      var gr = c.createRadialGradient(x, y, 16, x, y, C.STATION_R + 8);
+      gr.addColorStop(0, 'rgba(36,28,20,' + (0.06 + 0.03 * pu) + ')'); gr.addColorStop(1, 'rgba(36,28,20,0)');
+      c.fillStyle = gr; c.beginPath(); c.arc(x, y, C.STATION_R + 8, 0, PI2); c.fill();
+      c.strokeStyle = 'rgba(36,28,20,' + (0.32 + 0.12 * pu) + ')'; c.lineWidth = 1.6;
+      c.beginPath(); c.arc(x, y, C.STATION_R * 0.92, 0.25, 1.65); c.stroke();
+      c.beginPath(); c.arc(x, y, C.STATION_R * 0.92, 2.35, 4.15); c.stroke();
+      c.strokeStyle = 'rgba(90,82,70,0.4)'; c.lineWidth = 1;
+      c.beginPath(); c.arc(x, y, C.STATION_R * 0.78, 4.5, 5.7); c.stroke();
+      otxt(c, '唐僧驻守：营地回血 ↑  防御 ↑', x, y - 98, 14, '#3a2e22', 'center', true);
     }
-    // 营地圈：妖怪闯进来、师父又在圈里 = 红色警报
-    var zp = 0.5 + 0.5 * Math.sin(rt * 12);
+    // 营地圈：妖怪闯进来才画一圈飞白墨弧，不再用红虚线和粉橙光
+    var zp = 0.5 + 0.5 * Math.sin(rt * 6);
     if (G.breach) {
-      var zg = c.createRadialGradient(x, y, 30, x, y, C.CAMP_ZONE_R);
-      zg.addColorStop(0, 'rgba(224,60,40,0)'); zg.addColorStop(1, 'rgba(224,60,40,' + (0.25 + 0.2 * zp) + ')');
+      var zg = c.createRadialGradient(x, y, 24, x, y, C.CAMP_ZONE_R);
+      zg.addColorStop(0, 'rgba(28,22,16,0)'); zg.addColorStop(1, 'rgba(28,22,16,' + (0.08 + 0.05 * zp) + ')');
       c.fillStyle = zg; c.beginPath(); c.arc(x, y, C.CAMP_ZONE_R, 0, PI2); c.fill();
-      c.lineWidth = 5; c.strokeStyle = 'rgba(214,40,40,' + (0.6 + 0.4 * zp) + ')'; c.setLineDash([14, 8]); c.lineDashOffset = -rt * 40;
-      c.beginPath(); c.arc(x, y, C.CAMP_ZONE_R, 0, PI2); c.stroke(); c.setLineDash([]);
+      c.lineWidth = 1.8; c.strokeStyle = 'rgba(28,22,16,' + (0.42 + 0.18 * zp) + ')';
+      c.beginPath(); c.arc(x, y, C.CAMP_ZONE_R, 0.15, 1.35); c.stroke();
+      c.beginPath(); c.arc(x, y, C.CAMP_ZONE_R, 1.9, 3.35); c.stroke();
+      c.beginPath(); c.arc(x, y, C.CAMP_ZONE_R, 4.05, 5.65); c.stroke();
+      c.strokeStyle = 'rgba(90,82,70,0.35)'; c.lineWidth = 1;
+      c.beginPath(); c.arc(x, y, C.CAMP_ZONE_R * 0.84, 0.7, 2.15); c.stroke();
     }                                                                  // v0.6：平时不再画虚线营地圈（只有被攻破时才画红色警戒圈）
     c.fillStyle = 'rgba(80,60,30,0.15)'; c.beginPath(); c.ellipse(x, y + 34, 66, 18, 0, 0, PI2); c.fill();
     // 帐篷

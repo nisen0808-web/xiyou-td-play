@@ -291,11 +291,11 @@ async function shot(page, name) {
         id: 9001, type: 'cato_evil', dk: true, x: G.camp.x + 180, y: G.camp.y - 40, r: 30,
         hp: G.dkRun.unit.hp, maxHp: G.dkRun.unit.maxHp, speed: 62, dmg: 0, dead: false,
         kx: 0, ky: 0, flash: 0, atkT: 1, slowT: 0, stunT: 0, burnT: 0, def: G.dkRun.unit && {
-          name: '猫叔', elite: true, color: '#241c18', dark: '#8d1f18', r: 30, elem: 'water'
+          name: '猫叔', elite: false, color: '#241c18', dark: '#8d1f18', r: 30, elem: 'water'
         }
       });
       G.dkUnit = G.enemies[G.enemies.length - 1];
-      G.dkUnit.def = { name: '猫叔', elite: true, boss: false, denBoss: false, color: '#241c18', dark: '#8d1f18', r: 30, elem: 'water', xp: 10, coin: 0, coinP: 0, pdef: 0, mdef: 0, knockRes: 0.4, dmg: 0, hp: 900 };
+      G.dkUnit.def = { name: '猫叔', elite: false, boss: false, denBoss: false, color: '#241c18', dark: '#8d1f18', r: 30, elem: 'water', xp: 10, coin: 0, coinP: 0, pdef: 0, mdef: 0, knockRes: 0.4, dmg: 0, hp: 900 };
     }
     var u = G.dkUnit;
     XY.makeEnemy(G, 'small', u.x + 70, u.y + 30, 0);
