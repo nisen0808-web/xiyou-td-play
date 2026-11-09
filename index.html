@@ -8480,7 +8480,7 @@ XY.BGS1={"src": "data:image/webp;base64,UklGRtT1GgBXRUJQVlA4IMj1GgCQwWGdASoAEAAK
 
 
   /* ---------- v0.6.4 水墨山水背景（默认）：宣纸浅色 + 淡墨层叠远山 + 薄雾 + 稀疏松竹；同样分块预渲染，每帧只 drawImage ----------
-   * 设置存在 localStorage 'xy_bg'（'classic' = 回到原来的彩色卡通地面）；暂停菜单里有开关。
+   * 背景固定为浅色水墨。旧档如果存过 xy_bg=classic，读到时改写成 ink。暂停菜单不再提供彩色选项。
    * 画法：每块图块只画“宣纸底 → 附近 3×3 个单元里的远山（用单元坐标做种子，所以跨块接缝连续）→ 薄雾 → 溪水 → 道路 → 疏松 / 疏竹 / 墨点石”。
    * 对比度刻意压低：山 / 雾的墨色 ≤ 0.3 不透明度；道路是比纸更亮的奶白路面 + 两侧淡墨边线，单位和掉落物仍然是画面上最重的颜色。 */
   var INK = {
@@ -8489,8 +8489,11 @@ XY.BGS1={"src": "data:image/webp;base64,UklGRtT1GgBXRUJQVlA4IMj1GgCQwWGdASoAEAAK
     cave:    { paper: '#eeece6', blot: '#e1ded4', mtn: '86,90,98', mist: '250,250,252', road: '#fffdf5', edge: 'rgba(100,92,76,0.5)', water: '#d6e4e8', waterEdge: 'rgba(96,126,136,0.45)', tree: '84,88,84', deco: 'pine' },
     apricot: { paper: '#f8ecde', blot: '#f0dccb', mtn: '128,92,84', mist: '255,246,238', road: '#fffaf0', edge: 'rgba(140,92,66,0.5)', water: '#d8e8ee', waterEdge: 'rgba(96,126,146,0.45)', tree: '112,92,64', deco: 'pine' }
   };
-  XY.inkBg = function () { try { return window.localStorage.getItem('xy_bg') !== 'classic'; } catch (e) { return true; } };
-  XY.setInkBg = function (on) { try { window.localStorage.setItem('xy_bg', on ? 'ink' : 'classic'); } catch (e) {} cache = {}; cacheKey = null; };
+  XY.inkBg = function () {
+    try { if (window.localStorage.getItem('xy_bg') === 'classic') window.localStorage.setItem('xy_bg', 'ink'); } catch (e) {}
+    return true;
+  };
+  XY.setInkBg = function () { try { window.localStorage.setItem('xy_bg', 'ink'); } catch (e) {} cache = {}; cacheKey = null; };
   function cellRnd(G, cx, cy, salt) { return XY.seeded(40009 + cx * 7919 + cy * 104729 + G.levelId * 613 + salt * 31); }
   function inkMountains(c, G, ix, iy, th) {
     for (var cy = iy - 1; cy <= iy + 1; cy++) for (var cx = ix - 1; cx <= ix + 1; cx++) {
@@ -9839,7 +9842,7 @@ XY.BGS1={"src": "data:image/webp;base64,UklGRtT1GgBXRUJQVlA4IMj1GgCQwWGdASoAEAAK
     btn(c, app, W / 2 - 110, y0 + 98, 220, 52, '继续（Esc / P）', 'resume', { primary: true });
     btn(c, app, W / 2 - 110, y0 + 162, 220, 52, '重新开始（R）', 'restart');
     btn(c, app, W / 2 - 110, y0 + 226, 220, 52, '回到首页', 'home');
-    btn(c, app, W / 2 - 110, y0 + 290, 220, 44, '背景：' + (XY.inkBg && XY.inkBg() ? '水墨山水（点我换经典）' : '经典彩色（点我换水墨）'), 'bg');
+    if (XY.inkBg) XY.inkBg();
     txt(c, '现在 ' + XY.fmtTime(G.t) + '  ·  ' + G.level + ' 级  ·  击杀 ' + G.kills, W / 2, y0 + 360, 14, T.inkSoft, 'center', false);
     var mn = G.t / 60;                                                      // 从局内 HUD 挪过来的成长说明
     txt(c, '小怪 +' + Math.round(C.ENEMY_SCALE * mn * 100) + '%（每分钟 +1%）· BOSS +' + Math.round(C.BOSS_SCALE * mn * 100) + '%（每分钟 +5%）', W / 2, y0 + 384, 12, '#8a4a05', 'center', false);
@@ -13649,10 +13652,10 @@ XY.ICONINK_DATA={"金箍棒":{"src":"data:image/webp;base64,UklGRjINAABXRUJQVlA4
 /* ============================================================
  * auto.js —— v0.9「尽量只用方向键」：自动加点 / 自动犒赏天兵（F）/ 自动召唤特殊人物（G）/ 法宝三选一自动选推荐
  * 偏好存在 localStorage（xy_auto_v1），测试版和普通版共用；暂停页里有四个开关。
- * 默认：加点 关、犒赏 开、召唤 开、选推荐 关。只有玩家打开「自动加点」才花技能点。手动按键（F / G / 1 2 3）照旧可用。
+ * 默认：加点、犒赏、召唤、选卡都关。只有玩家自己打开才生效，刷新后保持。缺字段或坏值按关。手动按键（F / G / 1 2 3）照旧可用。
  * ============================================================ */
 (function () {
-  var XY = window.XY, KEY = 'xy_auto_v1', DEF = { points: false, treat: true, guest: true, pick: false };
+  var XY = window.XY, KEY = 'xy_auto_v1', DEF = { points: false, treat: false, guest: false, pick: false };
   var A = XY.auto = { DEF: DEF, LABEL: { points: '加点', treat: '犒赏', guest: '召唤', pick: '选卡' } };
   function plain(o) { return !!o && typeof o === 'object' && !Array.isArray(o); }
   function load() { var o = {}; try { o = JSON.parse(window.localStorage.getItem(KEY) || '{}'); } catch (e) { o = {}; } return plain(o) ? o : {}; }
@@ -18315,9 +18318,8 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
     var bw = 316, bx = cx - bw / 2;
     ov.btn(c, app, bx, py + 274, bw, 60, '继 续', 'resume', { primary: true, key: 'Esc / P', size: 26 });
     ov.btn(c, app, bx, py + 346, bw, 48, '重新开始', 'restart', { key: 'R', size: 18 });
-    var ink = !!(XY.inkBg && XY.inkBg()), muted = !!(XY.audio && XY.audio.mute);
-    text(c, '背景', px + 72, py + 412, 14, INK2, 'left', false);
-    ov.seg(c, app, px + 132, py + 390, 256, 46, [{ label: '水墨山水', act: 'bgSet', hit: { ink: true }, on: ink }, { label: '经典彩色', act: 'bgSet', hit: { ink: false }, on: !ink }]);
+    if (XY.inkBg) XY.inkBg();
+    var muted = !!(XY.audio && XY.audio.mute);
     text(c, '音效', px + 72, py + 468, 14, INK2, 'left', false);
     ov.seg(c, app, px + 132, py + 446, 256, 46, [{ label: '开', act: 'muteSet', hit: { mute: false }, on: !muted }, { label: '关', act: 'muteSet', hit: { mute: true }, on: muted }]);
     text(c, '快捷键 M 也可开关', cx, py + 506, 11.5, INK2, 'center', false);
@@ -22470,9 +22472,8 @@ K.t('暂 驻',22,46,40,'#a42d19','left',true);K.tf(XY.lvPre(G)+G.lv.name+'」',2
 figure(c,G,port?W*.27:W*.21,port?350:H-20,Math.min(port?248:H-180,460));
 var sx=port?W*.57:24,sy=port?145:112;K.lines('已坚持 '+XY.fmtTime(G.t),sx,sy,port?W*.4:W*.36,14,19,T.ink,2,true);K.t('Lv '+G.level+' · 击杀 '+XY.fmtNum(G.kills),sx,sy+28,14,T.ink,'left',true);
 K.btn(x,y,w,48,'继续 · Esc / P','resume',null,{primary:true,size:22});K.btn(x+5,y+56,w*.46,44,'重新开始 · R','restart',null,{size:16});K.btn(x+w*.56,y+62,w*.43,44,'回到首页','home',null,{size:15});
-var ink=!!XY.inkBg(),muted=!!(XY.audio&&XY.audio.mute);y+=118;
-K.t('背景',x,y+18,13,T.inkSoft,'left',false);K.btn(x+44,y,w*.44-36,44,'水墨山水','bgSet',{ink:true},{on:ink,size:14});K.btn(x+w*.53,y+3,w*.47,44,'经典彩色','bgSet',{ink:false},{on:!ink,size:14});
-y+=53;K.t('音效',x,y+18,13,T.inkSoft,'left',false);K.btn(x+44,y,w*.28,44,'开','muteSet',{mute:false},{on:!muted});K.btn(x+w*.48,y+2,w*.28,44,'关 · M','muteSet',{mute:true},{on:muted});
+if(XY.inkBg)XY.inkBg();var muted=!!(XY.audio&&XY.audio.mute);y+=118;
+K.t('音效',x,y+18,13,T.inkSoft,'left',false);K.btn(x+44,y,w*.28,44,'开','muteSet',{mute:false},{on:!muted});K.btn(x+w*.48,y+2,w*.28,44,'关 · M','muteSet',{mute:true},{on:muted});
 y+=55;if(XY.auto){K.t('自动',x,y+18,13,T.inkSoft,'left',false);['points','treat','guest','pick'].forEach(function(key,i){var ww=(w-46)/4;K.btn(x+46+i*ww,y+[0,3,1,5][i],ww-2,44,XY.auto.LABEL[key],'autoTog',{key:key},{on:XY.auto.get(key),size:12});});}
 K.tf('小怪 +'+Math.round(XY.C.ENEMY_SCALE*G.t/60*100)+'% · BOSS +'+Math.round(XY.C.BOSS_SCALE*G.t/60*100)+'%（每分钟 +1% / +5%）',x,Math.min(H-13,y+65),w,11.5,T.inkSoft,'left',false,10.5);P.end(c);};
 var oldEnd=XY.R4.end;
@@ -23123,8 +23124,8 @@ X.step=function(g,dt){if(!g._simRandom)return step.apply(this,arguments);var sel
         case 'restart': startGame(); break;
         case 'home': goHome(); break;
         case 'resume': resume(); break;
-        case 'bgSet': if (XY.setInkBg) XY.setInkBg(!!h.ink); break;
-        case 'bg': if (XY.setInkBg) XY.setInkBg(!XY.inkBg()); break;                 // 水墨山水 / 经典彩色 背景开关
+        case 'bgSet': if (XY.setInkBg) XY.setInkBg(); break;
+        case 'bg': if (XY.setInkBg) XY.setInkBg(); break;
         case 'muteTog': if (XY.audio) { XY.audio.init(); XY.audio.setMute(!XY.audio.mute); msg(XY.audio.mute ? '音效已关' : '音效已开'); } break;
         case 'muteSet': if (XY.audio) { XY.audio.init(); XY.audio.setMute(!!h.mute); msg(XY.audio.mute ? '音效已关' : '音效已开'); } break;
         case 'hero': var pc0 = G.ctrl; XY.switchHero(G, h.i); if (app.partyPanel && G.ctrl !== pc0) XY.party.close(app); break;   // 面板里点人 = 换人并收起面板继续打
