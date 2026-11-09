@@ -232,17 +232,33 @@ function serverPulls() {
       rows.forEach(function (r) { exp[r.id] = r.cards; });
       var got = {};
       XY.SPECIALS.forEach(function (d) { got[d.id] = XY.save.spCards(d.id); });
-      return { rolls: rolls - before, pulls: XY.save.data.gacha10.pulls.join(), server: server.join(), got: got, exp: exp, choice: st.choice, drawOps: st.calls.filter(function (c) { return c.op === 'draw'; }).length };
+      return { rolls: rolls - before, pulls: XY.save.data.gacha10.pulls.join(), server: server.join(), got: got, exp: exp, choice: st.choice, notice: st.notice, drawOps: st.calls.filter(function (c) { return c.op === 'draw'; }).length };
     });
   });
   if (replaced.rolls !== 0) fail('logged-in path rolled locally');
   if (replaced.choice) fail('same progress opened a dialog');
   if (replaced.pulls !== replaced.server) fail('pulls not from server ' + replaced.pulls);
   if (replaced.drawOps < 1) fail('no draw rpc');
+  if (!replaced.notice || !replaced.notice.length) fail('card swap was silent ' + JSON.stringify(replaced.notice));
+  if (!replaced.notice.some(function (line) { return line.indexOf('−') >= 0 && line.indexOf('张') >= 0; })) fail('notice missing amounts ' + JSON.stringify(replaced.notice));
   Object.keys(replaced.exp).concat(Object.keys(replaced.got)).forEach(function (id) {
     if ((replaced.got[id] || 0) !== (replaced.exp[id] || 0)) fail('cards ' + id + ' got ' + replaced.got[id] + ' expected ' + replaced.exp[id]);
   });
-  console.log('server ten replaces a local roll');
+  console.log('server ten replaces a local roll', JSON.stringify(replaced.notice));
+  await page.setViewport({ width: 1920, height: 1080, deviceScaleFactor: 1 });
+  await page.evaluate(function () { window.__xy.app.menuMsg = null; window.__xy.app.screen = 'levels'; });
+  await frames(page, 4);
+  var swapHit = await page.evaluate(function () {
+    var z = window.__xy.app.zoom || 1, hits = (XY.ui.hits || []).filter(function (h) { return h.act === 'cloudSwapOk'; });
+    return { n: hits.length, h: hits.length ? hits[0].h * z : 0, w: hits.length ? hits[0].w * z : 0 };
+  });
+  if (!swapHit.n || swapHit.h < 44 || swapHit.w < 44) fail('swap notice hit ' + JSON.stringify(swapHit));
+  await page.screenshot({ path: path.join(OUT, 'card-swap.png') });
+  await page.setViewport({ width: 390, height: 844, deviceScaleFactor: 1 });
+  await frames(page, 3);
+  await page.screenshot({ path: path.join(OUT, 'card-swap-mobile.png') });
+  await page.setViewport({ width: 1280, height: 720, deviceScaleFactor: 1 });
+  await page.evaluate(function () { XY.hubUI.act({ act: 'cloudSwapOk' }, null, window.__xy.app); });
 
   await page.evaluate(function () { XY.account.signOut(); });
   var offline = await page.evaluate(function () {
@@ -356,11 +372,21 @@ function serverPulls() {
   await frames(page, 4);
   var pickHit = await page.evaluate(function () {
     var z = window.__xy.app.zoom || 1;
-    return (XY.ui.hits || []).filter(function (h) { return h.act === 'cloudPick'; }).map(function (h) { return { which: h.which, h: h.h * z }; });
+    return (XY.ui.hits || []).filter(function (h) { return h.act === 'cloudPick'; }).map(function (h) { return { which: h.which, w: h.w * z, h: h.h * z }; });
   });
-  if (pickHit.length < 2 || pickHit.some(function (h) { return h.h < 43; })) fail('pick hits ' + JSON.stringify(pickHit));
+  if (pickHit.length < 2 || pickHit.some(function (h) { return h.h < 44; })) fail('pick hits ' + JSON.stringify(pickHit));
+  if (Math.abs(pickHit[0].h - pickHit[1].h) > 1 || Math.abs(pickHit[0].w - pickHit[1].w) > 1) fail('pick sizes differ ' + JSON.stringify(pickHit));
   await page.screenshot({ path: path.join(OUT, 'merge-dialog.png') });
-  console.log('merge shot');
+  await page.setViewport({ width: 390, height: 844, deviceScaleFactor: 1 });
+  await frames(page, 3);
+  var pickMobile = await page.evaluate(function () {
+    var z = window.__xy.app.zoom || 1;
+    return (XY.ui.hits || []).filter(function (h) { return h.act === 'cloudPick'; }).map(function (h) { return { which: h.which, w: Math.round(h.w * z), h: Math.round(h.h * z) }; });
+  });
+  if (pickMobile.length < 2 || pickMobile.some(function (h) { return h.h < 44 || h.w < 44; })) fail('mobile pick hits ' + JSON.stringify(pickMobile));
+  if (pickMobile[0].w !== pickMobile[1].w || pickMobile[0].h !== pickMobile[1].h) fail('mobile buttons differ ' + JSON.stringify(pickMobile));
+  await page.screenshot({ path: path.join(OUT, 'merge-dialog-mobile.png') });
+  console.log('merge shot', JSON.stringify(pickMobile));
 
   var bar = await page.evaluate(function () { return document.querySelectorAll('[id^=xyFail]').length; });
   if (bar) fail('script error bar');

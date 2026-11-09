@@ -23995,7 +23995,7 @@ window.XY_LAZY_CHUNKS = [{"id": "ui", "src": "chunks/ui-008ff700a700.js", "bytes
   var ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ0b3JqZG1iYmFnendvamFtdG5qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQyNDMyMTksImV4cCI6MjEwOTgxOTIxOX0.zwmP89BMJSJTBwKRuipZOq9Jwz4WAAcFFRGi6TLGdqQ';
   var NONE = { show: false, fresh: false, rec: null };
   var session = null, uid = null, profile = null, avatarImg = null;
-  var choice = null, expectVer = null, reconciled = false, applying = false;
+  var choice = null, swapNote = null, expectVer = null, reconciled = false, applying = false;
   var drawDone = false, drawBusy = false, inflight = false, queued = false, timer = null;
   var authGate = false, real = null, libP = null, lastDraw = null;
   var stub = { on: false, spec: null, remote: null, drew: false, results: null };
@@ -24054,12 +24054,27 @@ window.XY_LAZY_CHUNKS = [{"id": "ui", "src": "chunks/ui-008ff700a700.js", "bytes
       lingshi: d.lingshi | 0, gacha: d.gacha10 && d.gacha10.pulls, sp: d.sp && d.sp.cards, levels: d.levels, deck: d.deck
     });
   }
-  function brief(d) {
+  function clockOf(d) {
+    var when = d && d.updatedAt ? new Date(d.updatedAt) : null;
+    if (!when || isNaN(when.getTime())) return '还没有';
+    return (when.getMonth() + 1) + '月' + when.getDate() + '日 ' + when.getHours() + ':' + (when.getMinutes() < 10 ? '0' : '') + when.getMinutes();
+  }
+  function statLines(d) {
     d = d || {};
-    var st = d.stats || {}, cards = (d.sp && d.sp.cards) || {}, n = 0, k, when = d.updatedAt ? new Date(d.updatedAt) : null;
+    var st = d.stats || {}, cards = (d.sp && d.sp.cards) || {}, n = 0, k;
     for (k in cards) if ((cards[k] | 0) > 0) n++;
-    var t = when && !isNaN(when.getTime()) ? ((when.getMonth() + 1) + '/' + when.getDate() + ' ' + when.getHours() + ':' + (when.getMinutes() < 10 ? '0' : '') + when.getMinutes()) : '还没有时间';
-    return '开局 ' + (st.runs | 0) + ' · 通关 ' + (st.wins | 0) + ' · 灵石 ' + (d.lingshi | 0) + ' · 角色卡 ' + n + ' · ' + t;
+    return [['开局', String(st.runs | 0)], ['通关', String(st.wins | 0)], ['灵石', String(d.lingshi | 0)], ['角色卡', String(n)], ['时间', clockOf(d)]];
+  }
+  function sheet(c, x, y, w, h) {
+    c.save();
+    c.fillStyle = 'rgba(58,50,38,0.10)';
+    c.fillRect(x + 3, y + 5, w, h);
+    c.fillStyle = '#fffaf0';
+    c.fillRect(x, y, w, h);
+    c.strokeStyle = '#3a3226';
+    c.lineWidth = 1.6;
+    c.strokeRect(x + 0.8, y + 0.8, w - 1.6, h - 1.6);
+    c.restore();
   }
   function payload() {
     var d;
@@ -24226,6 +24241,7 @@ window.XY_LAZY_CHUNKS = [{"id": "ui", "src": "chunks/ui-008ff700a700.js", "bytes
     if (!force && uid === id && reconciled) return;
     uid = id;
     choice = null;
+    swapNote = null;
     drawDone = false;
     drawBusy = false;
     reconciled = false;
@@ -24234,7 +24250,7 @@ window.XY_LAZY_CHUNKS = [{"id": "ui", "src": "chunks/ui-008ff700a700.js", "bytes
     reconcile();
   }
   function onSignedOut() {
-    session = null; uid = null; profile = null; avatarImg = null; choice = null;
+    session = null; uid = null; profile = null; avatarImg = null; choice = null; swapNote = null;
     expectVer = null; reconciled = false; drawDone = false; drawBusy = false; authGate = false;
   }
   function samePulls(a, b) {
@@ -24249,13 +24265,32 @@ window.XY_LAZY_CHUNKS = [{"id": "ui", "src": "chunks/ui-008ff700a700.js", "bytes
       if (cur < 0) XY.save.addSpCard(r.id, -cur);
     });
   }
+  function backLines(rows) {
+    var bag = {}, order = [], i, r;
+    for (i = 0; i < (rows || []).length; i++) {
+      r = rows[i];
+      if (!r || !r.add || !r.id) continue;
+      if (bag[r.id] == null) { bag[r.id] = 0; order.push(r.id); }
+      bag[r.id] += r.add;
+    }
+    return order.map(function (id) {
+      var d = XY.SP_BY && XY.SP_BY[id];
+      return (d && d.name ? d.name : id) + '  −' + bag[id] + ' 张';
+    });
+  }
   function applyDraw(body) {
     var pulls = (body && body.results) || [];
     if (pulls.length !== 10) throw new Error('draw');
     lastDraw = { already_drawn: !!body.already_drawn, results: pulls.slice() };
     var prev = XY.save.data && XY.save.data.gacha10;
     var same = prev && samePulls(prev.pulls, pulls);
-    if (prev && prev.granted && prev.rows && !same) revertRows(prev.rows);
+    var backed = [];
+    if (prev && prev.granted && prev.rows && !same) {
+      backed = backLines(prev.rows);
+      revertRows(prev.rows);
+    }
+    if (!same && prev && prev.pulls && prev.pulls.length === 10) swapNote = { back: backed, ack: false };
+    else if (same) swapNote = null;
     if (same && prev.granted) {
       prev.server = true;
       if (!prev.acked) prev._flip = true;
@@ -24263,7 +24298,8 @@ window.XY_LAZY_CHUNKS = [{"id": "ui", "src": "chunks/ui-008ff700a700.js", "bytes
     }
     var bag = {};
     (XY.SPECIALS || []).forEach(function (s) { bag[s.id] = XY.save.spCards(s.id); });
-    var rec = { seed: 'srv', pulls: pulls.slice(), rows: XY.gacha10.plan(pulls, bag), granted: false, acked: false, at: Date.now(), server: true, _flip: true };
+    var rec = { seed: 'srv', pulls: pulls.slice(), rows: XY.gacha10.plan(pulls, bag), granted: false, acked: false, at: Date.now(), server: true };
+    if (!(swapNote && !swapNote.ack)) rec._flip = true;
     XY.save.data.gacha10 = rec;
     XY.gacha10.grant(rec);
     if (XY.bgArt) pulls.forEach(function (id) { try { XY.bgArt(id); } catch (e) {} });
@@ -24356,6 +24392,7 @@ window.XY_LAZY_CHUNKS = [{"id": "ui", "src": "chunks/ui-008ff700a700.js", "bytes
     if (choice || (authGate && !session)) return NONE;
     if (session && !reconciled) return NONE;
     if (session && drawDone !== true && drawDone !== 'err') { startDraw(); return NONE; }
+    if (swapNote && !swapNote.ack) return NONE;
     if (session && drawDone === 'err') {
       var rec0 = XY.save.data && XY.save.data.gacha10;
       if (!(rec0 && rec0.pulls && rec0.pulls.length === 10)) return NONE;
@@ -24366,7 +24403,7 @@ window.XY_LAZY_CHUNKS = [{"id": "ui", "src": "chunks/ui-008ff700a700.js", "bytes
   };
   var oldBlock = XY.gacha10.blocking;
   XY.gacha10.blocking = function () {
-    if (choice) return true;
+    if (choice || (swapNote && !swapNote.ack)) return true;
     if (authGate && !session) return true;
     if (session && !reconciled) return true;
     if (session && drawDone !== true && drawDone !== 'err') return true;
@@ -24411,48 +24448,104 @@ window.XY_LAZY_CHUNKS = [{"id": "ui", "src": "chunks/ui-008ff700a700.js", "bytes
     paintBar(c, st, st.cw - 10 - w, 6, w, 44);
   }
   function paintModal(c, st) {
-    if (!choice || !XY.villainUI) return;
-    var VU = XY.villainUI, cw = st.cw, ch = st.ch;
-    var bw = Math.min(cw - 20, 560), bh = Math.min(ch - 16, bw >= 420 ? 318 : 430);
-    var x = (cw - bw) / 2, y = Math.max(8, (ch - bh) / 2);
+    if (!XY.villainUI) return;
+    if (choice) paintChoice(c, st);
+    else if (swapNote && !swapNote.ack) paintSwap(c, st);
+  }
+  function paintChoice(c, st) {
+    var VU = XY.villainUI, cw = st.cw, ch = st.ch, narrow = cw < 640;
+    var pad = narrow ? 16 : 28, titleSz = narrow ? 26 : 34, bodySz = narrow ? 17 : 20;
+    var lineSz = narrow ? 18 : 22, lineH = narrow ? 32 : 40, cardHead = narrow ? 30 : 36;
+    var cardH = 14 + cardHead + 8 + 5 * lineH + 14;
+    var stack = narrow;
+    var bw = Math.min(cw - (narrow ? 16 : 64), narrow ? cw - 16 : 960);
+    var explainH = (bodySz + 12) * 2;
+    var headH = pad + titleSz + 16 + (bodySz + 18) + explainH + 10;
+    var cardsBlock = stack ? cardH * 2 + 14 : cardH;
+    var btnH = 52;
+    var bh = headH + cardsBlock + 18 + btnH + pad;
+    if (bh > ch - 10) {
+      lineH = Math.max(26, lineH - Math.ceil((bh - (ch - 10)) / (stack ? 10 : 5)));
+      cardH = 14 + cardHead + 8 + 5 * lineH + 14;
+      cardsBlock = stack ? cardH * 2 + 14 : cardH;
+      bh = Math.min(ch - 10, headH + cardsBlock + 18 + btnH + pad);
+    }
+    var x = Math.round((cw - bw) / 2), y = Math.round(Math.max(6, (ch - bh) / 2));
     var conflict = choice.kind === 'conflict';
     st.hit(0, 0, cw, ch, 'cloudNoop');
     c.save(); c.fillStyle = 'rgba(58,50,38,0.34)'; c.fillRect(0, 0, cw, ch); c.restore();
-    if (VU.artCard) VU.artCard(c, x, y, bw, bh, { seed: 17, paper: '#fffaf0' });
+    sheet(c, x, y, bw, bh);
     st.hit(x, y, bw, bh, 'cloudNoop');
-    var title = conflict ? '云端存档更新了' : '两份存档都有进度';
-    VU.txt(c, title, x + 22, y + 32, 22, '#8d3b2c', 'left', true, bw - 44);
-    if (VU.brush) VU.brush(c, x + 22, y + 46, 88, 3.5, 0.3, 6);
-    var who = ((profile && profile.name) || '') + (profile && profile.email ? ' · ' + profile.email : '');
-    if (who) VU.txt(c, who, x + 22, y + 66, 13, '#6d6455', 'left', false, bw - 44);
+    var cursor = y + pad + titleSz * 0.55;
+    VU.txt(c, conflict ? '云端存档更新了' : '两份存档都有进度', x + pad, cursor, titleSz, '#8d3b2c', 'left', true, bw - pad * 2);
+    cursor += titleSz * 0.55 + 12;
+    c.fillStyle = 'rgba(141,59,44,0.7)';
+    c.fillRect(x + pad, cursor, 88, 2);
+    cursor += 18;
+    var who = ((profile && profile.name) || '') + (profile && profile.email ? '  ·  ' + profile.email : '');
+    if (who) { VU.txt(c, who, x + pad, cursor, bodySz, '#3a3226', 'left', false, bw - pad * 2); cursor += bodySz + 16; }
     var explain = conflict
       ? '保存时对不上云端的版本。下面是云端现在的档，没有覆盖它。请再选一次。'
       : '这台设备和云端都有取经进度。请选一份留下来，另一份不会被悄悄盖掉。';
-    var ey = y + (who ? 84 : 70);
-    if (VU.wrap) VU.wrap(c, explain, x + 22, ey, bw - 44, 20, 14.5, '#3a3226', false, 3);
-    var cardY = ey + 62, cardH = 72, gap = 10, colW = (bw - 44 - gap) / 2;
-    function card(px, label, text) {
-      if (VU.artCard) VU.artCard(c, px, cardY, colW, cardH, { seed: 4, paper: '#fffdf6', lw: 1.6 });
-      VU.txt(c, label, px + 10, cardY + 18, 13, '#8d3b2c', 'left', true, colW - 20);
-      if (VU.wrap) VU.wrap(c, text, px + 10, cardY + 36, colW - 20, 16, 12.5, '#3a3226', false, 2);
+    if (VU.wrap) cursor += VU.wrap(c, explain, x + pad, cursor, bw - pad * 2, bodySz + 10, bodySz, '#3a3226', false, 3) + 12;
+    var colW = stack ? bw - pad * 2 : Math.floor((bw - pad * 2 - 16) / 2);
+    function card(px, py, label, data) {
+      sheet(c, px, py, colW, cardH);
+      VU.txt(c, label, px + 16, py + 14 + cardHead * 0.4, narrow ? 18 : 22, '#8d3b2c', 'left', true, colW - 32);
+      var rows = statLines(data), ly = py + 14 + cardHead + 8 + lineH * 0.35, i;
+      for (i = 0; i < rows.length; i++) {
+        VU.txt(c, rows[i][0], px + 16, ly, lineSz, '#6d6455', 'left', false, colW * 0.36);
+        VU.txt(c, rows[i][1], px + colW - 16, ly, lineSz, '#2b1c08', 'right', true, colW * 0.62);
+        ly += lineH;
+      }
     }
-    card(x + 22, '这台设备', brief(XY.save.data));
-    card(x + 22 + colW + gap, '云端' + (choice.version != null ? ' · 版本 ' + choice.version : ''), brief(choice.remoteData));
-    var by = y + bh - 58, wide = bw >= 420, btnW = wide ? (bw - 44 - 10) / 2 : bw - 44;
-    if (wide) {
-      st.btn(x + 22, by, btnW, 44, '留这台设备', 'cloudPick', { sz: 15, rgb: '58,50,38', vh: 32, ex: { which: 'local' } });
-      st.btn(x + 22 + btnW + 10, by, btnW, 44, '用云端这份', 'cloudPick', { pri: true, col: '#8d3b2c', sz: 15, stack: false, ex: { which: 'cloud' } });
-    } else {
-      st.btn(x + 22, by - 50, btnW, 44, '留这台设备', 'cloudPick', { sz: 15, rgb: '58,50,38', vh: 32, ex: { which: 'local' } });
-      st.btn(x + 22, by, btnW, 44, '用云端这份', 'cloudPick', { pri: true, col: '#8d3b2c', sz: 15, stack: false, ex: { which: 'cloud' } });
+    card(x + pad, cursor, '这台设备', XY.save.data);
+    card(stack ? x + pad : x + pad + colW + 16, stack ? cursor + cardH + 14 : cursor, '云端' + (choice.version != null ? '  ·  版本 ' + choice.version : ''), choice.remoteData);
+    var gap = narrow ? 16 : 24, btnW = Math.floor((bw - pad * 2 - gap) / 2), by = y + bh - pad - btnH, bsz = narrow ? 17 : 20;
+    function pickBtn(px, label, which) {
+      sheet(c, px, by, btnW, btnH);
+      st.hit(px, by, btnW, btnH, 'cloudPick', { which: which });
+      VU.txt(c, label, px + btnW / 2, by + btnH / 2 + 1, bsz, '#2b1c08', 'center', true, btnW - 12);
     }
+    pickBtn(x + pad, '留这台设备', 'local');
+    pickBtn(x + pad + btnW + gap, '用云端这份', 'cloud');
+  }
+  function paintSwap(c, st) {
+    var VU = XY.villainUI, cw = st.cw, ch = st.ch, narrow = cw < 640;
+    var lines = (swapNote && swapNote.back) || [];
+    var titleSz = narrow ? 24 : 32, bodySz = narrow ? 17 : 20, lineSz = narrow ? 18 : 22, lineH = narrow ? 30 : 36;
+    var bw = Math.min(cw - (narrow ? 16 : 80), narrow ? cw - 16 : 760);
+    var listH = Math.max(lineH, lines.length * lineH);
+    var bh = Math.min(ch - 12, (narrow ? 28 : 36) + titleSz + 20 + (bodySz + 12) * 3 + 12 + listH + 16 + 52 + 28);
+    var x = Math.round((cw - bw) / 2), y = Math.round(Math.max(6, (ch - bh) / 2)), pad = narrow ? 16 : 28;
+    st.hit(0, 0, cw, ch, 'cloudNoop');
+    c.save(); c.fillStyle = 'rgba(58,50,38,0.4)'; c.fillRect(0, 0, cw, ch); c.restore();
+    sheet(c, x, y, bw, bh);
+    st.hit(x, y, bw, bh, 'cloudNoop');
+    var cursor = y + pad + titleSz * 0.5;
+    VU.txt(c, '角色卡已按账号改回', x + pad, cursor, titleSz, '#8d3b2c', 'left', true, bw - pad * 2);
+    cursor += titleSz * 0.65 + 16;
+    var explain = lines.length
+      ? '这台设备先抽过的十连，和这个账号不是同一组。登录后以账号那次为准，本机多发的角色卡已经退回：'
+      : '这台设备上的十连和账号不是同一组。登录后改用账号的结果，本机没有多发角色卡。';
+    if (VU.wrap) cursor += VU.wrap(c, explain, x + pad, cursor, bw - pad * 2, bodySz + 10, bodySz, '#2b1c08', false, 4) + 8;
+    var i, show = lines.slice(0, Math.max(1, Math.floor((y + bh - 52 - 36 - cursor) / lineH)));
+    for (i = 0; i < show.length; i++) VU.txt(c, show[i], x + pad + 8, cursor + lineH * 0.4, lineSz, '#8d3b2c', 'left', true, bw - pad * 2 - 16), cursor += lineH;
+    if (lines.length > show.length) VU.txt(c, '还有 ' + (lines.length - show.length) + ' 项', x + pad + 8, cursor + lineH * 0.4, lineSz, '#6d6455', 'left', false, bw - pad * 2);
+    var btnW = Math.min(280, bw - pad * 2), btnH = 52;
+    st.btn(x + (bw - btnW) / 2, y + bh - pad - btnH, btnW, btnH, '知道了', 'cloudSwapOk', { sz: narrow ? 18 : 20, rgb: '58,50,38', vh: 48 });
   }
 
   var CL = XY.account = {
     signedIn: function () { return !!session; },
     name: function () { return (profile && profile.name) || ''; },
     email: function () { return (profile && profile.email) || ''; },
-    holdGacha: function () { return !!choice; },
+    holdGacha: function () { return !!choice || !!(swapNote && !swapNote.ack); },
+    ackSwap: function () {
+      if (swapNote) swapNote.ack = true;
+      var rec = XY.save.data && XY.save.data.gacha10;
+      if (rec && !rec.acked) rec._flip = true;
+    },
     barWidth: function (cw) {
       if (cw >= 1000) return 240;
       if (cw >= 720) return 210;
@@ -24529,6 +24622,7 @@ window.XY_LAZY_CHUNKS = [{"id": "ui", "src": "chunks/ui-008ff700a700.js", "bytes
       state: function () {
         return {
           signedIn: !!session, name: CL.name(), email: CL.email(), choice: choice && choice.kind, version: expectVer,
+          notice: (swapNote && !swapNote.ack) ? (swapNote.back || []).slice() : null,
           reconciled: reconciled, draw: drawDone, calls: calls.slice(), lastDraw: lastDraw,
           remoteVersion: stub.remote && stub.remote.version,
           remoteRuns: stub.remote && stub.remote.data && stub.remote.data.stats && stub.remote.data.stats.runs,
@@ -24575,6 +24669,7 @@ window.XY_LAZY_CHUNKS = [{"id": "ui", "src": "chunks/ui-008ff700a700.js", "bytes
       if (h.act === 'cloudLogin') { CL.signIn(); return true; }
       if (h.act === 'cloudLogout') { CL.signOut(); return true; }
       if (h.act === 'cloudPick') { CL.choose(h.which); return true; }
+      if (h.act === 'cloudSwapOk') { CL.ackSwap(); return true; }
       if (h.act === 'cloudPrivacy') { try { window.open('privacy.html', '_blank'); } catch (e) {} return true; }
       if (h.act === 'cloudNoop') return true;
       return oldAct(h, p, a);
