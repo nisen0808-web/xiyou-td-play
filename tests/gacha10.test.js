@@ -269,6 +269,25 @@ async function frames(page, n) {
   if (marks.worst >= 0.02) fail('立绘宽高比偏差 ' + marks.worst);
   if (marks.scales.some(function (s) { return Math.abs(s - 1) > 0.001; })) fail('翻牌缩放不是 1：' + marks.scales.join(','));
   if (marks.cards.some(function (r) { return Math.abs(r - marks.ratio) > 0.001; })) fail('卡片宽高比不固定 ' + marks.cards.join(','));
+  var spine = await page.evaluate(function () {
+    var cv = document.createElement('canvas'); cv.width = 220; cv.height = 400;
+    var ctx = cv.getContext('2d');
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, 220, 400);
+    XY.gacha10.paintFlipFx(ctx, 30, 20, 160, 340, 0.6, 4);
+    var data = ctx.getImageData(0, 0, 220, 400).data, bars = 0, x, y, run, max, i, dark;
+    for (x = 30; x < 190; x++) {
+      run = 0; max = 0;
+      for (y = 28; y < 350; y++) {
+        i = (y * 220 + x) * 4;
+        dark = data[i] < 90 && data[i + 1] < 90 && data[i + 2] < 90 && data[i + 3] > 140;
+        if (dark) { run++; if (run > max) max = run; } else run = 0;
+      }
+      if (max > 240) bars++;
+    }
+    return bars;
+  });
+  if (spine > 0) fail('翻牌中有独立竖条 ' + spine);
+  console.log('flip fx has no vertical bar');
   var midAt = marks.midAt, doneAt = marks.doneAt;
   var viewports = [[360, 640], [390, 844], [430, 932], [640, 360], [844, 390], [932, 430], [1920, 1080]];
   for (var vi = 0; vi < viewports.length; vi++) {

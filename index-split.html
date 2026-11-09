@@ -9273,14 +9273,14 @@ XY.TRAITS = {
     if (k === 'water') {
       var wc = accOf('#2aa6b8');
       IP.stroke(c, x, y, x - ca * 20, y - sa * 20, p.r * 1.0, wc, 0.55, sd + 1, 0.06); IP.stroke(c, x, y, x - ca * 16, y - sa * 16, p.r * 0.5, INK, 0.5, sd + 2, 0.06);
-      c.fillStyle = 'rgba(150,222,232,0.95)'; c.strokeStyle = 'rgba(' + INK + ',0.85)'; c.lineWidth = 1.5; c.beginPath(); c.arc(x, y, p.r * 0.85, 0, PI2); c.fill(); c.stroke();
+      c.fillStyle = 'rgba(232,236,230,0.9)'; c.strokeStyle = 'rgba(' + INK + ',0.9)'; c.lineWidth = 1.6; c.beginPath(); c.arc(x, y, p.r * 0.72, 0, PI2); c.fill(); c.stroke();
     } else if (k === 'ring') {
       var rc = accOf(p.magic ? '#4aa3d6' : '#e0642b'), rr = p.r + 4, rot = R4rt() * 9;
       c.fillStyle = 'rgba(' + rc + ',0.14)'; c.beginPath(); c.arc(x, y, rr, 0, PI2); c.fill();
       IP.ring(c, x, y, rr, 3.4, rc, 0.8, 7, 4, 1, rot); IP.ring(c, x, y, rr, 1.5, INK, 0.85, 11, 3, 1, rot + 1);
     } else if (k === 'sutra') {
-      c.fillStyle = '#fff2b5'; c.strokeStyle = 'rgba(' + INK + ',0.8)'; c.lineWidth = 1.6; c.save(); c.translate(x, y); c.rotate(a); rrect(c, -8, -5, 16, 10, 2); c.fill(); c.stroke();
-      c.fillStyle = 'rgba(190,40,30,0.85)'; c.fillRect(-2, -2, 4, 4); c.restore();
+      c.fillStyle = '#f7f1e2'; c.strokeStyle = 'rgba(' + INK + ',0.9)'; c.lineWidth = 1.5; c.save(); c.translate(x, y); c.rotate(a); rrect(c, -9, -5, 18, 10, 1); c.fill(); c.stroke();
+      c.fillStyle = 'rgba(36,28,22,0.85)'; c.fillRect(-1.5, -3, 3, 6); c.restore();
     } else if (k === 'arrow') {
       IP.stroke(c, x + ca * 8, y + sa * 8, x - ca * 16, y - sa * 16, 2.4, INK, 0.9, sd + 3, 0.04);
     } else {
@@ -18771,7 +18771,7 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
         var sold = st.sold[k], r = { sold: sold, btn: { label: sold ? '已买走' : (sl.kind === 'reroll' ? '刷新 ' : '买 ') + sl.price + (can(sl.price) ? '' : ' 不够'), act: sold ? null : 'shopBuy', ex: { slot: k }, primary: !sold && can(sl.price), off: sold || !can(sl.price) } };
         if (sl.kind === 'sp') { r.spId=sl.id; var d = XY.SP_BY[sl.id], lv = S.spLevel(sl.id), nx = XY.spNext(sl.id); r.title = '角色卡 · ' + d.name; r.sub = d.role; r.l2 = lv ? '已有 ' + S.spCards(sl.id) + ' 张 · Lv' + lv + (nx ? '（再 ' + (nx.need - nx.have) + ' 张升级）' : '（满级）') : '已有 ' + S.spCards(sl.id) + '/' + XY.SP_LV_AT[0] + ' 张'; r.icon = function (x, y, s) { var hd=XY.specialDef(sl.id,Math.max(1,lv)); XY.hud2.face(c,{id:sl.id,def:hd},x+s/2,y+s/2,s*.44,app.rt); }; r.col = d.frame; }
         else if (sl.kind === 'card') { var cd = XY.CARD_BY[sl.id], Rr = XY.RARITY[cd.r]; r.title = '法宝 · ' + cd.name; r.sub = Rr.name + ' · ' + XY.CARD_SETS[cd.set].name + '套'; r.l2 = XY.cardFxText(cd, 1); r.icon = function (x, y, s) { R.drawCardMini(c, cd, x + s / 2, y + s / 2, s * 0.7, s, 1); }; r.col = Rr.color; }
-        else if (sl.kind === 'shard') { r.title = '皮肤碎片 ×' + sl.n; r.sub = '集齐解锁皮肤'; r.l2 = '现有 ' + S.data.shards + ' 枚'; r.icon = function (x, y, s) { c.fillStyle = '#bfe3fa'; c.strokeStyle = '#4a90d9'; c.lineWidth = 2; c.beginPath(); c.moveTo(x + s / 2, y + 4); c.lineTo(x + s - 8, y + s / 2); c.lineTo(x + s / 2, y + s - 4); c.lineTo(x + 8, y + s / 2); c.closePath(); c.fill(); c.stroke(); }; }
+        else if (sl.kind === 'shard') { r.title = '皮肤碎片 ×' + sl.n; r.sub = '集齐解锁皮肤'; r.l2 = '现有 ' + S.data.shards + ' 枚'; r.icon = function (x, y, s) { c.strokeStyle = '#3a3226'; c.fillStyle = 'rgba(58,50,38,0.12)'; c.lineWidth = 1.6; c.beginPath(); c.moveTo(x + s / 2, y + 6); c.lineTo(x + s - 10, y + s / 2); c.lineTo(x + s / 2, y + s - 6); c.lineTo(x + 10, y + s / 2); c.closePath(); c.fill(); c.stroke(); }; }
         else { r.title = '刷新货架'; r.sub = '换一批角色卡和法宝'; r.l2 = ''; r.icon = function (x, y, s) { c.strokeStyle = '#8a7d63'; c.lineWidth = 5; c.lineCap = 'round'; c.beginPath(); c.arc(x + s / 2, y + s / 2, s * 0.3, 0.6, 5.4); c.stroke(); c.lineCap = 'butt'; }; }
         items.push(r);
       });
@@ -18779,61 +18779,59 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
       var list = tab === 'fb' ? XY.shop.fbList() : XY.shop.solList();
       list.forEach(function (r0) {
         var ok = can(r0.price) && !r0.full, r = { btn: { label: r0.full ? '已满级' : (tab === 'fb' ? '解锁 ' : '买 1 张 ') + r0.price + (ok || r0.full ? '' : ' 不够'), act: tab === 'fb' ? 'shopBuyFb' : 'shopBuySol', ex: tab === 'fb' ? { id: r0.id } : { t: r0.type }, primary: ok, off: !ok } };
-        if (tab === 'fb') { var it = XY.fabao.BY[r0.id]; r.title = (it.kind === 'l' ? '灵物 · ' : '法宝 · ') + it.name; r.sub = it.d; r.l2 = XY.fabao.whereText(r0.id) ? '也可以：' + XY.fabao.whereText(r0.id) : ''; r.icon = function (x, y, s) { c.fillStyle = it.kind === 'l' ? '#e8dcc0' : '#f3e2b0'; c.beginPath(); c.arc(x + s / 2, y + s / 2, s / 2 - 1, 0, PI2); c.fill(); c.lineWidth = 1.6; c.strokeStyle = '#b8863b'; c.stroke(); if (!(XY.ICONINK && XY.ICONINK.draw(c, it.name, x + s / 2, y + s / 2, s * 0.9))) K.t(it.name.charAt(0), x + s / 2, y + s / 2, 22, T.ink, 'center', true); }; }
-        else { var td = XY.TOWERS[r0.type]; r.title = '天兵卡 · ' + td.name; r.sub = '已有 ' + r0.cards + ' 张' + (r0.lv ? ' · Lv' + r0.lv : ' · 还没解锁'); r.l2 = r0.full ? '已满级' : '造价 ' + td.cost + ' 金币'; r.icon = function (x, y, s) { c.fillStyle = td.color; c.beginPath(); c.arc(x + s / 2, y + s / 2, s / 2 - 1, 0, PI2); c.fill(); if (!(XY.ICONINK && XY.ICONINK.sol(c, r0.type, x + s / 2, y + s * 0.46, s * 0.95))) K.t(td.name.charAt(0), x + s / 2, y + s / 2, 22, '#fff', 'center', true); }; }
+        if (tab === 'fb') { var it = XY.fabao.BY[r0.id]; r.title = (it.kind === 'l' ? '灵物 · ' : '法宝 · ') + it.name; r.sub = it.d; r.l2 = XY.fabao.whereText(r0.id) ? '也可以：' + XY.fabao.whereText(r0.id) : ''; r.icon = function (x, y, s) { if (!(XY.ICONINK && XY.ICONINK.draw(c, it.name, x + s / 2, y + s / 2, s * 0.9))) K.t(it.name.charAt(0), x + s / 2, y + s / 2, Math.max(28, Math.round(s * 0.42)), T.ink, 'center', true); }; }
+        else { var td = XY.TOWERS[r0.type]; r.title = '天兵卡 · ' + td.name; r.sub = '已有 ' + r0.cards + ' 张' + (r0.lv ? ' · Lv' + r0.lv : ' · 还没解锁'); r.l2 = r0.full ? '已满级' : '造价 ' + td.cost + ' 金币'; r.icon = function (x, y, s) { if (!(XY.ICONINK && XY.ICONINK.sol(c, r0.type, x + s / 2, y + s * 0.5, s * 0.92))) K.t(td.name.charAt(0), x + s / 2, y + s / 2, Math.max(28, Math.round(s * 0.42)), T.ink, 'center', true); }; }
         items.push(r);
       });
     }
-    // 行脚货摊：左边一件主货，其他货物以开放货签错落陈列；不再是六张等宽白卡。
-    var top = port ? f.y + 54 : f.y + 6, bot = f.y + f.h, bodyH=bot-top-52;
-    var featuredH = port ? Math.min(190,bodyH*0.31) : bodyH, featuredW = port ? f.w : Math.min(300,f.w*0.30);
-    var compact=!port && W<950, per=compact?3:6, from=P.pager(items.length,per,'shop-'+tab,f.x,bot-46,f.w,tab==='shelf');
-    if (!items.length) K.lines('能买的法宝 / 灵物都已解锁。其余的要靠击败洞主得到。',f.x+18,top+44,f.w-36,15,22,T.inkSoft,4,true);
-    if (items.length<=per) {
-      if(tab==='shelf') K.btn(f.x,bot-46,port?f.w:280,44,'抽一张法宝 '+S.CARD_PRICE+' 灵石','buyCard',null,{off:S.data.lingshi<S.CARD_PRICE,size:15});
-      else K.tf(tab==='fb'?'买下就永久解锁，开局可以带；洞主专属法宝不卖':'天兵卡：1 张 Lv1，3 张 Lv2，6 张 Lv3；每次买 1 张',f.x+2,bot-24,f.w-4,12.5,T.inkSoft,'left',false,11);
-    } else if(tab==='shelf') K.btn(f.x+84,bot-46,f.w-168,44,'抽法宝 '+S.CARD_PRICE+' · '+((P.page['shop-'+tab]||0)+1)+'/'+Math.ceil(items.length/per),'buyCard',null,{off:S.data.lingshi<S.CARD_PRICE,size:14});
-    function shelfLine(x,y,w,seed){ if(XY.INKP) XY.INKP.stroke(c,x,y,x+w,y+Math.sin(seed)*1.2,1.6,'83,61,34',0.38,seed,0.004); }
-    function buy(r,x,y,w) {
-      var hv=K.over(x,y,w,44), on=r.btn.primary, red='#b8300f';
-      c.save();c.translate(x+w/2,y+22);c.rotate(-0.025);c.fillStyle=r.btn.off?'rgba(100,80,45,0.09)':on?(hv?'#c74427':red):'rgba(184,48,15,0.12)';c.fillRect(-w/2,-17,w,34);c.restore();
-      var bc=r.btn.off?T.inkSoft:on?'#fff2d6':red;
-      if(/不够/.test(r.btn.label)){K.tf(r.btn.label.replace(/\s+/g,'').replace('不够',''),x+w/2,y+15,w-6,12,bc,'center',true,11);K.t('不够',x+w/2,y+29,11,bc,'center',true);}
-      else K.tf(r.btn.label,x+w/2,y+22,w-6,14,bc,'center',true,11);
-      if(r.btn.act&&!r.btn.off)K.hit(x,y,w,44,r.btn.act,r.btn.ex);
-    }
-    items.slice(from,from+per).forEach(function(r,k){
-      var x,y,ww,iw,tx,ty,iconX,iconY,bx,by,bw;
-      if(k===0){
-        x=f.x+6;y=top+10;ww=featuredW-16;iw=port?116:compact?80:Math.min(230,featuredW-28);
-        K.t('行脚珍藏',x,y+8,15,'#a42d19','left',true);
-        if(port){iconX=x;iconY=y+40;tx=x+146;ty=y+28;ww=f.w-158;bx=tx;by=y+featuredH-56;bw=ww;}
-        else {iconX=x+(featuredW-iw)/2;iconY=y+(compact?44:82);tx=x+10;ty=y+35;bx=x+10;by=top+bodyH-54;bw=Math.min(210,featuredW-30);}
-        c.save();if(r.sold)c.globalAlpha=.4;r.icon(iconX,iconY,iw);c.restore();
-        K.tf(r.title,tx,ty,ww,port?19:compact?18:25,T.ink,'left',true,12);
-        var sy=port?ty+31:compact?top+146:iconY+iw+28;
-        var ny=K.lines(r.sub||'',tx,sy,ww,compact?12:14,compact?16:19,T.inkSoft,port?3:compact?2:3,false);
-        var ey=r.l2?K.lines(r.l2,tx,ny+4,ww,compact?11.5:13,compact?14:18,'#8a4c23',compact?2:3,false):ny;
-        if(compact)by=bot-92;else if(!port)by=Math.min(by,ey+22);buy(r,bx,by,bw);
-      }else{
-        var q=k-1;
-        if(port){
-          var rh=(bodyH-featuredH-12)/5,rev=q%2,yy=top+featuredH+10+q*rh,sz=Math.min(66,rh-12),xx=f.x+[0,12,4,18,8][q];
-          iconX=rev?f.x+f.w-sz-9:xx+3;iconY=yy+3;tx=rev?f.x+8:xx+sz+14;ty=yy+11;ww=f.w-sz-44;iw=sz;bx=tx+(rev?4:0);by=yy+rh-39;bw=Math.min(104,ww);
-        }else if(compact){
-          var rh=bodyH/2;iconX=f.x+featuredW+28+(q?18:0);iconY=top+q*rh+16;iw=Math.min(70,rh-48);tx=iconX+iw+16;ty=top+q*rh+18;ww=f.x+f.w-tx-8;bx=tx+(q?20:0);by=top+(q+1)*rh-44;bw=104;
-        }else{
-          var pos=[[.35,.045,.25],[.67,.0,.28],[.53,.34,.30],[.33,.68,.31],[.78,.65,.21]][q];
-          var xx=f.x+f.w*pos[0],yy=top+bodyH*pos[1];iw=Math.min(108,bodyH*.17);iconX=xx;iconY=yy+12;tx=xx+iw+12;ty=yy+20;ww=Math.min(f.w*pos[2]-iw-16,f.x+f.w-tx-8);bx=tx+(q%2?8:0);by=yy+122;bw=Math.min(128,Math.max(76,ww));
-        }
-        c.save();if(r.sold)c.globalAlpha=.4;r.icon(iconX,iconY,iw);c.restore();
-        K.tf(r.title,tx,ty,ww,port?14:compact?17:18,T.ink,'left',true,11.5);
-        var ny=K.lines(r.sub||'',tx,ty+(port?20:25),ww,port?11.5:12.5,port?14:17,T.inkSoft,port?1:compact?2:3,false);
-        if(r.l2)K.lines(r.l2,tx,ny+2,ww,port?11.5:12.5,port?14:17,'#8a4c23',port?1:2,false);
-        buy(r,bx,by,bw);
+    // 整齐的水墨卡格：每张一样大，购买钮钉在卡底，说明留在格子下面。
+    var cols = port ? 2 : 3, rowsN = 2, per = cols * rowsN;
+    var note = tab === 'shelf' ? '角色卡和法宝用灵石买。抽一张法宝也会出现在下面。' : (tab === 'fb' ? '买下就永久解锁，开局可以带。洞主专属的不在这里卖。' : '天兵卡：1 张是 Lv1，3 张 Lv2，6 张 Lv3。每次买 1 张。');
+    var needPager = items.length > per;
+    var showBuy = tab === 'shelf';
+    var ctrlY = f.y + f.h - 8 - 44;
+    var noteY = (needPager || showBuy) ? ctrlY - 22 : f.y + f.h - 16;
+    var gridTop = port ? ty0 + 54 : f.y + 8;
+    var gridBot = noteY - 18;
+    var gap = port ? 8 : 14;
+    var from = P.pager(items.length, per, 'shop-' + tab, f.x, ctrlY, f.w, true);
+    var availW = f.w, availH = Math.max(120, gridBot - gridTop);
+    var cardW = Math.floor((availW - gap * (cols - 1)) / cols);
+    var cardH = Math.floor((availH - gap * (rowsN - 1)) / rowsN);
+    var gridW = cols * cardW + gap * (cols - 1);
+    var x0 = f.x + Math.max(0, Math.round((f.w - gridW) / 2));
+    function paperCard(x, y, w, h) {
+      c.save();
+      c.fillStyle = 'rgba(58,50,38,0.1)'; c.fillRect(x + 3, y + 4, w, h);
+      c.fillStyle = '#fffdf6'; c.fillRect(x, y, w, h);
+      if (XY.INKP) {
+        XY.INKP.stroke(c, x + 3, y + 2, x + w - 4, y + 4, 1.7, '36,28,22', 0.72, (x + y) | 0, 0.03);
+        XY.INKP.stroke(c, x + 4, y + h - 3, x + w - 6, y + h - 1, 2, '36,28,22', 0.8, (x * 3 + y) | 0, 0.03);
       }
+      c.strokeStyle = 'rgba(36,28,22,0.72)'; c.lineWidth = 1.3; c.strokeRect(x + 0.6, y + 0.6, w - 1.2, h - 1.2);
+      c.restore();
+    }
+    if (!items.length) K.lines('能买的法宝和灵物都已解锁。其余的要靠击败洞主得到。', f.x + 16, gridTop + 36, f.w - 32, 16, 22, T.inkSoft, 4, true);
+    items.slice(from, from + per).forEach(function (r, k) {
+      var col = k % cols, row = Math.floor(k / cols);
+      var x = x0 + col * (cardW + gap), y = gridTop + row * (cardH + gap);
+      paperCard(x, y, cardW, cardH);
+      var iconS = Math.min(cardW - 28, Math.max(56, Math.floor(cardH * 0.36)));
+      var ix = x + (cardW - iconS) / 2, iy = y + 14;
+      c.save(); if (r.sold) c.globalAlpha = 0.4;
+      if (r.icon) r.icon(ix, iy, iconS);
+      c.restore();
+      var ty = iy + iconS + 6;
+      K.tf(r.title || '', x + cardW / 2, ty, cardW - 16, port ? 14 : 17, T.ink, 'center', true, 12);
+      K.tf(r.sub || '', x + cardW / 2, ty + 20, cardW - 18, port ? 11 : 13, T.inkSoft, 'center', false, 11);
+      if (r.l2) K.tf(r.l2, x + cardW / 2, ty + 38, cardW - 18, port ? 11 : 12, '#8a4c23', 'center', false, 10);
+      var by = y + cardH - 52;
+      var lab = (r.btn && r.btn.label) || '';
+      K.btn(x + 10, by, cardW - 20, 44, lab, r.btn && !r.btn.off ? r.btn.act : null, r.btn && r.btn.ex, { off: !r.btn || !!r.btn.off, primary: !!(r.btn && r.btn.primary), size: port ? 12 : 14 });
     });
-    K.msg(f.x + f.w / 2, f.y + f.h - 62, 'center');
+    K.tf(note, f.x + 8, noteY, f.w - 16, 13, T.inkSoft, 'left', false, 11);
+    if (showBuy) K.btn(needPager ? f.x + 80 : f.x, ctrlY, needPager ? f.w - 160 : Math.min(f.w, port ? f.w : 300), 44, '抽一张法宝 ' + S.CARD_PRICE, 'buyCard', null, { off: S.data.lingshi < S.CARD_PRICE, size: 14 });
+    K.msg(f.x + f.w / 2, noteY - 16, 'center');
     P.end(c);
   }
 
@@ -22457,7 +22455,9 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
     kt(c, '天机', x + w / 2, y + h * 0.74, Math.max(18, Math.min(32, w * 0.13)), '#2b1c08', 'center', w - 24);
   }
   function drawFront(c, r, x, y, w, h, seed, sealP) {
-    var band = Math.max(52, Math.min(84, h * 0.18)), picH = Math.max(24, h - band - 18);
+    var subY = y + h - Math.max(48, Math.min(60, h * 0.15));
+    var nameY = subY - Math.max(18, Math.min(26, h * 0.06));
+    var picH = Math.max(24, nameY - y - 28);
     var ms = Math.round(Math.max(34, Math.min(w * 0.3, h * 0.16, 62)));
     var drop = sealP >= 1 ? 0 : (1 - gachaEase(Math.max(0, (sealP - 0.15) / 0.7)));
     var sy = y + 10 - drop * Math.min(56, h * 0.1);
@@ -22465,31 +22465,18 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
     gachaPortraitFit(c, r.id, x + 12, y + 12, w - 24, picH);
     if (r.kind === 'unlock') goldBrush(c, x, y, w, h, sealP, seed);
     VU.drawSeal(c, x + w - ms - 12, sy, ms, ms, r.kind === 'unlock' ? '得' : '复', { style: 'solid', col: r.kind === 'unlock' ? RED : '#5a5146', sz: Math.round(ms * 0.56), rot: -0.07 - drop * 0.25, stack: false, seed: 80 + seed });
-    kt(c, gachaName(r.id), x + w / 2, y + h - band + band * 0.38, Math.max(16, Math.min(28, w * 0.14)), '#2b1c08', 'center', w - 18);
-    kt(c, r.text || '', x + w / 2, y + h - band * 0.28, Math.max(12, Math.min(16, w * 0.075)), r.kind === 'unlock' ? RED : SOFT, 'center', w - 16, false);
+    kt(c, gachaName(r.id), x + w / 2, nameY, Math.max(16, Math.min(28, w * 0.14)), '#2b1c08', 'center', w - 18);
+    kt(c, r.text || '', x + w / 2, subY, Math.max(12, Math.min(16, w * 0.075)), r.kind === 'unlock' ? RED : SOFT, 'center', w - 16, false);
   }
   function flipCard(c, r, x, y, w, h, seed, p) {
     p = p <= 0 ? 0 : (p >= 1 ? 1 : p);
     var front = p >= 0.5;
     if (!front) drawBack(c, x, y, w, h, seed);
     else drawFront(c, r, x, y, w, h, seed, p >= 1 ? 1 : (p - 0.5) / 0.5);
-    if (p > 0.08 && p < 0.92) {
-      inkBloom(c, x, y, w, h, p);
-      var sweep = p, sx = x + 8 + (w - 16) * sweep, sk;
-      c.save();
-      c.strokeStyle = 'rgba(36,28,22,' + (0.55 * Math.sin(p * Math.PI)).toFixed(3) + ')';
-      c.lineWidth = Math.max(7, w * 0.035); c.lineCap = 'round';
-      c.beginPath(); c.moveTo(sx, y + 10); c.quadraticCurveTo(sx + 8, y + h * 0.5, sx - 6, y + h - 12); c.stroke();
-      c.fillStyle = 'rgba(168,42,32,' + (0.35 * Math.sin(p * Math.PI)).toFixed(3) + ')';
-      for (sk = 0; sk < 7; sk++) {
-        var ang = sk / 7 * Math.PI * 2 + seed * 0.2;
-        var rad = Math.min(w, h) * (0.18 + 0.12 * gachaHash(seed + sk));
-        c.beginPath();
-        c.arc(x + w / 2 + Math.cos(ang) * rad, y + h * 0.4 + Math.sin(ang) * rad * 0.7, 2 + 3.5 * gachaHash(seed + 20 + sk), 0, Math.PI * 2);
-        c.fill();
-      }
-      c.restore();
-    }
+    XY.gacha10.paintFlipFx(c, x, y, w, h, p);
+  }
+  XY.gacha10.paintFlipFx = function (c, x, y, w, h, p) {
+    if (p > 0.08 && p < 0.92) inkBloom(c, x, y, w, h, p);
   }
   XY.gacha10.timing = { intro: GACHA_INTRO, step: GACHA_STEP, flip: GACHA_FLIP, total: GACHA_INTRO + 10 * GACHA_STEP };
   XY.gacha10.cardAt = function (elapsed, i) {
