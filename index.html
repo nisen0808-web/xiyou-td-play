@@ -1473,7 +1473,7 @@ XY.TRAITS = {
    },
    {
     "id": "cato",
-    "name": "Cato",
+    "name": "猫叔",
     "handle": "@Cato_KT",
     "arch": "storm",
     "elem": "water",
@@ -3934,6 +3934,7 @@ XY.TRAITS = {
 
   function killEnemy(G, e, o) {
     if (e.dead) return;
+    if (e.dk && XY.devilKitty && XY.devilKitty.interceptDeath && XY.devilKitty.interceptDeath(G, e, o)) return;
     e.dead = true; G.kills++;
     if (e.affix) XY.affixDeath(G, e);
     if (XY.syn && o && o.src && o.src.sk) XY.syn.onKill(G, e, o.src);
@@ -23453,7 +23454,7 @@ X.step=function(g,dt){if(!g._simRandom)return step.apply(this,arguments);var sel
     if (XY.audio) { XY.audio.init(); if (XY.audio.bgmStart) XY.audio.bgmStart('play'); } if (XY.sfx) XY.sfx('start');
   }
   function openDeparture() {
-    var go = function () { app.screen = 'levels'; if (XY.gacha10 && XY.gacha10.ensure) XY.gacha10.ensure(); };
+    var go = function () { app.screen = 'levels'; };
     if (XY.lazy && XY.lazy.on) XY.lazy.enter(go);
     else go();
   }
@@ -23508,7 +23509,7 @@ X.step=function(g,dt){if(!g._simRandom)return step.apply(this,arguments);var sel
       return;
     }
     if (s === 'levels') {
-      if (XY.gacha10 && XY.gacha10.ensure && XY.gacha10.ensure().show) { if (k === 'ArrowLeft' || k === 'ArrowRight') { if (XY.gacha10.nudge) XY.gacha10.nudge(k === 'ArrowRight' ? 1 : -1); return; } if (k === 'Escape' || k === 'Enter' || k === 'Space') XY.gacha10.key(); return; }
+      if (XY.gacha10 && XY.gacha10.overlay && XY.gacha10.overlay()) { if (k === 'ArrowLeft' || k === 'ArrowRight') { if (XY.gacha10.nudge) XY.gacha10.nudge(k === 'ArrowRight' ? 1 : -1); return; } if (k === 'Escape' || k === 'Enter' || k === 'Space') XY.gacha10.key(); return; }
       if (k === 'Escape') toMenu(); else if (k === 'Enter') { var dp = XY.depart; if (dp && dp.kind === 'dungeon' && XY.save.dngUnlocked(dp.id)) startGame(null, dp.id); else startGame(app.levelId); }
       return;
     }
@@ -24112,6 +24113,7 @@ X.step=function(g,dt){if(!g._simRandom)return step.apply(this,arguments);var sel
     for (k in (d.levels || {})) if (d.levels[k] && (d.levels[k].cleared || d.levels[k].best)) return true;
     for (k in (d.dng || {})) if (d.dng[k] && d.dng[k].cleared) return true;
     for (k in ((d.sp && d.sp.cards) || {})) if ((d.sp.cards[k] | 0) > 0) return true;
+    if (d.spGear && d.spGear.bag) { for (k in d.spGear.bag) if ((d.spGear.bag[k] | 0) > 0) return true; }
     for (k in (d.cards || {})) n++;
     return n > 3;
   }
@@ -24119,7 +24121,7 @@ X.step=function(g,dt){if(!g._simRandom)return step.apply(this,arguments);var sel
     d = d || {};
     return JSON.stringify({
       runs: d.stats && d.stats.runs, wins: d.stats && d.stats.wins, kills: d.stats && d.stats.kills,
-      lingshi: d.lingshi | 0, gacha: d.gacha10 && d.gacha10.pulls, sp: d.sp && d.sp.cards, levels: d.levels, deck: d.deck
+      lingshi: d.lingshi | 0, gacha: d.gacha10 && d.gacha10.pulls, sp: d.sp && d.sp.cards, gear: d.spGear || null, devilKitty: d.devilKitty || null, levels: d.levels, deck: d.deck
     });
   }
   function clockOf(d) {
@@ -24789,5 +24791,8 @@ X.step=function(g,dt){if(!g._simRandom)return step.apply(this,arguments);var sel
 })();
 
 </script>
+
+<script src="js/devil_kitty_logic.js"></script>
+<script src="js/devil_kitty_ui.js"></script>
 </body>
 </html>
