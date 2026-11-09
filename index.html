@@ -23287,58 +23287,69 @@ X.step=function(g,dt){if(!g._simRandom)return step.apply(this,arguments);var sel
   }
 
   /* ---------- 开场视频（主菜单之前）----------
-   * 把视频放在 assets/intro.mp4（和 index.html / dist 文件同一级的 assets 文件夹）即可；没有这个文件 / 播不出来 / 4 秒还没开始播 → 自动跳过直接进主菜单。
-   * 随时可以跳过：右上角「跳过」按钮、Esc / 空格 / 回车、点一下屏幕。视频不会打进 dist 单文件里（体积大），dist 旁边放 assets/intro.mp4 同样有效。
-   * 网址加 ?intro=0 关掉；测试默认关掉（window.XY_NO_INTRO）。 */
-  var introEl = null, introTimer = 0;
+   * 有 assets/intro.mp4 就尝试播。跳过从第一帧起就在右上角，不靠视频先播出来。
+   * 4 秒还没播出画面，或播出后 4 秒画面不再往前走，就收掉进主菜单。失败不能把菜单盖死。
+   * 每次打开都再试一次（和以前一样）。?intro=0 或 XY_NO_INTRO 不播。 */
+  var introEl = null, introTimer = 0, introWatch = 0;
   function introEnd(why) {
     if (!introEl) return;
-    clearTimeout(introTimer); var el = introEl; introEl = null; app.intro = null; app.introWhy = why;
+    clearTimeout(introTimer); clearInterval(introWatch); introWatch = 0;
+    var el = introEl; introEl = null; app.intro = null; app.introWhy = why;
     try { el.pause(); } catch (e) {}
     if (el.parentNode) el.parentNode.removeChild(el);
-    var b = document.getElementById('introSkip'); if (b && b.parentNode) b.parentNode.removeChild(b);
-    var m = document.getElementById('introMute'); if (m && m.parentNode) m.parentNode.removeChild(m);
+    ['introSkip', 'introMute'].forEach(function (id) { var b = document.getElementById(id); if (b && b.parentNode) b.parentNode.removeChild(b); });
     last = performance.now();
   }
   XY.introSkip = function () { introEnd('skip'); };
   function introStart() {
     if (window.XY_NO_INTRO || /[?&]intro=0/.test(location.search)) return;
-    var v, skip;
+    var v, skip, born = performance.now(), lastT = -1, lastMove = born;
     try {
       v = document.createElement('video');
       v.id = 'introVideo'; v.playsInline = true; v.preload = 'auto'; v.controls = false; v.muted = false;
       v.setAttribute('playsinline', ''); v.setAttribute('webkit-playsinline', '');
-      // 视频一开始是看不见、点不到的（不挡住下面的主菜单）：真的开始播了才盖上来，所以没有视频 / 播不出来时玩家什么都不会看到
       v.style.cssText = 'position:fixed;left:0;top:0;width:100%;height:100%;object-fit:contain;background:#fff7e0;z-index:50;cursor:pointer;opacity:0;pointer-events:none;';
       skip = document.createElement('button');
-      skip.id = 'introSkip'; skip.textContent = '跳过 ▸'; skip.style.cssText = 'position:fixed;right:18px;top:16px;z-index:52;font:700 20px sans-serif;padding:10px 20px;min-width:96px;min-height:46px;border-radius:14px;border:3px solid #b9a77a;background:#fff8e0;color:#4a3a1a;cursor:pointer;display:none;';
-      introEl = v; app.intro = { t0: performance.now() };
-      v.addEventListener('error', function () { introEnd('error'); });
-      v.addEventListener('abort', function () { if (app.intro && !app.intro.playing) introEnd('abort'); });
-      v.addEventListener('stalled', function () { if (app.intro && !app.intro.playing) { clearTimeout(introTimer); introTimer = setTimeout(function () { introEnd('stalled'); }, 1500); } });
-      v.addEventListener('ended', function () { introEnd('ended'); });
-      v.addEventListener('playing', function () {
-        clearTimeout(introTimer); if (app.intro) app.intro.playing = true;
-        v.style.opacity = '1'; v.style.pointerEvents = 'auto'; skip.style.display = '';
-        introTimer = setTimeout(function () { introEnd('toolong'); }, 60000);          // 万一播着播着卡住（不触发 ended）：一分钟后放行
+      skip.id = 'introSkip'; skip.type = 'button'; skip.textContent = '跳过 ▸';
+      skip.style.cssText = 'position:fixed;right:max(18px, env(safe-area-inset-right));top:max(16px, env(safe-area-inset-top));z-index:60;font:700 20px sans-serif;padding:10px 20px;min-width:96px;min-height:46px;border-radius:14px;border:3px solid #b9a77a;background:#fff8e0;color:#4a3a1a;cursor:pointer;';
+      introEl = v; app.intro = { t0: born };
+      function alive() { return introEl === v; }
+      function show() {
+        if (!alive()) return;
+        v.style.opacity = '1'; v.style.pointerEvents = 'auto';
+        if (app.intro) app.intro.playing = true;
+      }
+      v.addEventListener('error', function () { if (alive()) introEnd('error'); });
+      v.addEventListener('ended', function () { if (alive()) introEnd('ended'); });
+      v.addEventListener('playing', function () { if (alive()) show(); });
+      v.addEventListener('timeupdate', function () {
+        if (!alive()) return;
+        if (v.currentTime > lastT + 0.05) { lastT = v.currentTime; lastMove = performance.now(); show(); }
       });
-      v.addEventListener('waiting', function () { if (app.intro && app.intro.playing) { clearTimeout(introTimer); introTimer = setTimeout(function () { introEnd('buffer'); }, 8000); } });
-      v.addEventListener('click', function () { introEnd('skip'); });
-      v.addEventListener('touchend', function (e) { e.preventDefault(); introEnd('skip'); }, { passive: false });
-      skip.addEventListener('click', function () { introEnd('skip'); });
+      v.addEventListener('click', function () { if (alive()) introEnd('skip'); });
+      v.addEventListener('touchend', function (e) { if (!alive()) return; e.preventDefault(); introEnd('skip'); }, { passive: false });
+      skip.addEventListener('click', function (e) { e.stopPropagation(); if (alive()) introEnd('skip'); });
       document.body.appendChild(v); document.body.appendChild(skip);
-      introTimer = setTimeout(function () { if (app.intro && !app.intro.playing) introEnd('timeout'); }, 3000);   // 3 秒还没开始播 = 放弃
+      introWatch = setInterval(function () {
+        if (!alive()) { clearInterval(introWatch); introWatch = 0; return; }
+        var now = performance.now(), started = app.intro && app.intro.playing;
+        if (!started && now - born > 4000) { introEnd('timeout'); return; }
+        if (started && now - lastMove > 4000) { introEnd('frozen'); }
+      }, 400);
       v.src = window.XY_INTRO_SRC || 'assets/intro.mp4';
       var pr = v.play();
-      if (pr && pr.catch) pr.catch(function () {                         // 浏览器不让带声音自动播放：静音先播，右上角给个「开声音」
-        if (!introEl) return; v.muted = true;
-        var p2; try { p2 = v.play(); } catch (e) { introEnd('blocked'); return; }
-        if (p2 && p2.catch) p2.catch(function () { introEnd('blocked'); });
-        var mb = document.createElement('button'); mb.id = 'introMute'; mb.textContent = '🔊 开声音'; mb.style.cssText = 'position:fixed;right:18px;top:76px;z-index:52;font:700 18px sans-serif;padding:8px 16px;min-height:42px;border-radius:14px;border:3px solid #b9a77a;background:#fff8e0;color:#4a3a1a;cursor:pointer;';
-        mb.addEventListener('click', function () { v.muted = false; if (mb.parentNode) mb.parentNode.removeChild(mb); });
+      if (pr && pr.catch) pr.catch(function () {
+        if (!alive()) return;
+        v.muted = true;
+        var p2; try { p2 = v.play(); } catch (e2) { introEnd('blocked'); return; }
+        if (p2 && p2.catch) p2.catch(function () { if (alive()) introEnd('blocked'); });
+        if (!alive() || document.getElementById('introMute')) return;
+        var mb = document.createElement('button'); mb.id = 'introMute'; mb.type = 'button'; mb.textContent = '🔊 开声音';
+        mb.style.cssText = 'position:fixed;right:max(18px, env(safe-area-inset-right));top:max(74px, calc(env(safe-area-inset-top) + 58px));z-index:60;font:700 18px sans-serif;padding:8px 16px;min-height:42px;border-radius:14px;border:3px solid #b9a77a;background:#fff8e0;color:#4a3a1a;cursor:pointer;';
+        mb.addEventListener('click', function (e) { e.stopPropagation(); v.muted = false; if (mb.parentNode) mb.parentNode.removeChild(mb); });
         document.body.appendChild(mb);
       });
-    } catch (e) { introEnd('exception'); }     // 视频相关的任何异常都不能影响进游戏
+    } catch (e) { introEnd('exception'); }
   }
 
   resize();
