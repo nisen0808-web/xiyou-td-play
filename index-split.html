@@ -6651,7 +6651,7 @@ XY.TRAITS = {
     c.restore();
   }
   // 图鉴 / 小图标：type 'bat' | 'owl'
-  F.icon = function (c, type, x, y, r, sil, rt) { if (type === 'bat') bat(c, x, y, r * 1.1, rt || 0, 0, null, sil); else owl(c, x, y + r * 0.1, r * 0.95, rt || 0, 0, null, sil, 1); };
+  F.icon = function (c, type, x, y, r, sil, rt) { if ((type === 'bat' || type === 'owl') && XY.MINK && XY.MINK.flyIcon && XY.MINK.flyIcon(c, type, x, y, r, sil)) return; if (type === 'bat' || type === 'owl') return; if (type === 'bat') bat(c, x, y, r * 1.1, rt || 0, 0, null, sil); else owl(c, x, y + r * 0.1, r * 0.95, rt || 0, 0, null, sil, 1); };
 
   // 地面层：影子 + 俯冲落点圈（在单位下面画）
   F.drawGround = function (c, G, rt) {
@@ -6674,9 +6674,9 @@ XY.TRAITS = {
       e = G.enemies[i]; if (!e.fly || e.dead || !inView(G, e.x, e.y, 60)) continue;
       lift = F.LIFT + (e.fs === 'aim' ? -3 : 0) + sin(rt * 3 + e.wob) * 2; if (e.fs === 'dive') lift = F.LIFT * 0.5;
       look = (e.th ? e.th.x : G.camp.x) > e.x ? 1 : -1;
-      var tint = e.flash > 0 ? '#ffffff' : (e.enraged ? '#8a3a3a' : null);
       c.globalAlpha = e.fs === 'recover' ? 0.8 : 1;
-      if (e.type === 'bat') bat(c, e.x, e.y - lift, e.r * 1.15, rt, e.wob, tint, false); else owl(c, e.x, e.y - lift, e.r * 1.1, rt, e.wob, tint, false, look);
+      var flew = XY.MINK && XY.MINK.fly && XY.MINK.fly(c, e, rt, e.x, e.y - lift, look);
+      if (!flew && e.type !== 'bat' && e.type !== 'owl') { var tint = e.flash > 0 ? '#ffffff' : (e.enraged ? '#8a3a3a' : null); if (e.type === 'bat') bat(c, e.x, e.y - lift, e.r * 1.15, rt, e.wob, tint, false); else owl(c, e.x, e.y - lift, e.r * 1.1, rt, e.wob, tint, false, look); }
       c.globalAlpha = 1;
       if (e.slowT > 0) { c.strokeStyle = 'rgba(74,144,217,0.75)'; c.lineWidth = 2; c.beginPath(); c.ellipse(e.x, e.y + e.r * 0.5, e.r * 1.1, e.r * 0.4, 0, 0, PI2); c.stroke(); }
       if (e.stunT > 0) { c.fillStyle = '#e0a415'; c.font = 'bold 12px sans-serif'; c.textAlign = 'center'; c.fillText('★ ★', e.x, e.y - lift - e.r * 1.6); }
@@ -8948,9 +8948,9 @@ XY.TRAITS = {
     var th = e.toCamp || !e.th ? G.camp : e.th, look = th.x > x ? 1 : -1;
     var bob = baked ? 0 : Math.sin(rt * 8 + e.wob) * 1.2;
     if (XY.MA) {                                               // v0.6.4：不再用圆圈——BOSS / 精英 / 小怪都是有轮廓的造型
-      if (d.denBoss && e.type === 'boss' && XY.MINK && XY.MINK.bfBoss && XY.MINK.bfBoss(c, e, rt)) { drawEnemyStatus2(c, e, e.r * 2.5); if (e.hp < e.maxHp) bar(c, x - r, y - e.r * 2.6, r * 2, 5, e.hp / e.maxHp, '#e0533d', 'rgba(255,255,255,0.85)'); return; }
+      if (d.denBoss && XY.MINK && XY.MINK.bfBoss && XY.MINK.bfBoss(c, e, rt)) { var btop = e.r * 2.7; drawEnemyStatus2(c, e, btop); if (e.hp < e.maxHp) bar(c, x - r, y - btop - 4, r * 2, 5, e.hp / e.maxHp, '#e0533d', 'rgba(255,255,255,0.85)'); return; }
       if (d.denBoss && XY.MINK && XY.MINK.boss && XY.MINK.boss(c, G, e, rt)) { drawEnemyStatus2(c, e, XY.MINK.top(e)); if (e.hp < e.maxHp) bar(c, x - r, y - XY.MINK.top(e) - 6, r * 2, 5, e.hp / e.maxHp, '#e0533d', 'rgba(255,255,255,0.85)'); return; }
-      if (d.denBoss && ((e.type === 'boss') || (XY.MINK_DATA && XY.MINK_DATA[e.type]))) { drawEnemyStatus2(c, e, e.r * 2.2); return; }
+      if (d.denBoss && ((e.type === 'boss') || (XY.MINK && XY.MINK.denPose && XY.MINK.denPose(e.type)) || (XY.MINK_DATA && XY.MINK_DATA[e.type]))) { drawEnemyStatus2(c, e, e.r * 2.2); return; }
       if (d.denBoss && XY.MA.hasFigure(e)) { XY.MA.boss(c, G, e, rt); drawEnemyStatus2(c, e, XY.MA.topOf(e)); return; }
       if (d.elite && !d.boss && XY.MINK && XY.MINK.elite && XY.MINK.elite(c, G, e, rt)) { var etp0 = XY.MINK.top(e); drawEnemyStatus2(c, e, etp0 + r * 0.1); bar(c, x - r, y - etp0 - 6, r * 2, 5, e.hp / e.maxHp, '#e0533d', 'rgba(255,255,255,0.85)'); return; }
       if (d.elite && !d.boss && XY.MINK_DATA && XY.MINK_DATA.elite) { drawEnemyStatus2(c, e, r * 2.1); bar(c, x - r, y - r * 2.2, r * 2, 5, e.hp / e.maxHp, '#e0533d', 'rgba(255,255,255,0.85)'); return; }
@@ -9053,8 +9053,10 @@ XY.TRAITS = {
     if (mnt) {                                                  // 骑乘：脚下是白龙马（跑动时有速度线和尘土），骑手抬高一点
       var hsOK = XY.chibi && XY.chibi.ready(mnt); ry = hsOK ? -r * 1.05 : -r * 0.55; var mr = mnt.def.r * 1.25, my = y + bob * 0.5 + r * 0.55;
       if (h.moving) { c.save(); c.strokeStyle = 'rgba(111,207,216,0.55)'; c.lineWidth = 3; c.lineCap = 'round'; var fa = h.face + Math.PI; for (var sl = 0; sl < 4; sl++) { var so = (sl - 1.5) * 9, sx0 = x + Math.cos(fa) * (r + 6) - Math.sin(fa) * so, sy0 = my + Math.sin(fa) * (r + 6) + Math.cos(fa) * so; c.beginPath(); c.moveTo(sx0, sy0); c.lineTo(sx0 + Math.cos(fa) * (22 + 8 * Math.sin(rt * 20 + sl)), sy0 + Math.sin(fa) * (22 + 8 * Math.sin(rt * 20 + sl))); c.stroke(); } c.restore(); for (var dp = 0; dp < 3; dp++) { var dph = (rt * 3 + dp / 3) % 1; c.fillStyle = 'rgba(190,170,130,' + (0.45 * (1 - dph)) + ')'; c.beginPath(); c.arc(x - Math.cos(h.face) * (8 + dph * 26) + (dp - 1) * 6, my + r * 0.7 - dph * 6, 3 + dph * 5, 0, PI2); c.fill(); } }
-      if (hsOK) { var mf = mnt.face, mm = mnt.moving, mhu = mnt.hurtT; mnt.face = h.face; mnt.moving = h.moving; mnt.hurtT = 0; XY.chibi.draw(c, G, mnt, rt, x, my, mr); mnt.face = mf; mnt.moving = mm; mnt.hurtT = mhu; }   // v0.8.1：骑乘时脚下是白龙马的全身精灵（骑手站在马背上方），不再是圆头像
-      else if (!(XY.CHIBI_INK && XY.CHIBI_INK.horse) && !(XY.CHIBI && XY.CHIBI.horse)) drawHeroShape(c, mnt.def, x, my, mr);
+      var horsePose = false;
+      if (XY.MINK && XY.MINK.poseHero) { var mf0 = mnt.face, mm0 = mnt.moving, mhu0 = mnt.hurtT; mnt.face = h.face; mnt.moving = h.moving; mnt.hurtT = 0; horsePose = XY.MINK.poseHero(c, mnt, rt, x, my, mr); mnt.face = mf0; mnt.moving = mm0; mnt.hurtT = mhu0; }
+      if (!horsePose && hsOK) { var mf = mnt.face, mm = mnt.moving, mhu = mnt.hurtT; mnt.face = h.face; mnt.moving = h.moving; mnt.hurtT = 0; XY.chibi.draw(c, G, mnt, rt, x, my, mr); mnt.face = mf; mnt.moving = mm; mnt.hurtT = mhu; }
+      else if (!horsePose && !(XY.CHIBI_INK && XY.CHIBI_INK.horse) && !(XY.CHIBI && XY.CHIBI.horse) && !(XY.MINK && XY.MINK.poseOwns && XY.MINK.poseOwns(mnt))) drawHeroShape(c, mnt.def, x, my, mr);
     }
     var rr = r * (h.xf > 0 ? 1.25 : 1);
     if (h.id === 'phyrex') { XY.phDrawHeroUnder(c, G, h, x, y + bob, r, rt); XY.R4.xfDraw = h.xf > 0; }
@@ -11639,32 +11641,98 @@ XY.TRAITS = {
     if (!o) { o = BF[k] = new Image(); o.src = 'bossfight/assets/spr/' + id + '/' + pose + '.webp'; }
     return o.complete && o.naturalWidth ? o : null;
   }
-  M.bfBoss = function (c, e, rt) {
-    var pose = (e.dead || e.hp <= 0) ? 'ko' : (e.flash > 0 ? 'hit' : (e.atkT > 0 ? 'swing' : ((Math.floor(rt * 1.5) % 2) ? 'idle_b' : 'idle_a')));
-    var im = bf('niumo', pose) || bf('niumo', 'stance');
-    if (!im) return false;
-    var face = (e.th && e.th.x < e.x) ? -1 : 1, bh = e.r * 3.1, bw = bh * im.naturalWidth / im.naturalHeight;
-    c.save(); c.fillStyle = 'rgba(58,50,38,0.2)'; c.beginPath(); c.ellipse(e.x, e.y + e.r * 0.85, e.r * 1.1, e.r * 0.32, 0, 0, PI2); c.fill();
-    c.translate(e.x, e.y + e.r * 0.9); c.scale(face, 1); c.drawImage(im, -bw / 2, -bh, bw, bh); c.restore();
+  var DEN6 = { jin: 1, red: 1, yellow: 1, iron: 1, yumian: 1, chiyan: 1 };
+  var IDLE5 = { jin: 1, red: 1, yellow: 1, iron: 1, yumian: 1, chiyan: 1, bat: 1, owl: 1, tang: 1, bajie: 1, wujing: 1, horse: 1, dragon: 1 };
+  function metaPose(id, pose) { var bag = window.BF_SPR_META && window.BF_SPR_META[id]; return bag && bag[pose] ? bag[pose] : null; }
+  function allowPose(id, pose) {
+    if (window.BF_SPR_META && window.BF_SPR_META[id]) return !!window.BF_SPR_META[id][pose];
+    if (pose === 'idle') return !!IDLE5[id];
     return true;
-  };
-  var POSE = { wukong: 1, phyrex: 1, sisi: 1, laosiji: 1, kuanggong: 1, haiteng: 1, yuanzhang: 1, heyuxi: 1, diaoyulao: 1, martin: 1 };
-  M.poseOwns = function (h) { return !!(h && POSE[h.id] && !(h.def && h.def.xid)); };
-  M.poseHero = function (c, h, rt, x, y, r) {
-    if (!M.poseOwns(h)) return false;
-    var face = Math.cos(h.face || 0) >= 0 ? 1 : -1;
-    var want = h.down ? 'ko' : (h.hurtT > 0 ? 'hit' : (h.dash ? 'charge' : (h.atkT > 0 ? 'attack' : (h.moving ? 'stance' : 'idle_a'))));
-    var im = bf(h.id, want) || bf(h.id, 'idle_b') || bf(h.id, 'idle_a') || bf(h.id, 'stance');
-    if (!im) return true;
-    var bh = r * (h.down ? 2.4 : 3.6) * (h.xf > 0 ? 1.25 : 1), bw = bh * im.naturalWidth / im.naturalHeight;
-    var bob = h.down ? 0 : (h.moving ? Math.sin(rt * 10) * 1.5 : Math.sin(rt * 2) * 1);
+  }
+  function resolvePose(id, want) {
+    var order = [want, 'idle', 'idle_b', 'idle_a', 'stance'], i, im;
+    for (i = 0; i < order.length; i++) {
+      if (!order[i] || !allowPose(id, order[i])) continue;
+      im = bf(id, order[i]);
+      if (im) return { pose: order[i], im: im };
+    }
+    return null;
+  }
+  function paintFoot(c, id, pose, im, bh, breathe) {
+    var bw = bh * im.naturalWidth / im.naturalHeight, m = metaPose(id, pose);
+    var ax = m && m.ax ? m.ax : im.naturalWidth / 2, k = bh / im.naturalHeight;
+    c.scale(1, 1 + (breathe || 0));
+    c.drawImage(im, -ax * k, -bh, bw, bh);
+  }
+  M.denPose = function (type) { return !!DEN6[type]; };
+  M.bfBoss = function (c, e, rt) {
+    var id = e.type === 'boss' ? 'niumo' : e.type;
+    if (id !== 'niumo' && !DEN6[id]) return false;
+    var ko = !!(e.dead || e.hp <= 0);
+    var want = id === 'niumo'
+      ? (ko ? 'ko' : (e.flash > 0 ? 'hit' : (e.atkT > 0 ? 'swing' : ((Math.floor(rt * 1.5) % 2) ? 'idle_b' : 'idle_a'))))
+      : (ko ? 'ko' : (e.flash > 0 ? 'hit' : (e.atkT > 0 ? 'attack' : ((Math.floor(rt * 1.25 + (e.wob || 0)) % 2) ? 'idle' : 'stance'))));
+    var got = resolvePose(id, want);
+    if (!got) return id !== 'niumo';
+    var face = (e.th && e.th.x < e.x) ? -1 : 1, bh = e.r * (ko ? 2.2 : 3.15);
+    var breathe = (!ko && !(e.flash > 0) && !(e.atkT > 0)) ? Math.sin(rt * 2.2 + (e.wob || 0)) * 0.028 : 0;
     c.save();
-    c.fillStyle = 'rgba(58,50,38,0.18)'; c.beginPath(); c.ellipse(x, y + r * 0.9, r * 1.05, r * 0.32, 0, 0, PI2); c.fill();
-    c.translate(x, y + r * 0.9 + bob); c.scale(face, 1); c.drawImage(im, -bw / 2, h.down ? -bh * 0.72 : -bh, bw, bh);
+    c.fillStyle = 'rgba(58,50,38,0.2)'; c.beginPath(); c.ellipse(e.x, e.y + e.r * 0.85, e.r * 1.15, e.r * 0.34, 0, 0, PI2); c.fill();
+    c.translate(e.x, e.y + e.r * 0.92); c.scale(face, 1);
+    paintFoot(c, id, got.pose, got.im, bh, breathe);
     c.restore();
     return true;
   };
+  var POSE = { wukong: 1, phyrex: 1, sisi: 1, laosiji: 1, kuanggong: 1, haiteng: 1, yuanzhang: 1, heyuxi: 1, diaoyulao: 1, martin: 1, tang: 1, bajie: 1, wujing: 1, horse: 1 };
+  M.poseOwns = function (h) { return !!(h && POSE[h.id] && !(h.def && h.def.xid)); };
+  M.poseFolder = function (h) { return (h.id === 'horse' && h.def && h.def.form === 'human') ? 'dragon' : h.id; };
+  M.poseHero = function (c, h, rt, x, y, r) {
+    if (!M.poseOwns(h)) return false;
+    var id = M.poseFolder(h), face = Math.cos(h.face || 0) >= 0 ? 1 : -1;
+    var want = h.down ? 'ko' : (h.hurtT > 0 ? 'hit' : (h.dash ? 'charge' : (h.atkT > 0 ? 'attack' : (h.moving ? 'stance' : ((Math.floor(rt * 1.25 + (h.bob || 0)) % 2) ? 'idle' : 'stance')))));
+    var got = resolvePose(id, want);
+    if (!got) return true;
+    var ko = !!h.down, bh = r * (ko ? 2.3 : 3.6) * (h.xf > 0 ? 1.25 : 1);
+    var breathe = (!ko && !(h.hurtT > 0) && !(h.atkT > 0) && !h.dash) ? Math.sin(rt * 2.2 + (h.bob || 0)) * 0.028 : 0;
+    c.save();
+    c.fillStyle = 'rgba(58,50,38,0.18)'; c.beginPath(); c.ellipse(x, y + r * 0.9, r * 1.05, r * 0.32, 0, 0, PI2); c.fill();
+    c.translate(x, y + r * 0.9); c.scale(face, 1);
+    paintFoot(c, id, got.pose, got.im, bh, breathe);
+    c.restore();
+    return true;
+  };
+  M.fly = function (c, e, rt, x, y, look) {
+    if (e.type !== 'bat' && e.type !== 'owl') return false;
+    var atk = e.fs === 'dive' || e.fs === 'aim', ko = e.hp <= 0;
+    var want = ko ? 'ko' : (e.flash > 0 ? 'hit' : (atk ? 'attack' : ((Math.floor(rt * 1.4 + (e.wob || 0)) % 2) ? 'idle' : 'stance')));
+    var got = resolvePose(e.type, want);
+    if (!got) return true;
+    var bh = Math.max(e.type === 'owl' ? 64 : 52, e.r * 5.2);
+    var breathe = (!ko && !atk && !(e.flash > 0)) ? Math.sin(rt * 2.6 + (e.wob || 0)) * 0.035 : 0;
+    c.save(); c.translate(x, y + bh * 0.42); c.scale(look || 1, 1);
+    paintFoot(c, e.type, got.pose, got.im, bh, breathe);
+    c.restore();
+    return true;
+  };
+  M.flyIcon = function (c, type, x, y, r) {
+    if (type !== 'bat' && type !== 'owl') return false;
+    var got = resolvePose(type, 'stance');
+    if (!got) return true;
+    var bh = Math.max(36, r * 2.3);
+    c.save(); c.translate(x, y + bh * 0.35);
+    paintFoot(c, type, got.pose, got.im, bh, 0);
+    c.restore();
+    return true;
+  };
+  M.dexPose = function (c, type, x, foot, bh) {
+    if (!DEN6[type] && type !== 'bat' && type !== 'owl') return false;
+    var got = resolvePose(type, 'stance');
+    if (!got) return true;
+    c.save(); c.translate(x, foot); paintFoot(c, type, got.pose, got.im, bh, 0); c.restore();
+    return true;
+  };
   if (XY.MINK_DATA) M.preload(); else setTimeout(function () { if (XY.MINK_DATA) M.preload(); }, 0);
+  if (!window.BF_SPR_META) { try { var mjs = document.createElement('script'); mjs.async = true; mjs.src = 'bossfight/meta.js'; document.head.appendChild(mjs); } catch (e) {} }
 })();
 
 </script>
@@ -16321,6 +16389,7 @@ XY.chibi.portrait = function (c, id, x, foot, h, alpha) {
   function drawEnemyIcon(c, type, x, y, r, sil, rt) {
     var d = XY.ENEMIES[type], col = sil ? '#aaa59a' : d.color, dk = sil ? '#85807a' : d.dark;
     if (d.fly && XY.fly) { XY.fly.icon(c, type, x, y, r, sil, rt); if (sil) txt(c, '？', x, y + 2, Math.round(r * 1.0), '#fff', 'center', true); return; }
+    if (XY.MINK && XY.MINK.denPose && XY.MINK.denPose(type) && XY.MINK.dexPose && XY.MINK.dexPose(c, type, x, y + r * 0.9, r * 2.8)) return;
     c.lineWidth = 3; c.strokeStyle = dk; c.fillStyle = col;
     if (type === 'elite' || type === 'boss') {
       c.beginPath(); c.moveTo(x - r * 0.7, y - r * 0.5); c.quadraticCurveTo(x - r * 1.3, y - r * 0.8, x - r * 1.1, y - r * 1.4); c.quadraticCurveTo(x - r * 0.6, y - r * 1.0, x - r * 0.3, y - r * 0.85); c.fill(); c.stroke();
@@ -18707,7 +18776,7 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
     function hero(id,x,y,r){var d=XY.SP_BY[id]?XY.specialDef(id,Math.max(1,S.spLevel(id))):XY.HEROES.filter(function(z){return z.id===id;})[0];if(d)XY.hud2.face(c,{id:id,def:d},x,y,r,app.rt);}
     if(tab==='enemy'){
       var ee=S.dexOf(sel),sn=ee&&ee.seen>0,dd=XY.ENEMIES[sel],bz=XY.BESTIARY[sel];title=sn?dd.name:'未曾相逢';sub=sn?'遇见 '+ee.seen+' · 击杀 '+ee.kills:'在战场相逢，才会记进此卷';
-      c.save();if(!sn){c.filter='brightness(0)';c.globalAlpha=.22;}var drawn=XY.MINK&&XY.MINK.portrait(c,sel,cx,foot,artH);c.restore();if(!drawn)hp.enemyIcon(c,sel,cx,foot-artH/2,Math.min(62,artH*.38),!sn,app.rt);
+      c.save();if(!sn){c.filter='brightness(0)';c.globalAlpha=.22;}var drawn=XY.MINK&&(XY.MINK.portrait(c,sel,cx,foot,artH)||(XY.MINK.dexPose&&XY.MINK.dexPose(c,sel,cx,foot,artH)));c.restore();if(!drawn)hp.enemyIcon(c,sel,cx,foot-artH/2,Math.min(62,artH*.38),!sn,app.rt);
       if(!sn)text='在战斗里遇到它，就会记进图鉴。还看不到详细信息。';
       else if(view===0)text=bz.desc;
       else if(view===1)text='生命 '+dd.hp+' · 速度 '+dd.speed+' · '+(dd.dive?'俯冲伤害 '+Math.round(dd.dmg*dd.dive.mul*10)/10:'碰撞伤害 '+dd.dmg)+(dd.range?' · 远程':'')+(dd.fly?' · 飞行':'')+'\n对付它：'+bz.tip+'\n掉落：'+bz.drop;
