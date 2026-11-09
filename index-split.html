@@ -9034,6 +9034,7 @@ XY.TRAITS = {
   }
   var G0 = { camp: { x: 0, y: 0 } };
   function drawEnemy(c, G, e, rt) {
+    if (e.dk) return;
     if (e.lt) return XY.lairUI.drawTower(c, G, e, rt);                    // v0.9 洞府塔
     if (e.fly) return;                                                   // v0.8.4 飞妖在空中层单独画（js/fly.js）
     if (e.def.etower) return XY.R4.etower(c, G, e, rt);

@@ -111,18 +111,24 @@ async function shot(page, name) {
   });
   await page.reload({ waitUntil: 'domcontentloaded', timeout: 90000 });
   await page.waitForFunction(function () { return window.XY && window.XY.devilKitty && window.XY.save && window.XY.save.data; }, { timeout: 30000 });
-  await page.evaluate(function () {
-    return document.fonts.ready.then(function () {
-      return Promise.all(['stage1.webp', 'form.webp', 'stage1-cut.webp', 'form-cut.webp'].map(function (f) {
-        return new Promise(function (ok) {
-          var im = new Image();
-          im.onload = function () { ok(1); };
-          im.onerror = function () { ok(0); };
-          im.src = 'assets/devil-kitty/' + f;
+  var fontOk = await page.evaluate(function () {
+    return document.fonts.load('64px DKBrush').then(function () {
+      return document.fonts.ready.then(function () {
+        return Promise.all(['stage1.webp', 'form.webp', 'stage1-cut.webp', 'form-cut.webp'].map(function (f) {
+          return new Promise(function (ok) {
+            var im = new Image();
+            im.onload = function () { ok(1); };
+            im.onerror = function () { ok(0); };
+            im.src = 'assets/devil-kitty/' + f;
+          });
+        })).then(function () {
+          return { check: document.fonts.check('64px DKBrush') };
         });
-      }));
+      });
     });
   });
+  console.log('brush font', JSON.stringify(fontOk));
+  if (!fontOk.check) fail('calligraphy font DKBrush did not load');
 
   async function prepPopup(screen) {
     await page.evaluate(function (screen) {

@@ -16,6 +16,8 @@
   var session = loadSession();
   var fpsN = 0, fpsT = 0, fpsV = 0;
   var boxes = {};
+  var inkCache = {};
+  var BRUSH_FACE = 'DKBrush, serif';
 
   function loadSession() {
     try {
@@ -30,9 +32,14 @@
     if (document.getElementById('dk-font')) return;
     var st = document.createElement('style');
     st.id = 'dk-font';
-    st.textContent = '@font-face{font-family:DKLatin;src:url("assets/fonts/GreatVibes-Regular.ttf") format("truetype");font-display:swap}';
+    st.textContent = '@font-face{font-family:DKBrush;src:url("assets/fonts/MaShanZheng-Regular.ttf") format("truetype");font-display:swap}'
+      + '@font-face{font-family:DKLatin;src:url("assets/fonts/GreatVibes-Regular.ttf") format("truetype");font-display:swap}';
     document.head.appendChild(st);
-    if (document.fonts && document.fonts.load) document.fonts.load('64px DKLatin').catch(function () {});
+    if (document.fonts && document.fonts.load) {
+      document.fonts.load('64px DKBrush').catch(function () {});
+      document.fonts.load('64px DKLatin').catch(function () {});
+    }
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { inkCache = {}; });
   }
   function img(key, file) {
     var o = imgs[key];
@@ -161,21 +168,10 @@
     c.fillText(s, x, y);
   }
   function cursive(c, s, x, y, px, col, align) {
-    var latinOnly = /^[\x00-\x7F\s]+$/.test(s);
-    c.font = latinOnly
-      ? px + 'px DKLatin, KaiTi, serif'
-      : 'bold ' + px + 'px KaiTi, STKaiti, "Noto Serif CJK SC", serif';
-    c.fillStyle = col;
-    c.textAlign = align || 'left';
-    c.textBaseline = 'middle';
-    c.fillText(s, x, y);
+    brush(c, s, x, y, px, col, align || 'left');
   }
-  function kai(c, s, x, y, px, col, align, bold) {
-    c.font = (bold === false ? '' : 'bold ') + px + 'px KaiTi, STKaiti, "Noto Serif CJK SC", serif';
-    c.fillStyle = col;
-    c.textAlign = align || 'left';
-    c.textBaseline = 'middle';
-    c.fillText(s, x, y);
+  function kai(c, s, x, y, px, col, align) {
+    brush(c, s, x, y, px, col, align || 'left');
   }
   function paper(c, x, y, w, h) {
     rr(c, x, y, w, h, 8);
@@ -608,53 +604,95 @@
     c.fillStyle = '#24180f';
     c.fillText(s, x, y + 0.5);
   }
+  function brushReady() {
+    return !!(document.fonts && document.fonts.check && document.fonts.check('32px ' + BRUSH_FACE));
+  }
+  function inkCanvas(s, size, col) {
+    var ready = brushReady();
+    var key = size + '\n' + (col || '') + '\n' + s;
+    if (ready && inkCache[key]) return inkCache[key];
+    var parts = String(s).split('·');
+    var i;
+    for (i = 0; i < parts.length; i++) parts[i] = parts[i].replace(/^\s+|\s+$/g, '');
+    if (!parts.length) parts = [''];
+    var probe = document.createElement('canvas').getContext('2d');
+    probe.font = size + 'px ' + BRUSH_FACE;
+    var widths = [], tw = 0, gap = size * 0.36;
+    for (i = 0; i < parts.length; i++) {
+      widths.push(parts[i] ? probe.measureText(parts[i]).width : 0);
+      tw += widths[i] + (i ? gap : 0);
+    }
+    var pad = Math.ceil(size * 0.28);
+    var cnv = document.createElement('canvas');
+    cnv.width = Math.max(1, Math.ceil(tw) + pad * 2);
+    cnv.height = Math.max(1, Math.ceil(size * 1.32));
+    var g = cnv.getContext('2d');
+    g.font = size + 'px ' + BRUSH_FACE;
+    g.fillStyle = col || '#24180f';
+    g.textBaseline = 'middle';
+    var cy = cnv.height * 0.52, x0 = pad;
+    for (i = 0; i < parts.length; i++) {
+      if (i) {
+        g.beginPath();
+        g.arc(x0 + gap * 0.5, cy, Math.max(1.15, size * 0.055), 0, Math.PI * 2);
+        g.fill();
+        x0 += gap;
+      }
+      if (parts[i]) g.fillText(parts[i], x0, cy);
+      x0 += widths[i];
+    }
+    cnv._tw = tw;
+    cnv._pad = pad;
+    if (ready) inkCache[key] = cnv;
+    return cnv;
+  }
   function brush(c, s, x, y, size, col, align) {
-    c.save();
-    c.font = 'bold ' + size + 'px KaiTi, STKaiti, "Noto Serif CJK SC", serif';
-    c.fillStyle = col || '#24180f';
-    c.textAlign = align || 'left';
-    c.textBaseline = 'middle';
-    c.fillText(s, x, y);
-    c.restore();
+    if (s === undefined || s === null || s === '') return;
+    var im = inkCanvas(String(s), size, col || '#24180f');
+    var dx = x - im._pad;
+    if (align === 'center') dx = x - im._pad - im._tw / 2;
+    else if (align === 'right') dx = x - im._pad - im._tw;
+    c.drawImage(im, dx, y - im.height / 2);
   }
   function brushFit(c, s, x, y, maxW, size, col, align) {
     var px = size;
-    c.save();
-    c.textAlign = align || 'center';
-    c.textBaseline = 'middle';
-    while (px > 11) {
-      c.font = 'bold ' + px + 'px KaiTi, STKaiti, "Noto Serif CJK SC", serif';
-      if (c.measureText(s).width <= maxW) break;
+    var im = inkCanvas(String(s), px, col || '#24180f');
+    while (px > 11 && im._tw > maxW) {
       px -= 1;
+      im = inkCanvas(String(s), px, col || '#24180f');
     }
-    c.fillStyle = col || '#24180f';
-    c.fillText(s, x, y);
-    c.restore();
+    var dx = x - im._pad;
+    if ((align || 'center') === 'center') dx = x - im._pad - im._tw / 2;
+    else if (align === 'right') dx = x - im._pad - im._tw;
+    c.drawImage(im, dx, y - im.height / 2);
     return px;
   }
   function brushVert(c, s, x, y, size, col) {
-    var i;
-    c.save();
-    c.fillStyle = col || '#24180f';
-    c.textAlign = 'center';
-    c.textBaseline = 'middle';
-    c.font = 'bold ' + size + 'px KaiTi, STKaiti, "Noto Serif CJK SC", serif';
-    for (i = 0; i < s.length; i++) c.fillText(s.charAt(i), x, y + i * size * 1.05);
-    c.restore();
-    return s.length * size * 1.05;
+    var i, ch, step = size * 0.98, yy = y;
+    for (i = 0; i < s.length; i++) {
+      ch = s.charAt(i);
+      if (ch === ' ') continue;
+      if (ch === '·' || ch === '・') {
+        c.beginPath();
+        c.fillStyle = col || '#24180f';
+        c.arc(x, yy, Math.max(1.4, size * 0.07), 0, Math.PI * 2);
+        c.fill();
+        yy += step * 0.48;
+        continue;
+      }
+      brush(c, ch, x, yy, size, col, 'center');
+      yy += step;
+    }
+    return yy - y;
   }
   function cinnabar(c, x, y, ch) {
     c.save();
     c.beginPath();
-    c.arc(x, y, 9, 0, Math.PI * 2);
+    c.arc(x, y, 11, 0, Math.PI * 2);
     c.fillStyle = '#8d1f18';
     c.fill();
-    c.fillStyle = '#f4e6d4';
-    c.font = 'bold 11px KaiTi, STKaiti, serif';
-    c.textAlign = 'center';
-    c.textBaseline = 'middle';
-    c.fillText(ch || '印', x, y + 0.5);
     c.restore();
+    brush(c, ch || '印', x, y, 13, '#f4e6d4', 'center');
   }
   function mostlyCjk(s) {
     var i, n = 0;
@@ -664,9 +702,9 @@
   function cardName(c, s, x, y, w, h) {
     if (mostlyCjk(s) && s.length <= 6) {
       var size = Math.max(13, Math.min(20, (h - 28) / s.length));
-      var top = y + Math.max(12, (h - s.length * size * 1.05) * 0.55);
-      brushVert(c, s, x + 16, top, size, '#24180f');
-      cinnabar(c, x + 16, top + s.length * size * 1.05 + 12, '印');
+      var top = y + Math.max(12, (h - s.length * size) * 0.55);
+      var used = brushVert(c, s, x + 16, top, size, '#24180f');
+      cinnabar(c, x + 16, top + used + 8, '印');
     } else {
       var px = brushFit(c, s, x + w / 2, y + h - 18, w - 28, Math.min(20, w * 0.14), '#24180f', 'center');
       cinnabar(c, x + w - 16, y + h - 18, '印');
@@ -725,40 +763,71 @@
       '只在主线。没打败也不判负。'
     ];
   }
+  function captionOn(c, x, y, w, h, name, handle) {
+    var size = Math.max(16, Math.min(32, w * 0.1));
+    var nameY = y + h - (handle ? 42 : 26);
+    var used = brushFit(c, name, x + w / 2 - 12, nameY, Math.max(40, w - 64), size, '#24180f', 'center');
+    var im = inkCanvas(name, used, '#24180f');
+    var sealX = x + w / 2 - 12 + im._tw / 2 + 16;
+    if (sealX > x + w - 14) sealX = x + w - 14;
+    cinnabar(c, sealX, nameY, '印');
+    if (handle) brush(c, handle, x + w / 2 - 12, y + h - 16, Math.max(12, Math.min(15, used * 0.42)), '#8d1f18', 'center');
+  }
+  function vertStory(c, s, x, y, maxW, h) {
+    var size = 16, step, per, cols, need, i, col, row, yy, ch;
+    function layout(px) {
+      step = px * 1.08;
+      per = Math.max(1, Math.floor((h - px * 1.4) / step));
+      cols = Math.ceil(s.length / per);
+      need = cols * (px + 8);
+      return need;
+    }
+    while (size >= 13 && layout(size) > maxW) size -= 1;
+    layout(size);
+    for (i = 0; i < s.length; i++) {
+      col = Math.floor(i / per);
+      row = i % per;
+      ch = s.charAt(i);
+      yy = y + row * step + size * 0.5;
+      if (ch === '·') {
+        c.beginPath();
+        c.fillStyle = '#3a2e22';
+        c.arc(x + col * (size + 7) + size * 0.5, yy, Math.max(1.3, size * 0.07), 0, Math.PI * 2);
+        c.fill();
+      } else brush(c, ch, x + col * (size + 7) + size * 0.5, yy, size, '#3a2e22', 'center');
+    }
+    return Math.max(size + 8, cols * (size + 7));
+  }
   function paintStory(c, x, y, w, h) {
     var lines = storyLines();
-    var size = 15, i, need = 0;
-    c.save();
-    while (size > 12) {
-      c.font = 'bold ' + size + 'px KaiTi, STKaiti, "Noto Serif CJK SC", serif';
-      need = 0;
-      for (i = 0; i < lines.length; i++) need = Math.max(need, c.measureText(lines[i]).width);
-      if (need <= w * 0.34) break;
-      size -= 1;
-    }
-    c.restore();
-    var textW = Math.min(w * 0.36, need + 12);
-    c.save();
-    c.beginPath();
-    c.rect(x, y, textW, h);
-    c.clip();
-    var yy = y + 18;
-    for (i = 0; i < lines.length && yy < y + h - 8; i++) {
-      brush(c, lines[i], x, yy, size, '#3a2e22', 'left');
-      yy += size + 8;
-    }
-    c.restore();
-    var gap = 10;
-    var px = x + textW + 8;
-    var pw = Math.max(80, w - textW - 8);
-    var cardW = Math.floor((pw - gap) / 2);
     var stage = img('stage1', art.stage1 || 'stage1.webp');
     var form = img('form', art.form || 'form.webp');
-    inkWash(c, stage, px, y, cardW, h, '猫');
-    cardName(c, API.HERO, px, y, cardW, h);
-    brush(c, API.HANDLE, px + 34, y + h - 34, 13, '#8d1f18', 'left');
-    inkWash(c, form, px + cardW + gap, y, cardW, h, '化');
-    cardName(c, API.HERO2, px + cardW + gap, y, cardW, h);
+    var gap = 8, textW, px, pw, cardW, i, colW, half, yy, size;
+    if (w >= 520 && h >= 360) {
+      textW = vertStory(c, lines.join(''), x + 2, y + 4, Math.min(168, w * 0.22), h - 8);
+      px = x + textW + 6;
+      pw = Math.max(80, w - textW - 6);
+      cardW = Math.floor((pw - gap) / 2);
+      inkWash(c, stage, px, y, cardW, h, '猫');
+      captionOn(c, px, y, cardW, h, API.HERO, API.HANDLE);
+      inkWash(c, form, px + cardW + gap, y, cardW, h, '化');
+      captionOn(c, px + cardW + gap, y, cardW, h, API.HERO2, '');
+      return;
+    }
+    size = w < 420 ? 13 : 14;
+    half = Math.ceil(lines.length / 2);
+    colW = (w - 10) / 2;
+    for (i = 0; i < lines.length; i++) {
+      yy = y + 12 + (i % half) * (size + 5);
+      brushFit(c, lines[i], x + (i < half ? 0 : colW + 8), yy, colW - 4, size, '#3a2e22', 'left');
+    }
+    var top = y + half * (size + 5) + 16;
+    var cardH = Math.max(80, h - (top - y));
+    cardW = Math.floor((w - gap) / 2);
+    inkWash(c, stage, x, top, cardW, cardH, '猫');
+    captionOn(c, x, top, cardW, cardH, API.HERO, API.HANDLE);
+    inkWash(c, form, x + cardW + gap, top, cardW, cardH, '化');
+    captionOn(c, x + cardW + gap, top, cardW, cardH, API.HERO2, '');
   }
   function paintPopup(c, app) {
     var W = app.lw, H = app.lh, port = H > W * 1.05 || W < 760;
@@ -814,43 +883,43 @@
     if (port) {
       var each = Math.floor((availH - gap) / 2);
       inkWash(c, stage, x + 8, top, w - 16, each, '猫');
-      cardName(c, API.HERO, x + 8, top, w - 16, each);
-      brush(c, API.HANDLE, x + 48, top + 18, 14, '#8d1f18', 'left');
+      captionOn(c, x + 8, top, w - 16, each, API.HERO, API.HANDLE);
       inkWash(c, form, x + 8, top + each + gap, w - 16, each, '化');
-      cardName(c, API.HERO2, x + 8, top + each + gap, w - 16, each);
+      captionOn(c, x + 8, top + each + gap, w - 16, each, API.HERO2, '');
     } else {
       var cw = Math.floor((w - 24 - gap) / 2);
       inkWash(c, stage, x + 10, top, cw, availH, '猫');
-      cardName(c, API.HERO, x + 10, top, cw, availH);
-      brush(c, API.HANDLE, x + 48, top + 20, 15, '#8d1f18', 'left');
+      captionOn(c, x + 10, top, cw, availH, API.HERO, API.HANDLE);
       inkWash(c, form, x + 10 + cw + gap, top, cw, availH, '化');
-      cardName(c, API.HERO2, x + 10 + cw + gap, top, cw, availH);
+      captionOn(c, x + 10 + cw + gap, top, cw, availH, API.HERO2, '');
     }
     c.restore();
   }
   function splatField(c, W, H, p) {
-    var i, n = Math.floor(18 + p * 48);
+    var i, n = Math.floor(26 + p * 70);
     c.save();
     c.lineCap = 'round';
     c.lineJoin = 'round';
     for (i = 0; i < n; i++) {
       var ang = i * 2.399963;
-      var rad = (0.05 + (i % 11) * 0.045) * Math.max(W, H) * (0.15 + p);
-      var x = W / 2 + Math.cos(ang) * rad * 0.95;
-      var y = H / 2 + Math.sin(ang * 0.97) * rad * 0.72;
-      var len = (18 + (i % 8) * 14) * (0.5 + p);
-      c.strokeStyle = 'rgba(28,22,16,' + (0.18 + (i % 4) * 0.1) + ')';
-      c.lineWidth = 1.2 + (i % 5) * 1.1;
+      var rad = (0.08 + (i % 13) * 0.05) * Math.max(W, H) * (0.22 + p * 0.85);
+      var x = W / 2 + Math.cos(ang) * rad * 0.92;
+      var y = H / 2 + Math.sin(ang * 0.97) * rad * 0.62;
+      var len = (28 + (i % 8) * 22) * (0.55 + p);
+      c.strokeStyle = 'rgba(28,22,16,' + (0.16 + (i % 4) * 0.08) + ')';
+      c.lineWidth = 1.4 + (i % 5) * 1.5;
       c.beginPath();
       c.moveTo(x, y);
-      c.quadraticCurveTo(x + Math.cos(ang + 1) * len, y + Math.sin(ang) * len * 0.6, x + Math.cos(ang) * len * 1.4, y + Math.sin(ang * 1.2) * len);
+      c.quadraticCurveTo(x + Math.cos(ang + 1) * len, y + Math.sin(ang) * len * 0.55, x + Math.cos(ang) * len * 1.5, y + Math.sin(ang * 1.15) * len);
       c.stroke();
-      if (i % 3 === 0) {
-        c.fillStyle = 'rgba(28,22,16,' + (0.22 + (i % 3) * 0.08) + ')';
+      if (i % 4 === 0) {
+        var r = (46 + (i % 5) * 28) * (0.45 + p);
+        var g = c.createRadialGradient(x, y, r * 0.08, x, y, r);
+        g.addColorStop(0, 'rgba(28,22,16,' + (0.14 + (i % 3) * 0.04) + ')');
+        g.addColorStop(1, 'rgba(28,22,16,0)');
+        c.fillStyle = g;
         c.beginPath();
-        c.moveTo(x, y);
-        c.quadraticCurveTo(x + 18, y - 22, x + 8, y - 36);
-        c.quadraticCurveTo(x - 10, y - 18, x, y);
+        c.arc(x, y, r, 0, Math.PI * 2);
         c.fill();
       }
     }
@@ -871,26 +940,46 @@
     c.fillStyle = '#f6efe2';
     c.fillRect(0, 0, W, H);
     splatField(c, W, H, p);
-    var foot = H * 0.94;
+    var foot = H - (port ? 6 : H * 0.015);
+    var cx = port ? W * 0.5 : W * 0.58;
+    var room = port ? Math.max(120, foot - 50) : H * 1.02;
     var ease = function (u) { return 1 - Math.pow(1 - Math.max(0, Math.min(1, u)), 3); };
     if (p < 0.5) {
-      var cover = p < 0.18 ? 0 : (p - 0.18) / 0.32;
+      var cover = p < 0.16 ? 0 : (p - 0.16) / 0.34;
       c.save();
-      c.globalAlpha = 1 - cover * 0.92;
-      blitCut(c, 'stage1cut', art.stage1Cut || 'stage1-cut.webp', W * 0.5, foot, H * 0.98);
+      c.globalAlpha = 1 - cover * 0.94;
+      blitCut(c, 'stage1cut', art.stage1Cut || 'stage1-cut.webp', cx, foot, room * (port ? 0.96 : 1));
       c.restore();
     }
-    if (p > 0.4) {
-      var u = ease((p - 0.4) / 0.38);
-      var fh = H * (0.55 + 0.48 * u);
+    if (p > 0.12 && p < 0.62) {
+      var k = Math.max(0, Math.min(1, (p - 0.12) / 0.42));
+      var rr = H * (0.12 + 0.78 * k);
+      var ig = c.createRadialGradient(cx, H * 0.46, rr * 0.08, cx, H * 0.46, rr);
+      ig.addColorStop(0, 'rgba(22,16,12,' + (0.08 + 0.42 * k) + ')');
+      ig.addColorStop(1, 'rgba(22,16,12,0)');
+      c.fillStyle = ig;
+      c.beginPath();
+      c.arc(cx, H * 0.46, rr, 0, Math.PI * 2);
+      c.fill();
+    }
+    if (p > 0.36) {
+      var u = ease((p - 0.36) / 0.4);
+      var fh = room * (port ? (0.78 + 0.22 * u) : (0.78 + 0.26 * u));
       c.save();
-      c.globalAlpha = Math.min(1, (p - 0.4) / 0.16);
-      blitCut(c, 'formcut', art.formCut || 'form-cut.webp', W * 0.5, foot + H * 0.02, fh);
+      c.globalAlpha = Math.min(1, (p - 0.36) / 0.16);
+      blitCut(c, 'formcut', art.formCut || 'form-cut.webp', cx, foot, fh);
       c.restore();
     }
-    if (p > 0.62) {
-      brush(c, API.HERO2, W / 2, H * 0.1, port ? 28 : 42, '#24180f', 'center');
-      cinnabar(c, W / 2 + (port ? 92 : 130), H * 0.1, '魔');
+    if (p > 0.55) {
+      if (port) {
+        brush(c, API.HERO2, W / 2, 26, 22, '#24180f', 'center');
+        cinnabar(c, W / 2 + 78, 26, '魔');
+      } else {
+        var nx = Math.max(36, Math.min(W * 0.07, cx - H * 0.46));
+        var ny = H * 0.2;
+        var used = brushVert(c, API.HERO2, nx, ny, 44, '#24180f');
+        cinnabar(c, nx, ny + used + 8, '魔');
+      }
     }
     var bw = 110, bh = 44, bx = W - bw - 14, by = H - bh - 12;
     redSeal(c, bx, by, bw, bh, '跳过');
@@ -1035,7 +1124,7 @@
     var e2 = G.dkUnit;
     if (e2 && !e2.dead && run.unit && !run.unit.dead && run.introLeft <= 0 && run.formLeft <= 0) {
       var q = w2s(G, app, e2.x, e2.y);
-      var ph = run.unit.phase >= 2 ? 250 : 188;
+      var ph = run.unit.phase >= 2 ? 292 : 200;
       var cutKey = run.unit.phase >= 2 ? 'formcut' : 'stage1cut';
       var cutFile = run.unit.phase >= 2 ? (art.formCut || 'form-cut.webp') : (art.stage1Cut || 'stage1-cut.webp');
       var cutIm = img(cutKey, cutFile);
@@ -1046,17 +1135,46 @@
       if (G.dens) for (di = 0; di < G.dens.length; di++) if (G.dens[di].boss && !G.dens[di].boss.dead) { boss = G.dens[di].boss; break; }
       if (boss) {
         var bq = w2s(G, app, boss.x, boss.y);
-        if (bq.x > q.x - 30 && px + pw > bq.x - 100) px = Math.max(8, bq.x - 100 - pw);
+        if (bq.x > q.x - 30 && px + pw > bq.x - 110) px = Math.max(8, bq.x - 110 - pw);
+      }
+      var banW = Math.min(260, Math.max(168, app.lw * 0.28));
+      var ban = { x: (app.lw - banW) / 2, y: Math.max(120, Math.min(app.lh * 0.18, 240)), w: banW, h: 64 };
+      if (px < ban.x + ban.w && px + pw > ban.x && py < ban.y + ban.h + 6) {
+        var shift = ban.y + ban.h + 8 - py;
+        if (shift > 0 && shift < 140 && py + ph + shift < app.lh - 16) py += shift;
       }
       if (cutIm) c.drawImage(cutIm, px, py, pw, ph);
       else blitCut(c, cutKey, cutFile, px + pw / 2, py + ph, ph);
       var label = run.unit.phase >= 2 ? API.HERO2 : API.HERO;
-      var nx = Math.max(8, px - 18);
-      var ny = Math.max(208, py + ph * 0.46);
-      if (ny + label.length * 17 > app.lh - 80) ny = Math.max(208, app.lh - 80 - label.length * 17);
-      brushVert(c, label, nx, ny, 15, '#24180f');
-      cinnabar(c, nx, ny + label.length * 15 * 1.05 + 12, run.unit.phase >= 2 ? '魔' : '猫');
-      brush(c, API.HANDLE, nx, ny + label.length * 15 * 1.05 + 28, 11, '#8d1f18', 'center');
+      var sizeN = 16, stepN = sizeN * 0.98, lh = label.length * stepN + 28;
+      var station = null;
+      if (G.camp) {
+        var cs = w2s(G, app, G.camp.x, G.camp.y - 98);
+        station = { x: cs.x - 140, y: cs.y - 16, w: 280, h: 32 };
+      }
+      var bossTag = null;
+      function overlap(r, b) { return b && r.x < b.x + b.w && r.x + r.w > b.x && r.y < b.y + b.h && r.y + r.h > b.y; }
+      function blocked(nx, ny) {
+        var r = { x: nx - 18, y: ny - 8, w: 36, h: lh };
+        if (r.y < 100 || r.y + r.h > app.lh - 64) return true;
+        if (r.x < 2 || r.x > app.lw - 8) return true;
+        if (overlap(r, station) || overlap(r, bossTag) || overlap(r, ban)) return true;
+        return false;
+      }
+      if (boss) {
+        var bs = w2s(G, app, boss.x, boss.y - (boss.r || 36) - 28);
+        bossTag = { x: bs.x - 170, y: bs.y - 30, w: 300, h: 64 };
+      }
+      var cands = [
+        { x: px + pw + 18, y: py + ph * 0.58 },
+        { x: px + pw + 18, y: py + ph * 0.34 },
+        { x: Math.max(14, px - 36), y: py + ph * 0.62 },
+        { x: Math.min(app.lw - 24, px + pw * 0.62), y: Math.min(app.lh - 96, py + ph + 16) }
+      ];
+      var spot = cands[0], ci;
+      for (ci = 0; ci < cands.length; ci++) if (!blocked(cands[ci].x, cands[ci].y)) { spot = cands[ci]; break; }
+      var usedN = brushVert(c, label, spot.x, spot.y, sizeN, '#24180f');
+      cinnabar(c, spot.x, spot.y + usedN + 6, run.unit.phase >= 2 ? '魔' : '猫');
     }
     if (run.introLeft > 0) paintIntro(c, app, run);
     if (run.formLeft > 0) paintForm(c, app, run);
