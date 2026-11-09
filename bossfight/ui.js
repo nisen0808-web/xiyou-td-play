@@ -138,7 +138,11 @@
   /* ---------- 特效 ---------- */
   function fxAdd(o) { o.age = 0; o.max = o.max || 0.6; G.fx.push(o); return o; }
   function dust(x, y, n, sz, col) { for (var i = 0; i < n; i++) fxAdd({ k: 'dust', x: x + (rnd() - .5) * sz * 1.4, y: y + (rnd() - .5) * 6, vx: (rnd() - .5) * 60 * G.S, vy: -(14 + rnd() * 40) * G.S, r: sz * (.25 + rnd() * .35), max: .6 + rnd() * .5, col: col || '176,146,104' }); }
-  function inkBurst(x, y, sz, col, n, a) { fxAdd({ k: 'ink', x: x, y: y, sz: sz, col: col || '#2f2a1f', max: .5, seed: rnd() * 99, n: n || 14, a: a || .85 }); }
+  function inkBurst(x, y, sz, col, n, a) {
+    n = n || 14; a = a || .85;
+    fxAdd({ k: 'ink', x: x, y: y, sz: sz, col: '#2a2218', max: .5, seed: rnd() * 99, n: n, a: a });
+    fxAdd({ k: 'ink', x: x, y: y, sz: sz * .7, col: '#6e342c', max: .4, seed: rnd() * 99, n: Math.max(2, Math.round(n / 4)), a: a * .7 });
+  }
   function stain(x, y, sz, a) { fxAdd({ k: 'stain', x: x, y: y + 2 * G.S, sz: sz, a: a || .16, max: .9, seed: (rnd() * 999) | 0 }); }
   function ring(x, y, sz, col, max, lw) { fxAdd({ k: 'ring', x: x, y: y, sz: sz, col: col, max: max || .5, lw: lw || 5 * G.S }); }
   function inkFloat(col) {
@@ -206,7 +210,7 @@
         G.shake = Math.max(G.shake, (e.big ? 9 : 3) * S); if (e.big) { G.stop = Math.max(G.stop, .06); hui(h).fly = .6; } h.flash = .14; wkick('h:' + e.id, 'hit', e.big ? 1.3 : .7); break; }
       case 'stagger': call('破招', '#c8341f', true); ring(bv.x, bodyY(bv.sc), 120 * S, '#e6c474', .5); break;
       case 'ultland': { call('必杀', '#c8341f', true); var cc = (e.id === 'wukong' ? '#ef8a3c' : BF.SP[e.id].color); ring(bv.x, bodyY(bv.sc), 150 * S, cc, .7, 7 * S); inkBurst(bv.x + 30 * S, bodyY(bv.sc) - G.fh * .25, 70 * S, cc, 10, .5); dust(bv.x, gy, 12, 56 * S);
-        slash(bv.x, bodyY(bv.sc), -.5, 300 * S, '#fffaf0', 18 * S); slash(bv.x, bodyY(bv.sc), .55, 260 * S, cc, 12 * S); G.shake = Math.max(G.shake, 13 * S); G.stop = Math.max(G.stop, .11); G.flash = .3; G.flashC = '#fffaf0';
+        slash(bv.x, bodyY(bv.sc), -.5, 300 * S, '#2a2218', 18 * S); slash(bv.x, bodyY(bv.sc), .55, 260 * S, '#6e342c', 8 * S); G.shake = Math.max(G.shake, 13 * S); G.stop = Math.max(G.stop, .11); G.flash = .3; G.flashC = '#f4efe4';
         if (e.id !== 'wukong') { var ef = BF.SP[e.id].ult.e || {}, lab = Object.keys(ef).filter(function (k) { return EFXN[k]; }).map(function (k) { return EFXN[k]; }); var w0 = F.heroes[0]; if (lab.length && w0) { hv = heroVis(w0); text(hv.x, Math.max(bodyY(hv.sc) - G.fh * .46, (G.land ? G.H * .245 : G.H * .2) + 48 * S), lab.join(' · '), cc, 22, 1.5); ring(hv.x, bodyY(hv.sc), 110 * S, cc, .8, 5 * S); } } break; }
       case 'ko': { h = heroById(e.id); if (!h) break; hv = heroVis(h); inkBurst(hv.x, bodyY(hv.sc) - G.fh * .1, 90 * S, '#2f2a1f', 14, .45); dust(hv.x, gy, 10, 50 * S); call(h.w ? '败' : '退场', '#4a4338', true); G.shake = 12 * S; break; }
       case 'bossko': G.calls = []; G.fx = G.fx.filter(function (f) { return !(f.k === 'txt' && f.col === '#b8863b'); }); G.slow = 1.6; G.shake = 18 * S; inkBurst(bv.x, bodyY(bv.sc) - G.fh * .3, 150 * S, '#2f2a1f', 22, .4); ring(bv.x, bodyY(bv.sc), 300 * S, '#e6c474', 1, 10 * S); G.flash = .5; G.flashC = '#fffaf0'; break;
@@ -217,9 +221,9 @@
       case 'meleehit': { var fx0 = bv.x + e.face * 120 * S; slash(fx0, bodyY(bv.sc) + (e.n === 2 ? 40 : 20) * S, e.face < 0 ? (e.n === 2 ? 3.6 : 2.6) : (e.n === 2 ? -.5 : .5), 200 * S, '#2f2a1f', 20 * S); dust(fx0, gy, 6, 40 * S); stain(fx0, gy, 80 * S, .16); wkick('boss', 'land', e.n === 2 ? .9 : .6); G.shake = Math.max(G.shake, (e.n === 2 ? 6 : 4) * S); break; }
       case 'spinhit': ring(bv.x, gy, BF.K.SPIN_R * G.V.k * 1.7, '#2f2a1f', .5, 8 * S); dust(bv.x, gy, 8, 48 * S); wkick('boss', 'land', .5); G.shake = Math.max(G.shake, 5 * S); break;
       case 'interrupt': text(bv.x, bodyY(bv.sc) - G.fh * .55, '打断！', '#5c4034', 40, 1.1); ring(bv.x, bodyY(bv.sc), 140 * S, '#5c4034', .6, 6 * S); break;
-      case 'finalhit': ring(bv.x, gy, G.W * .5, '#c8341f', .9, 12 * S); dust(bv.x, gy, 22, 90 * S); stain(bv.x, gy, 160 * S, .22); wkick('boss', 'land', 1.2); G.shake = 22 * S; G.stop = .1; G.flash = .4; G.flashC = '#ffd9a0'; break;
+      case 'finalhit': ring(bv.x, gy, G.W * .5, '#2a2218', .9, 12 * S); dust(bv.x, gy, 22, 90 * S); stain(bv.x, gy, 160 * S, .22); wkick('boss', 'land', 1.2); G.shake = 22 * S; G.stop = .1; G.flash = .4; G.flashC = '#f4efe4'; break;
       case 'guards': ring(bv.x, bodyY(bv.sc), 170 * S, '#7a2b8e', .7); break;
-      case 'flames': dust(bv.x - 60 * S, gy, 8, 46 * S, '150,110,70'); stain(bv.x - 60 * S, gy, 110 * S, .2); wkick('boss', 'land', 1); ring(bv.x - 60 * S, gy, 150 * S, '#7a5a30', .5, 6 * S); G.shake = Math.max(G.shake, 6 * S); break;
+      case 'flames': dust(bv.x - 60 * S, gy, 8, 46 * S, '42,34,24'); stain(bv.x - 60 * S, gy, 110 * S, .2); wkick('boss', 'land', 1); ring(bv.x - 60 * S, gy, 150 * S, '#2a2218', .5, 6 * S); inkBurst(bv.x - 60 * S, gy - 20 * S, 50 * S, '#2a2218', 8, .4); G.shake = Math.max(G.shake, 6 * S); break;
       case 'dodge': h = heroById(e.id); if (h) { hv = heroVis(h); text(hv.x, bodyY(hv.sc) - 60 * S, '闪', '#5c4034', 34, .7); } break;
       case 'trait': h = heroById(e.id); if (h) { hv = heroVis(h); if (!G.F.over) text(hv.x, bodyY(hv.sc) - 90 * S, e.name, '#b8863b', 22, 1.3); ring(hv.x, bodyY(hv.sc), 110 * S, h.color, .6); } break;
       case 'wuult': G.wuUlt = .9; hv = heroVis(F.heroes[0]); text(hv.x, bodyY(hv.sc) - 100 * S, '如意金箍棒', '#c8341f', 26, 1.2); break;
@@ -690,13 +694,13 @@
     }
     // 站到场上放必杀，然后离场
     var u2 = (t - cutT) / BF.SM.END, a = u2 < .1 ? u2 / .1 : (u2 > .8 ? clamp(1 - (u2 - .8) / .2, 0, 1) : 1), px = clamp(bv.x - (G.land ? .3 : .36) * W, W * .14, W * .8), ph = fh * 1.02;
-    c.save(); c.globalAlpha = .3 * a; var rg = c.createRadialGradient(px, G.gy - fh * .35, 10, px, G.gy - fh * .35, fh * .8); rg.addColorStop(0, col); rg.addColorStop(1, 'rgba(255,255,255,0)'); c.fillStyle = rg; c.fillRect(0, 0, W, H); c.restore();
+    c.save(); c.globalAlpha = .3 * a; var rg = c.createRadialGradient(px, G.gy - fh * .35, 10, px, G.gy - fh * .35, fh * .8); rg.addColorStop(0, 'rgba(42,34,24,.55)'); rg.addColorStop(1, 'rgba(42,34,24,0)'); c.fillStyle = rg; c.fillRect(0, 0, W, H); c.restore();
     var atk = clamp((t - cutT - .1) / .45, 0, 1), lunge = Math.sin(atk * Math.PI);
     var tt = t - cutT, spose = tt < .1 ? 'stance' : (tt < BF.SM.HIT + .5 ? 'ult' : 'stance');
     if (id === 'yuanzhang' || id === 'martin') drawRetinue(c, id, px, G.gy - .01 * H, ph, a * .95 * clamp(tt / .3, 0, 1), G.t);
     drawSpr(c, id, spose, px, G.gy - .01 * H, ph, { alpha: a, dx: lunge * 60 * S, rot: lunge * .04, sx: 1 + lunge * .03, lift: spose === 'ult' ? .03 : 0, skew: .014 * idleV(.2), key: 'sum:' + id });
-    if (!s.hit) { c.save(); c.globalAlpha = .5 * atk; c.strokeStyle = col; c.lineWidth = 8 * S; c.beginPath(); c.arc(px + 40 * S, G.gy - fh * .42, fh * .28 * (1 - atk * .4), 0, 7); c.stroke(); c.restore(); }
-    else { var q = clamp((t - cutT - BF.SM.HIT) / .6, 0, 1); c.save(); c.globalAlpha = (1 - q) * .8; c.strokeStyle = col; c.lineWidth = 14 * S * (1 - q); c.beginPath(); c.moveTo(px + 90 * S, G.gy - fh * .4); c.quadraticCurveTo((px + bv.x) / 2, G.gy - fh * .55, bv.x, G.gy - fh * .4); c.stroke(); c.lineWidth = 4 * S; c.strokeStyle = '#fffaf0'; c.stroke(); c.restore(); }
+    if (!s.hit) { c.save(); c.globalAlpha = .5 * atk; c.strokeStyle = '#2a2218'; c.lineWidth = 8 * S; c.beginPath(); c.arc(px + 40 * S, G.gy - fh * .42, fh * .28 * (1 - atk * .4), 0, 7); c.stroke(); c.restore(); }
+    else { var q = clamp((t - cutT - BF.SM.HIT) / .6, 0, 1); c.save(); c.globalAlpha = (1 - q) * .8; c.strokeStyle = '#2a2218'; c.lineWidth = 14 * S * (1 - q); c.beginPath(); c.moveTo(px + 90 * S, G.gy - fh * .4); c.quadraticCurveTo((px + bv.x) / 2, G.gy - fh * .55, bv.x, G.gy - fh * .4); c.stroke(); c.lineWidth = 3 * S; c.strokeStyle = '#6e342c'; c.stroke(); c.restore(); }
   }
 
   /* ---------- 总绘制 ---------- */
