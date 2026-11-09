@@ -86,7 +86,7 @@ async function shot(page, name) {
   });
   await page.evaluate(function () {
     return document.fonts.ready.then(function () {
-      return Promise.all(['stage1.webp', 'form.webp'].map(function (f) {
+      return Promise.all(['stage1.webp', 'form.webp', 'stage1-cut.webp', 'form-cut.webp'].map(function (f) {
         return new Promise(function (ok) {
           var im = new Image();
           im.onload = function () { ok(f); };
@@ -113,7 +113,7 @@ async function shot(page, name) {
   await page.waitForFunction(function () { return window.XY && window.XY.devilKitty && window.XY.save && window.XY.save.data; }, { timeout: 30000 });
   await page.evaluate(function () {
     return document.fonts.ready.then(function () {
-      return Promise.all(['stage1.webp', 'form.webp'].map(function (f) {
+      return Promise.all(['stage1.webp', 'form.webp', 'stage1-cut.webp', 'form-cut.webp'].map(function (f) {
         return new Promise(function (ok) {
           var im = new Image();
           im.onload = function () { ok(1); };
@@ -317,12 +317,31 @@ async function shot(page, name) {
   });
   console.log('formed', JSON.stringify(formed));
   if (!formed.hold || formed.drop) fail('phase1 should transform without drop ' + JSON.stringify(formed));
-  await page.waitForFunction(function () {
-    var v = document.querySelector('video');
-    return v && v.readyState >= 2 && v.currentTime > 2.2;
-  }, { timeout: 8000 }).catch(function () { console.log('video frame not ready, shooting poster'); });
-  await frames(page, 3);
-  await both('form');
+  var marks = [[8.6, 'a'], [6.6, 'b'], [4.4, 'c'], [2.4, 'd'], [0.7, 'e']];
+  async function pinForm(left) {
+    await page.evaluate(function (left) {
+      var G = window.__xy.G;
+      G.dkRun.formDur = 9;
+      G.dkRun.formLeft = left;
+      G.dkHold = true;
+    }, left);
+    await frames(page, 2);
+  }
+  var mi;
+  for (mi = 0; mi < marks.length; mi++) {
+    await setSize(1920, 1080);
+    await pinForm(marks[mi][0]);
+    await shot(page, 'form-' + marks[mi][1] + '-desktop');
+    await setSize(390, 844);
+    await pinForm(marks[mi][0]);
+    await shot(page, 'form-' + marks[mi][1] + '-mobile');
+  }
+  await setSize(1920, 1080);
+  await pinForm(3.2);
+  await shot(page, 'form-desktop');
+  await setSize(390, 844);
+  await pinForm(3.2);
+  await shot(page, 'form-mobile');
 
   var phase2 = await page.evaluate(function () {
     var G = window.__xy.G;
