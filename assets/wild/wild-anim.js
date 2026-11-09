@@ -105,6 +105,27 @@
     return !!(im && im.complete && im.naturalWidth > 0);
   };
   W.img = function (id, name) { return W.imgs[id + '/' + name] || null; };
+  /* 大图集解码后拆成单帧。牛魔王待机一张就有五百多万像素，每帧再从整张图里裁会把帧率压下去。 */
+  function bakeFrames(im, clip) {
+    if (!clip || typeof document === 'undefined') return;
+    var area = clip.cell[0] * clip.cell[1] * clip.frameCount;
+    if (area < 1500000) return;
+    var frames = [], cw = clip.cell[0], ch = clip.cell[1], i, col, row, cnv;
+    for (i = 0; i < clip.frameCount; i++) {
+      cnv = document.createElement('canvas');
+      cnv.width = cw; cnv.height = ch;
+      col = i % clip.cols; row = (i / clip.cols) | 0;
+      cnv.getContext('2d').drawImage(im, col * cw, row * ch, cw, ch, 0, 0, cw, ch);
+      frames.push(cnv);
+    }
+    clip._frames = frames;
+  }
+  W.blit = function (c, clip, im, index, dx, dy, dw, dh) {
+    var fr = clip._frames && clip._frames[index];
+    if (fr) { c.drawImage(fr, dx, dy, dw, dh); return; }
+    var cw = clip.cell[0], ch = clip.cell[1], col = index % clip.cols, row = (index / clip.cols) | 0;
+    c.drawImage(im, col * cw, row * ch, cw, ch, dx, dy, dw, dh);
+  };
   function loadImg(url) {
     return new Promise(function (resolve, reject) {
       var im = new Image();
@@ -134,7 +155,7 @@
           (function (id, name) {
             var clip = data.ids[id][name];
             if (!clip || !clip.file) return;
-            jobs.push(loadImg(W.base + clip.file).then(function (im) { W.imgs[id + '/' + name] = im; }, function () { }));
+            jobs.push(loadImg(W.base + clip.file).then(function (im) { W.imgs[id + '/' + name] = im; bakeFrames(im, clip); }, function () { }));
           })(ids[i], names[n]);
         }
       }

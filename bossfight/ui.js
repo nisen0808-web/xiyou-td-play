@@ -305,11 +305,22 @@
     var ax = clip.anchor[0], ay = clip.anchor[1], fl0 = p.fs != null ? p.fs : (p.flip ? -1 : 1), fl = p.fs != null ? turnW(fl0) : fl0, al = p.alpha == null ? 1 : p.alpha;
     if (Math.abs(fl) < .05) return true;
     var face = (fl < 0 ? -1 : 1), ref = p.fitH || fh;
-    if (!p.noShadow) drawShadow(c, cx, gyy, Math.min(body * .55, ref * .5), fh, p, al, face);
-    var tx = cx + (p.dx || 0), ty = gyy + (p.dy || 0) - (p.lift || 0) * fh;
+    var tx = cx + (p.dx || 0), ty = gyy + (p.dy || 0) - (p.lift || 0) * fh, nudge = 0;
+    if (id === 'niumo') {
+      var padX = G.W * 0.02, padTop = G.H * 0.07;
+      var sprW = cw * k, sprH = chh * k, maxW = G.W - padX * 2, maxH = Math.max(80, gyy - padTop);
+      var shrink = Math.min(1, maxW / sprW, maxH / sprH);
+      if (shrink < 1) k *= shrink;
+      var left = ax * k, right = (cw - ax) * k;
+      if (tx + right > G.W - padX) nudge = (G.W - padX) - (tx + right);
+      if (tx - left + nudge < padX) nudge = padX - (tx - left);
+      tx += nudge;
+    }
+    if (!p.noShadow) drawShadow(c, cx + nudge, gyy, Math.min(body * .55, ref * .5), fh, p, al, face);
     c.save(); c.globalAlpha = al; c.imageSmoothingEnabled = true;
     c.translate(tx, ty); c.rotate(p.rot || 0); c.transform(1, 0, (p.skew || 0) * fl, 1, 0, 0); c.scale(fl * (p.sx || 1), p.sy || 1);
-    c.drawImage(im, col * cw, row * chh, cw, chh, -ax * k, -ay * k, cw * k, chh * k);
+    if (W.blit) W.blit(c, clip, im, fr.index, -ax * k, -ay * k, cw * k, chh * k);
+    else c.drawImage(im, col * cw, row * chh, cw, chh, -ax * k, -ay * k, cw * k, chh * k);
     c.restore();
     return true;
   }
