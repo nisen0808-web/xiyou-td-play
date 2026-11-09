@@ -185,17 +185,6 @@
     g.addColorStop(1, '#efe0c0');
     c.fillStyle = g;
     c.fill();
-    c.save();
-    c.globalAlpha = 0.35;
-    c.strokeStyle = 'rgba(90,70,40,0.35)';
-    c.lineWidth = 1;
-    for (var i = 0; i < 7; i++) {
-      c.beginPath();
-      c.moveTo(x + 12, y + 18 + i * (h / 8));
-      c.lineTo(x + w - 16, y + 14 + i * (h / 8));
-      c.stroke();
-    }
-    c.restore();
     c.strokeStyle = '#2a2118';
     c.lineWidth = 2.2;
     c.stroke();
@@ -241,8 +230,27 @@
   function portrait(c, which, x, y, w, h, bare) {
     var im = img(which, which === 'form' ? (art.form || 'form.webp') : (art.stage1 || 'stage1.webp'));
     if (bare) {
+      c.save();
+      c.beginPath();
+      if (bare === 'field') {
+        c.moveTo(x, y);
+        c.lineTo(x + w, y);
+        c.lineTo(x + w, y + h * 0.58);
+        c.quadraticCurveTo(x + w * 0.82, y + h * 0.9, x + w * 0.5, y + h);
+        c.quadraticCurveTo(x + w * 0.18, y + h * 0.9, x, y + h * 0.58);
+        c.closePath();
+      } else c.rect(x, y, w, h);
+      c.clip();
       if (im) drawContain(c, im, x, y, w, h);
-      else { cursive(c, '猫', x + w / 2, y + h / 2, Math.min(w, h) * 0.28, '#3a2a1c', 'center'); }
+      else cursive(c, '猫', x + w / 2, y + h / 2, Math.min(w, h) * 0.28, '#3a2a1c', 'center');
+      c.globalCompositeOperation = 'destination-in';
+      var fade = c.createLinearGradient(x, y + h * 0.55, x, y + h);
+      fade.addColorStop(0, 'rgba(0,0,0,1)');
+      fade.addColorStop(0.12, 'rgba(0,0,0,1)');
+      fade.addColorStop(1, 'rgba(0,0,0,0)');
+      c.fillStyle = fade;
+      c.fillRect(x, y, w, h);
+      c.restore();
       return;
     }
     c.save();
@@ -563,18 +571,63 @@
     c.restore();
     boxes.popup = { x: x, y: y, w: w, h: h };
   }
+  function drawGachaCards(c, x, y, w, h, claimed) {
+    var pulls = claimed && XY.save.data && XY.save.data.gacha10 && XY.save.data.gacha10.pulls;
+    var src = (pulls && pulls.length) ? pulls : (XY.SPECIALS || []).map(function (d) { return d.id; });
+    if (!src.length) src = ['?'];
+    var list = [], i;
+    for (i = 0; i < 10; i++) list.push(src[i % src.length]);
+    var cols = 5, gap = 8, pad = 14;
+    var cw = Math.floor((w - pad * 2 - gap * (cols - 1)) / cols);
+    var ch = Math.floor((h - gap) / 2);
+    if (ch > cw * 1.45) ch = Math.floor(cw * 1.45);
+    for (i = 0; i < 10; i++) {
+      var cx = x + pad + (i % cols) * (cw + gap);
+      var cy = y + Math.floor(i / cols) * (ch + gap);
+      var id = list[i], d = XY.SP_BY && XY.SP_BY[id];
+      rr(c, cx, cy, cw, ch, 5);
+      var g = c.createLinearGradient(cx, cy, cx, cy + ch);
+      g.addColorStop(0, claimed ? '#fffaf0' : '#f6efe0');
+      g.addColorStop(1, claimed ? '#f3e6c8' : '#e7d7b4');
+      c.fillStyle = g;
+      c.fill();
+      c.strokeStyle = '#2a2118';
+      c.lineWidth = 1.15;
+      c.stroke();
+      c.strokeStyle = 'rgba(141,31,24,0.45)';
+      c.lineWidth = 1;
+      rr(c, cx + 3, cy + 3, cw - 6, ch - 6, 3);
+      c.stroke();
+      var nm = d ? d.name : '随机';
+      var face = d && XY.avatar ? XY.avatar(id) : null;
+      var r = Math.min(cw * 0.28, ch * 0.22, 22);
+      if (face) {
+        c.save();
+        c.beginPath();
+        c.arc(cx + cw / 2, cy + ch * 0.38, r, 0, Math.PI * 2);
+        c.clip();
+        c.drawImage(face, cx + cw / 2 - r, cy + ch * 0.38 - r, r * 2, r * 2);
+        c.restore();
+      } else {
+        cursive(c, claimed ? nm.slice(0, 1) : '背', cx + cw / 2, cy + ch * 0.4, Math.max(14, r), '#24180f', 'center');
+      }
+      kai(c, nm.length > 5 ? nm.slice(0, 4) : nm, cx + cw / 2, cy + ch - 16, Math.max(10, Math.min(13, cw * 0.22)), '#3a2e22', 'center', false);
+      kai(c, claimed ? '已领' : '未领', cx + cw / 2, cy + 12, 10, claimed ? '#2f663a' : '#8d1f18', 'center', false);
+    }
+  }
   function slip(c, app, x, y, w, h, kind) {
     rr(c, x, y, w, h, 6);
-    c.fillStyle = 'rgba(255,252,244,0.72)';
+    c.fillStyle = '#fbf6ea';
     c.fill();
     c.strokeStyle = 'rgba(42,33,24,0.45)';
     c.lineWidth = 1.2;
     c.stroke();
     if (kind === 'gacha') {
       cursive(c, '十连抽卡', x + 18, y + 28, 26, '#7d1c14', 'left');
-      kai(c, '每个存档一次。登录后走云端，只抽一次。', x + 18, y + 58, 14, '#5c4a36', 'left', false);
       var claimed = API.gachaClaimed(XY.save.data);
-      var bw = Math.min(220, w - 36), bh = 56, bx = x + 18, by = y + h - 78;
+      kai(c, claimed ? '已领取 · 这十张已经入册' : '未领取 · 可抽角色', x + 18, y + 54, 14, '#5c4a36', 'left', false);
+      drawGachaCards(c, x, y + 70, w, Math.max(120, h - 168), claimed);
+      var bw = Math.min(220, w - 36), bh = 52, bx = x + 18, by = y + h - 68;
       if (claimed) {
         rr(c, bx, by, bw, bh, 8);
         c.fillStyle = '#efe6d2';
@@ -586,7 +639,6 @@
         redSeal(c, bx, by, bw, bh, '去抽卡');
         hit(bx, by, bw, bh, 'dkDraw');
       }
-      kai(c, claimed ? '这一档的十连已经抽过。' : '点红印进入原来的翻牌。', x + 18, by - 22, 13, '#6a5438', 'left', false);
     } else {
       cursive(c, API.HERO, x + 18, y + 28, 28, '#24180f', 'left');
       kai(c, API.HANDLE, x + 18, y + 54, 13, '#8d1f18', 'left', false);
@@ -698,33 +750,47 @@
         if (!e._dkRage && !e.enraged) continue;
         var p = w2s(G, app, e.x, e.y - (e.r || 16) - 18);
         if (p.x < -20 || p.y < -20 || p.x > app.lw + 20 || p.y > app.lh + 20) continue;
+        if (e.def && (e.def.denBoss || e.def.boss)) continue;
         c.beginPath();
         c.arc(p.x, p.y, 11, 0, Math.PI * 2);
-        c.fillStyle = 'rgba(166,40,28,0.9)';
+        c.fillStyle = 'rgba(247,241,228,0.94)';
         c.fill();
-        cursive(c, '狂', p.x, p.y, 14, '#fff6e4', 'center');
+        c.lineWidth = 1.4;
+        c.strokeStyle = '#2a2118';
+        c.stroke();
+        cursive(c, '狂', p.x, p.y, 13, '#8d1f18', 'center');
         n++;
       }
       var left = Math.max(0, Math.ceil(run.rageLeft));
-      paper(c, app.lw / 2 - 92, 8, 184, 36);
-      cursive(c, '狂暴 ' + left + ' 秒', app.lw / 2, 26, 20, '#7d1c14', 'center');
+      paper(c, 12, 76, 156, 32);
+      cursive(c, '狂暴 ' + left + ' 秒', 90, 92, 16, '#7d1c14', 'center');
     }
     var e2 = G.dkUnit;
     if (e2 && !e2.dead && run.unit && !run.unit.dead && run.introLeft <= 0 && run.formLeft <= 0) {
       var q = w2s(G, app, e2.x, e2.y);
-      var ph = run.unit.phase >= 2 ? 250 : 220, pw = Math.round(ph * 0.72);
-      portrait(c, run.unit.phase >= 2 ? 'form' : 'stage1', q.x - pw / 2, q.y - ph + 28, pw, ph, true);
+      var ph = run.unit.phase >= 2 ? 146 : 112, pw = Math.round(ph * 0.58);
+      var px = q.x - pw / 2, py = q.y - ph + 10;
+      portrait(c, run.unit.phase >= 2 ? 'form' : 'stage1', px, py, pw, ph, 'field');
       var label = run.unit.phase >= 2 ? API.HERO2 : API.HERO;
-      paper(c, q.x - 78, q.y - ph - 6, 156, 36);
-      cursive(c, label, q.x, q.y - ph + 6, 18, '#24180f', 'center');
-      kai(c, API.HANDLE, q.x, q.y - ph + 22, 11, '#8d1f18', 'center', false);
-      var bw = 90, ratio = Math.max(0, Math.min(1, e2.hp / (e2.maxHp || 1)));
-      c.fillStyle = 'rgba(255,250,240,0.9)';
-      c.fillRect(q.x - bw / 2, q.y + 14, bw, 7);
-      c.fillStyle = run.unit.phase >= 2 ? '#a6281c' : '#3a2e22';
-      c.fillRect(q.x - bw / 2, q.y + 14, bw * ratio, 7);
-      c.strokeStyle = '#2a2118';
-      c.strokeRect(q.x - bw / 2, q.y + 14, bw, 7);
+      var plate = { x: q.x - 74, y: py - 42, w: 148, h: 34 };
+      var bwB = Math.min(260, Math.max(168, app.lw * 0.28)), bxB = (app.lw - bwB) / 2;
+      var byB = Math.max(120, Math.min(app.lh * 0.18, 240)), bhB = 64;
+      function overB(p) { return p.x < bxB + bwB && p.x + p.w > bxB && p.y < byB + bhB && p.y + p.h > byB; }
+      if (overB(plate)) {
+        plate.x = Math.min(app.lw - plate.w - 8, px + pw + 6);
+        if (overB(plate)) plate.x = Math.max(8, px - plate.w - 6);
+        if (overB(plate)) plate.y = byB + bhB + 8;
+      }
+      if (plate.y < 70) plate.y = py + 8;
+      paper(c, plate.x, plate.y, plate.w, plate.h);
+      cursive(c, label, plate.x + plate.w / 2, plate.y + 11, 16, '#24180f', 'center');
+      kai(c, API.HANDLE, plate.x + plate.w / 2, plate.y + 24, 11, '#8d1f18', 'center', false);
+      var bw = Math.min(96, plate.w - 28), ratio = Math.max(0, Math.min(1, e2.hp / (e2.maxHp || 1)));
+      var by = plate.y + plate.h - 5;
+      c.fillStyle = 'rgba(42,33,24,0.18)';
+      c.fillRect(plate.x + (plate.w - bw) / 2, by, bw, 2);
+      c.fillStyle = '#5c4030';
+      c.fillRect(plate.x + (plate.w - bw) / 2, by, bw * ratio, 2);
     }
     if (run.introLeft > 0) paintIntro(c, app, run);
     if (run.formLeft > 0) paintForm(c, app, run);
@@ -745,7 +811,7 @@
     latin(c, API.NAME, x + w / 2, y + 46, Math.min(64, w * 0.14), '#7d1c14', 'center');
     cursive(c, API.SUB + ' · ' + API.HERO + ' 登场', x + w / 2, y + 84, 22, '#3a2a1c', 'center');
     var ph = Math.min(360, h - 180), pw = Math.min(240, w - 80);
-    portrait(c, 'stage1', x + (w - pw) / 2, y + 108, pw, ph, true);
+    portrait(c, 'stage1', x + (w - pw) / 2, y + 108, pw, ph, false);
     kai(c, API.HERO, x + w / 2, y + h - 52, 22, '#24180f', 'center');
     kai(c, API.HANDLE, x + w / 2, y + h - 28, 13, '#8d1f18', 'center', false);
     c.restore();

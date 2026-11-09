@@ -1,4 +1,4 @@
-/* Devil Kitty（测试版活动）纯逻辑。
+/* Devil Kitty（特别活动）纯逻辑。
  * 浏览器挂到 window.XY_DEVIL_KITTY；node --test 直接 require。
  * 角色显示名是「猫叔」，X 账号小字「@Cato_KT」。代码 id 仍是 cato / devil_kitty。
  * 活动名 Devil Kitty。变身名牌「猫叔 · 魔化」。
@@ -12,7 +12,7 @@
 
   var ID = 'devil_kitty';
   var NAME = 'Devil Kitty';
-  var SUB = '测试版活动';
+  var SUB = '特别活动';
   var HERO = '猫叔';
   var HANDLE = '@Cato_KT';
   var HERO2 = '猫叔 · 魔化';
@@ -100,14 +100,12 @@
     };
   }
 
-  /* 测试版默认开。?cato=0 强制关。存档 devilKitty.on 可关可开。标准版默认关。 */
+  /* 默认开。?cato=0 强制关。存档 devilKitty.on === false 时关。不看版本开关。 */
   function enabled(o) {
     o = o || {};
     if (o.query === '0' || o.query === 0) return false;
     if (o.saved === false) return false;
-    if (o.saved === true) return true;
-    if (o.query === '1' || o.query === 1) return true;
-    return !!o.testBuild;
+    return true;
   }
 
   function isMainline(g) {

@@ -246,7 +246,13 @@ async function shot(page, name) {
   await frames(page, 3);
   await shot(page, 'gear-mobile');
 
-  await setSize(1280, 720);
+  await setSize(1920, 1080);
+  async function both(name) {
+    await setSize(1920, 1080);
+    await shot(page, name + '-desktop');
+    await setSize(390, 844);
+    await shot(page, name + '-mobile');
+  }
   var battle = await page.evaluate(function () {
     var app = window.__xy.app;
     app.dkGear = false;
@@ -270,7 +276,7 @@ async function shot(page, name) {
   console.log('battle-intro', JSON.stringify(battle));
   if (!battle.spawned || !battle.hold) fail('intro did not start ' + JSON.stringify(battle));
   await frames(page, 5);
-  await shot(page, 'intro-desktop');
+  await both('intro');
 
   await page.evaluate(function () {
     var G = window.__xy.G;
@@ -301,7 +307,7 @@ async function shot(page, name) {
     return { rage: G.dkRun.rageOn, left: G.dkRun.rageLeft, mobs: G.enemies.filter(function (e) { return e._dkRage; }).length, boss: (G.dens[0] && G.dens[0].boss && G.dens[0].boss.enraged) || false, name: u.def.name };
   });
   await frames(page, 4);
-  await shot(page, 'rage-desktop');
+  await both('rage');
 
   var formed = await page.evaluate(function () {
     var G = window.__xy.G;
@@ -316,7 +322,7 @@ async function shot(page, name) {
     return v && v.readyState >= 2 && v.currentTime > 2.2;
   }, { timeout: 8000 }).catch(function () { console.log('video frame not ready, shooting poster'); });
   await frames(page, 3);
-  await shot(page, 'form-desktop');
+  await both('form');
 
   var phase2 = await page.evaluate(function () {
     var G = window.__xy.G;
@@ -328,7 +334,7 @@ async function shot(page, name) {
   console.log('phase2', JSON.stringify(phase2));
   if (phase2.phase !== 2 || phase2.name !== '猫叔 · 魔化') fail('phase2 name ' + JSON.stringify(phase2));
   await frames(page, 4);
-  await shot(page, 'phase2-desktop');
+  await both('phase2');
 
   var dead = await page.evaluate(function () {
     var G = window.__xy.G;

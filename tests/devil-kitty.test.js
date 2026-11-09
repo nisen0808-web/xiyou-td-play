@@ -113,12 +113,12 @@ test('变身演出可被跳过，跳过即满血进入二阶段', function () {
   assert.equal(mid.run.hold, false);
 });
 
-test('开关关闭时不登场；测试版默认开，标准版默认关，?cato=0 强制关', function () {
+test('开关默认开，不看版本标志，?cato=0 或存档关掉后不登场', function () {
   assert.equal(DK.enabled({ testBuild: true, query: null, saved: null }), true);
-  assert.equal(DK.enabled({ testBuild: false, query: null, saved: null }), false);
-  assert.equal(DK.enabled({ testBuild: true, query: '0', saved: true }), false);
-  assert.equal(DK.enabled({ testBuild: false, query: null, saved: true }), true);
-  assert.equal(DK.enabled({ testBuild: true, query: null, saved: false }), false);
+  assert.equal(DK.enabled({ testBuild: false, query: null, saved: null }), true);
+  assert.equal(DK.enabled({ query: '0', saved: true }), false);
+  assert.equal(DK.enabled({ saved: false }), false);
+  assert.equal(DK.SUB, '特别活动');
   var run = DK.tickRun(DK.freshRun(), restCtx({ enabled: false, restT: 40 }), 1);
   assert.equal(run.run.spawned, false);
 });
