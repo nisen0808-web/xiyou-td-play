@@ -24127,22 +24127,47 @@ X.step=function(g,dt){if(!g._simRandom)return step.apply(this,arguments);var sel
     if (!when || isNaN(when.getTime())) return '还没有';
     return (when.getMonth() + 1) + '月' + when.getDate() + '日 ' + when.getHours() + ':' + (when.getMinutes() < 10 ? '0' : '') + when.getMinutes();
   }
-  function statLines(d) {
+  function saveFacts(d) {
     d = d || {};
     var st = d.stats || {}, cards = (d.sp && d.sp.cards) || {}, n = 0, k;
     for (k in cards) if ((cards[k] | 0) > 0) n++;
-    return [['开局', String(st.runs | 0)], ['通关', String(st.wins | 0)], ['灵石', String(d.lingshi | 0)], ['角色卡', String(n)], ['时间', clockOf(d)]];
+    return { runs: st.runs | 0, wins: st.wins | 0, lingshi: d.lingshi | 0, cards: n, time: clockOf(d) };
   }
-  function sheet(c, x, y, w, h) {
+  function kaiFam() { return (XY.menu && XY.menu.KAI) || '"STKaiti","KaiTi","楷体","Noto Serif CJK SC","Source Han Serif SC",serif'; }
+  function kai(c, s, x, y, sz, col, al, maxW) {
+    s = String(s);
+    c.font = 'bold ' + sz + 'px ' + kaiFam();
+    if (maxW) { var w = c.measureText(s).width; if (w > maxW && w > 0) { sz = Math.max(11, sz * maxW / w); c.font = 'bold ' + sz + 'px ' + kaiFam(); } }
+    c.fillStyle = col; c.textAlign = al || 'center'; c.textBaseline = 'middle';
+    c.fillText(s, x, y);
+  }
+  function phrase(c, word, num, cx, y, numSz, maxW) {
+    var fam = kaiFam(), ws = Math.round(numSz * 0.42), gap = Math.round(numSz * 0.28);
+    c.font = 'bold ' + numSz + 'px ' + fam;
+    var nw = c.measureText(String(num)).width;
+    c.font = 'bold ' + ws + 'px ' + fam;
+    var ww = c.measureText(word).width, total = ww + gap + nw, scale = maxW && total > maxW ? maxW / total : 1;
+    var nSz = Math.max(20, numSz * scale), wSz = Math.max(13, ws * scale), g2 = gap * scale;
+    c.font = 'bold ' + nSz + 'px ' + fam; nw = c.measureText(String(num)).width;
+    c.font = 'bold ' + wSz + 'px ' + fam; ww = c.measureText(word).width;
+    var x0 = cx - (ww + g2 + nw) / 2;
+    c.fillStyle = '#6a5340'; c.textAlign = 'left'; c.textBaseline = 'middle';
+    c.font = 'bold ' + wSz + 'px ' + fam; c.fillText(word, x0, y + Math.max(1, nSz * 0.06));
+    c.fillStyle = '#1a120c'; c.font = 'bold ' + nSz + 'px ' + fam; c.fillText(String(num), x0 + ww + g2, y);
+  }
+  function redGo(c, st, x, y, w, h, label, act, ex) {
+    var hv = st.over && st.over(x, y, w, h), oy = hv ? -2 : 0, rr = Math.min(18, h * 0.32), R = XY.R;
     c.save();
-    c.fillStyle = 'rgba(58,50,38,0.10)';
-    c.fillRect(x + 3, y + 5, w, h);
-    c.fillStyle = '#fffaf0';
-    c.fillRect(x, y, w, h);
-    c.strokeStyle = '#3a3226';
-    c.lineWidth = 1.6;
-    c.strokeRect(x + 0.8, y + 0.8, w - 1.6, h - 1.6);
+    c.shadowColor = 'rgba(176,42,28,0.4)'; c.shadowBlur = 16; c.shadowOffsetY = 4;
+    var gr = c.createLinearGradient(0, y, 0, y + h);
+    gr.addColorStop(0, hv ? '#e2553a' : '#d7432a');
+    gr.addColorStop(1, hv ? '#c13620' : '#b3301c');
+    R.rrect(c, x, y + oy, w, h, rr); c.fillStyle = gr; c.fill();
     c.restore();
+    c.save(); c.lineWidth = 1.6; c.strokeStyle = 'rgba(255,214,150,0.85)';
+    R.rrect(c, x + 3, y + 3 + oy, w - 6, h - 6, Math.max(6, rr - 3)); c.stroke(); c.restore();
+    kai(c, label, x + w / 2, y + h / 2 + oy, Math.min(22, Math.round(h * 0.4)), '#fff8e8', 'center', w - 18);
+    st.hit(x, y, w, h, act, ex);
   }
   function payload() {
     var d;
@@ -24499,15 +24524,13 @@ X.step=function(g,dt){if(!g._simRandom)return step.apply(this,arguments);var sel
     if (!VU || w < 132) return;
     h = Math.max(44, h || 44);
     if (!session) {
-      st.btn(x, y, w, h, '用 Google 登录', 'cloudLogin', { sz: w < 156 ? 13 : 15, rgb: '122,74,50', vh: 32 });
+      st.btn(x, y, w, h, '用 Google 登录', 'cloudLogin', { sz: w < 156 ? 14 : 16, rgb: '58,42,28', strong: true, vh: Math.max(36, h - 8) });
       return;
     }
-    if (VU.drawTag) VU.drawTag(c, x, y + 4, w, 36, '', '#8a7a58', { fill: 'rgba(255,250,240,0.96)', seed: 11 });
-    drawAvatar(c, x + 8, y + (h - 28) / 2, 28);
-    var outW = 64;
-    VU.txt(c, shortName(), x + 42, y + h / 2 + 1, 15, '#3a3226', 'left', true, w - 42 - outW - 8);
-    st.hit(x + w - outW, y, outW, h, 'cloudLogout');
-    VU.txt(c, '退出', x + w - outW / 2, y + h / 2 + 1, 14, '#9a2620', 'center', true, outW - 8);
+    if (VU.washE) VU.washE(c, x + w * 0.42, y + h / 2, w * 0.55, h * 0.42, '58,42,28', 0.22);
+    drawAvatar(c, x + 6, y + (h - 30) / 2, 30);
+    kai(c, shortName(), x + 42, y + h / 2 + 1, 16, '#2b1c08', 'left', w - 42 - 62);
+    st.btn(x + w - 58, y, 56, h, '退出', 'cloudLogout', { seal: true, pri: true, col: '#b8322a', sz: 15, stack: false, rot: -0.05 });
   }
   function paintHub(c, st) {
     if (!session) return;
@@ -24521,87 +24544,106 @@ X.step=function(g,dt){if(!g._simRandom)return step.apply(this,arguments);var sel
     else if (swapNote && !swapNote.ack) paintSwap(c, st);
   }
   function paintChoice(c, st) {
-    var VU = XY.villainUI, cw = st.cw, ch = st.ch, narrow = cw < 640;
-    var pad = narrow ? 16 : 28, titleSz = narrow ? 26 : 34, bodySz = narrow ? 17 : 20;
-    var lineSz = narrow ? 18 : 22, lineH = narrow ? 32 : 40, cardHead = narrow ? 30 : 36;
-    var cardH = 14 + cardHead + 8 + 5 * lineH + 14;
-    var stack = narrow;
-    var bw = Math.min(cw - (narrow ? 16 : 64), narrow ? cw - 16 : 960);
-    var explainH = (bodySz + 12) * 2;
-    var headH = pad + titleSz + 16 + (bodySz + 18) + explainH + 10;
-    var cardsBlock = stack ? cardH * 2 + 14 : cardH;
-    var btnH = 52;
+    var VU = XY.villainUI, cw = st.cw, ch = st.ch, narrow = cw < 700;
+    var numSz = narrow ? 26 : 40, phraseH = numSz + (narrow ? 8 : 16);
+    var slipHead = narrow ? 58 : 84, slipFoot = narrow ? 22 : 32;
+    var cardH = slipHead + phraseH * 3 + slipFoot;
+    var stack = narrow || cw < 860;
+    var bw = narrow ? cw - 14 : Math.min(840, Math.max(560, Math.round(cw * 0.46)));
+    if (!narrow && bw > cw - 48) bw = cw - 48;
+    var pad = narrow ? 14 : 22;
+    var gap = stack ? 12 : 36;
+    var colW = stack ? bw - pad * 2 : Math.floor((bw - pad * 2 - gap) / 2);
+    if (colW < 150) { stack = true; colW = bw - pad * 2; }
+    var explainH = (narrow ? 22 : 26) * 3;
+    var headH = pad + (narrow ? 30 : 38) + 10 + 20 + 8 + explainH + 6;
+    var cardsBlock = stack ? cardH * 2 + 16 : cardH;
+    var btnH = 56, btnGap = narrow ? 12 : 20;
     var bh = headH + cardsBlock + 18 + btnH + pad;
-    if (bh > ch - 10) {
-      lineH = Math.max(26, lineH - Math.ceil((bh - (ch - 10)) / (stack ? 10 : 5)));
-      cardH = 14 + cardHead + 8 + 5 * lineH + 14;
-      cardsBlock = stack ? cardH * 2 + 14 : cardH;
-      bh = Math.min(ch - 10, headH + cardsBlock + 18 + btnH + pad);
+    var topKeep = narrow ? 88 : 24, botKeep = narrow ? 188 : 10, avail = ch - topKeep - botKeep, guard = 0;
+    while (bh > avail && numSz > 20 && guard++ < 8) {
+      numSz -= 2;
+      phraseH = numSz + 6;
+      cardH = slipHead + phraseH * 3 + slipFoot;
+      cardsBlock = stack ? cardH * 2 + 16 : cardH;
+      bh = headH + cardsBlock + 18 + btnH + pad;
     }
-    var x = Math.round((cw - bw) / 2), y = Math.round(Math.max(6, (ch - bh) / 2));
+    var x = narrow ? Math.round((cw - bw) / 2) : Math.round(Math.max(18, Math.min(cw * 0.04, cw * 0.52 - bw)));
+    var y = narrow ? topKeep : Math.round(Math.max(24, (ch - bh) / 2));
+    if (y + bh > ch - botKeep) y = Math.max(8, ch - botKeep - bh);
     var conflict = choice.kind === 'conflict';
     st.hit(0, 0, cw, ch, 'cloudNoop');
-    c.save(); c.fillStyle = 'rgba(58,50,38,0.34)'; c.fillRect(0, 0, cw, ch); c.restore();
-    sheet(c, x, y, bw, bh);
+    c.save(); c.fillStyle = 'rgba(48,36,24,0.38)'; c.fillRect(0, 0, cw, ch); c.restore();
+    if (VU.washE) VU.washE(c, x + bw * 0.2, y + 36, bw * 0.35, 40, '90,60,30', 0.12);
+    VU.drawTag(c, x, y, bw, bh, '', '#3a3226', { fill: '#fcf6e8', seed: 17, cutK: 0.12 });
     st.hit(x, y, bw, bh, 'cloudNoop');
-    var cursor = y + pad + titleSz * 0.55;
-    VU.txt(c, conflict ? '云端存档更新了' : '两份存档都有进度', x + pad, cursor, titleSz, '#8d3b2c', 'left', true, bw - pad * 2);
-    cursor += titleSz * 0.55 + 12;
-    c.fillStyle = 'rgba(141,59,44,0.7)';
-    c.fillRect(x + pad, cursor, 88, 2);
-    cursor += 18;
+    var cursor = y + pad + (narrow ? 16 : 20);
+    kai(c, conflict ? '云端存档更新了' : '两份存档都有进度', x + pad, cursor, narrow ? 26 : 34, '#2b1c08', 'left', bw - pad * 2);
+    if (VU.brush) VU.brush(c, x + pad, cursor + (narrow ? 16 : 20), narrow ? 120 : 168, 5, 0.4, 9);
+    cursor += (narrow ? 34 : 42);
     var who = ((profile && profile.name) || '') + (profile && profile.email ? '  ·  ' + profile.email : '');
-    if (who) { VU.txt(c, who, x + pad, cursor, bodySz, '#3a3226', 'left', false, bw - pad * 2); cursor += bodySz + 16; }
+    if (who) { kai(c, who, x + pad, cursor, narrow ? 14 : 16, '#5c4a38', 'left', bw - pad * 2); cursor += narrow ? 22 : 26; }
     var explain = conflict
-      ? '保存时对不上云端的版本。下面是云端现在的档，没有覆盖它。请再选一次。'
-      : '这台设备和云端都有取经进度。请选一份留下来，另一份不会被悄悄盖掉。';
-    if (VU.wrap) cursor += VU.wrap(c, explain, x + pad, cursor, bw - pad * 2, bodySz + 10, bodySz, '#3a3226', false, 3) + 12;
-    var colW = stack ? bw - pad * 2 : Math.floor((bw - pad * 2 - 16) / 2);
-    function card(px, py, label, data) {
-      sheet(c, px, py, colW, cardH);
-      VU.txt(c, label, px + 16, py + 14 + cardHead * 0.4, narrow ? 18 : 22, '#8d3b2c', 'left', true, colW - 32);
-      var rows = statLines(data), ly = py + 14 + cardHead + 8 + lineH * 0.35, i;
-      for (i = 0; i < rows.length; i++) {
-        VU.txt(c, rows[i][0], px + 16, ly, lineSz, '#6d6455', 'left', false, colW * 0.36);
-        VU.txt(c, rows[i][1], px + colW - 16, ly, lineSz, '#2b1c08', 'right', true, colW * 0.62);
-        ly += lineH;
-      }
+      ? '保存时对不上云端的版本。云端这份还在，没有被盖掉。再选一次。'
+      : '两边都有取经进度。选一张留下来，另一张不会被悄悄盖掉。';
+    if (VU.wrap) cursor += VU.wrap(c, explain, x + pad, cursor, bw - pad * 2, narrow ? 22 : 26, narrow ? 15 : 17, '#3a3226', false, 3) + 8;
+    function slipCard(px, py, title, sealCh, data, ver, rot, seed) {
+      var f = saveFacts(data);
+      c.save();
+      c.translate(px + colW / 2, py + cardH / 2); c.rotate(rot); c.translate(-(px + colW / 2), -(py + cardH / 2));
+      if (VU.washE) VU.washE(c, px + colW * 0.78, py + 34, colW * 0.42, 26, '58,42,28', 0.2);
+      VU.drawTag(c, px, py, colW, cardH, '', '#4a3828', { fill: '#fffaf0', seed: seed, cutK: 0.22 });
+      VU.drawSeal(c, px + 10, py + 10, narrow ? 32 : 36, narrow ? 32 : 36, sealCh, { style: 'solid', col: '#b8322a', sz: narrow ? 16 : 18, rot: -0.06, stack: false, seed: seed });
+      kai(c, title, px + (narrow ? 48 : 54), py + (narrow ? 26 : 28), narrow ? 20 : 26, '#2b1c08', 'left', colW - (narrow ? 62 : 70));
+      if (VU.brush) VU.brush(c, px + (narrow ? 48 : 54), py + (narrow ? 42 : 46), Math.min(colW * 0.42, 130), 3.5, 0.45, seed);
+      var cy = px + colW / 2, yy = py + slipHead + phraseH * 0.35;
+      phrase(c, '通关', f.wins, cy, yy, numSz, colW - 28);
+      phrase(c, '灵石', f.lingshi, cy, yy + phraseH, numSz, colW - 28);
+      phrase(c, '角色卡', f.cards, cy, yy + phraseH * 2, numSz, colW - 28);
+      kai(c, '开局 ' + f.runs + ' 次　' + f.time + (ver ? '　版本 ' + ver : ''), px + colW / 2, py + slipHead + phraseH * 3 + slipFoot * 0.45, narrow ? 12 : 14, '#7a654e', 'center', colW - 20);
+      c.restore();
     }
-    card(x + pad, cursor, '这台设备', XY.save.data);
-    card(stack ? x + pad : x + pad + colW + 16, stack ? cursor + cardH + 14 : cursor, '云端' + (choice.version != null ? '  ·  版本 ' + choice.version : ''), choice.remoteData);
-    var gap = narrow ? 16 : 24, btnW = Math.floor((bw - pad * 2 - gap) / 2), by = y + bh - pad - btnH, bsz = narrow ? 17 : 20;
-    function pickBtn(px, label, which) {
-      sheet(c, px, by, btnW, btnH);
-      st.hit(px, by, btnW, btnH, 'cloudPick', { which: which });
-      VU.txt(c, label, px + btnW / 2, by + btnH / 2 + 1, bsz, '#2b1c08', 'center', true, btnW - 12);
-    }
-    pickBtn(x + pad, '留这台设备', 'local');
-    pickBtn(x + pad + btnW + gap, '用云端这份', 'cloud');
+    slipCard(x + pad, cursor, '这台设备', '本', XY.save.data, '', stack ? -0.01 : -0.018, 21);
+    slipCard(stack ? x + pad : x + pad + colW + gap, stack ? cursor + cardH + 16 : cursor + 6, '云端', '云', choice.remoteData, choice.version != null ? String(choice.version) : '', stack ? 0.008 : 0.014, 33);
+    var btnW = Math.floor((bw - pad * 2 - btnGap) / 2), by = y + bh - pad - btnH;
+    redGo(c, st, x + pad, by, btnW, btnH, '留这台设备', 'cloudPick', { which: 'local' });
+    redGo(c, st, x + pad + btnW + btnGap, by, btnW, btnH, '用云端这份', 'cloudPick', { which: 'cloud' });
   }
   function paintSwap(c, st) {
-    var VU = XY.villainUI, cw = st.cw, ch = st.ch, narrow = cw < 640;
+    var VU = XY.villainUI, cw = st.cw, ch = st.ch, narrow = cw < 700;
     var lines = (swapNote && swapNote.back) || [];
-    var titleSz = narrow ? 24 : 32, bodySz = narrow ? 17 : 20, lineSz = narrow ? 18 : 22, lineH = narrow ? 30 : 36;
-    var bw = Math.min(cw - (narrow ? 16 : 80), narrow ? cw - 16 : 760);
-    var listH = Math.max(lineH, lines.length * lineH);
-    var bh = Math.min(ch - 12, (narrow ? 28 : 36) + titleSz + 20 + (bodySz + 12) * 3 + 12 + listH + 16 + 52 + 28);
-    var x = Math.round((cw - bw) / 2), y = Math.round(Math.max(6, (ch - bh) / 2)), pad = narrow ? 16 : 28;
+    var lineH = narrow ? 28 : 34, titleSz = narrow ? 26 : 34;
+    var bw = narrow ? cw - 16 : Math.min(680, Math.round(cw * 0.4));
+    var listH = Math.max(lineH, Math.min(lines.length, 8) * lineH);
+    var bh = Math.min(ch - 16, (narrow ? 20 : 28) + titleSz + 36 + 78 + listH + 20 + 56 + 24);
+    var topKeep = narrow ? 92 : 20, botKeep = narrow ? 210 : 12;
+    if (bh > ch - topKeep - botKeep) bh = ch - topKeep - botKeep;
+    var x = narrow ? Math.round((cw - bw) / 2) : Math.round(Math.max(18, Math.min(cw * 0.06, cw * 0.46 - bw)));
+    var y = narrow ? topKeep : Math.round(Math.max(20, (ch - bh) / 2));
+    if (y + bh > ch - botKeep) y = Math.max(8, ch - botKeep - bh);
+    var pad = narrow ? 16 : 26;
     st.hit(0, 0, cw, ch, 'cloudNoop');
-    c.save(); c.fillStyle = 'rgba(58,50,38,0.4)'; c.fillRect(0, 0, cw, ch); c.restore();
-    sheet(c, x, y, bw, bh);
+    c.save(); c.fillStyle = 'rgba(48,36,24,0.42)'; c.fillRect(0, 0, cw, ch); c.restore();
+    VU.drawTag(c, x, y, bw, bh, '', '#3a3226', { fill: '#fcf6e8', seed: 29, cutK: 0.14 });
     st.hit(x, y, bw, bh, 'cloudNoop');
-    var cursor = y + pad + titleSz * 0.5;
-    VU.txt(c, '角色卡已按账号改回', x + pad, cursor, titleSz, '#8d3b2c', 'left', true, bw - pad * 2);
-    cursor += titleSz * 0.65 + 16;
+    var cursor = y + pad + titleSz * 0.45;
+    kai(c, '角色卡已按账号改回', x + pad, cursor, titleSz, '#2b1c08', 'left', bw - pad * 2);
+    if (VU.brush) VU.brush(c, x + pad, cursor + titleSz * 0.45, narrow ? 140 : 180, 5, 0.42, 12);
+    cursor += titleSz * 0.7 + 16;
     var explain = lines.length
-      ? '这台设备先抽过的十连，和这个账号不是同一组。登录后以账号那次为准，本机多发的角色卡已经退回：'
-      : '这台设备上的十连和账号不是同一组。登录后改用账号的结果，本机没有多发角色卡。';
-    if (VU.wrap) cursor += VU.wrap(c, explain, x + pad, cursor, bw - pad * 2, bodySz + 10, bodySz, '#2b1c08', false, 4) + 8;
-    var i, show = lines.slice(0, Math.max(1, Math.floor((y + bh - 52 - 36 - cursor) / lineH)));
-    for (i = 0; i < show.length; i++) VU.txt(c, show[i], x + pad + 8, cursor + lineH * 0.4, lineSz, '#8d3b2c', 'left', true, bw - pad * 2 - 16), cursor += lineH;
-    if (lines.length > show.length) VU.txt(c, '还有 ' + (lines.length - show.length) + ' 项', x + pad + 8, cursor + lineH * 0.4, lineSz, '#6d6455', 'left', false, bw - pad * 2);
-    var btnW = Math.min(280, bw - pad * 2), btnH = 52;
-    st.btn(x + (bw - btnW) / 2, y + bh - pad - btnH, btnW, btnH, '知道了', 'cloudSwapOk', { sz: narrow ? 18 : 20, rgb: '58,50,38', vh: 48 });
+      ? '这台设备先抽的十连，和账号不是同一组。以账号那次为准，多发的角色卡已经退回。'
+      : '这台设备上的十连和账号不是同一组。改用账号的结果，本机没有多发角色卡。';
+    if (VU.wrap) cursor += VU.wrap(c, explain, x + pad, cursor, bw - pad * 2, narrow ? 22 : 26, narrow ? 15 : 17, '#3a3226', false, 3) + 10;
+    var i, room = Math.max(1, Math.floor((y + bh - pad - 56 - 12 - cursor) / lineH));
+    var show = lines.slice(0, room);
+    for (i = 0; i < show.length; i++) {
+      if (VU.washE && i % 2 === 0) VU.washE(c, x + pad + 70, cursor, 90, 10, '58,42,28', 0.12);
+      kai(c, show[i], x + pad + (i % 2) * 18, cursor, narrow ? 16 : 20, '#8d3b2c', 'left', bw - pad * 2 - 24);
+      cursor += lineH;
+    }
+    if (lines.length > show.length) kai(c, '还有 ' + (lines.length - show.length) + ' 项', x + pad, cursor, 14, '#7a654e', 'left', bw - pad * 2);
+    var btnW = Math.min(narrow ? bw - pad * 2 : 280, bw - pad * 2), btnH = 56;
+    redGo(c, st, x + (bw - btnW) / 2, y + bh - pad - btnH, btnW, btnH, '知道了', 'cloudSwapOk', null);
   }
 
   var CL = XY.account = {
