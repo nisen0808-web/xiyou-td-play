@@ -279,17 +279,27 @@
     return G.dkRun;
   }
 
+  function roadStand(G) {
+    var camp = G.camp || { x: 0, y: 0 };
+    var rt = G.rt;
+    if (rt && rt.total && XY.routeProject && XY.routeAt) {
+      var proj = XY.routeProject(rt, camp.x, camp.y);
+      var dir = (proj.s || 0) > rt.total * 0.72 ? -1 : 1;
+      var s = Math.max(40, Math.min(rt.total - 40, (proj.s || 0) + dir * 1180));
+      var p = XY.routeAt(rt, s);
+      if (p && Math.hypot(p.x - camp.x, p.y - camp.y) > 420) return { x: p.x, y: p.y };
+    }
+    return { x: camp.x - 680, y: camp.y + 30 };
+  }
   function makeUnit(G, run) {
     var u = run.unit;
-    var camp = G.camp || { x: 900, y: 900 };
-    var tang = G.heroes && G.heroes[0];
-    var ang = tang ? Math.atan2(camp.y - tang.y, camp.x - tang.x) : -0.6;
+    var spot = roadStand(G);
     var e = {
       id: (G.nextId = (G.nextId || 1) + 1),
       type: 'cato_evil',
       dk: true,
-      x: camp.x + Math.cos(ang) * 260,
-      y: camp.y + Math.sin(ang) * 200,
+      x: spot.x,
+      y: spot.y,
       r: 30,
       hp: u.hp,
       maxHp: u.maxHp,
@@ -417,8 +427,11 @@
   }
   function lockCam(G) {
     if (!G || !G.dkCamLock || !G.dkUnit || G.dkUnit.dead) return;
+    var app = appOf();
+    var shift = 110;
+    if (app && app.lh) shift = Math.max(80, Math.min(170, app.lh * 0.14));
     G.cam.x = G.dkUnit.x;
-    G.cam.y = G.dkUnit.y;
+    G.cam.y = G.dkUnit.y - shift;
   }
   function lowBurst(G) {
     var u = G.dkRun && G.dkRun.unit, e = G.dkUnit;
@@ -764,14 +777,25 @@
     ];
   }
   function captionOn(c, x, y, w, h, name, handle) {
-    var size = Math.max(16, Math.min(32, w * 0.1));
-    var nameY = y + h - (handle ? 42 : 26);
-    var used = brushFit(c, name, x + w / 2 - 12, nameY, Math.max(40, w - 64), size, '#24180f', 'center');
-    var im = inkCanvas(name, used, '#24180f');
-    var sealX = x + w / 2 - 12 + im._tw / 2 + 16;
-    if (sealX > x + w - 14) sealX = x + w - 14;
-    cinnabar(c, sealX, nameY, '印');
-    if (handle) brush(c, handle, x + w / 2 - 12, y + h - 16, Math.max(12, Math.min(15, used * 0.42)), '#8d1f18', 'center');
+    var target = Math.max(80, w * 0.36);
+    var size = Math.round(Math.min(h * 0.2, Math.max(28, w * 0.2)));
+    var col = '#f4ead4';
+    var im = inkCanvas(name, size, col);
+    var guard = 0;
+    while (im._tw < target && size < h * 0.24 && guard++ < 16) {
+      size += 4;
+      im = inkCanvas(name, size, col);
+    }
+    while (im._tw > w * 0.82 && size > 22) {
+      size -= 2;
+      im = inkCanvas(name, size, col);
+    }
+    var nameY = y + Math.round(h * 0.62);
+    brush(c, name, x + w / 2 + 2, nameY + 3, size, 'rgba(16,10,6,0.78)', 'center');
+    brush(c, name, x + w / 2, nameY, size, col, 'center');
+    var sealX = x + w / 2 + im._tw / 2 + Math.max(14, size * 0.28);
+    if (sealX < x + w - 12) cinnabar(c, sealX, nameY, '印');
+    if (handle) brush(c, handle, x + w / 2, nameY + size * 0.58, Math.max(16, Math.round(size * 0.3)), '#f0d7a4', 'center');
   }
   function vertStory(c, s, x, y, maxW, h) {
     var size = 16, step, per, cols, need, i, col, row, yy, ch;
@@ -940,9 +964,10 @@
     c.fillStyle = '#f6efe2';
     c.fillRect(0, 0, W, H);
     splatField(c, W, H, p);
-    var foot = H - (port ? 6 : H * 0.015);
-    var cx = port ? W * 0.5 : W * 0.58;
-    var room = port ? Math.max(120, foot - 50) : H * 1.02;
+    var cx = port ? W * 0.5 : W * 0.56;
+    var fitH = (W * (port ? 0.9 : 0.78)) / 0.75;
+    var room = Math.min(H - (port ? 70 : 36), fitH);
+    var foot = Math.min(H - 12, (port ? 58 : 16) + room);
     var ease = function (u) { return 1 - Math.pow(1 - Math.max(0, Math.min(1, u)), 3); };
     if (p < 0.5) {
       var cover = p < 0.16 ? 0 : (p - 0.16) / 0.34;
@@ -1124,7 +1149,7 @@
     var e2 = G.dkUnit;
     if (e2 && !e2.dead && run.unit && !run.unit.dead && run.introLeft <= 0 && run.formLeft <= 0) {
       var q = w2s(G, app, e2.x, e2.y);
-      var ph = run.unit.phase >= 2 ? 292 : 200;
+      var ph = run.unit.phase >= 2 ? 236 : 176;
       var cutKey = run.unit.phase >= 2 ? 'formcut' : 'stage1cut';
       var cutFile = run.unit.phase >= 2 ? (art.formCut || 'form-cut.webp') : (art.stage1Cut || 'stage1-cut.webp');
       var cutIm = img(cutKey, cutFile);
@@ -1166,10 +1191,10 @@
         bossTag = { x: bs.x - 170, y: bs.y - 30, w: 300, h: 64 };
       }
       var cands = [
-        { x: px + pw + 18, y: py + ph * 0.58 },
-        { x: px + pw + 18, y: py + ph * 0.34 },
-        { x: Math.max(14, px - 36), y: py + ph * 0.62 },
-        { x: Math.min(app.lw - 24, px + pw * 0.62), y: Math.min(app.lh - 96, py + ph + 16) }
+        { x: px - 26, y: py + 12 },
+        { x: px + pw + 16, y: py + 18 },
+        { x: px - 26, y: py + ph * 0.22 },
+        { x: px + pw + 16, y: py + ph * 0.22 }
       ];
       var spot = cands[0], ci;
       for (ci = 0; ci < cands.length; ci++) if (!blocked(cands[ci].x, cands[ci].y)) { spot = cands[ci]; break; }
@@ -1318,6 +1343,7 @@
     anim: null,
     boxes: function () { return boxes; },
     fps: function () { return fpsV; },
+    roadStand: roadStand,
     eventOn: eventOn,
     setEventOn: setEventOn,
     env: env,

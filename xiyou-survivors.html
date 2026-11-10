@@ -5698,12 +5698,19 @@ XY.TRAITS = {
         c.globalAlpha = 1;
       } else if (f.kind === 'bossin') {
         var ib = Math.min(1, k * 5), ob = k > 0.8 ? 1 - (k - 0.8) / 0.2 : 1, ab = Math.min(ib, ob);
-        var bw = Math.min(260, Math.max(168, W * 0.28)), bh = 64, bx = (W - bw) / 2, byy = Math.max(120, Math.min(H * 0.18, 240));
+        var bx = W / 2, byy = Math.max(72, Math.min(H * 0.11, 108));
         c.save(); c.globalAlpha = ab;
-        c.fillStyle = 'rgba(251,246,234,0.96)'; c.fillRect(bx, byy, bw, bh);
-        c.strokeStyle = '#2a2118'; c.lineWidth = 1.5; c.strokeRect(bx + 0.5, byy + 0.5, bw - 1, bh - 1);
-        c.fillStyle = '#8d1f18'; c.fillRect(bx, byy, 4, bh);
-        if (otxt) { otxt(c, '洞主登场', bx + bw / 2, byy + 18, 14, '#8d1f18', 'center', true); otxt(c, f.name, bx + bw / 2, byy + 44, 20, '#24180f', 'center', true); }
+        c.strokeStyle = 'rgba(36,28,20,0.7)'; c.lineWidth = 1.6; c.lineCap = 'round';
+        c.beginPath();
+        c.moveTo(bx - 86, byy + 50);
+        c.quadraticCurveTo(bx - 20, byy + 44, bx + 28, byy + 52);
+        c.quadraticCurveTo(bx + 64, byy + 57, bx + 96, byy + 46);
+        c.stroke();
+        c.strokeStyle = 'rgba(141,31,24,0.85)'; c.lineWidth = 2.2;
+        c.beginPath(); c.moveTo(bx - 92, byy + 8); c.quadraticCurveTo(bx - 70, byy + 2, bx - 48, byy + 9); c.stroke();
+        c.textAlign = 'center'; c.textBaseline = 'middle';
+        c.font = '16px DKBrush, KaiTi, serif'; c.fillStyle = '#8d1f18'; c.fillText('洞主登场', bx, byy + 18);
+        c.font = '22px DKBrush, KaiTi, serif'; c.fillStyle = '#24180f'; c.fillText(f.name || '', bx, byy + 42);
         c.restore();
       }
     }
@@ -8994,7 +9001,7 @@ XY.BGS1={"src": "data:image/webp;base64,UklGRtT1GgBXRUJQVlA4IMj1GgCQwWGdASoAEAAK
       c.beginPath(); c.arc(x, y, C.STATION_R * 0.92, 2.35, 4.15); c.stroke();
       c.strokeStyle = 'rgba(90,82,70,0.4)'; c.lineWidth = 1;
       c.beginPath(); c.arc(x, y, C.STATION_R * 0.78, 4.5, 5.7); c.stroke();
-      otxt(c, '唐僧驻守：营地回血 ↑  防御 ↑', x, y - 98, 14, '#3a2e22', 'center', true);
+      var stLab = '唐僧驻守：营地回血 ↑  防御 ↑'; otxt(c, stLab, x, XY.R4.placeLabel(c, stLab, x, y - 178, 14, -1), 14, '#3a2e22', 'center', true);
     }
     // 营地圈：妖怪闯进来才画一圈飞白墨弧，不再用红虚线和粉橙光
     var zp = 0.5 + 0.5 * Math.sin(rt * 6);
@@ -9254,7 +9261,7 @@ XY.BGS1={"src": "data:image/webp;base64,UklGRtT1GgBXRUJQVlA4IMj1GgCQwWGdASoAEAAK
       otxt(c, G.breach ? '妖怪进营地了！' : '师傅危险！', x, clash ? y + r + 46 : y - tr - 42, 14, '#d62828', 'center', true);
     }
     if (h.id === 'tang' && h.inv > 0 && G.t < C.TANG_START_INV + 0.5) {
-      otxt(c, '开局保护 ' + Math.ceil(h.inv) + ' 秒', x, clash ? y + r + 46 : y - tr - 42, 12, '#a8700a', 'center', true);
+      var invLab = '开局保护 ' + Math.ceil(h.inv) + ' 秒'; otxt(c, invLab, x, clash ? y + r + 46 : XY.R4.placeLabel(c, invLab, x, y - tr - 58, 12, -1), 12, '#a8700a', 'center', true);
     }
     // 名字（操控中的更醒目，头顶带小三角）
     // v0.8.1：名牌延后到所有英雄画完再画（flushHeroNames），避开其他角色的身体 / 血条 / 命令标签和别的名牌，也不会被后画的角色盖住

@@ -293,8 +293,9 @@ async function shot(page, name) {
       /* skipIntro 不创建单位，补一步让 afterStep 看到已经结束的 intro 不会再生；直接造。 */
     }
     if (!G.dkUnit && G.dkRun.unit) {
+      var spot0 = XY.devilKitty.roadStand(G);
       G.enemies.push({
-        id: 9001, type: 'cato_evil', dk: true, x: G.camp.x + 180, y: G.camp.y - 40, r: 30,
+        id: 9001, type: 'cato_evil', dk: true, x: spot0.x, y: spot0.y, r: 30,
         hp: G.dkRun.unit.hp, maxHp: G.dkRun.unit.maxHp, speed: 62, dmg: 0, dead: false,
         kx: 0, ky: 0, flash: 0, atkT: 1, slowT: 0, stunT: 0, burnT: 0, def: G.dkRun.unit && {
           name: '猫叔', elite: false, color: '#241c18', dark: '#8d1f18', r: 30, elem: 'water'
@@ -304,10 +305,12 @@ async function shot(page, name) {
       G.dkUnit.def = { name: '猫叔', elite: false, boss: false, denBoss: false, color: '#241c18', dark: '#8d1f18', r: 30, elem: 'water', xp: 10, coin: 0, coinP: 0, pdef: 0, mdef: 0, knockRes: 0.4, dmg: 0, hp: 900 };
     }
     var u = G.dkUnit;
-    XY.makeEnemy(G, 'small', u.x + 70, u.y + 30, 0);
-    XY.makeEnemy(G, 'small', u.x - 60, u.y + 50, 0);
-    XY.makeEnemy(G, 'tank', u.x + 40, u.y - 70, 0);
-    if (G.dens && G.dens[0] && G.dens[0].boss) { G.dens[0].boss.x = u.x + 140; G.dens[0].boss.y = u.y + 20; }
+    var stand = XY.devilKitty.roadStand(G);
+    u.x = stand.x; u.y = stand.y;
+    XY.makeEnemy(G, 'small', u.x + 90, u.y + 40, 0);
+    XY.makeEnemy(G, 'small', u.x + 40, u.y - 70, 0);
+    XY.makeEnemy(G, 'tank', u.x - 80, u.y + 50, 0);
+    if (G.dens && G.dens[0] && G.dens[0].boss) { G.dens[0].boss.x = u.x + 320; G.dens[0].boss.y = u.y - 180; }
     G.dkCamLock = true;
     for (var i = 0; i < 8; i++) XY.step(G, 1 / 60);
     return { rage: G.dkRun.rageOn, left: G.dkRun.rageLeft, mobs: G.enemies.filter(function (e) { return e._dkRage; }).length, boss: (G.dens[0] && G.dens[0].boss && G.dens[0].boss.enraged) || false, name: u.def.name };
