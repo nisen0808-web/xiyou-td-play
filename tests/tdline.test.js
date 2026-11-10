@@ -87,10 +87,10 @@ eq(R.blockFlyer({ flyer: true, cannon: true }), true);
 eq(R.towerUntargetable(true), true);
 eq(R.towerUntargetable(false), false);
 eq(R.flyerPack(1, 0).bat, 0);
-eq(R.flyerPack(2, 0).bat, 3);
-eq(R.flyerPack(2, 1).owl, 1);
-eq(R.flyerPack(3, 0).bat, 4);
-eq(R.flyerPack(3, 0).owl, 1);
+eq(R.flyerPack(2, 0).bat, 2);
+eq(R.flyerPack(2, 2).owl, 1);
+eq(R.flyerPack(3, 0).bat, 3);
+eq(R.flyerPack(3, 1).owl, 1);
 eq(R.charge(0, 8, 16), 0.5);
 eq(R.charge(0.9, 8, 16), 1);
 

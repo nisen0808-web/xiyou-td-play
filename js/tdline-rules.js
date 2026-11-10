@@ -5,8 +5,10 @@
   'use strict';
   var R = {};
   R.VERSION = '0.8.7';
-  /* 天兵打不死、飞妖只有天兵能打之后，按实测占比改这两个数。 */
-  R.TOWER_DMG_MUL = { 2: 55, 3: 96 };
+  /* 不再为了凑伤害占比把一箭放大到秒杀。
+   * 第二关 3.2：弓对小妖大约四下，两名跟随弓兵能在蝠妖俯冲落地前打死它。
+   * 第三关 3.6：怪更厚，连携和升级（1.25 / 1.55）才是清精英的部分。 */
+  R.TOWER_DMG_MUL = { 2: 3.2, 3: 3.6 };
   R.START_GRANT = { 2: 120, 3: 160 };
   R.WAVE_BOUNTY = { 2: 6, 3: 8 };
   R.TIDE_BOUNTY = { 2: 15, 3: 20 };
@@ -75,8 +77,8 @@
   R.flyerPack = function (levelId, wave) {
     var lv = levelId | 0, n = wave | 0;
     if (lv < 2) return { bat: 0, owl: 0 };
-    if (lv === 2) return { bat: 3, owl: n % 2 === 1 ? 1 : 0 };
-    return { bat: 4, owl: 1 };
+    if (lv === 2) return { bat: 2, owl: n % 3 === 2 ? 1 : 0 };
+    return { bat: 3, owl: n % 2 === 1 ? 1 : 0 };
   };
 
   /* 弓 ×1.3 对飞妖；炮不对空（调用方直接不打）；破阵对 tank/shield/elite ×1.4。返回额外倍率（0 表示不加）。 */

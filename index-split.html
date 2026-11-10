@@ -3930,6 +3930,7 @@ XY.TRAITS = {
   }
 
   function hurtCamp(G, dmg) {
+    if (XY.tdCampMul) dmg *= XY.tdCampMul(G);
     var c = G.camp;
     if (G.godMode || !c.active) return;               // 营地只在休息阶段生效
     if (G.villain) { XY.villain.hurtEye(G, G.heroes[0], dmg, true); return; }
@@ -4802,6 +4803,7 @@ XY.TRAITS = {
       var d0 = XY.dist(hh0.x, hh0.y, e.x, e.y); if (i === 0) d0 = d0 * (C.DEN_AGGRO / C.DEN_AGGRO_TANG);
       if (d0 < nd) nd = d0;
     }
+    if (G.td && G.td.on) { for (i = 0; i < G.towers.length; i++) { var dTw = XY.dist(G.towers[i].x, G.towers[i].y, e.x, e.y); if (dTw < nd) nd = dTw; } }
     if (!e.home) e.home = { x: e.x, y: e.y };
     var hd = XY.dist(e.x, e.y, e.home.x, e.home.y);
     if (e.retreatT > 0) {                               // 败退：无敌，朝洞口跑，到洞口后继续养伤，时间到恢复血量再出来
