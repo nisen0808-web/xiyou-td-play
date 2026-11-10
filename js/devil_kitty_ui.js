@@ -964,8 +964,10 @@
     c.fillStyle = '#f6efe2';
     c.fillRect(0, 0, W, H);
     splatField(c, W, H, p);
+    var fim = img('formcut', art.formCut || 'form-cut.webp');
+    var aspect = fim && fim.naturalHeight ? fim.naturalWidth / fim.naturalHeight : 0.84;
     var cx = port ? W * 0.5 : W * 0.56;
-    var fitH = (W * (port ? 0.9 : 0.78)) / 0.75;
+    var fitH = (W * (port ? 0.9 : 0.76)) / aspect;
     var room = Math.min(H - (port ? 70 : 36), fitH);
     var foot = Math.min(H - 12, (port ? 58 : 16) + room);
     var ease = function (u) { return 1 - Math.pow(1 - Math.max(0, Math.min(1, u)), 3); };
@@ -1170,6 +1172,34 @@
       }
       if (cutIm) c.drawImage(cutIm, px, py, pw, ph);
       else blitCut(c, cutKey, cutFile, px + pw / 2, py + ph, ph);
+      var floats = [];
+      if (G.texts) {
+        for (di = 0; di < G.texts.length; di++) {
+          var ft = G.texts[di];
+          if (!ft || !ft.s) continue;
+          var fp = w2s(G, app, ft.x, ft.y);
+          var life = 1 - Math.pow((ft.t || 0) / (ft.max || 0.7), 3);
+          if (life <= 0.05) continue;
+          if (fp.x < -240 || fp.x > app.lw + 240 || fp.y < -80 || fp.y > app.lh + 80) continue;
+          floats.push({ x: fp.x - 46, y: fp.y - 18, w: 92, h: 36, p: fp, s: String(ft.s), size: ft.size || 16, life: life });
+          c.save();
+          c.globalAlpha = 1;
+          var labelS = String(ft.s);
+          var pxSize = Math.max(18, ft.size || 18);
+          c.font = 'bold ' + pxSize + 'px sans-serif';
+          var tw = c.measureText(labelS).width;
+          c.textAlign = 'center';
+          c.textBaseline = 'middle';
+          c.lineWidth = 4;
+          c.strokeStyle = '#fff6e4';
+          c.strokeText(labelS, fp.x, fp.y);
+          c.fillStyle = '#e23b2f';
+          c.fillText(labelS, fp.x, fp.y);
+          c.restore();
+          floats[floats.length - 1].w = Math.max(92, tw + 16);
+          floats[floats.length - 1].x = fp.x - (Math.max(92, tw + 16)) / 2;
+        }
+      }
       var label = run.unit.phase >= 2 ? API.HERO2 : API.HERO;
       var sizeN = 16, stepN = sizeN * 0.98, lh = label.length * stepN + 28;
       var station = null;
@@ -1184,6 +1214,7 @@
         if (r.y < 100 || r.y + r.h > app.lh - 64) return true;
         if (r.x < 2 || r.x > app.lw - 8) return true;
         if (overlap(r, station) || overlap(r, bossTag) || overlap(r, ban)) return true;
+        for (var fi = 0; fi < floats.length; fi++) if (overlap(r, floats[fi])) return true;
         return false;
       }
       if (boss) {
@@ -1191,10 +1222,10 @@
         bossTag = { x: bs.x - 170, y: bs.y - 30, w: 300, h: 64 };
       }
       var cands = [
-        { x: px - 26, y: py + 12 },
-        { x: px + pw + 16, y: py + 18 },
-        { x: px - 26, y: py + ph * 0.22 },
-        { x: px + pw + 16, y: py + ph * 0.22 }
+        { x: px - 28, y: py + ph * 0.08 },
+        { x: px + pw + 18, y: py + ph * 0.08 },
+        { x: px - 28, y: py + ph * 0.28 },
+        { x: px + pw + 18, y: py + ph * 0.28 }
       ];
       var spot = cands[0], ci;
       for (ci = 0; ci < cands.length; ci++) if (!blocked(cands[ci].x, cands[ci].y)) { spot = cands[ci]; break; }
