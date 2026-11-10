@@ -476,6 +476,12 @@
 
   function hold(G, dt) {
     var run = ensureRun(G);
+    if (G.dkSkip && run.introLeft > 0) {
+      API.skipIntro(run, G.levelId || 1);
+      G.dkSkip = false;
+      G.dkHold = false;
+      return;
+    }
     if (G.dkSkip && run.formLeft > 0) {
       API.skipForm(run);
       G.dkSkip = false;
@@ -936,15 +942,36 @@
   function paintIntro(c, app, run) {
     var scene = art.introScene ? img('introScene', art.introScene) : null;
     if (scene) {
-      var W0 = app.lw, H0 = app.lh;
-      var ir = scene.naturalWidth / scene.naturalHeight, br = W0 / H0, dw, dh, dx, dy;
+      var W0 = app.lw, H0 = app.lh, port = H0 > W0 * 1.05;
+      var ir = scene.naturalWidth / scene.naturalHeight;
+      var dw, dh, dx, dy, u = 0;
       c.save();
-      c.fillStyle = '#e7d7be';
+      c.fillStyle = '#d8c6a4';
       c.fillRect(0, 0, W0, H0);
-      if (ir > br) { dw = W0; dh = W0 / ir; dx = 0; dy = (H0 - dh) / 2; }
-      else { dh = H0; dw = H0 * ir; dy = 0; dx = (W0 - dw) / 2; }
+      if (port) {
+        /* 先铺满高度停在左名。右名一行更宽，平移时略缩小，停住时「猫叔 · 魔化」和 @Cato_KT 都在画面里。 */
+        var dwCover = H0 * ir;
+        var dwFit = W0 / 0.40;
+        var elapsed = (API.INTRO_T || 4.2) - ((run && run.introLeft) || 0);
+        if (elapsed > 1.2) {
+          var p = Math.max(0, Math.min(1, (elapsed - 1.2) / 2.5));
+          u = p * p * (3 - 2 * p);
+        }
+        dw = dwCover + (dwFit - dwCover) * u;
+        dh = dw / ir;
+        dy = (H0 - dh) * u;
+        var leftStart = 0.02;
+        var rightStart = 0.56;
+        var start = leftStart + (rightStart - leftStart) * u;
+        dx = -dw * start;
+      } else if (ir > W0 / H0) {
+        dh = H0; dw = H0 * ir; dy = 0; dx = (W0 - dw) / 2;
+      } else {
+        dw = W0; dh = W0 / ir; dx = 0; dy = (H0 - dh) / 2;
+      }
       c.drawImage(scene, dx, dy, dw, dh);
       c.restore();
+      hit(0, 0, W0, H0, 'dkSkip');
       return;
     }
     var W = app.lw, H = app.lh, port = H > W * 1.05;
@@ -1531,118 +1558,74 @@
     if (run.formLeft > 0) paintForm(c, app, run);
     if (G.dkDrops && G.dkDrops.t < 6) paintDrop(c, app, G.dkDrops);
   }
-  function inkLand(c, W, H, open) {
+  function obtainPaper(c, W, H) {
+    var im = img('obtainPaper', 'obtain/paper.webp');
+    if (!im) {
+      c.fillStyle = '#f3ead6';
+      c.fillRect(0, 0, W, H);
+      return;
+    }
+    var ir = im.naturalWidth / im.naturalHeight, br = W / H, dw, dh, dx, dy;
+    if (ir < br) { dw = W; dh = W / ir; dx = 0; dy = (H - dh) / 2; }
+    else { dh = H; dw = H * ir; dy = 0; dx = (W - dw) / 2; }
+    c.drawImage(im, dx, dy, dw, dh);
+  }
+  function obtainCut(id) {
+    return img('obtain-' + id, 'obtain/' + id + '.webp');
+  }
+  function drawCut(c, im, cx, cy, maxW, maxH, rot, alpha) {
+    if (!im) return;
+    var ir = im.naturalWidth / im.naturalHeight;
+    var w = maxW, h = maxW / ir;
+    if (h > maxH) { h = maxH; w = maxH * ir; }
     c.save();
-    c.fillStyle = '#f4efe4';
-    c.fillRect(0, 0, W, H);
-    c.globalAlpha = 0.35 + 0.65 * open;
-    c.fillStyle = 'rgba(90,82,72,0.1)';
-    c.beginPath();
-    c.moveTo(0, H * 0.58);
-    c.quadraticCurveTo(W * 0.12, H * 0.4, W * 0.24, H * 0.52);
-    c.quadraticCurveTo(W * 0.38, H * 0.64, W * 0.5, H * 0.48);
-    c.quadraticCurveTo(W * 0.66, H * 0.32, W * 0.8, H * 0.5);
-    c.quadraticCurveTo(W * 0.92, H * 0.62, W, H * 0.46);
-    c.lineTo(W, H);
-    c.lineTo(0, H);
-    c.fill();
-    c.fillStyle = 'rgba(60,52,44,0.08)';
-    c.beginPath();
-    c.moveTo(0, H * 0.7);
-    c.quadraticCurveTo(W * 0.2, H * 0.58, W * 0.36, H * 0.68);
-    c.quadraticCurveTo(W * 0.55, H * 0.8, W * 0.72, H * 0.62);
-    c.quadraticCurveTo(W * 0.88, H * 0.5, W, H * 0.66);
-    c.lineTo(W, H);
-    c.lineTo(0, H);
-    c.fill();
-    c.strokeStyle = 'rgba(36,28,20,0.55)';
-    c.lineWidth = 1.6;
-    c.lineCap = 'round';
-    var b;
-    for (b = 0; b < 4; b++) {
-      var bx = W * (0.05 + b * 0.045);
-      var top = H * (0.58 + (b % 2) * 0.05);
-      c.beginPath();
-      c.moveTo(bx, H * 0.94);
-      c.quadraticCurveTo(bx + 10, H * 0.76, bx - 4, top);
-      c.stroke();
-      c.beginPath();
-      c.moveTo(bx - 4, top + 18);
-      c.quadraticCurveTo(bx - 26, top + 4, bx - 34, top + 16);
-      c.moveTo(bx - 2, top + 34);
-      c.quadraticCurveTo(bx + 24, top + 16, bx + 32, top + 30);
-      c.stroke();
-    }
-    c.fillStyle = 'rgba(28,22,16,0.55)';
-    var dots = [[0.08, 0.12, 3], [0.16, 0.2, 2], [0.9, 0.16, 4], [0.84, 0.28, 2], [0.12, 0.84, 3], [0.92, 0.78, 2.4], [0.78, 0.1, 1.6]];
-    for (b = 0; b < dots.length; b++) {
-      c.beginPath();
-      c.arc(W * dots[b][0], H * dots[b][1], dots[b][2], 0, Math.PI * 2);
-      c.fill();
-    }
+    c.translate(cx, cy);
+    if (rot) c.rotate(rot);
+    c.globalAlpha = alpha == null ? 1 : alpha;
+    c.drawImage(im, -w / 2, -h / 2, w, h);
     c.restore();
   }
-  function gradeSeal(c, x, y, ch) {
-    var s = 34;
+  function gradeSeal(c, x, y, ch, s) {
     c.save();
     c.translate(x, y);
-    c.rotate(-0.05);
-    c.strokeStyle = '#9a2a22';
-    c.lineWidth = 2;
+    c.rotate(-0.06);
+    c.strokeStyle = '#a02822';
+    c.lineWidth = Math.max(3, s * 0.08);
     c.strokeRect(-s / 2, -s / 2, s, s);
     c.restore();
-    brush(c, (ch || '印').charAt(0), x, y + 1, 20, '#9a2a22', 'center');
+    brush(c, (ch || '印').charAt(0), x, y + s * 0.02, Math.round(s * 0.62), '#a02822', 'center');
   }
   function ownerMark(c, id, name, x, y, r, alpha) {
     c.save();
     c.globalAlpha = alpha;
-    var face = anyImg('xav-' + id, 'assets/art/x-avatars/' + id + '.webp');
-    c.save();
     c.beginPath();
     c.arc(x, y, r, 0, Math.PI * 2);
     c.clip();
-    if (face) drawContain(c, face, x - r, y - r, r * 2, r * 2);
-    else {
+    var face = anyImg('xav-' + id, 'assets/art/x-avatars/' + id + '.webp');
+    if (face) {
+      var ir = face.naturalWidth / face.naturalHeight;
+      var side = r * 2;
+      var dw = ir > 1 ? side * ir : side, dh = ir > 1 ? side : side / ir;
+      c.drawImage(face, x - dw / 2, y - dh / 2, dw, dh);
+    } else {
       c.fillStyle = '#efe6d4';
       c.fillRect(x - r, y - r, r * 2, r * 2);
     }
     c.restore();
-    c.strokeStyle = 'rgba(36,28,20,0.8)';
-    c.lineWidth = 2.4;
-    var i;
-    for (i = 0; i < 5; i++) {
-      c.beginPath();
-      c.arc(x + Math.sin(i) * 1.4, y + Math.cos(i * 1.3) * 1.2, r + (i % 2), i * 1.15, i * 1.15 + 0.95);
-      c.stroke();
-    }
-    brushFit(c, name || '', x, y + r + 22, r * 3.2, 22, '#24180f', 'center');
-    brush(c, '专属', x, y + r + 48, 16, '#3a2e22', 'center');
-    c.restore();
-  }
-  var gearMask = {};
-  function tiltedGear(c, im, id, x, y, s, rot, alpha) {
-    if (!im) return;
-    var key = id + ':' + s;
-    var cv = gearMask[key];
-    if (!cv) {
-      cv = document.createElement('canvas');
-      cv.width = cv.height = s;
-      var g = cv.getContext('2d');
-      g.drawImage(im, 0, 0, s, s);
-      g.globalCompositeOperation = 'destination-in';
-      var rg = g.createRadialGradient(s / 2, s / 2, s * 0.18, s / 2, s / 2, s * 0.5);
-      rg.addColorStop(0, 'rgba(0,0,0,1)');
-      rg.addColorStop(0.66, 'rgba(0,0,0,1)');
-      rg.addColorStop(1, 'rgba(0,0,0,0)');
-      g.fillStyle = rg;
-      g.fillRect(0, 0, s, s);
-      gearMask[key] = cv;
-    }
     c.save();
-    c.translate(x, y);
-    c.rotate(rot);
     c.globalAlpha = alpha;
-    c.drawImage(cv, -s / 2, -s / 2);
+    c.strokeStyle = 'rgba(28,22,18,0.82)';
+    c.lineWidth = Math.max(4, r * 0.09);
+    c.beginPath();
+    c.arc(x, y, r * 1.06, 0.2, 5.6);
+    c.stroke();
+    c.lineWidth = Math.max(2, r * 0.04);
+    c.beginPath();
+    c.arc(x + 2, y - 1, r * 1.16, 0.4, 2.4);
+    c.stroke();
+    var nameSize = Math.round(r * 0.42);
+    brushFit(c, name || '', x, y + r + nameSize * 0.85, r * 3.4, nameSize, '#24180f', 'center');
+    brush(c, '专属', x, y + r + nameSize * 1.7, Math.round(nameSize * 0.72), '#24180f', 'center');
     c.restore();
   }
   function paintDrop(c, app, drop) {
@@ -1652,44 +1635,50 @@
     if (!item) return;
     var W = app.lw, H = app.lh, port = H > W * 1.05;
     var t = drop.t || 0;
-    var open = 1 - Math.pow(1 - Math.max(0, Math.min(1, t / 0.55)), 3);
-    var gearIn = 1 - Math.pow(1 - Math.max(0, Math.min(1, (t - 0.35) / 0.7)), 3);
-    var fade = Math.max(0, Math.min(1, (t - 0.95) / 0.45));
+    var open = 1 - Math.pow(1 - Math.max(0, Math.min(1, t / 0.5)), 3);
+    var gearIn = 1 - Math.pow(1 - Math.max(0, Math.min(1, (t - 0.28) / 0.65)), 3);
+    var fade = Math.max(0, Math.min(1, (t - 0.85) / 0.4));
     c.save();
-    c.translate(W / 2, H / 2);
-    c.scale(0.2 + 0.8 * open, Math.max(0.05, open));
-    c.translate(-W / 2, -H / 2);
-    inkLand(c, W, H, open);
+    c.globalAlpha = 0.2 + 0.8 * open;
+    obtainPaper(c, W, H);
+    c.globalAlpha = 1;
     if (item.kind === 'gear') {
       var piece = API.gearById[item.id];
       if (piece && revealed(piece.owner)) {
+        var titleSize = Math.round(port ? Math.min(H * 0.055, W * 0.11) : H * 0.08);
         var title = '获得 · ' + piece.name;
-        var titleSize = port ? 26 : 34;
         var tim = inkCanvas(title, titleSize, '#24180f');
-        var tx = port ? 20 : 36;
-        var ty = port ? 42 : 58;
+        var tx = port ? W * 0.04 : W * 0.045;
+        var ty = port ? H * 0.07 : H * 0.09;
         c.globalAlpha = fade;
-        brush(c, title, tx + tim._tw / 2, ty, titleSize, '#24180f', 'center');
-        gradeSeal(c, tx + tim._tw + 28, ty, piece.seal);
+        brush(c, title, tx, ty, titleSize, '#24180f', 'left');
+        gradeSeal(c, tx + tim._tw + titleSize * 0.85, ty, piece.seal, Math.round(titleSize * 1.15));
         c.globalAlpha = 1;
-        var gs = Math.round(Math.min(port ? W * 0.72 : W * 0.42, H * 0.62));
-        var gx = port ? W * 0.48 : W * 0.42;
-        var gy = (port ? H * 0.4 : H * 0.5) + (1 - gearIn) * (-H * 0.22);
-        tiltedGear(c, gearArt(piece.id), piece.id, gx, gy, gs, -0.42, gearIn);
-        var hd = heroDef(piece.owner);
-        ownerMark(c, piece.owner, hd && hd.name, port ? W * 0.78 : W * 0.78, port ? H * 0.62 : H * 0.46, port ? 42 : 58, fade);
-        c.globalAlpha = fade;
-        brushFit(c, piece.desc, W / 2, H - (port ? 36 : 42), W - 48, port ? 16 : 18, '#24180f', 'center');
+        var im = obtainCut(piece.id);
+        var rot = piece.id === 'phyrex_w' ? 0 : -0.08;
+        var dropY = (1 - gearIn) * (-H * 0.12);
+        if (port) {
+          drawCut(c, im, W * 0.46, H * 0.42 + dropY, W * 0.78, H * 0.4, rot, gearIn);
+          var hd = heroDef(piece.owner);
+          ownerMark(c, piece.owner, hd && hd.name, W * 0.74, H * 0.58, W * 0.15, fade);
+          c.globalAlpha = fade;
+          brushFit(c, piece.desc, W / 2, H * 0.78, W * 0.9, Math.round(H * 0.028), '#24180f', 'center');
+        } else {
+          drawCut(c, im, W * 0.42, H * 0.52 + dropY, W * 0.52, H * 0.62, rot, gearIn);
+          var hdL = heroDef(piece.owner);
+          ownerMark(c, piece.owner, hdL && hdL.name, W * 0.82, H * 0.46, H * 0.125, fade);
+          c.globalAlpha = fade;
+          brushFit(c, piece.desc, W * 0.42, H * 0.92, W * 0.7, Math.round(H * 0.042), '#24180f', 'center');
+        }
         c.globalAlpha = 1;
       }
     } else {
       var nm = item.name || item.id;
       c.globalAlpha = fade;
-      brush(c, '获得 · ' + nm, port ? 24 : 36, port ? 42 : 58, port ? 26 : 34, '#24180f', 'left');
+      brush(c, '获得 · ' + nm, W * 0.05, port ? H * 0.08 : H * 0.1, Math.round(port ? H * 0.04 : H * 0.07), '#24180f', 'left');
       c.globalAlpha = 1;
       var artIm = spArt(item.id);
-      var side = Math.min(port ? W * 0.7 : H * 0.7, H * 0.62);
-      if (artIm) tiltedGear(c, artIm, 'card-' + item.id, W * 0.48, H * 0.5 + (1 - gearIn) * (-H * 0.18), Math.round(side), -0.08, gearIn);
+      drawCut(c, artIm, W * 0.48, H * 0.52 + (1 - gearIn) * (-H * 0.1), port ? W * 0.7 : W * 0.4, H * 0.55, 0, gearIn);
     }
     c.restore();
     hit(0, 0, W, H, 'dkSkip');

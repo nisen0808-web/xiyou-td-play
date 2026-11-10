@@ -22,7 +22,7 @@
   var RAGE_DUR = 45;
   var MOB_MUL = 1.5;
   var BOSS_MUL = 2;
-  var INTRO_T = 2.7;
+  var INTRO_T = 4.2;
   /* 变身演出约 9 秒（画布泼墨，不是居中竖卡）。换时长时改 art.json 的 formDurationMs，或调用 setFormDuration。 */
   var FORM_T = 9000 / 1000;
   var formDurLive = FORM_T;
