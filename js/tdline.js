@@ -2172,10 +2172,13 @@
           colH: Math.max(nameH, diagH) + gapDC + coloHD
         };
       });
-      var tallest = 0;
-      laid.forEach(function (p) { if (p.colH > tallest) tallest = p.colH; });
+      var tallest = 0, maxDiag = 0;
+      laid.forEach(function (p) {
+        if (p.colH > tallest) tallest = p.colH;
+        if (p.diagH > maxDiag) maxDiag = p.diagH;
+      });
       desk = {
-        laid: laid, lefts: lefts, n: nCol,
+        laid: laid, lefts: lefts, n: nCol, maxDiag: maxDiag,
         y0: contentTop + Math.max(0, (contentBot - contentTop - tallest) / 2),
         kai: kaiD, lh: lhD, seal: sealD, gap: gapDC, titleGap: titleGap
       };
@@ -2222,7 +2225,7 @@
         ctx.globalAlpha = inkA;
         if (nameIm) ctx.drawImage(nameIm, lay.titleX * S, ny, lay.nameW * S, lay.nameH * S);
         var dx = (lay.titleX + lay.nameW + desk.titleGap) * S;
-        var dy = desk.y0 * S;
+        var dy = (desk.y0 + desk.maxDiag - lay.diagH) * S;
         if (diagIm) ctx.drawImage(diagIm, dx, dy, lay.diagW * S, lay.diagH * S);
         ctx.restore();
         var coloXd = i === desk.n - 1 ? (dx / S + lay.diagW * 0.18) : (dx / S + lay.diagW * 0.42);
@@ -2236,7 +2239,7 @@
         });
         var limit = (i < desk.n - 1 ? desk.laid[i + 1].titleX : 1890) - 14;
         if (coloXd + widest > limit) coloXd = Math.max(desk.lefts[i], limit - widest);
-        var coloYd = desk.y0 + lay.diagH + desk.gap;
+        var coloYd = desk.y0 + desk.maxDiag + desk.gap;
         var lh = desk.lh * S;
         liftPaper(ctx, (coloXd - 12) * S, (coloYd - 8) * S, 330 * S, (desk.lh * lines.length + 8 + desk.seal + 18) * S);
         ctx.fillStyle = own ? "#241c18" : "rgba(70,58,50,0.88)";
