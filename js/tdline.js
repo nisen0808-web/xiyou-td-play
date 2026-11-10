@@ -715,6 +715,18 @@
     if (!spec) return;
     f.charge = 0;
     f.castT = 1.15;
+    G.td.quiet = G.td.clock + 1.35;
+    if (G.texts) {
+      var kept = [], ti, tx;
+      for (ti = 0; ti < G.texts.length; ti++) {
+        tx = G.texts[ti];
+        if (tx.kind === 'big' || tx.kind === 'elemtag' || tx.kind === 'counter') continue;
+        if (tx.kind === 'dmg' || tx.kind === 'crit' || tx.kind === 'weak' || tx.kind === 'hurt') tx.color = '#2a241c';
+        kept.push(tx);
+      }
+      G.texts.length = 0;
+      kept.forEach(function (tx2) { G.texts.push(tx2); });
+    }
     var row = G.td.combos[f.id] || (G.td.combos[f.id] = { casts: 0, dmg: 0 });
     row.casts++;
     var mul = mulOf(G), dmg, i, e, tang = G.heroes[0];
@@ -1068,20 +1080,79 @@
       return assist0(G, dt);
     };
   }
+  if (XY.vfx && XY.vfx.draw && !XY.vfx._td) {
+    var vfxDraw0 = XY.vfx.draw;
+    XY.vfx.draw = function (c, G) {
+      if (G && G.td && G.td.quiet > G.td.clock) return;
+      return vfxDraw0.call(this, c, G);
+    };
+    XY.vfx._td = true;
+  }
+  if (XY.SKILLFX && XY.SKILLFX.draw && !XY.SKILLFX._td) {
+    var skillFx0 = XY.SKILLFX.draw;
+    XY.SKILLFX.draw = function (c, f, k) {
+      var G = window.__xy && window.__xy.G;
+      if (G && G.td && G.td.quiet > G.td.clock) return;
+      return skillFx0.call(this, c, f, k);
+    };
+    XY.SKILLFX._td = true;
+  }
   if (XY.R4 && XY.R4.soldier) {
     var drawS = XY.R4.soldier;
     XY.R4.soldier = function (c, G, t, rt) {
       if (!(G && G.td && G.td.on)) return drawS(c, G, t, rt);
-      var lv = t.lv; t.lv = 1;
+      var lv = t.lv, pulse = t.pulse, upT = t.upT; t.lv = 1;
+      if (G.td.quiet > G.td.clock) { t.pulse = 0; t.upT = 0; }
       c.save(); c.translate(t.x, t.y); c.scale(1.45, 1.45); c.translate(-t.x, -t.y);
       drawS(c, G, t, rt);
-      c.restore(); t.lv = lv;
+      c.restore(); t.lv = lv; t.pulse = pulse; t.upT = upT;
     };
   }
 
   /* ---------- 画面 ---------- */
   function font(px, bold) { return (bold ? '700 ' : '500 ') + px + 'px ' + (C.FONT || 'serif'); }
   function brushFont(px) { return px + 'px "TDBrush","Ma Shan Zheng",' + (C.FONT || 'serif'); }
+  function inkWing(ctx, s, k, dive) {
+    ctx.save(); ctx.scale(s, 1); ctx.rotate(dive ? 0.15 : -0.25);
+    ctx.beginPath();
+    ctx.moveTo(0, k * 0.05);
+    ctx.quadraticCurveTo(k * 0.15, -k * 0.95, k * 0.72, -k * 0.78);
+    ctx.quadraticCurveTo(k * 0.48, -k * 0.42, k * 1.15, -k * 0.22);
+    ctx.quadraticCurveTo(k * 0.62, -k * 0.02, k * 1.05, k * 0.28);
+    ctx.quadraticCurveTo(k * 0.4, k * 0.12, 0, k * 0.32);
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(36,28,20,0.82)';
+    ctx.fill();
+    ctx.strokeStyle = '#1c1814'; ctx.lineWidth = Math.max(1.8, k * 0.055); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(0, 0); ctx.lineTo(k * 0.72, -k * 0.78);
+    ctx.moveTo(0, 0); ctx.lineTo(k * 1.15, -k * 0.22);
+    ctx.moveTo(0, 0); ctx.lineTo(k * 1.05, k * 0.28);
+    ctx.stroke();
+    ctx.restore();
+  }
+  XY.tdInkFly = function (ctx, e, rt, x, y) {
+    var owl = e.type === 'owl', r = e.r * (owl ? 2.8 : 3.3), dive = e.fs === 'dive', flap = Math.sin(rt * (dive ? 6 : 14) + (e.wob || 0));
+    ctx.save(); ctx.translate(x, y + (dive ? 4 : flap * 4));
+    inkWing(ctx, 1, r, dive); inkWing(ctx, -1, r, dive);
+    ctx.strokeStyle = '#1c1814'; ctx.fillStyle = 'rgba(28,24,20,0.92)'; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.lineWidth = Math.max(1.6, r * 0.07);
+    if (owl) {
+      ctx.beginPath(); ctx.ellipse(0, r * 0.02, r * 0.34, r * 0.48, 0, 0, PI2); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(-r * 0.22, -r * 0.28); ctx.lineTo(-r * 0.16, -r * 0.78); ctx.lineTo(0, -r * 0.32);
+      ctx.moveTo(r * 0.22, -r * 0.28); ctx.lineTo(r * 0.16, -r * 0.78); ctx.lineTo(0, -r * 0.32); ctx.stroke();
+    } else {
+      ctx.beginPath(); ctx.ellipse(0, r * 0.02, r * 0.2, r * 0.28, dive ? 0.35 : 0, 0, PI2); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(-r * 0.12, -r * 0.16); ctx.lineTo(-r * 0.2, -r * 0.58); ctx.lineTo(-r * 0.02, -r * 0.2);
+      ctx.moveTo(r * 0.12, -r * 0.16); ctx.lineTo(r * 0.2, -r * 0.58); ctx.lineTo(r * 0.02, -r * 0.2); ctx.fill(); ctx.stroke();
+    }
+    ctx.fillStyle = '#f4efe4';
+    ctx.beginPath(); ctx.arc(-r * 0.07, -r * 0.02, Math.max(1.6, r * 0.035), 0, PI2); ctx.arc(r * 0.07, -r * 0.02, Math.max(1.6, r * 0.035), 0, PI2); ctx.fill();
+    ctx.restore();
+    ctx.fillStyle = '#6e211b'; ctx.font = brushFont(18); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(owl ? '夜枭' : '蝠妖', x, y - r * 0.9 - 18);
+  };
   function dryArc(ctx, r, a0, a1) {
     var i, n = 7, span = a1 - a0;
     ctx.lineCap = 'round';
@@ -1111,6 +1182,32 @@
     ctx.stroke();
     ctx.restore();
   }
+  function torn(ctx, x, y, w, h) {
+    var i, n = 10;
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(x + 8, y + 3);
+    for (i = 1; i <= n; i++) ctx.lineTo(x + (w - 10) * i / n, y + (i % 2 ? 6 : 1));
+    ctx.lineTo(x + w - 2, y + 10);
+    for (i = 1; i <= n; i++) ctx.lineTo(x + w - (i % 2 ? 1 : 5), y + 10 + (h - 16) * i / n);
+    ctx.lineTo(x + w - 8, y + h - 2);
+    for (i = 1; i <= n; i++) ctx.lineTo(x + w - 8 - (w - 14) * i / n, y + h - (i % 2 ? 1 : 5));
+    ctx.lineTo(x + 3, y + h - 8);
+    for (i = 1; i <= n; i++) ctx.lineTo(x + (i % 2 ? 2 : 6), y + h - 8 - (h - 14) * i / n);
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(246, 240, 226, 0.94)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(42, 32, 22, 0.55)';
+    ctx.lineWidth = 1.15;
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(42, 32, 22, 0.28)';
+    ctx.lineWidth = 3.2;
+    ctx.beginPath();
+    ctx.moveTo(x + 14, y + h * 0.55);
+    ctx.quadraticCurveTo(x + w * 0.4, y + h * 0.2, x + w - 18, y + h * 0.48);
+    ctx.stroke();
+    ctx.restore();
+  }
   function paper(ctx, x, y, w, h) {
     ctx.save();
     ctx.fillStyle = '#f6f1e4';
@@ -1124,7 +1221,7 @@
     ctx.save(); ctx.translate(x, y); ctx.rotate(-0.05);
     ctx.beginPath(); ctx.arc(0, 0, r, 0, PI2); ctx.fillStyle = '#9a2e24'; ctx.fill();
     ctx.lineWidth = 2; ctx.strokeStyle = '#6e211b'; ctx.stroke();
-    ctx.fillStyle = '#fff6ea'; ctx.font = font(r > 28 ? 18 : 13, true);
+    ctx.fillStyle = '#fff6ea'; ctx.font = font(label.length > 1 && r <= 18 ? 11 : (r > 28 ? 18 : 13), true);
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(label, 0, 1);
     ctx.restore();
   }
@@ -1211,7 +1308,11 @@
       ctx.fillStyle = 'rgba(36,28,20,' + (0.82 * k) + ')';
       ctx.lineWidth = 1.6;
       if (fx.kind === 'bolt') {
-        ctx.beginPath(); ctx.moveTo(fx.x, fx.y); ctx.lineTo(fx.x2, fx.y2); ctx.stroke();
+        ctx.lineWidth = 2.8; ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(fx.x, fx.y - 16);
+        ctx.quadraticCurveTo((fx.x + fx.x2) / 2, (fx.y + fx.y2) / 2 - 28, fx.x2, fx.y2);
+        ctx.stroke();
+        ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(fx.x2, fx.y2, 11 * k, 0.2, 5.6); ctx.stroke();
       } else if (fx.kind === 'ring') {
         ctx.translate(fx.x, fx.y); dryArc(ctx, (fx.r || 180) * (0.86 + 0.14 * (1 - k)), 0.15, 6.0);
       } else if (fx.kind === 'sweep') {
@@ -1239,13 +1340,24 @@
       var sr = narrow ? 30 : 38;
       seal(ctx, W - sr - 18, 78 + sr, sr, '出发');
       hit(W - sr * 2 - 26, 78, sr * 2 + 16, sr * 2 + 16, 'tdStart');
-      ctx.fillStyle = '#2a241c'; ctx.font = font(narrow ? 14 : 16, true); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      paper(ctx, W / 2 - 150, 46, 300, 30);
-      ctx.fillText('布置天兵，准备好后点出发', W / 2, 61);
-      var hw = narrow ? Math.min(W - 24, 460) : 460;
-      paper(ctx, W / 2 - hw / 2, 82, hw, 28);
-      ctx.font = font(narrow ? 13 : 15, false);
-      ctx.fillText(R.FLY_HINT, W / 2, 96);
+      ctx.fillStyle = '#2a241c'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      if (narrow) {
+        var bw = Math.min(W - 24, 340);
+        torn(ctx, 12, 210, bw, 30);
+        ctx.font = brushFont(15);
+        ctx.fillText('布置天兵，再点出发', 12 + bw / 2, 225);
+        var hw = Math.min(W - 24, 460);
+        torn(ctx, 12, 246, hw, 34);
+        ctx.font = brushFont(14);
+        ctx.fillText(R.FLY_HINT, 12 + hw / 2, 263);
+      } else {
+        torn(ctx, W / 2 - 168, 40, 336, 34);
+        ctx.font = brushFont(20);
+        ctx.fillText('布置天兵，再点出发', W / 2, 57);
+        torn(ctx, W / 2 - 240, 78, 480, 32);
+        ctx.font = brushFont(16);
+        ctx.fillText(R.FLY_HINT, W / 2, 94);
+      }
     }
     if (G.td.offer && !G.td.deploy) {
       paper(ctx, W / 2 - 70, 78, 140, bh);
@@ -1349,29 +1461,33 @@
     ctx.save();
     ctx.fillStyle = 'rgba(246,240,226,0.5)';
     ctx.beginPath(); ctx.rect(0, 0, W, H); ctx.rect(target.x - 6, target.y - 6, target.w + 12, target.h + 12); ctx.fill('evenodd');
-    ctx.strokeStyle = '#6e211b'; ctx.lineWidth = 2; ctx.strokeRect(target.x - 6, target.y - 6, target.w + 12, target.h + 12);
+    ctx.strokeStyle = '#6e211b'; ctx.lineWidth = 2.2; ctx.lineCap = 'round';
+    var tx = target.x - 6, ty = target.y - 6, tw = target.w + 12, th = target.h + 12, mk = 14;
+    ctx.beginPath();
+    ctx.moveTo(tx, ty + mk); ctx.lineTo(tx, ty); ctx.lineTo(tx + mk, ty);
+    ctx.moveTo(tx + tw - mk, ty); ctx.lineTo(tx + tw, ty); ctx.lineTo(tx + tw, ty + mk);
+    ctx.moveTo(tx, ty + th - mk); ctx.lineTo(tx, ty + th); ctx.lineTo(tx + mk, ty + th);
+    ctx.moveTo(tx + tw - mk, ty + th); ctx.lineTo(tx + tw, ty + th); ctx.lineTo(tx + tw, ty + th - mk);
+    ctx.stroke();
     ctx.restore();
-    var cw = phone() ? Math.min(420, W * 0.52) : Math.min(460, W - 24), ch = phone() ? 160 : 132;
-    var x = phone() ? 16 : Math.min(W - cw - 12, Math.max(12, target.x - cw - 16));
-    var y = phone() ? 460 : Math.max(80, target.y - ch - 16);
-    if (!phone() && (y + ch > target.y - 8 && y < target.y + target.h + 8)) y = Math.min(H - ch - 12, target.y + target.h + 16);
-    paper(ctx, x, y, cw, ch);
+    var cw = phone() ? Math.min(340, W * 0.62) : 420, ch = phone() ? 176 : 148;
+    var x = 18, y = phone() ? 300 : 132;
+    if (x < target.x + target.w && x + cw > target.x && y < target.y + target.h && y + ch > target.y) y = Math.min(H - ch - 150, target.y + target.h + 24);
+    torn(ctx, x, y, cw, ch);
     var list = G.td.guide.kind === 'td3' ? R.GUIDE3 : R.GUIDE2;
-    ctx.fillStyle = '#9a2e24'; ctx.font = font(12, true); ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-    ctx.fillText((G.td.guide.kind === 'td3' ? '阵型' : '布阵') + ' ' + (G.td.guide.i + 1) + '/' + list.length, x + 12, y + 8);
-    ctx.fillStyle = '#2a241c'; ctx.font = font(phone() ? 15 : 16, false);
+    ctx.fillStyle = '#6e211b'; ctx.font = brushFont(phone() ? 18 : 22); ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+    ctx.fillText((G.td.guide.kind === 'td3' ? '阵型' : '布阵') + ' ' + (G.td.guide.i + 1) + '/' + list.length, x + 16, y + 10);
+    ctx.fillStyle = '#2a241c'; ctx.font = brushFont(phone() ? 15 : 17);
     var words = st.text, line = '', lines = [], i;
     for (i = 0; i < words.length; i++) {
       if (ctx.measureText(line + words.charAt(i)).width > cw - 24) { lines.push(line); line = words.charAt(i); }
       else line += words.charAt(i);
     }
     lines.push(line);
-    lines.slice(0, 4).forEach(function (ln, n) { ctx.fillText(ln, x + 12, y + 30 + n * 22); });
-    var by = y + ch - 40;
-    paper(ctx, x + 12, by, 72, 30);
-    ctx.fillStyle = '#2a241c'; ctx.font = font(13, true); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText('跳过', x + 48, by + 15);
-    hit(x + 12, by, 72, 30, 'tdGuideSkip');
+    lines.slice(0, 4).forEach(function (ln, n) { ctx.fillText(ln, x + 14, y + 36 + n * 22); });
+    var by = y + ch - 46;
+    seal(ctx, x + 40, by + 16, 16, '跳过');
+    hit(x + 12, by - 2, 56, 36, 'tdGuideSkip');
     if (st.id === 'wait' || st.id === 'break' || st.id === 'detail' || st.id === 'hire') {
       seal(ctx, x + cw - 46, by + 14, 16, '下一步');
       hit(x + cw - 78, by - 4, 70, 36, 'tdGuideNext');
@@ -1397,7 +1513,15 @@
 
   var origRender = XY.render;
   XY.render = function (ctx, G, a) {
+    var keptFx = null;
+    if (G && G.td && G.td.quiet > G.td.clock && G.fx) {
+      keptFx = G.fx;
+      G.fx = G.fx.filter(function (f) {
+        return f.type !== 'ring' && f.type !== 'coinDrop' && f.type !== 'vsfx' && !(f.type === 'an' && (f.kind === 'maxlv' || f.kind === 'levelup' || f.kind === 'flash'));
+      });
+    }
     origRender(ctx, G, a);
+    if (keptFx) G.fx = keptFx;
     if (!a) return;
     if (a.tdChooser) { try { drawChooser(ctx, a); } catch (e) {} }
     if (!G || !G.td || !G.td.on || a.screen !== 'play') return;
