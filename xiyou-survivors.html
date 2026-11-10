@@ -3907,7 +3907,7 @@ XY.TRAITS = {
     if (contact) { if (h.contactT > 0) return; h.contactT = 0.4; }   // 被围殴时每 0.4 秒最多吃一次接触伤害
     if (XY.spsupPre) { dmg = XY.spsupPre(G, h, dmg); if (dmg <= 0) { h.hurtT = 0.1; return; } }
     var hdt = G._dt || 'phys', hel = G._el || null;
-    dmg *= (1 - h.dr) * (h.taunt > 0 ? 0.4 : 1) * (1 - (hdt === 'magic' ? h.mdef : h.pdef)) * XY.elemMul(hel, h.def.elem) * (h.shield > 0 ? 0.5 : 1) * (XY.syn ? XY.syn.drMul(G, h) : 1);                // 钉耙挡灾期间再减伤；协同技·互相守护再减伤 60%
+    dmg *= (1 - h.dr) * (h._lineDr ? (1 - Math.min(0.35, h._lineDr)) : 1) * (h.taunt > 0 ? 0.4 : 1) * (1 - (hdt === 'magic' ? h.mdef : h.pdef)) * XY.elemMul(hel, h.def.elem) * (h.shield > 0 ? 0.5 : 1) * (XY.syn ? XY.syn.drMul(G, h) : 1);                // 钉耙挡灾期间再减伤；协同技·互相守护再减伤 60%
     if (dmg > 0 && h.ward && h.ward.ready && XY.fabao && XY.fabao.wardBreak) { XY.fabao.wardBreak(G, h); return; }   // v0.8.3：避水珠 / 定海神珠 —— 一次性挡掉这一下（不管多大），然后进入冷却
     if (h.absorb > 0) { var ab2 = Math.min(h.absorb, dmg); h.absorb -= ab2; dmg -= ab2; if (dmg <= 0) { h.hurtT = 0.1; return; } }
     var sk = contact ? 'contact' : (G._src || 'other'); G.stats[sk] = (G.stats[sk] || 0) + dmg;
@@ -9103,7 +9103,7 @@ XY.BGS1={"src": "data:image/webp;base64,UklGRtT1GgBXRUJQVlA4IMj1GgCQwWGdASoAEAAK
     if (lab && !(G.td && G.td.quiet > G.td.clock)) otxt(c, lab, x, XY.R4.placeLabel(c, lab, x, y + r + 20, 11, 1), 11, isC ? '#b8300f' : (G.station && h.id === 'tang' ? '#a8700a' : '#4a6a8a'), 'center', true);
     var clash = XY.R4.labelClash(G, x - 50, y + lift - tr - 54, 100, 52);          // v0.7：头顶标签碰到 BOSS 的名牌 / 血条区域 → 名字等挪到脚下
     // 唐僧血量低：红圈 + 感叹号
-    if (h.id === 'tang' && (G.tdanger || G.breach)) {
+    if (h.id === 'tang' && (G.tdanger || G.breach) && !(G.td && G.td.quiet > G.td.clock)) {
       var pz = 0.5 + 0.5 * Math.sin(rt * 10);
       c.strokeStyle = 'rgba(224,60,40,' + (0.5 + 0.4 * pz) + ')'; c.lineWidth = 3.5; c.beginPath(); c.arc(x, y, r + 11 + pz * 3, 0, PI2); c.stroke();
       otxt(c, G.breach ? '妖怪进营地了！' : '师傅危险！', x, clash ? y + r + 46 : y - tr - 42, 14, '#d62828', 'center', true);
@@ -11286,7 +11286,7 @@ XY.BGS1={"src": "data:image/webp;base64,UklGRtT1GgBXRUJQVlA4IMj1GgCQwWGdASoAEAAK
       T.otxt(c, label, ax - Math.cos(ang) * 40, ly, 13, alert ? '#c0392b' : T.T.ink, 'center', true);
     }
     if (!pOpen && (G.camp.active || G.tang.phase === 'walk') && !(G.td && G.td.quiet > G.td.clock)) edge(G.camp.x, G.camp.y, G.campAlert > 0 ? '营地被攻击！' : (G.camp.active ? '营地' : '休息点'), '#d9a21a', G.campAlert > 0);
-    if (!pOpen && !tg.down) edge(tg.x, tg.y, (G.breach || G.tdanger) ? '师傅危险！' : '师傅', '#e2a63a', G.breach || G.tdanger);
+    if (!pOpen && !tg.down && !(G.td && G.td.quiet > G.td.clock)) edge(tg.x, tg.y, (G.breach || G.tdanger) ? '师傅危险！' : '师傅', '#e2a63a', G.breach || G.tdanger);
     if (!pOpen && !(G.td && G.td.quiet > G.td.clock)) edge(G.gate.x, G.gate.y, G.gate.sealed ? '关口（主线未完成）' : '关口：师父走到就通关', G.gate.sealed ? '#a39a8a' : '#e0a415', false);
     drawTip(c, app, tip || app._tip);
     if (G.tut) XY.tutDraw(c, G, app);

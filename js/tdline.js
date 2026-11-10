@@ -63,7 +63,7 @@
       spots: makeSpots(G), guide: null, focus: null, gapT: 0, inSurge: false,
       surges: G.stats.surges || 0, restHint: false, restFormHint: false,
       dmg: { hero: 0, tower: 0 }, dmgRest: { hero: 0, tower: 0 }, byType: {},
-      toastBat: false, toastLife: false, baguaTill: 0, form: { tower: null, hero: null },
+      toastBat: false, toastLife: false, baguaTill: 0, form: { tower: null, hero: null, line: null }, seat: 0,
       clock: 0, tangSafe: 0, campShield: 0,
       fly: { n: 0, waves: 0, towerKills: 0, leak: 0 },
       combos: {}, fx: []
@@ -643,10 +643,11 @@
 
   /* ---------- 阵 ---------- */
   function breakForms(G, who, why) {
-    ['tower', 'hero'].forEach(function (k) {
+    ['tower', 'hero', 'line'].forEach(function (k) {
       var f = G.td.form[k];
-      if (!f || !f.members) return;
-      if (f.members.indexOf(who) >= 0) { f.state = 'broken'; f.why = why; clearMemberFlags(f); }
+      if (!f) return;
+      var list = f.seats || f.members;
+      if (list && list.indexOf(who) >= 0) { f.state = 'broken'; f.why = why; clearMemberFlags(f); }
     });
   }
   function clearMemberFlags(f) {
@@ -702,6 +703,66 @@
       }
     });
     splashBoost(G);
+    tickLine(G, dt);
+  }
+  function lineMembers(f) {
+    var out = [], i;
+    for (i = 0; i < (f.seats || []).length; i++) if (f.seats[i]) out.push(f.seats[i]);
+    f.members = out;
+    f.eye = f.seats ? f.seats[0] : null;
+    return out;
+  }
+  /* 阵眼是唐僧：阵心跟着他沿路走，别人按阵位围着他。唐僧本人不被拽离路线。
+   * 唐僧只是阵员：他继续自己走路，人在阵里就给其他人一份护持。 */
+  function tickLine(G, dt) {
+    if (G.heroes) G.heroes.forEach(function (h) { h._lineDr = 0; });
+    var f = G.td.form && G.td.form.line;
+    if (!f || f.state === 'ended' || f.state === 'draft' || f.state === 'broken') return;
+    var def = R.formById(f.id);
+    if (!def || !f.seats) return;
+    var eye = f.seats[0], i, m, w;
+    if (R.isTang(eye)) {
+      f.cx = eye.x;
+      f.cy = eye.y;
+      var ahead = XY.routeAt(G.rt, Math.min(G.rt.total, ((G.tang && G.tang.s) || 0) + 40));
+      f.facing = Math.atan2(ahead.y - eye.y, ahead.x - eye.x);
+    }
+    var tangIn = false;
+    for (i = 0; i < f.seats.length; i++) {
+      m = f.seats[i];
+      if (R.isTang(m)) tangIn = true;
+      if (!m || R.isTang(m) || (m.i != null && m.i === G.ctrl)) continue;
+      if (m.down || (m.hp != null && m.hp <= 0 && !m.type)) { f.state = 'broken'; f.why = 'dead'; clearMemberFlags(f); return; }
+      if (!def.slots[i]) continue;
+      w = slotWorld(f, def.slots[i]);
+      if (m.type) { m.x = w.x; m.y = w.y; m.mode = 'garrison'; m.rs = 1e9; m.holdForm = true; m.anchor = { x: w.x, y: w.y }; }
+      else if (!m.down) { m.x = w.x; m.y = w.y; m._inSlot = true; }
+    }
+    lineMembers(f);
+    if (!R.formOk(def, f.seats)) { f.state = 'broken'; f.why = 'count'; clearMemberFlags(f); return; }
+    f.held = (f.held || 0) + dt;
+    if (f.state !== 'active') {
+      f.state = 'assembling';
+      if (f.held >= 0.5) { f.state = 'active'; f.ever = true; }
+    }
+    if (f.state !== 'active') return;
+    var eff = R.FORM_EFFECT[f.id] || {};
+    var guard = tangIn ? R.TANG_GUARD : { dr: 0, regen: 0 };
+    f.members.forEach(function (u) {
+      if (!u) return;
+      u._formDmg = eff.dmg || 0;
+      u._formDr = eff.dr || 0;
+      u._lineDr = R.isTang(u) ? 0 : (eff.dr || 0) + (guard.dr || 0);
+      if (!u.type && guard.regen && !u.down && u.maxHp) u.hp = Math.min(u.maxHp, u.hp + guard.regen * dt);
+    });
+    if (eff.slow) {
+      G.enemies.forEach(function (e) {
+        if (e.dead || hypot(e.x - f.cx, e.y - f.cy) > 200) return;
+        e.slowT = Math.max(e.slowT || 0, 0.35);
+        e.slowF = Math.max(e.slowF || 0, eff.slow * (e.def && e.def.boss ? 0.4 : 1));
+      });
+    }
+    chargeCombo(G, f, dt);
   }
   function chargeCombo(G, f, dt) {
     if (G.td.deploy) return;
@@ -709,6 +770,25 @@
     if (!spec) return;
     f.charge = R.charge(f.charge, dt, spec.sec);
     if (f.charge >= 1) castCombo(G, f);
+  }
+  function castLine(G, f, mul) {
+    var rad = f.id === 'bagua' ? 240 : f.id === 'qixing' ? 220 : f.id === 'liuhe' ? 200 : 180;
+    var dmg = (f.id === 'bagua' ? 16 : f.id === 'qixing' ? 22 : f.id === 'wuxing' ? 18 : f.id === 'liuhe' ? 14 : 10) * mul;
+    var i, e;
+    for (i = 0; i < G.enemies.length; i++) {
+      e = G.enemies[i];
+      if (e.dead || hypot(e.x - f.cx, e.y - f.cy) > rad) continue;
+      if (e.def && (e.def.boss || e.def.etower)) continue;
+      if (f.id === 'liuhe' || f.id === 'bagua') e.stunT = Math.max(e.stunT || 0, f.id === 'bagua' ? 1.2 : 0.8);
+      if (f.id !== 'bagua') e.slowT = Math.max(e.slowT || 0, 1.1);
+      XY.core.hurtEnemy(G, e, dmg, { combo: f.id, type: 'magic' });
+    }
+    (f.members || []).forEach(function (m) {
+      if (!m || m.down) return;
+      if (!m.type && m.maxHp) m.hp = Math.min(m.maxHp, m.hp + m.maxHp * (f.id === 'sixiang' ? 0.12 : 0.05));
+      else if (m.type) m.hp = Math.min(XY.towerMaxHp(m), (m.hp || 0) + (f.id === 'sixiang' ? 60 : 30));
+    });
+    pushFx(G, { kind: 'ring', x: f.cx, y: f.cy, life: 0.8, r: rad, name: '' });
   }
   function castCombo(G, f) {
     var spec = R.COMBOS[f.id];
@@ -731,6 +811,7 @@
     row.casts++;
     var mul = mulOf(G), dmg, i, e, tang = G.heroes[0];
     pushFx(G, { kind: 'name', x: f.cx, y: f.cy, life: 1.15, name: spec.name, a: f.facing || 0 });
+    if (f.who === 'line') { castLine(G, f, mul); return; }
     if (f.id === 'sancai') {
       G.td.tangSafe = G.td.clock + 2.4;
       dmg = 28 * mul;
@@ -915,6 +996,26 @@
     }
   }
 
+  TD.confirmLine = function (G) {
+    var f = G.td.form.line;
+    if (!f) return false;
+    var def = R.formById(f.id);
+    lineMembers(f);
+    if (!R.formOk(def, f.seats)) {
+      f.missing = R.filled(f.seats) < R.FORM_MIN ? '不足 4 人，不能成阵' : ('这一阵要 ' + def.size + ' 人');
+      if (XY.toast) XY.toast(G, f.missing);
+      return false;
+    }
+    f.eye = f.seats[0];
+    f.who = 'line';
+    if (f.eye && !R.isTang(f.eye)) { f.cx = f.eye.x; f.cy = f.eye.y; }
+    f.state = 'assembling';
+    f.held = 0;
+    f.charge = f.charge || 0;
+    var g = guideStep(G);
+    if (g && g.id === 'confirm') advanceGuide(G);
+    return true;
+  };
   TD.confirmForm = function (G, kind) {
     var f = G.td.form[kind];
     if (!f) return false;
@@ -976,9 +1077,9 @@
     if (st.id === 'detail') return h.act === 'tdSel' || h.act === 'tdUpgrade' || h.act === 'tdRecall' || h.act === 'treat' || h.act === 'tdGuideNext';
     if (st.id === 'go') return h.act === 'tdStart';
     if (st.id === 'open') return h.act === 'tdTab' && h.id === 'form';
-    if (st.id === 'sancai') return h.act === 'tdPick' && h.id === 'sancai';
-    if (st.id === 'confirm') return h.act === 'tdBind' || h.act === 'tdCenter' || h.act === 'tdConfirm' || h.act === 'tdGuideNext';
-    if (st.id === 'jinchan') return h.act === 'tdPick' && h.id === 'jinchan' || h.act === 'tdBind' || h.act === 'order' || h.act === 'tdConfirm';
+    if (st.id === 'sixiang') return h.act === 'tdPick' && h.id === 'sixiang';
+    if (st.id === 'confirm') return h.act === 'tdLineSeat' || h.act === 'tdLineUnit' || h.act === 'tdBind' || h.act === 'tdCenter' || h.act === 'tdConfirm' || h.act === 'tdGuideNext';
+    if (st.id === 'bagua') return (h.act === 'tdPick' && h.id === 'bagua') || h.act === 'tdGuideNext';
     return false;
   }
   function onAct(h, G, a) {
@@ -1027,12 +1128,33 @@
     if (h.act === 'tdRecall') { TD.recall(G, a.selTower); return true; }
     if (h.act === 'tdPick') {
       var def = R.formById(h.id); if (!def) return true;
-      var kind = def.who === 'hero' ? 'hero' : 'tower';
-      var center = def.camp && G.camp ? G.camp : G.heroes[0];
+      var center = G.heroes[0];
       var facing = XY.routeAt(G.rt, XY.routeProject(G.rt, center.x, center.y).s).a;
-      G.td.form[kind] = { id: def.id, name: def.name, who: def.who, state: 'draft', members: [], cx: center.x, cy: center.y, facing: facing, missing: '' };
+      if (def.who === 'line') {
+        G.td.form.line = { id: def.id, name: def.name, who: 'line', state: 'draft', seats: def.slots.map(function () { return null; }), members: [], eye: null, cx: center.x, cy: center.y, facing: facing, missing: '' };
+        G.td.seat = 0;
+      } else {
+        var kind = def.who === 'hero' ? 'hero' : 'tower';
+        G.td.form[kind] = { id: def.id, name: def.name, who: def.who, state: 'draft', members: [], cx: center.x, cy: center.y, facing: facing, missing: '' };
+      }
       G.td.tab = 'form';
-      if (guideStep(G) && ((guideStep(G).id === 'sancai' && h.id === 'sancai') || (guideStep(G).id === 'jinchan' && h.id === 'jinchan'))) advanceGuide(G);
+      if (guideStep(G) && ((guideStep(G).id === 'sixiang' && h.id === 'sixiang') || (guideStep(G).id === 'bagua' && h.id === 'bagua'))) advanceGuide(G);
+      return true;
+    }
+    if (h.act === 'tdLineSeat') { G.td.seat = h.i || 0; return true; }
+    if (h.act === 'tdLineUnit') {
+      var lf = G.td.form.line;
+      if (!lf || lf.state !== 'draft') return true;
+      var unit = h.kind === 'tower' ? G.towers[h.i] : G.heroes[h.i];
+      if (!unit) return true;
+      var si = G.td.seat || 0, p;
+      for (p = 0; p < lf.seats.length; p++) if (lf.seats[p] === unit) lf.seats[p] = null;
+      if (lf.seats[si] === unit) lf.seats[si] = null;
+      else lf.seats[si] = unit;
+      lineMembers(lf);
+      var defLeft = R.formById(lf.id);
+      lf.missing = R.formOk(defLeft, lf.seats) ? '' : (R.filled(lf.seats) < R.FORM_MIN ? '不足 4 人' : ('要凑满 ' + defLeft.size + ' 人'));
+      for (p = 0; p < lf.seats.length; p++) if (!lf.seats[p]) { G.td.seat = p; break; }
       return true;
     }
     if (h.act === 'tdBind') {
@@ -1050,8 +1172,16 @@
       if (ff && h.x != null) { ff.cx = h.x; ff.cy = h.y; ff.facing = h.a || ff.facing; }
       return true;
     }
-    if (h.act === 'tdConfirm') { TD.confirmForm(G, h.who === 'hero' ? 'hero' : 'tower'); return true; }
+    if (h.act === 'tdConfirm') {
+      if (h.who === 'line') { TD.confirmLine(G); return true; }
+      TD.confirmForm(G, h.who === 'hero' ? 'hero' : 'tower');
+      return true;
+    }
     if (h.act === 'tdDisband') {
+      if (h.who === 'line') {
+        if (G.td.form.line) { clearMemberFlags(G.td.form.line); G.td.form.line = null; }
+        return true;
+      }
       var side = h.who === 'hero' ? 'hero' : 'tower';
       var cur = G.td.form[side];
       if (cur && cur.id === 'bagua') G.td.baguaTill = G.td.clock + 8;
@@ -1264,7 +1394,44 @@
       ctx.restore();
     }
     previewSlots(ctx, G);
+    drawLineSlots(ctx, G);
     ctx.restore();
+  }
+  function drawLineSlots(ctx, G) {
+    var f = G.td.form.line;
+    if (!f || f.state === 'ended' || f.state === 'broken') return;
+    var def = R.formById(f.id);
+    if (!def) return;
+    if (def.gap) {
+      var gap = slotWorld(f, def.gap);
+      ctx.fillStyle = '#9a2e24';
+      ctx.font = brushFont(15);
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('生', gap.x, gap.y);
+    }
+    def.slots.forEach(function (slot, i) {
+      var w = slotWorld(f, slot);
+      var on = f.seats && f.seats[i];
+      var picked = f.state === 'draft' && G.td.seat === i;
+      ctx.save();
+      ctx.translate(w.x, w.y);
+      ctx.strokeStyle = slot.eye || picked ? 'rgba(154,46,36,0.9)' : 'rgba(42,32,22,0.7)';
+      ctx.lineWidth = slot.eye ? 2.2 : 1.3;
+      dryArc(ctx, slot.eye ? 20 : 15, 0.15, 5.9);
+      ctx.fillStyle = slot.eye ? '#9a2e24' : '#2a241c';
+      ctx.font = brushFont(slot.eye ? 16 : 13);
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      var mark = slot.eye ? '眼' : slot.label;
+      if (on) mark = R.isTang(on) ? '唐' : (on.type && XY.TOWERS[on.type] ? XY.TOWERS[on.type].name.slice(0, 1) : ((on.def && on.def.name) ? on.def.name.slice(0, 1) : '人'));
+      ctx.fillText(mark, 0, 0);
+      ctx.restore();
+      if (f.state === 'draft') {
+        var s = w2s(G, w.x, w.y);
+        hit(s.x - 24, s.y - 24, 48, 48, 'tdLineSeat', { i: i });
+      }
+    });
   }
   function previewSlots(ctx, G) {
     ['tower', 'hero'].forEach(function (k) {
@@ -1410,47 +1577,53 @@
     });
   }
   function drawFormPanel(ctx, G, narrow, bh) {
-    var x = narrow ? 12 : G.view.w - 340, y = narrow ? 230 : 120, w = narrow ? Math.min(460, G.view.w - 24) : 320;
-    var list = R.FORMATIONS, h = Math.min(G.view.h * 0.55, 36 + list.length * 36 + bh + 8);
-    paper(ctx, x, y, w, h);
-    ctx.fillStyle = '#2a241c'; ctx.font = font(14, true); ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-    ctx.fillText('选阵、绑人、确认', x + 10, y + 8);
+    var cur0 = G.td.form.line;
+    if (cur0 && cur0.castT > 0) return;
+    var x = narrow ? 12 : G.view.w - 360, y = narrow ? 300 : 108, w = narrow ? Math.min(360, G.view.w - 24) : 340;
+    var list = R.FORMATIONS, h = Math.min(G.view.h * 0.62, 52 + list.length * 46 + bh + 28);
+    torn(ctx, x, y, w, h);
+    ctx.fillStyle = '#6e211b'; ctx.font = brushFont(18); ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+    ctx.fillText('布阵', x + 16, y + 8);
+    ctx.fillStyle = '#2a241c'; ctx.font = brushFont(13);
+    ctx.fillText('最少 4 人，最多 8 人', x + 64, y + 12);
     list.forEach(function (f, i) {
-      var yy = y + 30 + i * 34;
-      if (yy > y + h - bh - 8) return;
-      var on = (G.td.form.tower && G.td.form.tower.id === f.id) || (G.td.form.hero && G.td.form.hero.id === f.id);
-      ctx.fillStyle = on ? 'rgba(154,46,36,0.08)' : 'rgba(0,0,0,0)';
-      ctx.fillRect(x + 6, yy, w - 12, 32);
-      ctx.fillStyle = '#2a241c'; ctx.font = font(13, true);
-      ctx.fillText(f.name, x + 10, yy + 4);
-      ctx.font = font(11, false); ctx.fillStyle = '#5c5144';
-      var line = f.short;
-      while (line.length > 2 && ctx.measureText(line).width > w - 24) line = line.slice(0, -1);
-      ctx.fillText(line, x + 10, yy + 18);
-      hit(x + 6, yy, w - 12, 32, 'tdPick', { id: f.id });
+      var yy = y + 36 + i * 44;
+      if (yy > y + h - bh - 36) return;
+      var on = G.td.form.line && G.td.form.line.id === f.id;
+      ctx.fillStyle = on ? '#9a2e24' : '#2a241c';
+      ctx.font = brushFont(16);
+      ctx.fillText(f.name + '  ' + f.size + ' 人', x + 16, yy);
+      ctx.font = brushFont(12); ctx.fillStyle = '#5c5144';
+      var line = f.effect;
+      while (line.length > 4 && ctx.measureText(line).width > w - 28) line = line.slice(0, -1);
+      ctx.fillText(line, x + 16, yy + 18);
+      hit(x + 8, yy - 4, w - 16, 40, 'tdPick', { id: f.id });
     });
-    var cur = G.td.form.tower || G.td.form.hero;
+    var cur = G.td.form.line;
     if (cur && cur.state === 'draft') {
-      ctx.fillStyle = '#6e211b'; ctx.font = font(12, false);
-      ctx.fillText(cur.missing || '点场上的人加入，再确认', x + 10, y + h - bh - 4);
+      var n = R.filled(cur.seats), need = R.formById(cur.id).size;
+      ctx.fillStyle = '#6e211b'; ctx.font = brushFont(13);
+      ctx.fillText('已入 ' + n + ' / ' + need + (n < R.FORM_MIN ? '，不足 4 人' : (n < need ? '，还要 ' + (need - n) + ' 人' : '，可以确认')), x + 16, y + h - bh - 22);
     }
     if (cur) {
-      paper(ctx, x + 8, y + h - bh - 2, 88, bh);
-      ctx.fillStyle = '#9a2e24'; ctx.font = font(14, true); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText('确认', x + 52, y + h - bh / 2 - 2);
-      hit(x + 8, y + h - bh - 2, 88, bh, 'tdConfirm', { who: cur.who });
-      paper(ctx, x + 104, y + h - bh - 2, 88, bh);
-      ctx.fillStyle = '#2a241c';
-      ctx.fillText('散阵', x + 148, y + h - bh / 2 - 2);
-      hit(x + 104, y + h - bh - 2, 88, bh, 'tdDisband', { who: cur.who });
+      seal(ctx, x + 36, y + h - bh / 2 - 4, 18, '确认');
+      hit(x + 12, y + h - bh - 8, 52, bh, 'tdConfirm', { who: 'line' });
+      seal(ctx, x + 100, y + h - bh / 2 - 4, 18, '散');
+      hit(x + 76, y + h - bh - 8, 52, bh, 'tdDisband', { who: 'line' });
     }
     bindHits(G, cur);
   }
   function bindHits(G, cur) {
-    if (!cur || cur.state === 'ended') return;
-    var who = cur.who === 'hero' ? 'hero' : 'tower';
-    if (who === 'tower') G.towers.forEach(function (t, i) { var s = w2s(G, t.x, t.y); hit(s.x - 20, s.y - 20, 40, 40, 'tdBind', { who: 'tower', i: i }); });
-    else G.heroes.forEach(function (h, i) { if (h.id === 'tang') return; var s = w2s(G, h.x, h.y); hit(s.x - 20, s.y - 20, 40, 40, 'tdBind', { who: 'hero', i: i }); });
+    if (!cur || cur.state !== 'draft') return;
+    G.towers.forEach(function (t, i) {
+      var s = w2s(G, t.x, t.y);
+      hit(s.x - 22, s.y - 22, 44, 44, 'tdLineUnit', { kind: 'tower', i: i });
+    });
+    G.heroes.forEach(function (h, i) {
+      if (h.down) return;
+      var s = w2s(G, h.x, h.y);
+      hit(s.x - 22, s.y - 22, 44, 44, 'tdLineUnit', { kind: 'hero', i: i });
+    });
   }
   function drawGuide(ctx, G) {
     var st = guideStep(G); if (!st) return;

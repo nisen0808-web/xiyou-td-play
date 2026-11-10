@@ -64,12 +64,23 @@
   R.towerUntargetable = function (tdOn) { return !!tdOn; };
 
   R.COMBOS = {
-    sancai: { name: '佛光护行', sec: 16 },
-    yanyue: { name: '寒锋横扫', sec: 16 },
-    bagua: { name: '天罗地网', sec: 18 },
-    jinchan: { name: '金蝉引怪', sec: 16 },
-    sixiang: { name: '四象守营', sec: 18 },
-    fengshi: { name: '锋矢破阵', sec: 16 }
+    sixiang: { name: '四象回春', sec: 16 },
+    wuxing: { name: '五行相生', sec: 16 },
+    liuhe: { name: '六合锁空', sec: 16 },
+    qixing: { name: '七星坠野', sec: 17 },
+    bagua: { name: '天罗地网', sec: 18 }
+  };
+  /* 人数下限。某阵自己的人数就是它的阵位数，四象 4 人到八卦 8 人。 */
+  R.FORM_MIN = 4;
+  R.FORM_MAX = 8;
+  /* 唐僧在阵里时，给阵中其他人的护持。不改英雄伤害。 */
+  R.TANG_GUARD = { dr: 0.08, regen: 3 };
+  R.FORM_EFFECT = {
+    sixiang: { dr: 0.10 },
+    wuxing: { dmg: 0.08 },
+    liuhe: { dr: 0.08 },
+    qixing: { slow: 0.15 },
+    bagua: { dmg: 0.12, dr: 0.15 }
   };
   R.charge = function (cur, dt, sec) { return Math.min(1, (cur || 0) + (dt || 0) / (sec || 16)); };
 
@@ -128,37 +139,55 @@
     return Math.max(0, Math.min(add, cap - (used || 0)));
   };
 
+  /* 阵眼在圆心。其余人按这个阵自己的方位站。八卦留一个生门，不算人。 */
+  function ringSlots(labels, radius, skipAt) {
+    var n = labels.length + (skipAt == null ? 0 : 1), slots = [{ eye: true, x: 0, y: 0, label: '阵眼' }], k = 0, i, a;
+    for (i = 0; i < n; i++) {
+      a = -Math.PI / 2 + i * Math.PI * 2 / n;
+      if (skipAt != null && i === skipAt) continue;
+      slots.push({ x: Math.cos(a) * radius, y: Math.sin(a) * radius, label: labels[k++] });
+    }
+    return slots;
+  }
   R.FORMATIONS = [
-    { id: 'sancai', name: '三才护法阵', who: 'tower', unlock: 3,
-      need: { arrow: 2, heal: 1 },
-      slots: [{ type: 'arrow', x: 90, y: 80 }, { type: 'arrow', x: 90, y: -80 }, { type: 'heal', x: -60, y: 0 }],
-      effect: '佛光对本阵两名弓兵的治疗 +15%',
-      short: '不能清群，也拆不动硬目标' },
-    { id: 'yanyue', name: '偃月寒锋阵', who: 'tower', unlock: 3,
-      need: { frost: 1, cannon: 2 },
-      slots: [{ type: 'frost', x: 70, y: 0 }, { type: 'cannon', x: -60, y: 100 }, { type: 'cannon', x: -60, y: -100 }],
-      effect: '炮弹主目标正被本阵寒冰减速时，溅射半径 +15%',
-      short: '不能对空，也拆不了远处的塔' },
-    { id: 'bagua', name: '金刚八卦阵', who: 'tower', unlock: 3, camp: true, min: 5,
-      effect: '围营全员伤害 +15%、受伤 −20%，佛光盖住整环',
-      short: '唐僧离营后天兵不跟，散阵后 8 秒没有加成，生门没人拦' },
-    { id: 'jinchan', name: '金蝉护法阵', who: 'hero', unlock: 3, order: 'guard', min: 2,
-      slots: [{ x: 60, y: 0 }, { x: -50, y: 50 }, { x: -50, y: -50 }],
-      effect: '在位嘲讽 ×0.8，唐僧被选中的权重 +1，移速 −10%',
-      short: '不离唐僧 90 以外追击' },
-    { id: 'sixiang', name: '四象守营阵', who: 'hero', unlock: 3, order: 'station', min: 2, camp: true,
-      slots: [{ x: 110, y: 0 }, { x: -110, y: 0 }, { x: 0, y: 110 }, { x: 0, y: -110 }],
-      effect: '营地受伤 ×0.85，在位每秒回血 +0.8',
-      short: '只追 160 以内的怪，不管远处' },
-    { id: 'fengshi', name: '锋矢破围阵', who: 'hero', unlock: 3, min: 3, camp: true,
-      slots: [{ role: 'van', x: 160, y: 0 }, { x: 50, y: 90 }, { x: 50, y: -90 }],
-      effect: '集火营地前方 120°、300 以内的一名精英，对它伤害 +12%',
-      short: '对 Boss 和妖塔不加，没有营地减伤，背后容易漏' }
+    { id: 'sixiang', name: '四象阵', who: 'line', unlock: 3, size: 4,
+      slots: ringSlots(['青龙', '白虎', '朱雀'], 100),
+      effect: '阵内少挨一成。唐僧在阵再护持。',
+      short: '4 人。阵眼居中，三灵环绕' },
+    { id: 'wuxing', name: '五行阵', who: 'line', unlock: 3, size: 5,
+      slots: ringSlots(['金', '木', '水', '火'], 112),
+      effect: '阵内天兵伤害略高。',
+      short: '5 人。阵眼为土，四方为金木水火' },
+    { id: 'liuhe', name: '六合阵', who: 'line', unlock: 3, size: 6,
+      slots: ringSlots(['东', '南', '西', '北', '天'], 120),
+      effect: '阵内少挨一成。连携能定飞妖。',
+      short: '6 人。阵眼在中，五方合围' },
+    { id: 'qixing', name: '七星阵', who: 'line', unlock: 3, size: 7,
+      slots: ringSlots(['天璇', '天玑', '天权', '玉衡', '开阳', '摇光'], 128),
+      effect: '阵心附近的妖怪更慢。',
+      short: '7 人。阵眼为枢，六星环列' },
+    { id: 'bagua', name: '八卦阵', who: 'line', unlock: 3, size: 8,
+      slots: ringSlots(['乾', '坤', '震', '巽', '坎', '离', '艮'], 140, 5),
+      gap: (function () { var a = -Math.PI / 2 + 5 * Math.PI * 2 / 8; return { x: Math.cos(a) * 140, y: Math.sin(a) * 140, label: '生' }; })(),
+      effect: '天兵略强，人少挨一成半。',
+      short: '8 人。阵眼居中，七方有人，兑位是生门' }
   ];
   R.formById = function (id) {
     for (var i = 0; i < R.FORMATIONS.length; i++) if (R.FORMATIONS[i].id === id) return R.FORMATIONS[i];
     return null;
   };
+  R.filled = function (seats) {
+    var n = 0, i;
+    for (i = 0; i < (seats || []).length; i++) if (seats[i]) n++;
+    return n;
+  };
+  /* 不满 4 人不能成阵。每种阵还要坐满自己的阵位。 */
+  R.formOk = function (def, seats) {
+    var n = R.filled(seats);
+    if (!def || n < R.FORM_MIN || n > R.FORM_MAX) return false;
+    return n === def.size;
+  };
+  R.isTang = function (u) { return !!(u && u.id === 'tang' && !u.type); };
   R.unlocked = function (levelId) {
     if ((levelId | 0) < 3) return [];
     return R.FORMATIONS.slice();
@@ -174,12 +203,12 @@
     { id: 'go', text: '天兵守沿途，英雄去做任务。布置好了，自己点出发。' }
   ];
   R.GUIDE3 = [
-    { id: 'open', text: '第三关可以布阵。点「阵型」。' },
-    { id: 'sancai', text: '选三才护法阵：两名弓兵在前，佛光在后。没有佛光就会显示缺员。' },
-    { id: 'confirm', text: '选阵心，看槽位，再确认。站稳半秒才算成阵。' },
-    { id: 'break', text: '徒弟阵亡、天兵被遣返或离开槽位，阵效马上停。天兵不会被妖怪打死。脚步抖开有三秒宽限。' },
-    { id: 'jinchan', text: '再选金蝉护法阵，把两位徒弟设为守护，站到唐僧身前。' },
-    { id: 'go', text: '阵看过了。到休息点还可以换成八卦阵和四象守营阵。自己点出发。' }
+    { id: 'open', text: '第三关可以布阵。点「阵型」，先看每阵要几个人。' },
+    { id: 'sixiang', text: '选四象阵：一共 4 人，阵眼居中。唐僧、天兵、徒弟都能入。' },
+    { id: 'confirm', text: '点阵位，再点人放入。不满 4 人不能成阵。站稳半秒才算成阵。' },
+    { id: 'break', text: '阵员阵亡或天兵被遣返，阵效马上停。天兵不会被妖怪打死。唐僧仍沿路走。' },
+    { id: 'bagua', text: '八卦阵是 8 人阵：阵眼在中，七个方位，兑位留作生门。' },
+    { id: 'go', text: '五行、六合、七星的人数在阵名旁边。人数够了再确认，然后点出发。' }
   ];
 
   R.widgets = function (g) {
