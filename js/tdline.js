@@ -1470,11 +1470,76 @@
     ctx.textBaseline = 'top';
     ctx.fillText(label, 0, r + 4 / z);
   }
+  function drawFormShape(ctx, f, def) {
+    if (R.filled(f.seats) !== def.size) return;
+    var outer = [], i, p, rad = 1, dx, dy;
+    for (i = 0; i < def.slots.length; i++) {
+      if (def.slots[i].eye) continue;
+      p = slotWorld(f, def.slots[i]);
+      outer.push(p);
+      dx = p.x - f.cx; dy = p.y - f.cy;
+      rad = Math.max(rad, Math.sqrt(dx * dx + dy * dy));
+    }
+    ctx.save();
+    ctx.lineCap = 'round';
+    ctx.translate(f.cx, f.cy);
+    ctx.fillStyle = 'rgba(42,36,28,0.045)';
+    ctx.beginPath();
+    ctx.arc(0, 0, rad, 0, PI2);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(42,36,28,0.14)';
+    ctx.lineWidth = 8;
+    ctx.beginPath();
+    ctx.arc(0, 0, rad, 0, PI2);
+    ctx.stroke();
+    var gapA = null;
+    if (def.gap) {
+      var gw = slotWorld(f, def.gap);
+      gapA = Math.atan2(gw.y - f.cy, gw.x - f.cx);
+    }
+    ctx.strokeStyle = 'rgba(42,36,28,0.5)';
+    ctx.lineWidth = 1.35;
+    ctx.beginPath();
+    if (gapA == null) {
+      ctx.arc(0, 0, rad, 0.2, 2.55);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(0, 0, rad, 3.25, 5.95);
+    } else {
+      ctx.arc(0, 0, rad, gapA + 0.55, gapA + PI2 - 0.55);
+    }
+    ctx.stroke();
+    ctx.restore();
+    ctx.strokeStyle = 'rgba(42,36,28,0.36)';
+    ctx.lineWidth = 1.15;
+    ctx.lineCap = 'round';
+    for (i = 0; i < outer.length; i++) {
+      ctx.beginPath();
+      ctx.moveTo(f.cx, f.cy);
+      ctx.lineTo(outer[i].x, outer[i].y);
+      ctx.stroke();
+    }
+    outer.sort(function (a, b) {
+      return Math.atan2(a.y - f.cy, a.x - f.cx) - Math.atan2(b.y - f.cy, b.x - f.cx);
+    });
+    for (i = 0; i < outer.length; i++) {
+      var nxt = outer[(i + 1) % outer.length];
+      var a0 = Math.atan2(outer[i].y - f.cy, outer[i].x - f.cx);
+      var a1 = Math.atan2(nxt.y - f.cy, nxt.x - f.cx);
+      var turn = a1 - a0; if (turn < 0) turn += PI2;
+      if (turn > Math.PI * 0.62) continue;
+      ctx.beginPath();
+      ctx.moveTo(outer[i].x, outer[i].y);
+      ctx.lineTo(nxt.x, nxt.y);
+      ctx.stroke();
+    }
+  }
   function drawLineSlots(ctx, G) {
     var f = G.td.form.line;
     if (!f || f.state === 'ended' || f.state === 'broken') return;
     var def = R.formById(f.id);
     if (!def) return;
+    drawFormShape(ctx, f, def);
     var z = (app() && app().zoom) || 1;
     function one(slot, i, picked) {
       var w = slotWorld(f, slot);
@@ -1623,7 +1688,7 @@
       ctx.fillText('布阵', W / 2, 78 + bh / 2);
       hit(W / 2 - 70, 78, 140, bh, 'tdOffer');
     }
-    var tabY = H - (narrow ? 200 : 150);
+    var tabY = H - (narrow ? (140 / ((a && a.zoom) || 1) + 52) : 150);
     inkSlip(ctx, 6, tabY, R.formationOn(G) ? 128 : 64, 34);
     ctx.font = brushFont(18); ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
     ctx.fillStyle = (G.td.tab || 'tower') === 'tower' ? '#9a2e24' : '#2a241c';
@@ -1722,7 +1787,8 @@
     var open = G.td.drawer !== false;
     var curBar = G.td.form.line;
     if (!open) {
-      var ty = H - (narrow ? 248 : 168);
+      var zc = (app() && app().zoom) || 1;
+      var ty = narrow ? (H - (140 / zc) - 60) : (H - 168);
       var bw = narrow ? Math.min(W - 24, 420) : 280;
       torn(ctx, 12, ty, bw, narrow ? 52 : 40);
       ctx.fillStyle = '#6e211b'; ctx.font = brushFont(namePx); ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
@@ -1735,8 +1801,11 @@
       hit(12, ty, bw, narrow ? 52 : 40, 'tdDrawer');
       return;
     }
+    var zFit = (app() && app().zoom) || 1;
+    var soldierTop = narrow ? H - (140 / zFit) : H - 130;
     var bandTop = narrow ? Math.round(H * 0.68) : 168;
-    var bandBot = narrow ? H - 190 : Math.min(H - 24, bandTop + 520);
+    var bandBot = narrow ? Math.min(soldierTop - 58, H - 16) : Math.min(H - 24, bandTop + 520);
+    if (narrow && bandBot < bandTop + 140) bandTop = Math.max(80, bandBot - 220);
     var maxH = Math.max(150, bandBot - bandTop);
     var viewH = Math.min(h, maxH);
     var w = narrow ? Math.min(W - 24, 520) : 380;
