@@ -140,10 +140,17 @@
     if (XY.save.touch) XY.save.touch();
     if (XY.save.flush) XY.save.flush();
   }
-  function cardPool() {
-    return (XY.SPECIALS || []).map(function (d) { return d.id; }).filter(Boolean);
+  function revealed(id) {
+    var hidden = !!(XY.isHidden && XY.isHidden(id));
+    var owned = !!(hidden && XY.save && XY.save.spRealOwned && XY.save.spRealOwned(id));
+    return API.heroRevealed(id, hidden, owned);
   }
-  function gearIds() { return API.GEAR.map(function (g) { return g.id; }); }
+  function cardPool() {
+    return (XY.SPECIALS || []).map(function (d) { return d.id; }).filter(revealed);
+  }
+  function gearIds() {
+    return API.GEAR.filter(function (g) { return revealed(g.owner); }).map(function (g) { return g.id; });
+  }
 
   function appOf() { return (window.__xy && window.__xy.app) || null; }
   function hit(x, y, w, h, act, ex) {
@@ -550,6 +557,7 @@
     }
   }
   function spArt(id) {
+    if (!revealed(id)) return null;
     if (id === 'qinba' || id === 'traders18') {
       var local = img('hero-' + id, 'heroes/' + id + '.webp');
       if (local) return local;
@@ -559,6 +567,8 @@
   }
   function gearArt(id) {
     if (!id) return null;
+    var piece = API.gearById[id];
+    if (piece && !revealed(piece.owner)) return null;
     return img('gear-' + id, 'gear/' + id + '.webp');
   }
   /* 未领取：可抽池每人一张。可见特殊角色 9 位，猫叔在隐藏名单里，不进十连。
@@ -567,8 +577,8 @@
   function gachaPack() {
     var g = XY.save.data && XY.save.data.gacha10;
     var claimed = API.gachaClaimed(XY.save.data);
-    if (claimed && g && g.pulls && g.pulls.length) return { claimed: true, ids: g.pulls.slice() };
-    return { claimed: false, ids: (XY.SPECIALS || []).map(function (d) { return d.id; }) };
+    if (claimed && g && g.pulls && g.pulls.length) return { claimed: true, ids: g.pulls.filter(revealed) };
+    return { claimed: false, ids: (XY.SPECIALS || []).map(function (d) { return d.id; }).filter(revealed) };
   }
   function inkWash(c, im, x, y, w, h, fallback) {
     c.save();
@@ -1287,7 +1297,7 @@
     brush(c, '专属装备', 24, port ? 32 : 36, port ? 28 : 36, '#24180f', 'left');
     redSeal(c, W - 96, 16, 70, 44, '返回');
     hit(W - 96, 16, 70, 44, 'dkGearClose');
-    var ids = (XY.SPECIALS_ALL || XY.SPECIALS || []).map(function (d) { return d.id; }).filter(function (id) { return id !== 'cato'; });
+    var ids = (XY.SPECIALS_ALL || XY.SPECIALS || []).map(function (d) { return d.id; }).filter(revealed);
     var sel = app.dkHero && ids.indexOf(app.dkHero) >= 0 ? app.dkHero : (ids[0] || 'phyrex');
     app.dkHero = sel;
     var top = port ? 62 : 68;

@@ -182,6 +182,32 @@ test('十连从活动入口抽，抽过就不能再抽一次', function () {
   assert.deepEqual(save.gacha10.pulls, a.pack.pulls);
 });
 
+test('隐藏角色没获得前不进装备名单和掉落，获得后才出现', function () {
+  var hidden = { qinba: true, traders18: true, cato: true };
+  function isHidden(id) { return !!hidden[id]; }
+  assert.equal(DK.heroRevealed('qinba', true, false), false);
+  assert.equal(DK.heroRevealed('traders18', true, false), false);
+  assert.equal(DK.heroRevealed('cato', true, false), false);
+  assert.equal(DK.heroRevealed('phyrex', false, false), true);
+  assert.equal(DK.heroRevealed('qinba', true, true), true);
+  var locked = DK.GEAR.filter(function (g) { return DK.heroRevealed(g.owner, isHidden(g.owner), false); });
+  ['qinba', 'traders18', 'cato'].forEach(function (id) {
+    assert.equal(locked.some(function (g) { return g.owner === id; }), false, id);
+  });
+  assert.equal(locked.some(function (g) { return g.owner === 'phyrex'; }), true);
+  var opened = DK.GEAR.filter(function (g) { return DK.heroRevealed(g.owner, isHidden(g.owner), g.owner === 'qinba'); });
+  assert.equal(opened.some(function (g) { return g.id === 'qinba_w'; }), true);
+  assert.equal(opened.some(function (g) { return g.owner === 'traders18' || g.owner === 'cato'; }), false);
+  var names = ['qinbafrank', 'TraderS', '@qinbafrank', '@TraderS18'];
+  var pub = ['js/devil_kitty_ui.js'];
+  pub.forEach(function (rel) {
+    var text = fs.readFileSync(path.join(__dirname, '..', rel), 'utf8');
+    names.forEach(function (n) {
+      assert.equal(text.indexOf(n), -1, rel + ' 写了 ' + n);
+    });
+  });
+});
+
 test('变身素材清单和动画时间轴可替换', function () {
   var root = path.join(__dirname, '..', 'assets', 'devil-kitty');
   var anim = JSON.parse(fs.readFileSync(path.join(root, 'animation.json'), 'utf8'));

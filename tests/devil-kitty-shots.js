@@ -245,8 +245,42 @@ async function shot(page, name) {
     XY_DEVIL_KITTY.equipGear(g, 'phyrex', 'phyrex_w');
     XY_DEVIL_KITTY.writeGear(XY.save.data, g);
   });
+  await frames(page, 3);
+  var leak = await page.evaluate(function () {
+    var hidden = ['qinba', 'traders18', 'cato'];
+    var ids = (XY.SPECIALS_ALL || []).map(function (d) { return d.id; }).filter(function (id) {
+      return XY_DEVIL_KITTY.heroRevealed(id, !!(XY.isHidden && XY.isHidden(id)), !!(XY.isHidden && XY.isHidden(id) && XY.save.spRealOwned(id)));
+    });
+    var pack = (XY.SPECIALS || []).map(function (d) { return d.id; });
+    var resources = performance.getEntriesByType('resource').map(function (e) { return e.name; });
+    return {
+      hiddenInGear: ids.filter(function (id) { return hidden.indexOf(id) >= 0; }),
+      hiddenInPool: pack.filter(function (id) { return hidden.indexOf(id) >= 0; }),
+      art: resources.filter(function (u) { return /heroes\/(qinba|traders18)|gear\/(qinba_|traders18_|cato_)/.test(u); })
+    };
+  });
+  console.log('hidden-locked', JSON.stringify(leak));
+  if (leak.hiddenInGear.length || leak.hiddenInPool.length || leak.art.length) fail('hidden leak ' + JSON.stringify(leak));
+  await shot(page, 'gear-locked-desktop');
+  await setSize(390, 844);
+  await page.evaluate(function () { window.__xy.app.dkGear = true; window.__xy.app.screen = 'levels'; window.__xy.app.dkOpen = false; });
+  await frames(page, 2);
+  await shot(page, 'gear-locked-mobile');
+  await setSize(1920, 1080);
   await page.evaluate(function () {
-    var files = ['heroes/qinba.webp', 'heroes/traders18.webp', 'gear/phyrex_w.webp', 'gear/yuanzhang_i.webp'];
+    XY.save.addSpCard('qinba', 2);
+    window.__xy.app.dkHero = 'qinba';
+    window.__xy.app.dkGear = true;
+    window.__xy.app.screen = 'levels';
+  });
+  await frames(page, 3);
+  var opened = await page.evaluate(function () {
+    return XY.save.spRealOwned('qinba') && XY_DEVIL_KITTY.heroRevealed('qinba', true, true);
+  });
+  if (!opened) fail('qinba still hidden after cards');
+  await shot(page, 'gear-unlocked-desktop');
+  await page.evaluate(function () {
+    var files = ['gear/phyrex_w.webp', 'gear/yuanzhang_i.webp'];
     return Promise.all(files.map(function (f) {
       return new Promise(function (res) {
         var im = new Image();

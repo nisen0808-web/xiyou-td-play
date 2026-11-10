@@ -257,6 +257,12 @@
     return !!(e && !e.dead && !e.enraged && (e.def && (e.def.denBoss || e.def.boss)));
   }
 
+  /* 隐藏角色在玩家真正拿到卡之前，不进名单、不进掉落。owned 为真才算已经获得。 */
+  function heroRevealed(id, hidden, owned) {
+    if (!id) return false;
+    if (hidden) return !!owned;
+    return true;
+  }
   function rollDrops(rng, phase, pool, gears) {
     rng = rng || Math.random;
     pool = pool && pool.length ? pool : ['phyrex'];
@@ -457,7 +463,7 @@
     enabled: enabled, isMainline: isMainline, tickRun: tickRun,
     skipForm: skipForm, skipIntro: skipIntro, finishForm: finishForm, spawnUnit: spawnUnit,
     hurtUnit: hurtUnit, rageMul: rageMul, applyMobRage: applyMobRage, clearMobRage: clearMobRage,
-    shouldEnrageBoss: shouldEnrageBoss, rollDrops: rollDrops, onDefeat: onDefeat,
+    shouldEnrageBoss: shouldEnrageBoss, heroRevealed: heroRevealed, rollDrops: rollDrops, onDefeat: onDefeat,
     emptyGear: emptyGear, readGear: readGear, writeGear: writeGear, grantGear: grantGear,
     equipGear: equipGear, unequipGear: unequipGear, effectsOf: effectsOf, applyEffects: applyEffects,
     freshSession: freshSession, tutorialBlocks: tutorialBlocks, shouldAuto: shouldAuto, markAuto: markAuto,
