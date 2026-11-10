@@ -1788,29 +1788,41 @@
     var curBar = G.td.form.line;
     if (!open) {
       var zc = (app() && app().zoom) || 1;
-      var ty = narrow ? (H - (140 / zc) - 60) : (H - 168);
-      var bw = narrow ? Math.min(W - 24, 420) : 280;
-      torn(ctx, 12, ty, bw, narrow ? 52 : 40);
+      var tabTop = narrow ? (H - (140 / zc + 52)) : (H - 150);
+      var barH = narrow ? 52 : 34;
+      var ty = narrow ? (tabTop - barH - 12) : (tabTop - 14);
+      var bx = narrow ? 12 : 148;
+      var bw = narrow ? Math.min(W - 24, 420) : 260;
+      torn(ctx, bx, ty, bw, barH);
       ctx.fillStyle = '#6e211b'; ctx.font = brushFont(namePx); ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
       var bar = '布阵';
       if (curBar) {
         var bn = R.filled(curBar.seats), bneed = (R.formById(curBar.id) || {}).size || 0;
         bar = curBar.name + '  ' + bn + '/' + bneed;
       }
-      ctx.fillText(bar, 28, ty + (narrow ? 26 : 20));
-      hit(12, ty, bw, narrow ? 52 : 40, 'tdDrawer');
+      ctx.fillText(bar, bx + 16, ty + barH / 2);
+      hit(bx, ty, bw, barH, 'tdDrawer');
       return;
     }
-    var zFit = (app() && app().zoom) || 1;
-    var soldierTop = narrow ? H - (140 / zFit) : H - 130;
-    var bandTop = narrow ? Math.round(H * 0.68) : 168;
-    var bandBot = narrow ? Math.min(soldierTop - 58, H - 16) : Math.min(H - 24, bandTop + 520);
-    if (narrow && bandBot < bandTop + 140) bandTop = Math.max(80, bandBot - 220);
-    var maxH = Math.max(150, bandBot - bandTop);
-    var viewH = Math.min(h, maxH);
+    var showRows = narrow ? 3 : Math.min(list.length, 8);
+    var listNeed = showRows * rowH;
+    var footH = Math.max(bh + 8, bodyPx * 2 + 36);
+    var viewNeed = head + listNeed + footH;
+    var tabTopOpen = narrow ? (H - (140 / z + 52)) : (H - 150);
+    var yBottom = narrow ? tabTopOpen - 8 : Math.min(H - 16, 168 + viewNeed);
+    var yTop = narrow ? yBottom - viewNeed : 168;
+    if (narrow && yTop < 220) {
+      showRows = 2;
+      listNeed = showRows * rowH;
+      viewNeed = head + listNeed + footH;
+      yTop = Math.max(180, yBottom - viewNeed);
+      viewNeed = yBottom - yTop;
+      listNeed = viewNeed - head - footH;
+    }
+    var viewH = narrow ? (yBottom - yTop) : Math.min(h, yBottom - yTop);
     var w = narrow ? Math.min(W - 24, 520) : 380;
     var x = narrow ? Math.max(12, (W - w) / 2) : Math.max(12, W - w - 120);
-    var y = narrow ? (bandBot - viewH) : bandTop;
+    var y = yTop;
     torn(ctx, x, y, w, viewH);
     ctx.fillStyle = '#6e211b'; ctx.font = brushFont(namePx); ctx.textAlign = 'left'; ctx.textBaseline = 'top';
     ctx.fillText('布阵', x + 16, y + 10);
@@ -1820,7 +1832,7 @@
     hit(x + w - (narrow ? 100 : 86), y + 4, 44, 40, 'tdOpenShop');
     seal(ctx, x + w - 28, y + 24, narrow ? 16 : 14, '收');
     hit(x + w - 48, y + 4, 44, 40, 'tdDrawer');
-    var listH = viewH - head - foot;
+    var listH = Math.max(rowH, viewH - head - footH);
     var maxScroll = Math.max(0, list.length * rowH - listH);
     G.td.panelScroll = Math.max(0, Math.min(maxScroll, G.td.panelScroll || 0));
     ctx.save();
@@ -1856,22 +1868,24 @@
       var cname = (R.COMBOS[cur.id] && R.COMBOS[cur.id].name) || '';
       ctx.fillStyle = '#6e211b';
       ctx.font = brushFont(bodyPx);
-      ctx.fillText('已入 ' + n + ' / ' + need + (n < need ? '' : '，可以确认'), x + 16, y + viewH - foot + 4);
-      if (cname) ctx.fillText('连携 ' + cname, x + 16, y + viewH - foot + bodyPx + 6);
+      var footTop = y + head + listH;
+      ctx.fillText('已入 ' + n + ' / ' + need + (n < need ? '' : '，可以确认'), x + 16, footTop + 8);
+      if (cname) ctx.fillText('连携 ' + cname, x + 16, footTop + bodyPx + 14);
     } else if (cur) {
       var cname2 = (R.COMBOS[cur.id] && R.COMBOS[cur.id].name) || '';
       if (cname2) {
         ctx.fillStyle = '#6e211b';
         ctx.font = brushFont(bodyPx);
-        ctx.fillText('连携 ' + cname2, x + 16, y + viewH - foot + 4);
+        ctx.fillText('连携 ' + cname2, x + 16, y + head + listH + 8);
       }
     }
     if (cur) {
       var sealR = narrow ? 22 : 18;
-      seal(ctx, x + w - 130, y + viewH - foot / 2, sealR, '确认');
-      hit(x + w - 160, y + viewH - foot, 60, foot, 'tdConfirm', { who: 'line' });
-      seal(ctx, x + w - 52, y + viewH - foot / 2, sealR, '散');
-      hit(x + w - 82, y + viewH - foot, 60, foot, 'tdDisband', { who: 'line' });
+      var footTop2 = y + head + listH;
+      seal(ctx, x + w - 130, footTop2 + footH / 2, sealR, '确认');
+      hit(x + w - 160, footTop2, 60, footH, 'tdConfirm', { who: 'line' });
+      seal(ctx, x + w - 52, footTop2 + footH / 2, sealR, '散');
+      hit(x + w - 82, footTop2, 60, footH, 'tdDisband', { who: 'line' });
     }
     bindHits(G, cur);
   }
@@ -2080,7 +2094,7 @@
       if (G.td.deploy && G.td.needCam !== false && G.heroes && G.heroes[0]) {
         var tang0 = G.heroes[0], narrowCam = phone() || G.view.w < 700;
         var sx = narrowCam ? G.view.w * 0.5 : G.view.w * 0.34;
-        var sy = narrowCam ? G.view.h * 0.24 : G.view.h * 0.44;
+        var sy = narrowCam ? G.view.h * 0.30 : G.view.h * 0.40;
         G.cam.x = tang0.x + G.view.w / 2 - sx;
         G.cam.y = tang0.y + G.view.h / 2 - sy;
         G.td.needCam = false;
