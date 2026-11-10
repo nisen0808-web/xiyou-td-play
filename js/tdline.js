@@ -107,6 +107,9 @@
       if (!t._tdLife) { t._tdLife = 1; t.maxLife = (t.maxLife || t.life || 1) * R.LIFE_MUL; t.life = t.maxLife; }
     });
     formBook();
+    if (G.fx) G.fx = G.fx.filter(function (f) { return f.type !== 'ring' && f.type !== 'arc' && f.type !== 'elemBurst' && f.type !== 'coinDrop'; });
+    if (G.parts) G.parts.length = 0;
+    if (XY.vfx && XY.vfx.reset) XY.vfx.reset();
     if (!G.tut) openGuide(G);
   }
   function openGuide(G) {
@@ -1109,7 +1112,7 @@
     var st = guideStep(G);
     if (!st) return true;
     if (h.act === 'tdGuideSkip' || h.act === 'esc' || h.act === 'spd2') return true;
-    if (h.act === 'tdOpenShop' || h.act === 'tdCloseShop' || h.act === 'tdBuyForm' || h.act === 'tdUpForm' || h.act === 'tdDrawer' || h.act === 'tdShopBg') return true;
+    if (h.act === 'tdOpenShop' || h.act === 'tdCloseShop' || h.act === 'tdBuyForm' || h.act === 'tdUpForm' || h.act === 'tdDrawer' || h.act === 'tdShopBg' || h.act === 'tdShopPage' || h.act === 'tdShopPrev' || h.act === 'tdShopNext' || h.act === 'tdPanelUp' || h.act === 'tdPanelDown') return true;
     if (st.id === 'wait' || st.id === 'break') return h.act === 'tdGuideNext';
     if (st.id === 'pick') return h.act === 'tdSel' && h.freeArrow;
     if (st.id === 'move') return h.act === 'tdSpot';
@@ -1185,6 +1188,11 @@
       return true;
     }
     if (h.act === 'tdDrawer') { G.td.drawer = G.td.drawer === false; return true; }
+    if (h.act === 'tdPanelUp') { G.td.panelScroll = (G.td.panelScroll || 0) - 90; return true; }
+    if (h.act === 'tdPanelDown') { G.td.panelScroll = (G.td.panelScroll || 0) + 90; return true; }
+    if (h.act === 'tdShopPage') { G.td.shopPage = h.i | 0; return true; }
+    if (h.act === 'tdShopPrev') { G.td.shopPage = (G.td.shopPage || 0) - 1; return true; }
+    if (h.act === 'tdShopNext') { G.td.shopPage = (G.td.shopPage || 0) + 1; return true; }
     if (h.act === 'tdOpenShop') { if (a) a.tdFormShop = true; return true; }
     if (h.act === 'tdCloseShop') { if (a) a.tdFormShop = false; return true; }
     if (h.act === 'tdBuyForm') { buyForm(h.id); return true; }
@@ -1379,12 +1387,6 @@
     ctx.strokeStyle = 'rgba(42, 32, 22, 0.55)';
     ctx.lineWidth = 1.15;
     ctx.stroke();
-    ctx.strokeStyle = 'rgba(42, 32, 22, 0.28)';
-    ctx.lineWidth = 3.2;
-    ctx.beginPath();
-    ctx.moveTo(x + 14, y + h * 0.55);
-    ctx.quadraticCurveTo(x + w * 0.4, y + h * 0.2, x + w - 18, y + h * 0.48);
-    ctx.stroke();
     ctx.restore();
   }
   function paper(ctx, x, y, w, h) {
@@ -1494,9 +1496,13 @@
       var bns = f.bonus || R.bonus(def, formRank(f.id));
       ctx.fillStyle = '#6e211b';
       ctx.font = brushFont(Math.max(16, 16 / z));
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'bottom';
-      ctx.fillText('攻+' + Math.round(bns.atk * 100) + '%  防+' + Math.round(bns.dr * 100) + '%', f.cx, f.cy - (36 / z));
+      ctx.textAlign = 'right';
+      ctx.textBaseline = 'top';
+      var line = Math.max(16, 16 / z);
+      var yb = f.cy - line * 0.15;
+      var xb = f.cx - (46 / z);
+      ctx.fillText('攻+' + Math.round(bns.atk * 100) + '%', xb, yb);
+      ctx.fillText('防+' + Math.round(bns.dr * 100) + '%', xb, yb + line + 2);
     }
   }
   function previewSlots(ctx, G) {
@@ -1530,6 +1536,25 @@
         ctx.fillText('阵', f.cx + ctx.measureText(def.name).width / 2 + 16, f.cy - 78);
       }
     });
+  }
+  function inkHalo(ctx, h) {
+    if (!h || h.down || h.ridden) return;
+    var r = (h.def && h.def.r) || 16;
+    ctx.save();
+    ctx.translate(h.x, h.y);
+    ctx.fillStyle = 'rgba(42,36,28,0.05)';
+    ctx.beginPath();
+    ctx.ellipse(0, r * 0.15, r * 1.45, r * 0.9, 0, 0, PI2);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(154,46,36,0.72)';
+    ctx.lineWidth = 1.15;
+    ctx.beginPath();
+    ctx.arc(0, 0, r * 1.55, 0.65, 2.35);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(0, 0, r * 1.9, 3.6, 5.35);
+    ctx.stroke();
+    ctx.restore();
   }
   function drawFx(ctx, G) {
     var i, fx, k, p;
@@ -1642,28 +1667,43 @@
       hit(bx, y + 48, bw - 6, bh, lb[1]);
     });
   }
-  function miniForm(ctx, f, x, y, s) {
-    var slots = f.slots || [], i, m = 1, p;
+  function inkDiagram(ctx, f, cx, cy, size, pale) {
+    var slots = f.slots || [], i, m = 1, p, a = pale ? 0.38 : 1;
     for (i = 0; i < slots.length; i++) {
       p = Math.sqrt(slots[i].x * slots[i].x + slots[i].y * slots[i].y);
       if (p > m) m = p;
     }
-    if (f.gap) {
-      p = Math.sqrt(f.gap.x * f.gap.x + f.gap.y * f.gap.y);
-      if (p > m) m = p;
-    }
-    var sc = (s * 0.38) / m;
+    if (f.gap) m = Math.max(m, Math.sqrt(f.gap.x * f.gap.x + f.gap.y * f.gap.y));
+    var sc = (size * 0.46) / (m || 1);
     ctx.save();
-    ctx.translate(x + s / 2, y + s / 2);
+    ctx.translate(cx, cy);
+    ctx.globalAlpha = a;
+    ctx.strokeStyle = '#2a241c';
+    ctx.lineWidth = Math.max(1, size * 0.02);
+    ctx.lineCap = 'round';
+    for (i = 1; i < slots.length; i++) {
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(slots[i].x * sc, slots[i].y * sc);
+      ctx.stroke();
+    }
+    if (f.gap) {
+      ctx.setLineDash([3, 4]);
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(f.gap.x * sc, f.gap.y * sc);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
     function dot(px, py, eye, gap) {
       ctx.beginPath();
-      ctx.arc(px * sc, py * sc, eye ? s * 0.11 : s * 0.07, 0, PI2);
-      ctx.fillStyle = gap ? '#9a2e24' : (eye ? '#9a2e24' : '#2a241c');
+      ctx.arc(px * sc, py * sc, eye ? size * 0.07 : size * 0.045, 0, PI2);
+      ctx.fillStyle = eye || gap ? '#9a2e24' : '#2a241c';
       ctx.fill();
-      if (!eye) { ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(42,32,22,0.45)'; ctx.stroke(); }
     }
-    for (i = 0; i < slots.length; i++) dot(slots[i].x, slots[i].y, slots[i].eye, false);
+    for (i = 1; i < slots.length; i++) dot(slots[i].x, slots[i].y, false, false);
     if (f.gap) dot(f.gap.x, f.gap.y, false, true);
+    dot(0, 0, true, false);
     ctx.restore();
   }
   function drawFormPanel(ctx, G, narrow, bh) {
@@ -1680,33 +1720,49 @@
     var diagram = narrow ? 72 : 46;
     var h = head + list.length * rowH + foot;
     var open = G.td.drawer !== false;
-    if (narrow && !open) {
-      var ty = H - (narrow ? 248 : 170);
-      torn(ctx, 16, ty, 120, 44);
-      ctx.fillStyle = '#6e211b'; ctx.font = brushFont(namePx); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText('布阵', 76, ty + 22);
-      hit(16, ty, 120, 44, 'tdDrawer');
+    var curBar = G.td.form.line;
+    if (!open) {
+      var ty = H - (narrow ? 248 : 168);
+      var bw = narrow ? Math.min(W - 24, 420) : 280;
+      torn(ctx, 12, ty, bw, narrow ? 52 : 40);
+      ctx.fillStyle = '#6e211b'; ctx.font = brushFont(namePx); ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+      var bar = '布阵';
+      if (curBar) {
+        var bn = R.filled(curBar.seats), bneed = (R.formById(curBar.id) || {}).size || 0;
+        bar = curBar.name + '  ' + bn + '/' + bneed;
+      }
+      ctx.fillText(bar, 28, ty + (narrow ? 26 : 20));
+      hit(12, ty, bw, narrow ? 52 : 40, 'tdDrawer');
       return;
     }
-    var w = narrow ? Math.min(W - 24, 520) : 360;
+    var bandTop = narrow ? Math.round(H * 0.68) : 168;
+    var bandBot = narrow ? H - 190 : Math.min(H - 24, bandTop + 520);
+    var maxH = Math.max(150, bandBot - bandTop);
+    var viewH = Math.min(h, maxH);
+    var w = narrow ? Math.min(W - 24, 520) : 380;
     var x = narrow ? Math.max(12, (W - w) / 2) : Math.max(12, W - w - 120);
-    var y = narrow ? Math.max(280, H - (narrow ? 230 : 160) - h) : 168;
-    if (y + h > H - 80) y = Math.max(120, H - h - 80);
-    torn(ctx, x, y, w, h);
+    var y = narrow ? (bandBot - viewH) : bandTop;
+    torn(ctx, x, y, w, viewH);
     ctx.fillStyle = '#6e211b'; ctx.font = brushFont(namePx); ctx.textAlign = 'left'; ctx.textBaseline = 'top';
     ctx.fillText('布阵', x + 16, y + 10);
     ctx.fillStyle = '#2a241c'; ctx.font = brushFont(bodyPx);
     ctx.fillText('最少 4 人', x + 16 + namePx * 2.4, y + 14);
-    seal(ctx, x + w - (narrow ? 78 : 46), y + 24, narrow ? 18 : 16, '谱');
-    hit(x + w - (narrow ? 100 : 68), y + 4, 44, 40, 'tdOpenShop');
-    if (narrow) {
-      seal(ctx, x + w - 36, y + 28, 16, '收');
-      hit(x + w - 58, y + 8, 48, 40, 'tdDrawer');
-    }
+    seal(ctx, x + w - (narrow ? 78 : 64), y + 24, narrow ? 18 : 16, '谱');
+    hit(x + w - (narrow ? 100 : 86), y + 4, 44, 40, 'tdOpenShop');
+    seal(ctx, x + w - 28, y + 24, narrow ? 16 : 14, '收');
+    hit(x + w - 48, y + 4, 44, 40, 'tdDrawer');
+    var listH = viewH - head - foot;
+    var maxScroll = Math.max(0, list.length * rowH - listH);
+    G.td.panelScroll = Math.max(0, Math.min(maxScroll, G.td.panelScroll || 0));
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(x + 4, y + head, w - 8, listH);
+    ctx.clip();
     list.forEach(function (f, i) {
-      var yy = y + head + i * rowH;
+      var yy = y + head + i * rowH - G.td.panelScroll;
+      if (yy + rowH < y + head || yy > y + head + listH) return;
       var on = G.td.form.line && G.td.form.line.id === f.id;
-      miniForm(ctx, f, x + 12, yy, diagram);
+      inkDiagram(ctx, f, x + 12 + diagram / 2, yy + diagram / 2, diagram, false);
       ctx.fillStyle = on ? '#9a2e24' : '#2a241c';
       ctx.font = brushFont(namePx);
       ctx.textAlign = 'left';
@@ -1718,19 +1774,35 @@
       ctx.fillText('攻+' + Math.round(bns.atk * 100) + '%   防+' + Math.round(bns.dr * 100) + '%', x + 20 + diagram, yy + namePx + 4);
       hit(x + 8, yy, w - 16, rowH - 4, 'tdPick', { id: f.id });
     });
+    ctx.restore();
+    if (maxScroll > 0) {
+      seal(ctx, x + w - 22, y + head + 16, 12, '上');
+      seal(ctx, x + w - 22, y + head + listH - 16, 12, '下');
+      hit(x + w - 40, y + head, 36, 32, 'tdPanelUp');
+      hit(x + w - 40, y + head + listH - 32, 36, 32, 'tdPanelDown');
+    }
     var cur = G.td.form.line;
     if (cur && cur.state === 'draft') {
       var n = R.filled(cur.seats), need = R.formById(cur.id).size;
+      var cname = (R.COMBOS[cur.id] && R.COMBOS[cur.id].name) || '';
       ctx.fillStyle = '#6e211b';
       ctx.font = brushFont(bodyPx);
-      ctx.fillText('已入 ' + n + ' / ' + need + (n < R.FORM_MIN ? '，不足 4 人' : (n < need ? '，还要 ' + (need - n) + ' 人' : '，可以确认')), x + 16, y + h - foot + 4);
+      ctx.fillText('已入 ' + n + ' / ' + need + (n < need ? '' : '，可以确认'), x + 16, y + viewH - foot + 4);
+      if (cname) ctx.fillText('连携 ' + cname, x + 16, y + viewH - foot + bodyPx + 6);
+    } else if (cur) {
+      var cname2 = (R.COMBOS[cur.id] && R.COMBOS[cur.id].name) || '';
+      if (cname2) {
+        ctx.fillStyle = '#6e211b';
+        ctx.font = brushFont(bodyPx);
+        ctx.fillText('连携 ' + cname2, x + 16, y + viewH - foot + 4);
+      }
     }
     if (cur) {
       var sealR = narrow ? 22 : 18;
-      seal(ctx, x + w - 130, y + h - foot / 2, sealR, '确认');
-      hit(x + w - 160, y + h - foot, 60, foot, 'tdConfirm', { who: 'line' });
-      seal(ctx, x + w - 52, y + h - foot / 2, sealR, '散');
-      hit(x + w - 82, y + h - foot, 60, foot, 'tdDisband', { who: 'line' });
+      seal(ctx, x + w - 130, y + viewH - foot / 2, sealR, '确认');
+      hit(x + w - 160, y + viewH - foot, 60, foot, 'tdConfirm', { who: 'line' });
+      seal(ctx, x + w - 52, y + viewH - foot / 2, sealR, '散');
+      hit(x + w - 82, y + viewH - foot, 60, foot, 'tdDisband', { who: 'line' });
     }
     bindHits(G, cur);
   }
@@ -1808,51 +1880,116 @@
   function drawFormShop(ctx, G, a) {
     var W = G.view.w, H = G.view.h, narrow = phone() || W < 700;
     var z = (a && a.zoom) || 1;
-    var title = narrow ? Math.max(28, Math.ceil(16 / z)) : 26;
-    var body = narrow ? Math.max(28, Math.ceil(14 / z)) : 15;
+    var title = narrow ? Math.max(32, Math.ceil(20 / z)) : 32;
+    var body = narrow ? Math.max(28, Math.ceil(14 / z)) : 16;
+    var sizes = [4, 5, 6, 7, 8];
+    var names = ['四人', '五人', '六人', '七人', '八人'];
+    var page = Math.max(0, Math.min(sizes.length - 1, G.td.shopPage || 0));
+    G.td.shopPage = page;
+    var forms = R.FORMATIONS.filter(function (f) { return f.size === sizes[page]; });
     ctx.save();
-    ctx.fillStyle = 'rgba(246,240,226,0.96)';
+    ctx.fillStyle = '#f3ead7';
     ctx.fillRect(0, 0, W, H);
     hit(0, 0, W, H, 'tdShopBg');
+    ctx.strokeStyle = 'rgba(42,32,22,0.18)';
+    ctx.lineWidth = 1;
+    var rule;
+    for (rule = 48; rule < H; rule += 48) { ctx.beginPath(); ctx.moveTo(0, rule); ctx.lineTo(W, rule); ctx.stroke(); }
     ctx.fillStyle = '#6e211b';
     ctx.font = brushFont(title);
     ctx.textAlign = 'left';
-    ctx.textBaseline = 'top';
-    ctx.fillText('阵谱', 20, 14);
+    ctx.textBaseline = 'middle';
+    ctx.fillText('阵谱', 22, 32);
     ctx.fillStyle = '#2a241c';
     ctx.font = brushFont(body);
-    ctx.fillText('灵石 ' + ((XY.save && XY.save.data && XY.save.data.lingshi) || 0), 20 + title * 2.4, 18);
+    ctx.fillText('灵石 ' + ((XY.save && XY.save.data && XY.save.data.lingshi) || 0), 22 + title * 2.2, 32);
     seal(ctx, W - 36, 32, narrow ? 20 : 16, '关');
-    hit(W - 60, 8, 52, 48, 'tdCloseShop');
-    var cols = narrow ? 2 : 4, gap = 10;
-    var cw = Math.floor((W - 28 - gap * (cols - 1)) / cols);
-    var ch = narrow ? 196 : 150;
-    R.FORMATIONS.forEach(function (f, i) {
-      var col = i % cols, row = Math.floor(i / cols);
-      var x = 14 + col * (cw + gap), y = 64 + row * (ch + gap);
-      if (y + ch > H - 6) return;
-      torn(ctx, x, y, cw, ch);
-      miniForm(ctx, f, x + 6, y + 8, narrow ? 58 : 48);
-      var own = formOwned(f.id), rank = formRank(f.id), b = R.bonus(f, own ? rank : 1);
+    hit(W - 60, 6, 52, 52, 'tdCloseShop');
+    var tabY = 78;
+    names.forEach(function (nm, i) {
+      var tx = 28 + i * (narrow ? 70 : 92);
+      ctx.fillStyle = i === page ? '#9a2e24' : 'rgba(42,36,28,0.55)';
+      ctx.font = brushFont(i === page ? body + 4 : body);
+      ctx.textAlign = 'left';
+      ctx.fillText(nm, tx, tabY);
+      hit(tx - 6, tabY - 18, narrow ? 64 : 80, 36, 'tdShopPage', { i: i });
+    });
+    seal(ctx, W - 86, tabY, 14, '左');
+    seal(ctx, W - 40, tabY, 14, '右');
+    hit(W - 108, tabY - 20, 36, 40, 'tdShopPrev');
+    hit(W - 58, tabY - 20, 40, 40, 'tdShopNext');
+    var top = 108, bot = H - 18;
+    var n = Math.max(1, forms.length);
+    var wide = !narrow && W >= 900;
+    forms.forEach(function (f, i) {
+      var own = formOwned(f.id), rank = formRank(f.id);
+      var b = R.bonus(f, own ? rank : 1);
+      var x, y, cw, ch;
+      if (wide) { cw = (W - 48) / n; ch = bot - top; x = 24 + i * cw; y = top; }
+      else { cw = W - 24; ch = (bot - top) / n; x = 12; y = top + i * ch; }
+      ctx.fillStyle = own ? '#2a241c' : 'rgba(42,36,28,0.42)';
+      ctx.font = brushFont(wide ? 42 : 36);
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(f.name, x + cw / 2, y + 28);
+      var noteH = body * 4 + 30;
+      var diagram, dx, dy, nx, ny, noteW;
+      if (wide) {
+        noteW = Math.min(cw - 28, 280);
+        diagram = Math.min(cw - 36, ch - noteH - 78);
+        dx = x + cw / 2;
+        dy = y + 52 + diagram / 2;
+        nx = x + (cw - noteW) / 2;
+        ny = dy + diagram / 2 + 12;
+      } else {
+        diagram = Math.min(ch - 64, cw * 0.58);
+        dx = x + 8 + diagram / 2;
+        dy = y + 52 + (ch - 60) / 2;
+        noteW = Math.max(120, cw - diagram - 36);
+        nx = x + 16 + diagram;
+        ny = dy - noteH / 2;
+      }
+      inkDiagram(ctx, f, dx, dy, diagram, !own);
+      paper(ctx, nx, ny, noteW, noteH);
       ctx.fillStyle = '#6e211b';
       ctx.font = brushFont(body);
       ctx.textAlign = 'left';
       ctx.textBaseline = 'top';
-      ctx.fillText(f.name, x + (narrow ? 68 : 58), y + 8);
+      ctx.fillText('攻+' + Math.round(b.atk * 100) + '%', nx + 10, ny + 8);
+      ctx.fillText('防+' + Math.round(b.dr * 100) + '%', nx + 10, ny + 8 + body);
       ctx.fillStyle = '#2a241c';
-      ctx.font = brushFont(Math.max(narrow ? 22 : 13, body - 4));
-      ctx.fillText(f.size + ' 人 · ' + (R.ROLE_NAME[f.role] || '') + (own ? '  ' + rank + '阶' : ''), x + (narrow ? 68 : 58), y + 8 + body);
-      ctx.fillStyle = '#6e211b';
-      ctx.fillText('攻+' + Math.round(b.atk * 100) + '%  防+' + Math.round(b.dr * 100) + '%', x + 8, y + ch - body * 2 - 28);
-      ctx.fillStyle = '#4a4034';
-      ctx.fillText(f.comboName, x + 8, y + ch - body - 24);
-      var act = '', word = '满';
-      if (!own) { act = 'tdBuyForm'; word = '买'; }
-      else if (rank < R.FORM_RANK_MAX) { act = 'tdUpForm'; word = '升'; }
-      seal(ctx, x + cw - 26, y + ch - 22, 15, word);
-      if (act) hit(x + cw - 48, y + ch - 42, 42, 38, act, { id: f.id });
+      ctx.fillText(f.comboName, nx + 10, ny + 10 + body * 2);
+      var actY = ny + 12 + body * 3;
+      var sealX = nx + noteW - 18;
+      if (!own) {
+        ctx.fillStyle = '#9a2e24';
+        ctx.font = brushFont(body);
+        ctx.textAlign = 'left';
+        ctx.fillText(R.priceOf(f) + ' 灵石', nx + 10, actY);
+        seal(ctx, sealX, actY + body * 0.35, narrow ? 16 : 14, '购');
+        hit(nx + 4, actY - 6, noteW - 8, body + 16, 'tdBuyForm', { id: f.id });
+      } else if (rank < R.FORM_RANK_MAX) {
+        ctx.fillStyle = '#6e211b';
+        ctx.font = brushFont(body);
+        ctx.textAlign = 'left';
+        ctx.fillText(rank + ' 阶', nx + 10, actY);
+        seal(ctx, sealX, actY + body * 0.35, 14, '升');
+        hit(sealX - 22, actY - 8, 44, body + 18, 'tdUpForm', { id: f.id });
+      } else {
+        ctx.fillStyle = '#6e211b';
+        ctx.font = brushFont(body);
+        ctx.textAlign = 'left';
+        ctx.fillText(rank + ' 阶', nx + 10, actY);
+      }
     });
     ctx.restore();
+  }
+  if (XY.phDrawHeroOver) {
+    var origPhOver = XY.phDrawHeroOver;
+    XY.phDrawHeroOver = function (c, G, h, x, y, r, rt) {
+      if (G && G.td && G.td.on) return;
+      return origPhOver.apply(this, arguments);
+    };
   }
   var origRender = XY.render;
   XY.render = function (ctx, G, a) {
@@ -1871,9 +2008,18 @@
     try {
       var z = (a.zoom || 1) * (a.dpr || 1);
       ctx.setTransform(z, 0, 0, z, 0, 0);
-      if (G.td.deploy && G.td.needCam !== false) {
-        var p = XY.routeAt(G.rt, Math.min(G.rt.total * 0.2, G.tang.s + 280));
-        G.cam.x = p.x; G.cam.y = p.y; G.td.needCam = false;
+      if (G.td.deploy && G.td.needCam !== false && G.heroes && G.heroes[0]) {
+        var tang0 = G.heroes[0], narrowCam = phone() || G.view.w < 700;
+        var sx = narrowCam ? G.view.w * 0.5 : G.view.w * 0.34;
+        var sy = narrowCam ? G.view.h * 0.24 : G.view.h * 0.44;
+        G.cam.x = tang0.x + G.view.w / 2 - sx;
+        G.cam.y = tang0.y + G.view.h / 2 - sy;
+        G.td.needCam = false;
+      }
+      if (G.td.deploy) {
+        if (G.fx) G.fx = G.fx.filter(function (f) { return f.type !== 'ring' && f.type !== 'arc' && f.type !== 'elemBurst' && f.type !== 'coinDrop'; });
+        if (G.parts && G.parts.length) G.parts.length = 0;
+        if (XY.vfx && XY.vfx.reset && XY.vfx.count && XY.vfx.count()) XY.vfx.reset();
       }
       if (G.td.deploy) {
         var now = a.rt || 0;
@@ -1884,6 +2030,7 @@
       drawSpots(ctx, G);
       ctx.save();
       ctx.translate(G.view.w / 2 - G.cam.x, G.view.h / 2 - G.cam.y);
+      G.heroes.forEach(function (h) { inkHalo(ctx, h); });
       drawFx(ctx, G);
       ctx.restore();
       drawHud(ctx, G, a);

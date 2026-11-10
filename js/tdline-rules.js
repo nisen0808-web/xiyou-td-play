@@ -126,8 +126,10 @@
   };
 
   /* 阵眼在圆心。其余人按这个阵自己的方位站。八卦留一个生门，不算人。 */
+  var FORM_SPREAD = 1.75;
   function ringSlots(labels, radius, opt) {
     opt = opt || {};
+    radius *= FORM_SPREAD;
     var skip = opt.skip, n = labels.length + (skip == null ? 0 : 1), start = opt.start == null ? -Math.PI / 2 : opt.start;
     var slots = [{ eye: true, x: 0, y: 0, label: '阵眼' }], k = 0, i, a, rr;
     for (i = 0; i < n; i++) {
@@ -141,17 +143,17 @@
   function wedgeSlots() {
     return [
       { eye: true, x: 0, y: 0, label: '阵眼' },
-      { x: 120, y: 0, label: '锋' },
-      { x: 55, y: 72, label: '左' },
-      { x: 55, y: -72, label: '右' }
+      { x: 210, y: 0, label: '锋' },
+      { x: 96, y: 126, label: '左' },
+      { x: 96, y: -126, label: '右' }
     ];
   }
   function arcSlots() {
     return [
       { eye: true, x: 0, y: 0, label: '阵眼' },
-      { x: -80, y: 0, label: '后' },
-      { x: -36, y: 86, label: '左' },
-      { x: -36, y: -86, label: '右' }
+      { x: -150, y: 0, label: '后' },
+      { x: -64, y: 156, label: '左' },
+      { x: -64, y: -156, label: '右' }
     ];
   }
   R.FORMATIONS = [
@@ -197,7 +199,7 @@
       comboName: '天罗落羽', sec: 17, combo: { dmg: 16, rad: 230, slow: 0.9, air: 1.6, heal: 0.03 } },
     { id: 'bagua', name: '八卦阵', who: 'line', unlock: 3, size: 8, role: 'def',
       slots: ringSlots(['乾', '坤', '震', '巽', '坎', '离', '艮'], 146, { skip: 5 }),
-      gap: (function () { var a = -Math.PI / 2 + 5 * Math.PI * 2 / 8; return { x: Math.cos(a) * 146, y: Math.sin(a) * 146, label: '生' }; })(),
+      gap: (function () { var a = -Math.PI / 2 + 5 * Math.PI * 2 / 8, r = 146 * 1.75; return { x: Math.cos(a) * r, y: Math.sin(a) * r, label: '生' }; })(),
       effect: '守阵。八人，兑位留生门。', short: '8 人 · 守',
       comboName: '天罗地网', sec: 18, combo: { dmg: 16, rad: 240, slow: 0.7, stun: 1.2, heal: 0.06 } },
     { id: 'zhuxie', name: '诛邪阵', who: 'line', unlock: 3, size: 8, role: 'atk',
