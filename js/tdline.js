@@ -54,6 +54,40 @@
     });
   }
 
+  function formBook() {
+    var d = XY.save && XY.save.data;
+    if (!d) return null;
+    if (!d.forms) d.forms = {};
+    R.FORMATIONS.forEach(function (f) {
+      var row = d.forms[f.id];
+      if (!row) row = d.forms[f.id] = { owned: !!f.free, rank: 1 };
+      if (f.free) row.owned = true;
+      if (!row.rank) row.rank = 1;
+    });
+    return d.forms;
+  }
+  function formOwned(id) { var b = formBook(); return !!(b && b[id] && b[id].owned); }
+  function formRank(id) { var b = formBook(); return (b && b[id] && b[id].rank) || 1; }
+  function buyForm(id) {
+    var def = R.formById(id), b = formBook();
+    if (!def || !b || b[id].owned) return false;
+    var price = R.priceOf(def);
+    if ((XY.save.data.lingshi || 0) < price) { if (XY.toast) XY.toast(null, '灵石不够'); return false; }
+    XY.save.data.lingshi -= price;
+    b[id].owned = true;
+    XY.save.touch();
+    return true;
+  }
+  function upForm(id) {
+    var def = R.formById(id), b = formBook();
+    if (!def || !b || !b[id].owned || b[id].rank >= R.FORM_RANK_MAX) return false;
+    var price = R.upPrice(def, b[id].rank);
+    if ((XY.save.data.lingshi || 0) < price) { if (XY.toast) XY.toast(null, '灵石不够'); return false; }
+    XY.save.data.lingshi -= price;
+    b[id].rank += 1;
+    XY.save.touch();
+    return true;
+  }
   function boot(G) {
     var grant = R.START_GRANT[G.levelId] || R.START_GRANT[3];
     G.coins += grant;
@@ -72,6 +106,7 @@
       t.free = true; t.paid = 0; t._rank = t.lv || 1;
       if (!t._tdLife) { t._tdLife = 1; t.maxLife = (t.maxLife || t.life || 1) * R.LIFE_MUL; t.life = t.maxLife; }
     });
+    formBook();
     if (!G.tut) openGuide(G);
   }
   function openGuide(G) {
@@ -176,7 +211,7 @@
         form.charge = Math.min(1, (form.charge || 0) + dmg / (spec ? 5000 : 5000));
       }
     } else if (heroHit) {
-      var heroBonus = o.src._fengshi && e._fengshi ? 0.12 : 0;
+      var heroBonus = (o.src._formAtk || 0) + (o.src._fengshi && e._fengshi ? 0.12 : 0);
       if (heroBonus && e.def && (e.def.boss || e.def.etower)) heroBonus = 0;
       if (heroBonus) e.hp -= dmg * heroBonus;
       G.td.dmg.hero += dmg * (1 + heroBonus);
@@ -464,9 +499,10 @@
       if (hypot(t.x - G.camp.x, t.y - G.camp.y) < C.CAMP_ZONE_R + 90) near++;
     }
     if (near < 2) return;
+    var formed = G.td.form.line && (G.td.form.line.state === 'active' || G.td.form.line.state === 'assembling');
     var lost = camp0 - G.camp.hp;
-    if (lost > 0) G.camp.hp += lost * 0.62;
-    G.camp.hp = Math.min(G.camp.maxHp, G.camp.hp + near * 12 * dt);
+    if (lost > 0 && formed) G.camp.hp += lost * 0.7;
+    G.camp.hp = Math.min(G.camp.maxHp, G.camp.hp + near * (formed ? 14 : 3) * dt);
   }
   function campForm(G, camp0, dt) {
     var f = G.td.form.hero;
@@ -715,7 +751,8 @@
   /* 阵眼是唐僧：阵心跟着他沿路走，别人按阵位围着他。唐僧本人不被拽离路线。
    * 唐僧只是阵员：他继续自己走路，人在阵里就给其他人一份护持。 */
   function tickLine(G, dt) {
-    if (G.heroes) G.heroes.forEach(function (h) { h._lineDr = 0; });
+    if (G.heroes) G.heroes.forEach(function (h) { h._lineDr = 0; h._formAtk = 0; });
+    if (G.towers) G.towers.forEach(function (t) { t._formAtk = 0; });
     var f = G.td.form && G.td.form.line;
     if (!f || f.state === 'ended' || f.state === 'draft' || f.state === 'broken') return;
     var def = R.formById(f.id);
@@ -746,20 +783,22 @@
       if (f.held >= 0.5) { f.state = 'active'; f.ever = true; }
     }
     if (f.state !== 'active') return;
-    var eff = R.FORM_EFFECT[f.id] || {};
-    var guard = tangIn ? R.TANG_GUARD : { dr: 0, regen: 0 };
+    var bonus = R.bonus(def, formRank(f.id));
+    f.bonus = bonus;
+    var guard = tangIn ? R.TANG_GUARD : { regen: 0 };
     f.members.forEach(function (u) {
       if (!u) return;
-      u._formDmg = eff.dmg || 0;
-      u._formDr = eff.dr || 0;
-      u._lineDr = R.isTang(u) ? 0 : (eff.dr || 0) + (guard.dr || 0);
+      u._formDmg = bonus.atk;
+      u._formAtk = bonus.atk;
+      u._formDr = bonus.dr;
+      u._lineDr = R.isTang(u) ? 0 : bonus.dr;
       if (!u.type && guard.regen && !u.down && u.maxHp) u.hp = Math.min(u.maxHp, u.hp + guard.regen * dt);
     });
-    if (eff.slow) {
+    if (def.role === 'ctrl' || def.role === 'air') {
       G.enemies.forEach(function (e) {
         if (e.dead || hypot(e.x - f.cx, e.y - f.cy) > 200) return;
         e.slowT = Math.max(e.slowT || 0, 0.35);
-        e.slowF = Math.max(e.slowF || 0, eff.slow * (e.def && e.def.boss ? 0.4 : 1));
+        e.slowF = Math.max(e.slowF || 0, (def.role === 'ctrl' ? 0.2 : 0.12) * (e.def && e.def.boss ? 0.4 : 1));
       });
     }
     chargeCombo(G, f, dt);
@@ -772,21 +811,21 @@
     if (f.charge >= 1) castCombo(G, f);
   }
   function castLine(G, f, mul) {
-    var rad = f.id === 'bagua' ? 240 : f.id === 'qixing' ? 220 : f.id === 'liuhe' ? 200 : 180;
-    var dmg = (f.id === 'bagua' ? 16 : f.id === 'qixing' ? 22 : f.id === 'wuxing' ? 18 : f.id === 'liuhe' ? 14 : 10) * mul;
-    var i, e;
+    var def = R.formById(f.id) || {}, spec = def.combo || { dmg: 12, rad: 180, heal: 0.04 };
+    var rad = spec.rad || 180, dmg = (spec.dmg || 12) * mul, i, e;
     for (i = 0; i < G.enemies.length; i++) {
       e = G.enemies[i];
       if (e.dead || hypot(e.x - f.cx, e.y - f.cy) > rad) continue;
       if (e.def && (e.def.boss || e.def.etower)) continue;
-      if (f.id === 'liuhe' || f.id === 'bagua') e.stunT = Math.max(e.stunT || 0, f.id === 'bagua' ? 1.2 : 0.8);
-      if (f.id !== 'bagua') e.slowT = Math.max(e.slowT || 0, 1.1);
-      XY.core.hurtEnemy(G, e, dmg, { combo: f.id, type: 'magic' });
+      if (spec.stun) e.stunT = Math.max(e.stunT || 0, spec.stun);
+      if (spec.slow) e.slowT = Math.max(e.slowT || 0, spec.slow);
+      var hit = dmg * (e.tdSky && spec.air ? spec.air : 1);
+      XY.core.hurtEnemy(G, e, hit, { combo: f.id, type: 'magic' });
     }
     (f.members || []).forEach(function (m) {
       if (!m || m.down) return;
-      if (!m.type && m.maxHp) m.hp = Math.min(m.maxHp, m.hp + m.maxHp * (f.id === 'sixiang' ? 0.12 : 0.05));
-      else if (m.type) m.hp = Math.min(XY.towerMaxHp(m), (m.hp || 0) + (f.id === 'sixiang' ? 60 : 30));
+      if (!m.type && m.maxHp) m.hp = Math.min(m.maxHp, m.hp + m.maxHp * (spec.heal || 0.04));
+      else if (m.type) m.hp = Math.min(XY.towerMaxHp(m), (m.hp || 0) + Math.round(40 * (spec.heal || 0.04) * 8));
     });
     pushFx(G, { kind: 'ring', x: f.cx, y: f.cy, life: 0.8, r: rad, name: '' });
   }
@@ -1070,6 +1109,7 @@
     var st = guideStep(G);
     if (!st) return true;
     if (h.act === 'tdGuideSkip' || h.act === 'esc' || h.act === 'spd2') return true;
+    if (h.act === 'tdOpenShop' || h.act === 'tdCloseShop' || h.act === 'tdBuyForm' || h.act === 'tdUpForm' || h.act === 'tdDrawer' || h.act === 'tdShopBg') return true;
     if (st.id === 'wait' || st.id === 'break') return h.act === 'tdGuideNext';
     if (st.id === 'pick') return h.act === 'tdSel' && h.freeArrow;
     if (st.id === 'move') return h.act === 'tdSpot';
@@ -1106,6 +1146,7 @@
     if (h.act === 'tdTab') {
       if (h.id === 'form' && !R.formationOn(G)) return true;
       G.td.tab = h.id;
+      if (h.id === 'form') G.td.drawer = true;
       if (guideStep(G) && guideStep(G).id === 'open' && h.id === 'form') advanceGuide(G);
       return true;
     }
@@ -1131,6 +1172,7 @@
       var center = G.heroes[0];
       var facing = XY.routeAt(G.rt, XY.routeProject(G.rt, center.x, center.y).s).a;
       if (def.who === 'line') {
+        if (!formOwned(def.id)) { if (XY.toast) XY.toast(G, '这阵还没买。点阵谱，用灵石买。'); return true; }
         G.td.form.line = { id: def.id, name: def.name, who: 'line', state: 'draft', seats: def.slots.map(function () { return null; }), members: [], eye: null, cx: center.x, cy: center.y, facing: facing, missing: '' };
         G.td.seat = 0;
       } else {
@@ -1138,9 +1180,16 @@
         G.td.form[kind] = { id: def.id, name: def.name, who: def.who, state: 'draft', members: [], cx: center.x, cy: center.y, facing: facing, missing: '' };
       }
       G.td.tab = 'form';
+      G.td.drawer = true;
       if (guideStep(G) && ((guideStep(G).id === 'sixiang' && h.id === 'sixiang') || (guideStep(G).id === 'bagua' && h.id === 'bagua'))) advanceGuide(G);
       return true;
     }
+    if (h.act === 'tdDrawer') { G.td.drawer = G.td.drawer === false; return true; }
+    if (h.act === 'tdOpenShop') { if (a) a.tdFormShop = true; return true; }
+    if (h.act === 'tdCloseShop') { if (a) a.tdFormShop = false; return true; }
+    if (h.act === 'tdBuyForm') { buyForm(h.id); return true; }
+    if (h.act === 'tdUpForm') { upForm(h.id); return true; }
+    if (h.act === 'tdShopBg') return true;
     if (h.act === 'tdLineSeat') { G.td.seat = h.i || 0; return true; }
     if (h.act === 'tdLineUnit') {
       var lf = G.td.form.line;
@@ -1397,41 +1446,58 @@
     drawLineSlots(ctx, G);
     ctx.restore();
   }
+  function seatMark(ctx, slot, picked, zoom) {
+    var z = zoom || 1;
+    var r = (slot.eye ? 22 : 18) / z;
+    var label = slot.gap ? '生' : (slot.eye ? '阵眼' : slot.label);
+    ctx.beginPath();
+    ctx.arc(0, 0, r, 0, PI2);
+    ctx.fillStyle = 'rgba(246,240,226,0.9)';
+    ctx.fill();
+    ctx.strokeStyle = slot.eye || picked ? '#9a2e24' : 'rgba(42,32,22,0.88)';
+    ctx.lineWidth = (slot.eye ? 2.6 : 1.8) / z;
+    ctx.stroke();
+    ctx.save();
+    ctx.scale(1 / z, 1 / z);
+    dryArc(ctx, r * z - 5, 0.5, 5.5);
+    ctx.restore();
+    var px = Math.max(14, 14 / z);
+    ctx.fillStyle = slot.eye || slot.gap ? '#9a2e24' : '#2a241c';
+    ctx.font = brushFont(px);
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillText(label, 0, r + 4 / z);
+  }
   function drawLineSlots(ctx, G) {
     var f = G.td.form.line;
     if (!f || f.state === 'ended' || f.state === 'broken') return;
     var def = R.formById(f.id);
     if (!def) return;
-    if (def.gap) {
-      var gap = slotWorld(f, def.gap);
-      ctx.fillStyle = '#9a2e24';
-      ctx.font = brushFont(15);
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('生', gap.x, gap.y);
-    }
-    def.slots.forEach(function (slot, i) {
+    var z = (app() && app().zoom) || 1;
+    function one(slot, i, picked) {
       var w = slotWorld(f, slot);
-      var on = f.seats && f.seats[i];
-      var picked = f.state === 'draft' && G.td.seat === i;
       ctx.save();
       ctx.translate(w.x, w.y);
-      ctx.strokeStyle = slot.eye || picked ? 'rgba(154,46,36,0.9)' : 'rgba(42,32,22,0.7)';
-      ctx.lineWidth = slot.eye ? 2.2 : 1.3;
-      dryArc(ctx, slot.eye ? 20 : 15, 0.15, 5.9);
-      ctx.fillStyle = slot.eye ? '#9a2e24' : '#2a241c';
-      ctx.font = brushFont(slot.eye ? 16 : 13);
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      var mark = slot.eye ? '眼' : slot.label;
-      if (on) mark = R.isTang(on) ? '唐' : (on.type && XY.TOWERS[on.type] ? XY.TOWERS[on.type].name.slice(0, 1) : ((on.def && on.def.name) ? on.def.name.slice(0, 1) : '人'));
-      ctx.fillText(mark, 0, 0);
+      seatMark(ctx, slot, picked, z);
       ctx.restore();
-      if (f.state === 'draft') {
+      if (f.state === 'draft' && i != null) {
         var s = w2s(G, w.x, w.y);
-        hit(s.x - 24, s.y - 24, 48, 48, 'tdLineSeat', { i: i });
+        var hitR = Math.max(22, 22 / z);
+        hit(s.x - hitR, s.y - hitR, hitR * 2, hitR * 2, 'tdLineSeat', { i: i });
       }
+    }
+    def.slots.forEach(function (slot, i) {
+      one(slot, i, f.state === 'draft' && G.td.seat === i);
     });
+    if (def.gap) one({ x: def.gap.x, y: def.gap.y, label: '生', gap: true }, null, false);
+    if (R.filled(f.seats) > 0) {
+      var bns = f.bonus || R.bonus(def, formRank(f.id));
+      ctx.fillStyle = '#6e211b';
+      ctx.font = brushFont(Math.max(16, 16 / z));
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'bottom';
+      ctx.fillText('攻+' + Math.round(bns.atk * 100) + '%  防+' + Math.round(bns.dr * 100) + '%', f.cx, f.cy - (36 / z));
+    }
   }
   function previewSlots(ctx, G) {
     ['tower', 'hero'].forEach(function (k) {
@@ -1576,40 +1642,95 @@
       hit(bx, y + 48, bw - 6, bh, lb[1]);
     });
   }
+  function miniForm(ctx, f, x, y, s) {
+    var slots = f.slots || [], i, m = 1, p;
+    for (i = 0; i < slots.length; i++) {
+      p = Math.sqrt(slots[i].x * slots[i].x + slots[i].y * slots[i].y);
+      if (p > m) m = p;
+    }
+    if (f.gap) {
+      p = Math.sqrt(f.gap.x * f.gap.x + f.gap.y * f.gap.y);
+      if (p > m) m = p;
+    }
+    var sc = (s * 0.38) / m;
+    ctx.save();
+    ctx.translate(x + s / 2, y + s / 2);
+    function dot(px, py, eye, gap) {
+      ctx.beginPath();
+      ctx.arc(px * sc, py * sc, eye ? s * 0.11 : s * 0.07, 0, PI2);
+      ctx.fillStyle = gap ? '#9a2e24' : (eye ? '#9a2e24' : '#2a241c');
+      ctx.fill();
+      if (!eye) { ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(42,32,22,0.45)'; ctx.stroke(); }
+    }
+    for (i = 0; i < slots.length; i++) dot(slots[i].x, slots[i].y, slots[i].eye, false);
+    if (f.gap) dot(f.gap.x, f.gap.y, false, true);
+    ctx.restore();
+  }
   function drawFormPanel(ctx, G, narrow, bh) {
     var cur0 = G.td.form.line;
     if (cur0 && cur0.castT > 0) return;
-    var x = narrow ? 12 : G.view.w - 360, y = narrow ? 300 : 108, w = narrow ? Math.min(360, G.view.w - 24) : 340;
-    var list = R.FORMATIONS, h = Math.min(G.view.h * 0.62, 52 + list.length * 46 + bh + 28);
+    var W = G.view.w, H = G.view.h;
+    var z = (app() && app().zoom) || 1;
+    var namePx = narrow ? Math.max(28, Math.ceil(16 / z)) : 18;
+    var bodyPx = narrow ? Math.max(28, Math.ceil(14 / z)) : 15;
+    var list = R.FORMATIONS.filter(function (f) { return formOwned(f.id); });
+    var rowH = namePx + bodyPx + (narrow ? 18 : 12);
+    var head = narrow ? 56 : 40;
+    var foot = bh + 16;
+    var diagram = narrow ? 72 : 46;
+    var h = head + list.length * rowH + foot;
+    var open = G.td.drawer !== false;
+    if (narrow && !open) {
+      var ty = H - (narrow ? 248 : 170);
+      torn(ctx, 16, ty, 120, 44);
+      ctx.fillStyle = '#6e211b'; ctx.font = brushFont(namePx); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('布阵', 76, ty + 22);
+      hit(16, ty, 120, 44, 'tdDrawer');
+      return;
+    }
+    var w = narrow ? Math.min(W - 24, 520) : 360;
+    var x = narrow ? Math.max(12, (W - w) / 2) : Math.max(12, W - w - 120);
+    var y = narrow ? Math.max(280, H - (narrow ? 230 : 160) - h) : 168;
+    if (y + h > H - 80) y = Math.max(120, H - h - 80);
     torn(ctx, x, y, w, h);
-    ctx.fillStyle = '#6e211b'; ctx.font = brushFont(18); ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-    ctx.fillText('布阵', x + 16, y + 8);
-    ctx.fillStyle = '#2a241c'; ctx.font = brushFont(13);
-    ctx.fillText('最少 4 人，最多 8 人', x + 64, y + 12);
+    ctx.fillStyle = '#6e211b'; ctx.font = brushFont(namePx); ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+    ctx.fillText('布阵', x + 16, y + 10);
+    ctx.fillStyle = '#2a241c'; ctx.font = brushFont(bodyPx);
+    ctx.fillText('最少 4 人', x + 16 + namePx * 2.4, y + 14);
+    seal(ctx, x + w - (narrow ? 78 : 46), y + 24, narrow ? 18 : 16, '谱');
+    hit(x + w - (narrow ? 100 : 68), y + 4, 44, 40, 'tdOpenShop');
+    if (narrow) {
+      seal(ctx, x + w - 36, y + 28, 16, '收');
+      hit(x + w - 58, y + 8, 48, 40, 'tdDrawer');
+    }
     list.forEach(function (f, i) {
-      var yy = y + 36 + i * 44;
-      if (yy > y + h - bh - 36) return;
+      var yy = y + head + i * rowH;
       var on = G.td.form.line && G.td.form.line.id === f.id;
+      miniForm(ctx, f, x + 12, yy, diagram);
       ctx.fillStyle = on ? '#9a2e24' : '#2a241c';
-      ctx.font = brushFont(16);
-      ctx.fillText(f.name + '  ' + f.size + ' 人', x + 16, yy);
-      ctx.font = brushFont(12); ctx.fillStyle = '#5c5144';
-      var line = f.effect;
-      while (line.length > 4 && ctx.measureText(line).width > w - 28) line = line.slice(0, -1);
-      ctx.fillText(line, x + 16, yy + 18);
-      hit(x + 8, yy - 4, w - 16, 40, 'tdPick', { id: f.id });
+      ctx.font = brushFont(namePx);
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+      ctx.fillText(f.name + '  ' + f.size + ' 人', x + 20 + diagram, yy + 2);
+      ctx.font = brushFont(bodyPx);
+      ctx.fillStyle = '#6e211b';
+      var bns = R.bonus(f, formRank(f.id));
+      ctx.fillText('攻+' + Math.round(bns.atk * 100) + '%   防+' + Math.round(bns.dr * 100) + '%', x + 20 + diagram, yy + namePx + 4);
+      hit(x + 8, yy, w - 16, rowH - 4, 'tdPick', { id: f.id });
     });
     var cur = G.td.form.line;
     if (cur && cur.state === 'draft') {
       var n = R.filled(cur.seats), need = R.formById(cur.id).size;
-      ctx.fillStyle = '#6e211b'; ctx.font = brushFont(13);
-      ctx.fillText('已入 ' + n + ' / ' + need + (n < R.FORM_MIN ? '，不足 4 人' : (n < need ? '，还要 ' + (need - n) + ' 人' : '，可以确认')), x + 16, y + h - bh - 22);
+      ctx.fillStyle = '#6e211b';
+      ctx.font = brushFont(bodyPx);
+      ctx.fillText('已入 ' + n + ' / ' + need + (n < R.FORM_MIN ? '，不足 4 人' : (n < need ? '，还要 ' + (need - n) + ' 人' : '，可以确认')), x + 16, y + h - foot + 4);
     }
     if (cur) {
-      seal(ctx, x + 36, y + h - bh / 2 - 4, 18, '确认');
-      hit(x + 12, y + h - bh - 8, 52, bh, 'tdConfirm', { who: 'line' });
-      seal(ctx, x + 100, y + h - bh / 2 - 4, 18, '散');
-      hit(x + 76, y + h - bh - 8, 52, bh, 'tdDisband', { who: 'line' });
+      var sealR = narrow ? 22 : 18;
+      seal(ctx, x + w - 130, y + h - foot / 2, sealR, '确认');
+      hit(x + w - 160, y + h - foot, 60, foot, 'tdConfirm', { who: 'line' });
+      seal(ctx, x + w - 52, y + h - foot / 2, sealR, '散');
+      hit(x + w - 82, y + h - foot, 60, foot, 'tdDisband', { who: 'line' });
     }
     bindHits(G, cur);
   }
@@ -1684,6 +1805,55 @@
     ctx.restore();
   }
 
+  function drawFormShop(ctx, G, a) {
+    var W = G.view.w, H = G.view.h, narrow = phone() || W < 700;
+    var z = (a && a.zoom) || 1;
+    var title = narrow ? Math.max(28, Math.ceil(16 / z)) : 26;
+    var body = narrow ? Math.max(28, Math.ceil(14 / z)) : 15;
+    ctx.save();
+    ctx.fillStyle = 'rgba(246,240,226,0.96)';
+    ctx.fillRect(0, 0, W, H);
+    hit(0, 0, W, H, 'tdShopBg');
+    ctx.fillStyle = '#6e211b';
+    ctx.font = brushFont(title);
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    ctx.fillText('阵谱', 20, 14);
+    ctx.fillStyle = '#2a241c';
+    ctx.font = brushFont(body);
+    ctx.fillText('灵石 ' + ((XY.save && XY.save.data && XY.save.data.lingshi) || 0), 20 + title * 2.4, 18);
+    seal(ctx, W - 36, 32, narrow ? 20 : 16, '关');
+    hit(W - 60, 8, 52, 48, 'tdCloseShop');
+    var cols = narrow ? 2 : 4, gap = 10;
+    var cw = Math.floor((W - 28 - gap * (cols - 1)) / cols);
+    var ch = narrow ? 196 : 150;
+    R.FORMATIONS.forEach(function (f, i) {
+      var col = i % cols, row = Math.floor(i / cols);
+      var x = 14 + col * (cw + gap), y = 64 + row * (ch + gap);
+      if (y + ch > H - 6) return;
+      torn(ctx, x, y, cw, ch);
+      miniForm(ctx, f, x + 6, y + 8, narrow ? 58 : 48);
+      var own = formOwned(f.id), rank = formRank(f.id), b = R.bonus(f, own ? rank : 1);
+      ctx.fillStyle = '#6e211b';
+      ctx.font = brushFont(body);
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+      ctx.fillText(f.name, x + (narrow ? 68 : 58), y + 8);
+      ctx.fillStyle = '#2a241c';
+      ctx.font = brushFont(Math.max(narrow ? 22 : 13, body - 4));
+      ctx.fillText(f.size + ' 人 · ' + (R.ROLE_NAME[f.role] || '') + (own ? '  ' + rank + '阶' : ''), x + (narrow ? 68 : 58), y + 8 + body);
+      ctx.fillStyle = '#6e211b';
+      ctx.fillText('攻+' + Math.round(b.atk * 100) + '%  防+' + Math.round(b.dr * 100) + '%', x + 8, y + ch - body * 2 - 28);
+      ctx.fillStyle = '#4a4034';
+      ctx.fillText(f.comboName, x + 8, y + ch - body - 24);
+      var act = '', word = '满';
+      if (!own) { act = 'tdBuyForm'; word = '买'; }
+      else if (rank < R.FORM_RANK_MAX) { act = 'tdUpForm'; word = '升'; }
+      seal(ctx, x + cw - 26, y + ch - 22, 15, word);
+      if (act) hit(x + cw - 48, y + ch - 42, 42, 38, act, { id: f.id });
+    });
+    ctx.restore();
+  }
   var origRender = XY.render;
   XY.render = function (ctx, G, a) {
     var keptFx = null;
@@ -1718,6 +1888,7 @@
       ctx.restore();
       drawHud(ctx, G, a);
       if (G.td.guide && G.td.deploy) drawGuide(ctx, G);
+      if (a.tdFormShop) drawFormShop(ctx, G, a);
     } catch (err) { if (window.console) console.warn('tdline', err); }
   };
 

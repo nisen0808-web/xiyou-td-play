@@ -9065,9 +9065,9 @@ XY.BGS1={"src": "data:image/webp;base64,UklGRtT1GgBXRUJQVlA4IMj1GgCQwWGdASoAEAAK
     if (h.id === 'wujing' && h.beads) {
       for (var i = 0; i < h.beads; i++) {
         var a = h.orbit + i / h.beads * PI2, bx = x + Math.cos(a) * h.beadR, by = y + Math.sin(a) * h.beadR, br = h.beadSize;
-        c.fillStyle = '#fffdf4'; c.strokeStyle = '#6b6b6b'; c.lineWidth = 1.8; c.beginPath(); c.arc(bx, by, br, 0, PI2); c.fill(); c.stroke();
-        c.fillStyle = '#444'; c.beginPath(); c.arc(bx - br * 0.35, by - br * 0.1, br * 0.2, 0, PI2); c.arc(bx + br * 0.35, by - br * 0.1, br * 0.2, 0, PI2); c.fill();
-        c.fillRect(bx - br * 0.15, by + br * 0.25, br * 0.3, br * 0.3);
+        c.strokeStyle = 'rgba(42,32,22,0.8)'; c.lineWidth = Math.max(1.4, br * 0.28); c.lineCap = 'round';
+        c.beginPath(); c.arc(bx, by, br * 0.72, 0.6, 5.4); c.stroke();
+        c.fillStyle = '#2a241c'; c.beginPath(); c.arc(bx, by, Math.max(1.2, br * 0.18), 0, PI2); c.fill();
       }
     }
     var mnt = h.mounted ? G.heroes[4] : null, ry = 0;

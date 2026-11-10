@@ -63,25 +63,11 @@
   };
   R.towerUntargetable = function (tdOn) { return !!tdOn; };
 
-  R.COMBOS = {
-    sixiang: { name: '四象回春', sec: 16 },
-    wuxing: { name: '五行相生', sec: 16 },
-    liuhe: { name: '六合锁空', sec: 16 },
-    qixing: { name: '七星坠野', sec: 17 },
-    bagua: { name: '天罗地网', sec: 18 }
-  };
-  /* 人数下限。某阵自己的人数就是它的阵位数，四象 4 人到八卦 8 人。 */
   R.FORM_MIN = 4;
   R.FORM_MAX = 8;
-  /* 唐僧在阵里时，给阵中其他人的护持。不改英雄伤害。 */
-  R.TANG_GUARD = { dr: 0.08, regen: 3 };
-  R.FORM_EFFECT = {
-    sixiang: { dr: 0.10 },
-    wuxing: { dmg: 0.08 },
-    liuhe: { dr: 0.08 },
-    qixing: { slow: 0.15 },
-    bagua: { dmg: 0.12, dr: 0.15 }
-  };
+  R.FORM_RANK_MAX = 3;
+  /* 唐僧在阵里时，另外给阵中其他人的少量回血。攻防加成走 R.bonus，不改英雄基础伤害。 */
+  R.TANG_GUARD = { regen: 3 };
   R.charge = function (cur, dt, sec) { return Math.min(1, (cur || 0) + (dt || 0) / (sec || 16)); };
 
   /* 每波额外飞妖。第一关不走这里。 */
@@ -140,37 +126,88 @@
   };
 
   /* 阵眼在圆心。其余人按这个阵自己的方位站。八卦留一个生门，不算人。 */
-  function ringSlots(labels, radius, skipAt) {
-    var n = labels.length + (skipAt == null ? 0 : 1), slots = [{ eye: true, x: 0, y: 0, label: '阵眼' }], k = 0, i, a;
+  function ringSlots(labels, radius, opt) {
+    opt = opt || {};
+    var skip = opt.skip, n = labels.length + (skip == null ? 0 : 1), start = opt.start == null ? -Math.PI / 2 : opt.start;
+    var slots = [{ eye: true, x: 0, y: 0, label: '阵眼' }], k = 0, i, a, rr;
     for (i = 0; i < n; i++) {
-      a = -Math.PI / 2 + i * Math.PI * 2 / n;
-      if (skipAt != null && i === skipAt) continue;
-      slots.push({ x: Math.cos(a) * radius, y: Math.sin(a) * radius, label: labels[k++] });
+      a = start + i * Math.PI * 2 / n;
+      if (skip != null && i === skip) continue;
+      rr = radius * (opt.squash && (i % 2) ? opt.squash : 1);
+      slots.push({ x: Math.cos(a) * rr, y: Math.sin(a) * rr * (opt.flat || 1), label: labels[k++] });
     }
     return slots;
   }
+  function wedgeSlots() {
+    return [
+      { eye: true, x: 0, y: 0, label: '阵眼' },
+      { x: 120, y: 0, label: '锋' },
+      { x: 55, y: 72, label: '左' },
+      { x: 55, y: -72, label: '右' }
+    ];
+  }
+  function arcSlots() {
+    return [
+      { eye: true, x: 0, y: 0, label: '阵眼' },
+      { x: -80, y: 0, label: '后' },
+      { x: -36, y: 86, label: '左' },
+      { x: -36, y: -86, label: '右' }
+    ];
+  }
   R.FORMATIONS = [
-    { id: 'sixiang', name: '四象阵', who: 'line', unlock: 3, size: 4,
-      slots: ringSlots(['青龙', '白虎', '朱雀'], 100),
-      effect: '阵内少挨一成。唐僧在阵再护持。',
-      short: '4 人。阵眼居中，三灵环绕' },
-    { id: 'wuxing', name: '五行阵', who: 'line', unlock: 3, size: 5,
-      slots: ringSlots(['金', '木', '水', '火'], 112),
-      effect: '阵内天兵伤害略高。',
-      short: '5 人。阵眼为土，四方为金木水火' },
-    { id: 'liuhe', name: '六合阵', who: 'line', unlock: 3, size: 6,
-      slots: ringSlots(['东', '南', '西', '北', '天'], 120),
-      effect: '阵内少挨一成。连携能定飞妖。',
-      short: '6 人。阵眼在中，五方合围' },
-    { id: 'qixing', name: '七星阵', who: 'line', unlock: 3, size: 7,
-      slots: ringSlots(['天璇', '天玑', '天权', '玉衡', '开阳', '摇光'], 128),
-      effect: '阵心附近的妖怪更慢。',
-      short: '7 人。阵眼为枢，六星环列' },
-    { id: 'bagua', name: '八卦阵', who: 'line', unlock: 3, size: 8,
-      slots: ringSlots(['乾', '坤', '震', '巽', '坎', '离', '艮'], 140, 5),
-      gap: (function () { var a = -Math.PI / 2 + 5 * Math.PI * 2 / 8; return { x: Math.cos(a) * 140, y: Math.sin(a) * 140, label: '生' }; })(),
-      effect: '天兵略强，人少挨一成半。',
-      short: '8 人。阵眼居中，七方有人，兑位是生门' }
+    { id: 'sixiang', name: '四象阵', who: 'line', unlock: 3, size: 4, role: 'def', free: true,
+      slots: ringSlots(['青龙', '白虎', '朱雀'], 108),
+      effect: '守阵。少挨得多，连携回血。', short: '4 人 · 守',
+      comboName: '四象回春', sec: 16, combo: { dmg: 10, rad: 170, slow: 1.1, heal: 0.12 } },
+    { id: 'fengshi', name: '锋矢阵', who: 'line', unlock: 3, size: 4, role: 'atk', free: true,
+      slots: wedgeSlots(),
+      effect: '攻阵。攻击更高，阵位收成箭矢。', short: '4 人 · 攻',
+      comboName: '锋矢破阵', sec: 16, combo: { dmg: 22, rad: 200, slow: 0.4, heal: 0.03 } },
+    { id: 'quexie', name: '却邪阵', who: 'line', unlock: 3, size: 4, role: 'air',
+      slots: arcSlots(),
+      effect: '对空。连携多打飞妖。', short: '4 人 · 对空',
+      comboName: '却邪射空', sec: 16, combo: { dmg: 14, rad: 210, slow: 0.8, heal: 0.02, air: 1.5 } },
+    { id: 'wuxing', name: '五行阵', who: 'line', unlock: 3, size: 5, role: 'atk',
+      slots: ringSlots(['金', '木', '水', '火'], 118),
+      effect: '攻阵。金木水火围着阵眼。', short: '5 人 · 攻',
+      comboName: '五行相生', sec: 16, combo: { dmg: 20, rad: 190, slow: 0.6, heal: 0.06 } },
+    { id: 'jiejie', name: '结界阵', who: 'line', unlock: 3, size: 5, role: 'def',
+      slots: ringSlots(['东', '南', '西', '北'], 86),
+      effect: '守阵。圈子收得紧，减伤更高。', short: '5 人 · 守',
+      comboName: '结界回护', sec: 17, combo: { dmg: 8, rad: 150, slow: 0.5, heal: 0.1 } },
+    { id: 'hansuo', name: '寒锁阵', who: 'line', unlock: 3, size: 5, role: 'ctrl',
+      slots: ringSlots(['冰', '霜', '凝', '滞'], 124, { squash: 0.7 }),
+      effect: '控阵。连携把靠近的妖怪定住。', short: '5 人 · 控',
+      comboName: '寒锁冰封', sec: 17, combo: { dmg: 12, rad: 180, slow: 1.6, stun: 1.1, heal: 0.02 } },
+    { id: 'liuhe', name: '六合阵', who: 'line', unlock: 3, size: 6, role: 'ctrl',
+      slots: ringSlots(['东', '南', '西', '北', '天'], 128),
+      effect: '控阵。五方合上，能定飞妖。', short: '6 人 · 控',
+      comboName: '六合锁空', sec: 16, combo: { dmg: 14, rad: 200, slow: 0.8, stun: 0.9, air: 1.2, heal: 0.03 } },
+    { id: 'huichun', name: '回春阵', who: 'line', unlock: 3, size: 6, role: 'heal',
+      slots: ringSlots(['生', '息', '养', '复', '荣'], 112, { flat: 0.82 }),
+      effect: '回复。连携把血抬起来。', short: '6 人 · 回复',
+      comboName: '回春生息', sec: 16, combo: { dmg: 8, rad: 160, slow: 0.4, heal: 0.16 } },
+    { id: 'qixing', name: '七星阵', who: 'line', unlock: 3, size: 7, role: 'atk',
+      slots: ringSlots(['天璇', '天玑', '天权', '玉衡', '开阳', '摇光'], 136),
+      effect: '攻阵。六星环着天枢。', short: '7 人 · 攻',
+      comboName: '七星坠野', sec: 17, combo: { dmg: 24, rad: 220, slow: 1.0, heal: 0.04 } },
+    { id: 'tianluo', name: '天罗阵', who: 'line', unlock: 3, size: 7, role: 'air',
+      slots: ringSlots(['罗', '网', '缴', '射', '落', '空'], 132, { start: -Math.PI / 3 }),
+      effect: '对空。网住往下扑的飞妖。', short: '7 人 · 对空',
+      comboName: '天罗落羽', sec: 17, combo: { dmg: 16, rad: 230, slow: 0.9, air: 1.6, heal: 0.03 } },
+    { id: 'bagua', name: '八卦阵', who: 'line', unlock: 3, size: 8, role: 'def',
+      slots: ringSlots(['乾', '坤', '震', '巽', '坎', '离', '艮'], 146, { skip: 5 }),
+      gap: (function () { var a = -Math.PI / 2 + 5 * Math.PI * 2 / 8; return { x: Math.cos(a) * 146, y: Math.sin(a) * 146, label: '生' }; })(),
+      effect: '守阵。八人，兑位留生门。', short: '8 人 · 守',
+      comboName: '天罗地网', sec: 18, combo: { dmg: 16, rad: 240, slow: 0.7, stun: 1.2, heal: 0.06 } },
+    { id: 'zhuxie', name: '诛邪阵', who: 'line', unlock: 3, size: 8, role: 'atk',
+      slots: ringSlots(['诛', '邪', '破', '军', '斩', '灭', '锋'], 150, { start: -Math.PI / 5 }),
+      effect: '攻阵。人多，攻击加成最高一档。', short: '8 人 · 攻',
+      comboName: '诛邪破军', sec: 18, combo: { dmg: 26, rad: 230, slow: 0.5, heal: 0.03 } },
+    { id: 'zhenyue', name: '镇岳阵', who: 'line', unlock: 3, size: 8, role: 'ctrl',
+      slots: ringSlots(['镇', '岳', '定', '山', '止', '戈', '安'], 124, { squash: 0.78 }),
+      effect: '控阵。圈子压得低，减速和定身。', short: '8 人 · 控',
+      comboName: '镇岳定身', sec: 18, combo: { dmg: 12, rad: 200, slow: 1.5, stun: 1.3, heal: 0.04 } }
   ];
   R.formById = function (id) {
     for (var i = 0; i < R.FORMATIONS.length; i++) if (R.FORMATIONS[i].id === id) return R.FORMATIONS[i];
@@ -188,6 +225,34 @@
     return n === def.size;
   };
   R.isTang = function (u) { return !!(u && u.id === 'tang' && !u.type); };
+  R.ROLE_NAME = { atk: '攻', def: '守', ctrl: '控', air: '对空', heal: '回复' };
+  /* 入阵同时加攻击和减伤。人数越大、阶数越高，加成越高，落在攻击 15%–40%、减伤 15%–35%。 */
+  R.bonus = function (def, rank) {
+    if (!def) return { atk: 0, dr: 0 };
+    rank = Math.max(1, Math.min(R.FORM_RANK_MAX, rank || 1));
+    var sizeK = (def.size - 4) / 4;
+    var atk = 0.16 + sizeK * 0.10 + (rank - 1) * 0.06;
+    var dr = 0.16 + sizeK * 0.06 + (rank - 1) * 0.05;
+    if (def.role === 'atk') { atk += 0.08; dr -= 0.02; }
+    else if (def.role === 'def') { dr += 0.08; atk -= 0.02; }
+    else if (def.role === 'ctrl') { atk -= 0.01; dr += 0.02; }
+    else if (def.role === 'air') { atk += 0.04; }
+    else if (def.role === 'heal') { dr += 0.04; atk -= 0.02; }
+    atk = Math.max(0.15, Math.min(0.40, atk));
+    dr = Math.max(0.15, Math.min(0.35, dr));
+    return { atk: Math.round(atk * 100) / 100, dr: Math.round(dr * 100) / 100 };
+  };
+  R.priceOf = function (def) {
+    if (!def || def.free) return 0;
+    return { 4: 40, 5: 80, 6: 130, 7: 190, 8: 260 }[def.size] || 100;
+  };
+  R.upPrice = function (def, rank) {
+    if (!def || def.free && false) return 0;
+    var base = def.free ? 40 : R.priceOf(def);
+    return Math.round(base * (rank === 1 ? 0.75 : 1.1));
+  };
+  R.COMBOS = {};
+  R.FORMATIONS.forEach(function (f) { R.COMBOS[f.id] = { name: f.comboName, sec: f.sec }; });
   R.unlocked = function (levelId) {
     if ((levelId | 0) < 3) return [];
     return R.FORMATIONS.slice();
