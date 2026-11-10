@@ -1517,7 +1517,7 @@
     if (G && G.td && G.td.quiet > G.td.clock && G.fx) {
       keptFx = G.fx;
       G.fx = G.fx.filter(function (f) {
-        return f.type !== 'ring' && f.type !== 'coinDrop' && f.type !== 'vsfx' && !(f.type === 'an' && (f.kind === 'maxlv' || f.kind === 'levelup' || f.kind === 'flash'));
+        return f.type !== 'ring' && f.type !== 'arc' && f.type !== 'coinDrop' && f.type !== 'vsfx' && !(f.type === 'an' && (f.kind === 'maxlv' || f.kind === 'levelup' || f.kind === 'flash'));
       });
     }
     origRender(ctx, G, a);
