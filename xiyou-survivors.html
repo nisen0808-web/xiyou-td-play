@@ -64,13 +64,13 @@ window.XY_MENU_V5 = {"bg_v2":"data:image/webp;base64,UklGRrpaAgBXRUJQVlA4IK5aAgD
 var XY = window.XY = window.XY || {};
 
 XY.VERSION = '0.8.7';
-// 测试版开关：公开入口默认关闭。网址加 ?test=1 才进入测试版（全角色可选、单独存档）；?test=0 / ?normal=1 回到标准版
-// 版本开关（测试版 / 标准版）现在存在存档里：见 meta.js 的 XY.TEST_BUILD / XY.version
-XY.TEST_LV = 5;     // 测试版里特殊角色的角色卡等级（5 = 卡牌等级上限 XY.CARD_MAXLV，也是 SP_MAX_LV；隐藏角色不受影响）
+// 全开开关：公开入口默认关闭。网址加 ?test=1 才进入全开（全角色可选、单独存档）；?test=0 / ?normal=1 回到标准版
+// 版本开关（全开 / 标准版）现在存在存档里：见 meta.js 的 XY.TEST_BUILD / XY.version
+XY.TEST_LV = 5;     // 全开里特殊角色的角色卡等级（5 = 卡牌等级上限 XY.CARD_MAXLV，也是 SP_MAX_LV；隐藏角色不受影响）
 
 /* ---------- 全局常量 ---------- */
 XY.C = {
-  TEST_DEFAULT: false,    // 公开入口默认标准版（新档特殊角色全锁、第 1 关从 Lv1 打）。?test=1 才进测试版
+  TEST_DEFAULT: false,    // 公开入口默认标准版（新档特殊角色全锁、第 1 关从 Lv1 打）。?test=1 才进全开
   WORLD_W: 5120,          // 地图宽（v0.4：东西向长图，营地在东、关口在西）
   WORLD_H: 3200,          // 地图高
   STEP: 1 / 60,           // 固定逻辑步长（秒）
@@ -358,7 +358,7 @@ XY.TRAITS = {
         var list = this.cells[cy * this.cols + cx];
         for (var i = 0; i < list.length; i++) {
           var e = list[i];
-          if (e.dead || e.veil) continue;                        // v0.9 洞府塔：英雄没走进塔的射程之前，塔被妖气罩着，选不中也打不到
+          if (e.dead || e.veil || (e.tdSky && !XY._skyOn)) continue;                        // v0.9 洞府塔：英雄没走进塔的射程之前，塔被妖气罩着，选不中也打不到；天兵层的飞妖不进英雄的索敌
           var dx = e.x - x, dy = e.y - y, rr = r + e.r;
           var d2 = dx * dx + dy * dy;
           if (d2 <= rr * rr) fn(e, d2);
@@ -393,8 +393,8 @@ XY.TRAITS = {
  * ============================================================ */
 (function () {
   var XY = window.XY;
-  var KEY_STD = 'xiyou_survivors_save', KEY_TEST = 'xiyou_survivors_save_test';     // 测试版和普通版各用一把存档钥匙：测试版永远不会碰普通版的存档
-  // 进入哪个版本：同一标签页里切换过 > 网址 ?normal=1（或 ?test=0）= 普通版 / ?test=1 = 测试版 > C.TEST_DEFAULT（默认 true：直接打开就是测试版）
+  var KEY_STD = 'xiyou_survivors_save', KEY_TEST = 'xiyou_survivors_save_test';     // 全开和普通版各用一把存档钥匙：全开永远不会碰普通版的存档
+  // 进入哪个版本：同一标签页里切换过 > 网址 ?normal=1（或 ?test=0）= 普通版 / ?test=1 = 全开 > C.TEST_DEFAULT（默认 true：直接打开就是全开）
   function resolveMode() {
     var q = (window.location && window.location.search) || '', ss = null;
     try { ss = window.sessionStorage.getItem('xy_mode'); } catch (e) { ss = null; }
@@ -405,7 +405,7 @@ XY.TRAITS = {
   }
   var MODE = resolveMode(), KEY = MODE === 'test' ? KEY_TEST : KEY_STD;
   var DEFAULT_MODE = MODE;
-  var SCHEMA = 5;   // v0.8.8：5 = 反派系列块补全（villain.series[系列] 加 wallet{yaojin,yaodan}/mats/evo/t3Seen/pity/traps/stage，旧的数字钱包迁成妖金）。   // v0.5：4 = 新增 mode（版本开关）+ spT（测试版特殊角色状态）。   // v0.5：3 = 新增 journey（取经之旅成长存档）。   // v0.5：2 = 新增 sp 默认（2 张 Phyrex + 已选）、sold（天兵卡）、tutorial；旧档升级不丢任何进度
+  var SCHEMA = 5;   // v0.8.8：5 = 反派系列块补全（villain.series[系列] 加 wallet{yaojin,yaodan}/mats/evo/t3Seen/pity/traps/stage，旧的数字钱包迁成妖金）。   // v0.5：4 = 新增 mode（版本开关）+ spT（全开特殊角色状态）。   // v0.5：3 = 新增 journey（取经之旅成长存档）。   // v0.5：2 = 新增 sp 默认（2 张 Phyrex + 已选）、sold（天兵卡）、tutorial；旧档升级不丢任何进度
 
   /* ---------- 皮肤（每位英雄一套换装）和变体角色 ---------- */
   XY.SKINS = {
@@ -523,8 +523,8 @@ XY.TRAITS = {
       cards: {}, deck: [], dex: {}, unlocks: {}, skins: {}, party: { horse: 'horse' },
       levels: {}, dng: {}, routes: { N: 0, S: 0 }, lingshi: 0, shards: 0, questsDone: {},   // v0.4：关卡进度、灵石（货币）、皮肤碎片、已完成过的支线
       sp: { cards: {}, chosen: null, shop: null, shopGen: 0 },   // 公开新档：特殊角色一张都没有。出发页十连抽到的才解锁
-      spT: { cards: {}, chosen: null, shop: null, shopGen: 0 },  // 测试版特殊角色状态（和标准版分开存）。测试版仍按 TEST_LV 全可选，不靠这叠卡
-      mode: DEFAULT_MODE,                                                       // v0.5：版本开关 'test'（测试版，默认）/ 'std'（标准版）
+      spT: { cards: {}, chosen: null, shop: null, shopGen: 0 },  // 全开特殊角色状态（和标准版分开存）。全开仍按 TEST_LV 全可选，不靠这叠卡
+      mode: DEFAULT_MODE,                                                       // v0.5：版本开关 'test'（全开）/ 'std'（标准版）
       sold: { cards: { arrow: 1, heal: 1 } },                                   // v0.5：天兵卡
       tutorial: { done: false, grow: false },
       gacha10: null,                                                             // 出发页十连：抽出即写入；null = 这个存档还没抽
@@ -755,7 +755,7 @@ XY.TRAITS = {
     return d;
   };
 
-  /* ---- 版本开关（单文件，不用构建参数）：XY.TEST_BUILD 是存档 mode 的读写口；测试版 / 标准版各有一份特殊角色状态 ---- */
+  /* ---- 版本开关（单文件，不用构建参数）：XY.TEST_BUILD 是存档 mode 的读写口；全开 / 标准版各有一份特殊角色状态 ---- */
   Object.defineProperty(XY, 'TEST_BUILD', { configurable: true, enumerable: true,
     get: function () { return MODE === 'test'; },
     set: function (v) { if (S.data) XY.version.set(v ? 'test' : 'std'); else MODE = v ? 'test' : 'std'; } });
@@ -1945,7 +1945,7 @@ XY.TRAITS = {
     }
    }
   ];
-  // ===== 隐藏名单（v0.5）：qinbafrank / TraderS 暂时隐藏——数据和代码都在，但选角 / 掉落 / 商店 / 图鉴 / 测试版开局全部不出现，头像也不打进 dist。
+  // ===== 隐藏名单（v0.5）：qinbafrank / TraderS 暂时隐藏——数据和代码都在，但选角 / 掉落 / 商店 / 图鉴 / 全开开局全部不出现，头像也不打进 dist。
   //       v0.6：Cato 也先隐藏（含 Cato 的协同技「双水合流」一起隐藏）。
   //       要恢复：把 window.XY_HIDDEN_SPECIALS 设成 []，或网址加 ?hidden=0（build.sh 同步读本行的名单决定内联哪些头像）
   XY.HIDDEN_SPECIALS = /[?&]hidden=0/.test((window.location && window.location.search) || '') ? [] : (window.XY_HIDDEN_SPECIALS || ['qinba', 'traders18', 'cato']);
@@ -2004,14 +2004,14 @@ XY.TRAITS = {
 
   /* ---------- 存档：角色卡张数 / 携带 ---------- */
   function sd() {
-    var d = XY.save.data, key = XY.TEST_BUILD ? 'spT' : 'sp';     // 测试版 / 标准版各存一份，互不污染
+    var d = XY.save.data, key = XY.TEST_BUILD ? 'spT' : 'sp';     // 全开 / 标准版各存一份，互不污染
     if (!d[key] || typeof d[key] !== 'object') d[key] = { cards: {}, chosen: null, shop: null, shopGen: 0 };
     if (!d[key].cards) d[key].cards = {};
     return d[key];
   }
   XY.spLevelOf = function (n) { var l = 0; XY.SP_LV_AT.forEach(function (a, i) { if (n >= a) l = i + 1; }); return l; };
   XY.save.spCards = function (id) { return sd().cards[id] || 0; };
-  // 测试版（仅 ?test=1 / 存档 mode=test）：12 位特殊角色开局全部可选，等级至少 XY.TEST_LV（不写入存档）
+  // 全开（仅 ?test=1 / 存档 mode=test）：12 位特殊角色开局全部可选，等级至少 XY.TEST_LV（不写入存档）
   XY.save.spLevel = function (id) { if (XY.isHidden(id) || !XY.SP_BY[id]) return 0; return Math.max(XY.spLevelOf(XY.save.spCards(id)), XY.TEST_BUILD ? XY.TEST_LV : 0); };
   XY.save.spOwned = function (id) { return XY.save.spLevel(id) >= 1; };
   XY.save.spRealOwned = function (id) { return XY.spLevelOf(XY.save.spCards(id)) >= 1; };
@@ -2033,7 +2033,7 @@ XY.TRAITS = {
     if (!XY.save.spOwned(id)) return { ok: false, reason: '未解锁：集齐 ' + XY.SP_LV_AT[0] + ' 张「' + XY.SP_BY[id].name + '」角色卡（掉落或灵石商店）' };
     sd().chosen = id; XY.save.touch(); return { ok: true, reason: '本关常驻：' + XY.SP_BY[id].name };
   };
-  // 测试版“一击满级”：只在测试版、只对本局常驻的特殊角色；师徒五人不受影响（队伍等级 G.level 不动）。
+  // 全开“一击满级”：只在全开、只对本局常驻的特殊角色；师徒五人不受影响（队伍等级 G.level 不动）。
   // 满级 = 角色卡 Lv5（它自己的上限：数值 +100%、特性、第 3 分支、觉醒外观）+ 角色等级 99（G.spHeroLv，Phyrex 变身要它）。只改本局，不写存档。
   XY.SP_MAX_LV = 5; XY.HERO_MAXLV = 99; XY.instMaxOn = !window.XY_NO_INSTMAX;     // instMaxOn：平衡 probe 把它关掉
   XY.version.instantMax = function (G) {
@@ -2047,7 +2047,7 @@ XY.TRAITS = {
     XY.ring(G, h.x, h.y, 90, h.def.color, 0.7, true); XY.ring(G, h.x, h.y, 150, '#ffd54a', 1.0, false); if (XY.anim) XY.anim.maxLevel(G, h);
     return true;
   };
-  XY.spHeroLv = function (G) { return G.instMax ? XY.HERO_MAXLV : Math.min(XY.HERO_MAXLV, G.level || 1); };   // 特殊角色的“角色等级”：测试版一击满级后是 99，否则就是队伍等级
+  XY.spHeroLv = function (G) { return G.instMax ? XY.HERO_MAXLV : Math.min(XY.HERO_MAXLV, G.level || 1); };   // 特殊角色的“角色等级”：全开一击满级后是 99，否则就是队伍等级
 
   // 下一级还差几张
   XY.spNext = function (id) {
@@ -3227,7 +3227,7 @@ XY.TRAITS = {
     LEGACY_LV: LEGACY_LV,
     // 开始第 n 关该用的快照（null = 从零开始）
     entryFor: function (n) {
-      if (XY.TEST_BUILD && C.TEST_LV98 !== false) return JR.testEntry(n);      // 测试版：每关都从“全队 Lv98、差一只怪升 99”开局，不看存档快照
+      if (XY.TEST_BUILD && C.TEST_LV98 !== false) return JR.testEntry(n);      // 全开：每关都从“全队 Lv98、差一只怪升 99”开局，不看存档快照
       var j = J(), e = j.entry[n];
       if (e) return e;
       if (n > 1 && j.legacy && XY.save.levelUnlocked(n)) {
@@ -3822,10 +3822,12 @@ XY.TRAITS = {
 
   function text(G, x, y, s, kind, color) {
     var T = G.texts;
+    if (G.td && G.td.quiet > G.td.clock && kind === 'big') return;
+    if (G.td && G.td.quiet > G.td.clock && (kind === 'dmg' || kind === 'crit' || kind === 'weak')) color = '#2a241c';
     if (kind === 'dmg' || kind === 'weak' || kind === 'resist') {                  // v0.5：同一处 100ms 内的伤害数字合并，高密度时不满屏
       for (var mi = T.length - 1; mi >= 0 && mi >= T.length - 14; mi--) {
         var mt = T[mi];
-        if (mt.kind === kind && mt.t < 0.1 && Math.abs(mt.x - x) < 34 && Math.abs(mt.y - (y - mt.t * 50)) < 26 && +mt.s > 0 && +s > 0) { mt.s = String(+mt.s + (+s)); G.stats.textMerged = (G.stats.textMerged || 0) + 1; return; }
+        var box = (G.td && G.td.quiet > G.td.clock) ? 140 : 34; if (mt.kind === kind && mt.t < 0.1 && Math.abs(mt.x - x) < box && Math.abs(mt.y - (y - mt.t * 50)) < box && +mt.s > 0 && +s > 0) { mt.s = String(+mt.s + (+s)); G.stats.textMerged = (G.stats.textMerged || 0) + 1; return; }
       }
     }
     if (T.length > 150) return;
@@ -3894,6 +3896,7 @@ XY.TRAITS = {
     if (e.dead) return;
     if (e.hidden) { if (!o || !o.dot) { e.flash = 0.1; if (Math.random() < 0.3) text(G, e.x, e.y - e.r - 4, '躲在洞里', 'resist'); } return; }   // 已经躲进洞里养伤的洞主：打不到；路上逃跑（还没进洞）时可以被打死
     o = o || {};
+    if (XY.tdHitBlock && XY.tdHitBlock(G, e, o)) { e.flash = 0.05; return; }
     if (e.fly && o.ground && C.AIR_GROUND_IMMUNE) { e.flash = 0.06; if (G.t - (G._airTxtT === undefined ? -9 : G._airTxtT) > 0.7) { G._airTxtT = G.t; text(G, e.x, e.y - e.r - 24, '飞在天上 · 够不着', 'resist'); } return; }   // v0.8.4：地面范围伤害打不到飞妖
     if (e.lt) dmg = Math.min(dmg, e.maxHp * VD_TOWER_HIT);       // v0.9 洞府塔：单次伤害最多掉最大血量的一小截（英雄大招动辄几千，不封顶塔一下就没了）
     if (e.def.boss && G.P.boss) dmg *= 1 + G.P.boss;          // 照妖镜：对洞府 BOSS 伤害更高
@@ -3938,7 +3941,7 @@ XY.TRAITS = {
     e.dead = true; G.kills++;
     if (e.affix) XY.affixDeath(G, e);
     if (XY.syn && o && o.src && o.src.sk) XY.syn.onKill(G, e, o.src);
-    if (XY.version && XY.version.instantMax) XY.version.instantMax(G);     // 测试版：打死第一只怪，当前特殊角色直接满级（标准版什么都不发生）
+    if (XY.version && XY.version.instantMax) XY.version.instantMax(G);     // 全开：打死第一只怪，当前特殊角色直接满级（标准版什么都不发生）
     var d = e.def;
     if (XY.sfx) XY.sfx(d.elite || d.etower ? 'elite' : 'kill');
     G.killsBy[e.type] = (G.killsBy[e.type] || 0) + 1; XY.save.addKill(e.type);   // 图鉴击杀数（存档）
@@ -4025,7 +4028,7 @@ XY.TRAITS = {
     if (contact) { if (h.contactT > 0) return; h.contactT = 0.4; }   // 被围殴时每 0.4 秒最多吃一次接触伤害
     if (XY.spsupPre) { dmg = XY.spsupPre(G, h, dmg); if (dmg <= 0) { h.hurtT = 0.1; return; } }
     var hdt = G._dt || 'phys', hel = G._el || null;
-    dmg *= (1 - h.dr) * (h.taunt > 0 ? 0.4 : 1) * (1 - (hdt === 'magic' ? h.mdef : h.pdef)) * XY.elemMul(hel, h.def.elem) * (h.shield > 0 ? 0.5 : 1) * (XY.syn ? XY.syn.drMul(G, h) : 1);                // 钉耙挡灾期间再减伤；协同技·互相守护再减伤 60%
+    dmg *= (1 - h.dr) * (h._lineDr ? (1 - Math.min(0.35, h._lineDr)) : 1) * (h.taunt > 0 ? 0.4 : 1) * (1 - (hdt === 'magic' ? h.mdef : h.pdef)) * XY.elemMul(hel, h.def.elem) * (h.shield > 0 ? 0.5 : 1) * (XY.syn ? XY.syn.drMul(G, h) : 1);                // 钉耙挡灾期间再减伤；协同技·互相守护再减伤 60%
     if (dmg > 0 && h.ward && h.ward.ready && XY.fabao && XY.fabao.wardBreak) { XY.fabao.wardBreak(G, h); return; }   // v0.8.3：避水珠 / 定海神珠 —— 一次性挡掉这一下（不管多大），然后进入冷却
     if (h.absorb > 0) { var ab2 = Math.min(h.absorb, dmg); h.absorb -= ab2; dmg -= ab2; if (dmg <= 0) { h.hurtT = 0.1; return; } }
     var sk = contact ? 'contact' : (G._src || 'other'); G.stats[sk] = (G.stats[sk] || 0) + dmg;
@@ -4050,12 +4053,14 @@ XY.TRAITS = {
   }
 
   function hurtHeroBy(G, h, dmg, contact, cause, dt, el) {
+    if (XY.tdTangSave && XY.tdTangSave(G, h)) return;
     G._dt = dt; G._el = el;
     hurtHero(G, h, dmg, contact, cause);
     G._dt = null; G._el = null;
   }
 
   function hurtCamp(G, dmg) {
+    if (XY.tdCampMul) dmg *= XY.tdCampMul(G);
     var c = G.camp;
     if (G.godMode || !c.active) return;               // 营地只在休息阶段生效
     if (G.villain) { XY.villain.hurtEye(G, G.heroes[0], dmg, true); return; }
@@ -4723,7 +4728,7 @@ XY.TRAITS = {
       var a = G.allies[j]; if (a.dead) continue;
       var dl = XY.dist(a.x, a.y, e.x, e.y); if (dl < ad) { ad = dl; al = a; }
     }
-    for (j = 0; j < G.towers.length; j++) {                // v0.5：护法天兵（原来的塔）和降临天兵同级，优先级都是最低
+    for (j = 0; j < G.towers.length && !(G.td && G.td.on); j++) {                // 天兵层：妖怪不拿天兵当目标
       var tw0 = G.towers[j], dl2 = XY.dist(tw0.x, tw0.y, e.x, e.y); if (dl2 < ad) { ad = dl2; al = tw0; }
     }
     return al || best;
@@ -4745,7 +4750,7 @@ XY.TRAITS = {
       o = G.heroes[i]; if (o.down || (i === 0 && false)) continue;
       dd = XY.dist(o.x, o.y, e.x, e.y); if (dd < R && dd < bd) { bd = dd; best = o; }
     }
-    if (!best) {                                            // v0.5：天兵（塔 + 降临天兵）统一排在最后
+    if (!best && !(G.td && G.td.on)) {                                            // 天兵层：妖塔也不打天兵
       var soldiers = XY.soldiersOf(G);
       for (i = 0; i < soldiers.length; i++) {
         o = soldiers[i]; dd = XY.dist(o.x, o.y, e.x, e.y); if (dd < R && dd < bd) { bd = dd; best = o; }
@@ -4928,6 +4933,7 @@ XY.TRAITS = {
       var d0 = XY.dist(hh0.x, hh0.y, e.x, e.y); if (i === 0) d0 = d0 * (C.DEN_AGGRO / C.DEN_AGGRO_TANG);
       if (d0 < nd) nd = d0;
     }
+    if (G.td && G.td.on) { for (i = 0; i < G.towers.length; i++) { var dTw = XY.dist(G.towers[i].x, G.towers[i].y, e.x, e.y); if (dTw < nd) nd = dTw; } }
     if (!e.home) e.home = { x: e.x, y: e.y };
     var hd = XY.dist(e.x, e.y, e.home.x, e.home.y);
     if (e.retreatT > 0) {                               // 败退：无敌，朝洞口跑，到洞口后继续养伤，时间到恢复血量再出来
@@ -5035,6 +5041,7 @@ XY.TRAITS = {
 
   // 塔受伤（只有妖塔 / 洞府 BOSS 的震地能伤到）。塔永远不能收回，被打爆是它唯一消失的方式
   function hurtTower(G, t, dmg) {
+    if (G && G.td && G.td.on) return;                 // 天兵层：妖怪打不到天兵
     if (G.godMode) return;
     if (t.treatT > 0 && C.SOLBUFF) dmg *= 1 - C.SOLBUFF.treat.dr;           // v0.8.3：犒赏期间受伤 −20%
     t.hp -= dmg; t.hurtT = 0.25;
@@ -5076,7 +5083,7 @@ XY.TRAITS = {
         t.cd = s.cd; var any = false;
         G.grid.query(t.x, t.y, s.range, function (e) {
           any = true; e.slowT = Math.max(e.slowT, 0.9); e.slowF = Math.max(e.slowF, d.slow * (e.def.boss ? 0.5 : 1));
-          hurtEnemy(G, e, s.dmg, { dot: true, type: 'magic', elem: 'water' });
+          hurtEnemy(G, e, s.dmg, { dot: true, type: 'magic', elem: 'water', kind: 'frost' });
         });
         if (any) { t.pulse = 0.4; t.atkT = 0.3; }
         continue;
@@ -5169,7 +5176,7 @@ XY.TRAITS = {
           p.hits.push(e.id); p.hitAny = true;
           if (p.kind === 'shell') { alive = false; explode(G, p); return; }
           if (p.anti && e.def.etower) { var amul = p.anti; hurtEnemy(G, e, p.dmg * amul, { src: p.src, kb: 0, fx: p.x, fy: p.y }); if (p.pierce-- <= 0) alive = false; return; }
-          hurtEnemy(G, e, p.dmg, { anti: p.anti, src: p.src, kb: p.kind === 'water' ? 90 : 40, fx: p.x - p.vx, fy: p.y - p.vy, crit: p.crit, type: p.dtype, elem: p.elem });
+          hurtEnemy(G, e, p.dmg, { anti: p.anti, src: p.src, kb: p.kind === 'water' ? 90 : 40, fx: p.x - p.vx, fy: p.y - p.vy, crit: p.crit, type: p.dtype, elem: p.elem, kind: p.kind });
           if (p.onHit) p.onHit(G, e, p);                   // v0.5：12 位常驻角色的独有效果（藤蔓缠绕 / 拉钩 / 标记 …）
           if (p.pierce-- <= 0) alive = false;
         });
@@ -5619,6 +5626,7 @@ XY.TRAITS = {
         IPr.dots(c, f.x, f.y, rR * 0.7, rR * 1.15, 5, 1, 2.4, IPr.INK, (1 - kk) * 0.6, rs + 8, 1);
         c.globalAlpha = 1; break; }
       case 'levelup': {
+        if (G && G.td && G.td.quiet > G.td.clock) { c.strokeStyle = 'rgba(90,70,40,0.45)'; c.lineWidth = 1.3; c.beginPath(); c.arc(x, y - 60, 22 + 10 * k, 0.8, 5.2); c.stroke(); break; }
         var up = Math.min(1, k * 2.2), fade = k < 0.6 ? 1 : (1 - (k - 0.6) / 0.4), H = 230 * up, w = 34 * (1 - 0.4 * k);
         if (f.lod < 2) { var g = c.createLinearGradient(0, y - H, 0, y + 16); g.addColorStop(0, 'rgba(255,230,120,0)'); g.addColorStop(1, 'rgba(255,214,80,' + 0.75 * fade + ')'); c.fillStyle = g; c.fillRect(x - w / 2, y - H, w, H + 16); }
         else { c.globalAlpha = 0.5 * fade; c.fillStyle = '#ffd650'; c.fillRect(x - w / 3, y - H, w * 0.66, H + 16); c.globalAlpha = 1; }
@@ -5626,6 +5634,7 @@ XY.TRAITS = {
         c.fillStyle = '#fff3a0'; for (var i = 0; i < (f.lod < 2 ? 6 : 3); i++) { var yy = y + 10 - ((t * 120 + i * 47) % 150), xx = x + sin(i * 2.1 + t * 3) * 22; starFill(c, xx, yy, 5 - 2 * k, i + t * 4); }
         c.globalAlpha = fade; otxt(c, '升级！', x, y - 66 - 40 * up, 20, '#d98a00', 'center', true); c.globalAlpha = 1; break; }
       case 'maxlv': {
+        if (G && G.td && G.td.quiet > G.td.clock) { c.strokeStyle = 'rgba(42,32,22,0.55)'; c.lineWidth = 1.5; c.beginPath(); c.arc(x, y - 78, 28 + 16 * k, 0.5, 5.4); c.stroke(); break; }
         var fa = k < 0.7 ? 1 : (1 - (k - 0.7) / 0.3); c.globalAlpha = fa;
         c.strokeStyle = '#ffcf33'; c.lineWidth = 6 * (1 - k) + 2; star(c, x, y, 30 + 160 * Math.min(1, k * 1.4), 10, 0.78, k * 2); c.stroke();
         c.lineWidth = 3; star(c, x, y, 18 + 100 * Math.min(1, k * 1.2), 8, 0.7, -k * 2); c.stroke();
@@ -6812,12 +6821,12 @@ XY.TRAITS = {
       lift = F.LIFT + (e.fs === 'aim' ? -3 : 0) + sin(rt * 3 + e.wob) * 2; if (e.fs === 'dive') lift = F.LIFT * 0.5;
       look = (e.th ? e.th.x : G.camp.x) > e.x ? 1 : -1;
       c.globalAlpha = e.fs === 'recover' ? 0.8 : 1;
-      var flew = XY.MINK && XY.MINK.fly && XY.MINK.fly(c, e, rt, e.x, e.y - lift, look);
-      if (!flew && e.type !== 'bat' && e.type !== 'owl') { var tint = e.flash > 0 ? '#ffffff' : (e.enraged ? '#2a2118' : null); if (e.type === 'bat') bat(c, e.x, e.y - lift, e.r * 1.15, rt, e.wob, tint, false); else owl(c, e.x, e.y - lift, e.r * 1.1, rt, e.wob, tint, false, look); }
+      var sky = !!e.tdSky, flew = !sky && XY.MINK && XY.MINK.fly && XY.MINK.fly(c, e, rt, e.x, e.y - lift, look);
+      if (!flew) { if (sky && XY.tdInkFly) XY.tdInkFly(c, e, rt, e.x, e.y - lift); else { var tint = e.flash > 0 ? '#ffffff' : (e.enraged ? '#2a2118' : null); if (e.type === 'owl') owl(c, e, rt, e.x, e.y - lift, e.r * 1.1, rt, e.wob, tint, false, look); else bat(c, e.x, e.y - lift, e.r * 1.15, rt, e.wob, tint, false); } }
       c.globalAlpha = 1;
       if (e.slowT > 0) { c.strokeStyle = 'rgba(74,144,217,0.75)'; c.lineWidth = 2; c.beginPath(); c.ellipse(e.x, e.y + e.r * 0.5, e.r * 1.1, e.r * 0.4, 0, 0, PI2); c.stroke(); }
       if (e.stunT > 0) { c.fillStyle = '#e0a415'; c.font = 'bold 12px sans-serif'; c.textAlign = 'center'; c.fillText('★ ★', e.x, e.y - lift - e.r * 1.6); }
-      if (e.hp < e.maxHp) bar(c, e.x - e.r, e.y - lift - e.r * 1.5 - 4, e.r * 2, 4, e.hp / e.maxHp, '#e0533d', 'rgba(255,255,255,0.85)');
+      if (e.hp < e.maxHp && !sky) bar(c, e.x - e.r, e.y - lift - e.r * 1.5 - 4, e.r * 2, 4, e.hp / e.maxHp, '#e0533d', 'rgba(255,255,255,0.85)');
     }
   };
 })();
@@ -7718,7 +7727,7 @@ XY.TRAITS = {
     var h = ph(G); if (!h) return { ok: false, reason: '只有 Phyrex 能变身' };
     if (h.down) return { ok: false, reason: 'Phyrex 已阵亡' };
     if (h.xf > 0) return { ok: false, reason: '正在变身中' };
-    var rl = XY.spHeroLv ? XY.spHeroLv(G) : G.level;      // 角色等级：测试版一击满级后是 99，否则就是队伍等级
+    var rl = XY.spHeroLv ? XY.spHeroLv(G) : G.level;      // 角色等级：全开一击满级后是 99，否则就是队伍等级
     if (rl < C.PH_XF_LEVEL) return { ok: false, reason: '队伍等级到 ' + C.PH_XF_LEVEL + ' 级才能变身（现在 ' + rl + ' 级）' };
     if (h.xfCd > 0) return { ok: false, reason: '变身冷却中（还要 ' + Math.ceil(h.xfCd) + ' 秒）' };
     return { ok: true, reason: '' };
@@ -7980,7 +7989,7 @@ XY.TRAITS = {
   XY.save.solCards = function (t) { return sdat().cards[t] || 0; };
   XY.save.solLevel = function (t) {
     var l = XY.solLevelOf(XY.save.solCards(t));
-    if (XY.TEST_BUILD) l = Math.max(l, 1);      // 测试版：所有天兵种类开局可用（至少 Lv1）
+    if (XY.TEST_BUILD) l = Math.max(l, 1);      // 全开：所有天兵种类开局可用（至少 Lv1）
     return l;
   };
   XY.save.solOwned = function (t) { return XY.save.solLevel(t) >= 1; };
@@ -9191,8 +9200,9 @@ XY.BGS1={"src": "data:image/webp;base64,UklGRtT1GgBXRUJQVlA4IMj1GgCQwWGdASoAEAAK
     if (cl) { lift = 10 + 2.5 * Math.sin(rt * 2.2 + (h.bob || 0)); y -= lift; }
     // 唐僧佛光
     if (h.id === 'tang' && !h.down) {
-      var ar = h.auraR || 125;
-      if (XY.INKP) { XY.INKP.ring(c, x, y, ar, 2.1, XY.INKP.INK, 0.22 + 0.06 * Math.sin(rt * 2), 9, 6, 1, rt * 0.35); XY.INKP.ring(c, x, y, ar * 0.97, 1, XY.INKP.INK, 0.14, 4, 4, 1, -rt * 0.2); }
+      var ar = h.auraR || 125, qAura = G.td && G.td.quiet > G.td.clock;
+      if (qAura) { c.strokeStyle = 'rgba(42,32,22,0.32)'; c.lineWidth = 1.3; c.beginPath(); c.arc(x, y, ar * 0.62, 0.5, 2.4); c.stroke(); c.beginPath(); c.arc(x, y, ar, 3.6, 5.8); c.stroke(); }
+      else if (XY.INKP) { XY.INKP.ring(c, x, y, ar, 2.1, XY.INKP.INK, 0.22 + 0.06 * Math.sin(rt * 2), 9, 6, 1, rt * 0.35); XY.INKP.ring(c, x, y, ar * 0.97, 1, XY.INKP.INK, 0.14, 4, 4, 1, -rt * 0.2); }
     }
     // 流沙河、操控标记
     if (cl) {
@@ -9223,7 +9233,7 @@ XY.BGS1={"src": "data:image/webp;base64,UklGRtT1GgBXRUJQVlA4IMj1GgCQwWGdASoAEAAK
       else if (!horsePose && !(XY.CHIBI_INK && XY.CHIBI_INK.horse) && !(XY.CHIBI && XY.CHIBI.horse) && !(XY.MINK && XY.MINK.poseOwns && XY.MINK.poseOwns(mnt))) drawHeroShape(c, mnt.def, x, my, mr);
     }
     var rr = r * (h.xf > 0 ? 1.25 : 1);
-    if (h.id === 'phyrex') { XY.phDrawHeroUnder(c, G, h, x, y + bob, r, rt); XY.R4.xfDraw = h.xf > 0; }
+    if (h.id === 'phyrex') { if (!(G.td && G.td.quiet > G.td.clock)) XY.phDrawHeroUnder(c, G, h, x, y + bob, r, rt); XY.R4.xfDraw = h.xf > 0; }
     var posed = !!(XY.MINK && XY.MINK.poseHero && XY.MINK.poseHero(c, h, rt, x, y + bob + ry, rr));
     var useCb = !posed && !(h.id === 'horse' && d.form === 'human') && XY.chibi && XY.chibi.ready(h);
     var tall = useCb || posed, tr = tall ? rr * 2.85 - ry : r;
@@ -9235,40 +9245,47 @@ XY.BGS1={"src": "data:image/webp;base64,UklGRtT1GgBXRUJQVlA4IMj1GgCQwWGdASoAEAAK
       drawHeroShape(c, d, x, y + bob + ry, rr);
       if (sq) c.restore();
     }
-    if (h.id === 'phyrex') { XY.R4.xfDraw = false; XY.phDrawHeroOver(c, G, h, x, y + bob - (useCb ? r * 0.5 : 0), r, rt); }
+    if (h.id === 'phyrex') { XY.R4.xfDraw = false; if (!(G.td && G.td.quiet > G.td.clock)) XY.phDrawHeroOver(c, G, h, x, y + bob - (useCb ? r * 0.5 : 0), r, rt); }
     if (h.hurtT > 0 && !useCb && !posed) { c.fillStyle = 'rgba(255,60,40,' + (h.hurtT * 2) + ')'; c.beginPath(); c.arc(x, y + bob, r, 0, PI2); c.fill(); }
-    if (h.inv > 0) { c.strokeStyle = 'rgba(255,215,80,0.85)'; c.lineWidth = 3; c.beginPath(); c.arc(x, y, r + 6 + Math.sin(rt * 20) * 1.5, 0, PI2); c.stroke(); }
+    if (h.inv > 0) { var qInv = G.td && G.td.quiet > G.td.clock; c.strokeStyle = qInv ? 'rgba(42,32,22,0.4)' : 'rgba(255,215,80,0.85)'; c.lineWidth = qInv ? 1.4 : 3; c.beginPath(); c.arc(x, y, r + 6 + Math.sin(rt * 20) * 1.5, 0, PI2); c.stroke(); }
     // 血条
     var bw = 44, f = h.hp / h.maxHp;
     if (h.id === 'tang') { rrect(c, x - 20, y + r + 4, 40, 12, 6); c.fillStyle = (G.tdanger || G.breach) && Math.sin(rt * 14) > 0 ? '#e0533d' : '#f3b3a6'; c.fill(); txt(c, '仅 1 血', x, y + r + 10.5, 10, '#7a1d10', 'center', true); }
     else bar(c, x - bw / 2, y + r + 5, bw, 6, f, hpColor(f), 'rgba(255,255,255,0.85)');
     // 命令标签：手动 / 自动命令（唐僧驻守生效时写明“只回血”）
     var lab = isC ? '手动' : (h.id === 'tang' && G.station ? '驻守中·只回血' : (XY.ORDER_SHORT[h.order] || ''));
-    if (lab) otxt(c, lab, x, XY.R4.placeLabel(c, lab, x, y + r + 20, 11, 1), 11, isC ? '#b8300f' : (G.station && h.id === 'tang' ? '#a8700a' : '#4a6a8a'), 'center', true);
+    if (lab && !(G.td && G.td.quiet > G.td.clock)) otxt(c, lab, x, XY.R4.placeLabel(c, lab, x, y + r + 20, 11, 1), 11, isC ? '#b8300f' : (G.station && h.id === 'tang' ? '#a8700a' : '#4a6a8a'), 'center', true);
     var clash = XY.R4.labelClash(G, x - 50, y + lift - tr - 54, 100, 52);          // v0.7：头顶标签碰到 BOSS 的名牌 / 血条区域 → 名字等挪到脚下
     // 唐僧血量低：红圈 + 感叹号
-    if (h.id === 'tang' && (G.tdanger || G.breach)) {
+    if (h.id === 'tang' && (G.tdanger || G.breach) && !(G.td && G.td.quiet > G.td.clock)) {
       var pz = 0.5 + 0.5 * Math.sin(rt * 10);
       c.strokeStyle = 'rgba(224,60,40,' + (0.5 + 0.4 * pz) + ')'; c.lineWidth = 3.5; c.beginPath(); c.arc(x, y, r + 11 + pz * 3, 0, PI2); c.stroke();
       otxt(c, G.breach ? '妖怪进营地了！' : '师傅危险！', x, clash ? y + r + 46 : y - tr - 42, 14, '#d62828', 'center', true);
     }
-    if (h.id === 'tang' && h.inv > 0 && G.t < C.TANG_START_INV + 0.5) {
+    if (h.id === 'tang' && h.inv > 0 && G.t < C.TANG_START_INV + 0.5 && !(G.td && G.td.quiet > G.td.clock)) {
       var invLab = '开局保护 ' + Math.ceil(h.inv) + ' 秒'; otxt(c, invLab, x, clash ? y + r + 46 : XY.R4.placeLabel(c, invLab, x, y - tr - 58, 12, -1), 12, '#a8700a', 'center', true);
     }
     // 名字（操控中的更醒目，头顶带小三角）
     // v0.8.1：名牌延后到所有英雄画完再画（flushHeroNames），避开其他角色的身体 / 血条 / 命令标签和别的名牌，也不会被后画的角色盖住
     heroBodies.push({ h: h, x0: x - Math.max(rr * 1.15, tall ? 30 : 0), x1: x + Math.max(rr * 1.15, tall ? 30 : 0), y0: Math.min(y - (tall ? tr : r) - 2, h._wildTop == null ? 1e9 : h._wildTop), y1: y + r + 12 });
     var nameY = clash ? y + r + (h.sp ? 47 : 34) : y - tr - (isC ? 17 : 13); if (!clash && h._wildTop != null) nameY = Math.min(nameY, h._wildTop - (isC ? 18 : 14));
-    heroNames.push({ h: h, s: d.name + (h.sp ? ' Lv' + d.lv : ''), x: x, y: nameY, sz: isC ? 15 : 13, col: isC ? '#b8300f' : T.ink, dir: clash ? 1 : -1, mark: isC && !clash, a: c.globalAlpha, tri: Math.sin(rt * 6) * 2 });
+    if (!(G.td && G.td.quiet > G.td.clock)) heroNames.push({ h: h, s: d.name + (h.sp ? ' Lv' + d.lv : ''), x: x, y: nameY, sz: isC ? 15 : 13, col: isC ? '#b8300f' : T.ink, dir: clash ? 1 : -1, mark: isC && !clash, a: c.globalAlpha, tri: Math.sin(rt * 6) * 2 });
   }
   var heroBodies = [], heroNames = [];
-  function flushHeroNames(c) {                                  // 名牌防叠：名字优先在头顶；候选只有「头顶 / 左右小幅错开 / 稍高」，最大偏离约半个人物高度，不放脚下。严格避开别的名牌 / 命令标签，和身体只轻微让一让
-    var R4 = XY.R4, L = R4.lblList(), m = c.getTransform(), sc = m.a || 1, i, j, k, B = [];
+  function flushHeroNames(c) {                                  // 名牌防叠：挤在一起超过三人时只留主控的名字；其余左右、上下错开
+    var R4 = XY.R4, L = R4.lblList(), m = c.getTransform(), sc = m.a || 1, i, j, k, B = [], pile = [], ctrl = window.__xy && window.__xy.G ? window.__xy.G.ctrl : -1;
+    for (i = 0; i < heroNames.length; i++) {
+      var n0 = heroNames[i], near = 0;
+      for (j = 0; j < heroNames.length; j++) if (Math.abs(heroNames[j].x - n0.x) < 80 && Math.abs(heroNames[j].y - n0.y) < 64) near++;
+      if (near >= 4 && !(n0.h && n0.h.i === ctrl)) continue;
+      pile.push(n0);
+    }
+    heroNames = pile;
     for (j = 0; j < heroBodies.length; j++) { var o = heroBodies[j]; B.push({ h: o.h, x0: m.e + o.x0 * sc, x1: m.e + o.x1 * sc, y0: m.f + o.y0 * sc, y1: m.f + o.y1 * sc }); }
     function ov(r, list, skipH) { var a = 0; for (var q = 0; q < list.length; q++) { var t = list[q]; if (skipH && t.h === skipH) continue; var w = Math.min(r.x1, t.x1) - Math.max(r.x0, t.x0), h = Math.min(r.y1, t.y1) - Math.max(r.y0, t.y0); if (w > 0 && h > 0) a += w * h; } return a; }
     for (i = 0; i < heroNames.length; i++) {
       var n = heroNames[i], fs = n.sz; c.font = 'bold ' + fs + 'px ' + C.FONT;
-      var tw = c.measureText(XY.fmtStr(n.s)).width + 6, th = fs + 3, best = null, sg = n.dir < 0 ? -1 : 1, dx = 22, cand = [[0, 0], [-dx, 0], [dx, 0], [0, sg * th * 0.8], [-dx, sg * th * 0.8], [dx, sg * th * 0.8], [0, sg * th * 1.6]];
+      var tw = c.measureText(XY.fmtStr(n.s)).width + 6, th = fs + 3, best = null, sg = n.dir < 0 ? -1 : 1, dx = 52, cand = [[0, 0], [-dx, 0], [dx, 0], [0, sg * th], [-dx, sg * th], [dx, sg * th], [0, sg * th * 2.2], [-dx, sg * th * 2.2], [dx, sg * th * 2.2]];
       for (k = 0; k < cand.length; k++) {
         var cy = n.y + cand[k][1], cx = n.x + cand[k][0], r = { x0: m.e + (cx - tw / 2) * sc, x1: m.e + (cx + tw / 2) * sc, y0: m.f + (cy - fs / 2 - 1.5) * sc, y1: m.f + (cy - fs / 2 - 1.5 + th) * sc };
         var sc0 = ov(r, L, null) * 4 + ov(r, B, n.h) * 0.12 + (Math.abs(cand[k][0]) * 0.6 + Math.abs(cand[k][1])) * 0.05 * sc;   // 名牌 / 标签重叠重罚；身体只轻罚；离头顶越远略扣分
@@ -9453,6 +9470,7 @@ XY.BGS1={"src": "data:image/webp;base64,UklGRtT1GgBXRUJQVlA4IMj1GgCQwWGdASoAEAAK
     }
     c.globalAlpha = 1;
     for (i = 0; i < G.coinDrops.length; i++) {
+      if (G.td && G.td.quiet > G.td.clock) break;
       var k = G.coinDrops[i]; if (!inView(G, k.x, k.y, 20)) continue;
       c.globalAlpha = XY.dropAlpha(k, rt);
       drawInkIngot(c, k.x, k.y, ((k.x + k.y) | 0));
@@ -9772,7 +9790,7 @@ XY.BGS1={"src": "data:image/webp;base64,UklGRtT1GgBXRUJQVlA4IMj1GgCQwWGdASoAEAAK
 
     // 造塔预览 / 选中的塔：升级按钮（点击操作，不用热键）
     var tcx = G.view.w / 2 - G.cam.x, tcy = G.view.h / 2 - G.cam.y;
-    if (app.build && app.mouse && G.mode === 'play') {
+    if (app.build && app.mouse && G.mode === 'play' && !G.td) {
       var bd0 = XY.TOWERS[app.build], mxw = app.mouse.x - tcx, myw = app.mouse.y - tcy, why = XY.towerBlock(G, app.build, mxw, myw);
       c.save(); c.globalAlpha = 0.85;
       c.beginPath(); c.arc(app.mouse.x, app.mouse.y, bd0.range, 0, PI2); c.fillStyle = why ? 'rgba(220,80,60,0.08)' : 'rgba(80,170,90,0.10)'; c.fill();
@@ -9782,7 +9800,7 @@ XY.BGS1={"src": "data:image/webp;base64,UklGRtT1GgBXRUJQVlA4IMj1GgCQwWGdASoAEAAK
       c.restore();
       txt(c, why ? '✘ ' + why : '✔ 点击放置 ' + bd0.name + '（' + bd0.cost + ' 金币）', app.mouse.x, app.mouse.y - 40, 13, why ? '#b8300f' : '#2f7d3b', 'center', true);
     }
-    if (app.selTower && G.towers.indexOf(app.selTower) >= 0) {
+    if (app.selTower && G.towers.indexOf(app.selTower) >= 0 && !G.td) {
       var st = app.selTower, sd = XY.TOWERS[st.type], sx = st.x + tcx, sy = st.y + tcy, ss = XY.towerStat(G, st);
       c.beginPath(); c.arc(sx, sy, ss.range, 0, PI2); c.lineWidth = 2; c.strokeStyle = 'rgba(232,137,43,0.8)'; c.setLineDash([6, 5]); c.stroke(); c.setLineDash([]);
       var pw = 158, ph = 62, px2 = Math.max(6, Math.min(W - pw - 6, sx - pw / 2)), py2 = Math.max(60, sy - 40 - ph);
@@ -10412,9 +10430,9 @@ XY.BGS1={"src": "data:image/webp;base64,UklGRtT1GgBXRUJQVlA4IMj1GgCQwWGdASoAEAAK
     if (t.pulse > 0 && TY === 'frost') { c.strokeStyle = 'rgba(80,160,230,' + (t.pulse * 1.5) + ')'; c.lineWidth = 3; c.beginPath(); c.arc(x, y, s.range * (1 - t.pulse), 0, PI2); c.stroke(); }
     // 血条（受伤才显示）
     var mh = XY.towerMaxHp ? XY.towerMaxHp(t) : t.maxHp;
-    if (t.hp < mh - 0.5) T.bar(c, x - 20, y + 31, 40, 5, t.hp / mh, '#e0533d', 'rgba(255,255,255,0.85)');
+    if (t.hp < mh - 0.5 && !(G.td && G.td.on)) T.bar(c, x - 20, y + 31, 40, 5, t.hp / mh, '#e0533d', 'rgba(255,255,255,0.85)');
     if (t.maxLife) { T.bar(c, x - 20, y + 37, 40, 3, Math.max(0, t.life / t.maxLife), '#6bb7e8', 'rgba(255,255,255,0.7)'); }
-    if (t.mode === 'garrison') T.otxt(c, '驻守', x, inkd ? gy - XY.SINK.top(t) - 6 : y - 52, 10.5, '#a8700a', 'center', true);
+    if (t.mode === 'garrison' && !(G.td && G.td.quiet > G.td.clock)) T.otxt(c, '驻守', x, inkd ? gy - XY.SINK.top(t) - 6 : y - 52, 10.5, '#a8700a', 'center', true);
     // 升级闪光（t.upT 倒计时）
     if (t.upT > 0) {
       var u = 1 - t.upT / 1.2; u = Math.max(0, Math.min(1, u));
@@ -11390,7 +11408,7 @@ XY.BGS1={"src": "data:image/webp;base64,UklGRtT1GgBXRUJQVlA4IMj1GgCQwWGdASoAEAAK
     }
     // 造塔预览 / 天兵落点预览 / 选中的塔
     var tcx = G.view.w / 2 - G.cam.x, tcy = G.view.h / 2 - G.cam.y;
-    if (app.build && app.mouse && G.mode === 'play') {
+    if (app.build && app.mouse && G.mode === 'play' && !G.td) {
       var bd0 = XY.TOWERS[app.build], mxw = app.mouse.x - tcx, myw = app.mouse.y - tcy, why = XY.towerBlock(G, app.build, mxw, myw);
       c.save(); c.globalAlpha = 0.85; c.beginPath(); c.arc(app.mouse.x, app.mouse.y, bd0.range, 0, 6.3); c.fillStyle = why ? 'rgba(220,80,60,0.08)' : 'rgba(80,170,90,0.10)'; c.fill();
       c.lineWidth = 2; c.strokeStyle = why ? '#d9503c' : '#4aa35a'; c.setLineDash([6, 5]); c.stroke(); c.setLineDash([]);
@@ -11402,7 +11420,7 @@ XY.BGS1={"src": "data:image/webp;base64,UklGRtT1GgBXRUJQVlA4IMj1GgCQwWGdASoAEAAK
       c.beginPath(); c.arc(app.mouse.x, app.mouse.y, 320, 0, 6.3); c.fill(); c.stroke(); c.setLineDash([]); c.restore();
       T.otxt(c, '点击降下天兵（免费，每关一次）· 右键取消', app.mouse.x, app.mouse.y - 12, 14, '#3d6aa8', 'center', true);
     }
-    if (app.selTower && G.towers.indexOf(app.selTower) >= 0) {
+    if (app.selTower && G.towers.indexOf(app.selTower) >= 0 && !G.td) {
       var st = app.selTower, sd = XY.TOWERS[st.type], sx = st.x + tcx, sy = st.y + tcy, ss = XY.towerStat(G, st);
       c.beginPath(); c.arc(sx, sy, ss.range, 0, 6.3); c.lineWidth = 2; c.strokeStyle = 'rgba(232,137,43,0.8)'; c.setLineDash([6, 5]); c.stroke(); c.setLineDash([]);
       var sb = XY.solBuff(G, st), tr0 = C.SOLBUFF.treat, mobT = app.zoom < 0.75, u = mobT ? Math.min(2.4, 1.2 / app.zoom) : 1;   // 手机：整块浮窗放大，按钮 ≥ 40 CSS 像素
@@ -11425,7 +11443,7 @@ XY.BGS1={"src": "data:image/webp;base64,UklGRtT1GgBXRUJQVlA4IMj1GgCQwWGdASoAEAAK
     function edge(tx, ty, label, col, alert) {
       var dx = tx - G.cam.x, dy = ty - G.cam.y;
       if (Math.abs(dx) <= G.view.w / 2 - 20 && Math.abs(dy) <= G.view.h / 2 - 20) return;
-      var ang = Math.atan2(dy, dx), ca = Math.cos(ang), sa = Math.sin(ang), x0 = 300, x1 = W - 290, y0 = 160, y1 = H - 150;
+      var ang = Math.atan2(dy, dx), ca = Math.cos(ang), sa = Math.sin(ang), x0 = Math.min(150, W * 0.18), x1 = W - Math.min(140, W * 0.18), y0 = Math.min(140, H * 0.12), y1 = H - Math.min(130, H * 0.14);
       var kx = ca > 0 ? (x1 - W / 2) / ca : (ca < 0 ? (x0 - W / 2) / ca : 1e9), ky = sa > 0 ? (y1 - H / 2) / sa : (sa < 0 ? (y0 - H / 2) / sa : 1e9), sc = Math.min(kx, ky);
       var ax = W / 2 + ca * sc, ay = H / 2 + sa * sc;
       c.save(); c.translate(ax, ay); c.rotate(ang); c.fillStyle = alert && Math.sin(rt * 14) > 0 ? '#e0533d' : col; c.strokeStyle = '#fff'; c.lineWidth = 3;
@@ -11433,9 +11451,9 @@ XY.BGS1={"src": "data:image/webp;base64,UklGRtT1GgBXRUJQVlA4IMj1GgCQwWGdASoAEAAK
       var ly = R4.placeLabel(c, label, ax - Math.cos(ang) * 40, ay - Math.sin(ang) * 40, 13, -1);
       T.otxt(c, label, ax - Math.cos(ang) * 40, ly, 13, alert ? '#c0392b' : T.T.ink, 'center', true);
     }
-    if (!pOpen && (G.camp.active || G.tang.phase === 'walk')) edge(G.camp.x, G.camp.y, G.campAlert > 0 ? '营地被攻击！' : (G.camp.active ? '营地' : '休息点'), '#d9a21a', G.campAlert > 0);
-    if (!pOpen && !tg.down) edge(tg.x, tg.y, (G.breach || G.tdanger) ? '师傅危险！' : '师傅', '#e2a63a', G.breach || G.tdanger);
-    if (!pOpen) edge(G.gate.x, G.gate.y, G.gate.sealed ? '关口（主线未完成）' : '关口：师父走到就通关', G.gate.sealed ? '#a39a8a' : '#e0a415', false);
+    if (!pOpen && (G.camp.active || G.tang.phase === 'walk') && !(G.td && G.td.quiet > G.td.clock)) edge(G.camp.x, G.camp.y, G.campAlert > 0 ? '营地被攻击！' : (G.camp.active ? '营地' : '休息点'), '#d9a21a', G.campAlert > 0);
+    if (!pOpen && !tg.down && !(G.td && G.td.quiet > G.td.clock)) edge(tg.x, tg.y, (G.breach || G.tdanger) ? '师傅危险！' : '师傅', '#e2a63a', G.breach || G.tdanger);
+    if (!pOpen && !(G.td && G.td.quiet > G.td.clock)) edge(G.gate.x, G.gate.y, G.gate.sealed ? '关口（主线未完成）' : '关口：师父走到就通关', G.gate.sealed ? '#a39a8a' : '#e0a415', false);
     drawTip(c, app, tip || app._tip);
     if (G.tut) XY.tutDraw(c, G, app);
   };
@@ -13844,7 +13862,7 @@ XY.ICONINK_DATA={"金箍棒":{"src":"data:image/webp;base64,UklGRjINAABXRUJQVlA4
   XY.VILLAIN_SERIES = XY.VILLAIN_SERIES || { niumo: { id: 'niumo', name: '牛魔王', order: 1, enabled: true } };
   /* 解锁链（用户确认）：基础关 → 副本 → Boss 战 → 反派模式。条件做成可配置表：改这张表就能改解锁条件，存档记录每一环是否通过（data.chain）。
    *   need.kind：'level'（通关第 id 关）/ 'dungeon'（通关任意洞府副本）/ 'boss'（打赢 id 系列的 Boss，id 如 'niumo'）
-   *   测试版（XY.TEST_BUILD）全部开放。反派模式按 Boss 系列分钱包 / 进度：data.villain.series[系列] = { wallet:{yaojin,yaodan}, got, runs, cleared, mats, evo, t3Seen, pity, traps, stage }（见 meta.js villainSeriesDefault），牛魔王 niumo 是第一个。 */
+   *   全开（XY.TEST_BUILD）全部开放。反派模式按 Boss 系列分钱包 / 进度：data.villain.series[系列] = { wallet:{yaojin,yaodan}, got, runs, cleared, mats, evo, t3Seen, pity, traps, stage }（见 meta.js villainSeriesDefault），牛魔王 niumo 是第一个。 */
   XY.CHAIN09 = XY.CHAIN09 || [
     { id: 'dungeon', name: '洞府副本', need: { kind: 'level', id: 1 }, hint: '通关第 1 关一次' },
     { id: 'bossfight', name: 'Boss 战', need: { kind: 'dungeon' }, hint: '通关任意一个洞府副本' },
@@ -13852,7 +13870,7 @@ XY.ICONINK_DATA={"金箍棒":{"src":"data:image/webp;base64,UklGRjINAABXRUJQVlA4
   ];
   var CH = XY.chain09 = {
     by: function (id) { return XY.CHAIN09.filter(function (z) { return z.id === id; })[0] || null; },
-    passed: function (need) {                                              // 条件本身是否满足（只读存档，不看测试版）
+    passed: function (need) {                                              // 条件本身是否满足（只读存档，不看全开）
       var d = XY.save && XY.save.data; if (!d || !need) return false;
       if (need.kind === 'level') return !!(d.levels && d.levels[need.id] && d.levels[need.id].cleared);
       if (need.kind === 'dungeon') return !!(d.dng && Object.keys(d.dng).some(function (k) { return d.dng[k] && d.dng[k].cleared; }));
@@ -14009,7 +14027,7 @@ XY.ICONINK_DATA={"金箍棒":{"src":"data:image/webp;base64,UklGRjINAABXRUJQVlA4
 /* ---- js/auto.js ---- */
 /* ============================================================
  * auto.js —— v0.9「尽量只用方向键」：自动加点 / 自动犒赏天兵（F）/ 自动召唤特殊人物（G）/ 法宝三选一自动选推荐
- * 偏好存在 localStorage（xy_auto_v1），测试版和普通版共用；暂停页里有四个开关。
+ * 偏好存在 localStorage（xy_auto_v1），全开和普通版共用；暂停页里有四个开关。
  * 默认：加点、犒赏、召唤、选卡都关。只有玩家自己打开才生效，刷新后保持。缺字段或坏值按关。手动按键（F / G / 1 2 3）照旧可用。
  * ============================================================ */
 (function () {
@@ -17382,7 +17400,7 @@ XY.XC_TPL={"scholar":{"w":310,"h":520,"foot":[182,516],"head":[182,45,32],"kb":5
     verBtn(c, app, px + pw - 214, py + 14, 200, 48); if (app.menuMsg && app.rt < app.menuMsg.until) txt(c, app.menuMsg.text, W / 2, py + ph - 9, 13, '#2f7d3b', 'center', true);
     var nu = (rep.newUnlocks || []).map(function (id) { return XY.UNLOCK_BY[id].name; });
     if (nu.length) { txt(c, '★ 新解锁：' + nu.join('、'), W / 2, y, 14, '#2f7d3b', 'center', true); }
-    var jn = G.mod ? '非官方玩法包：只能玩，不发任何奖励，不记通关，不影响存档' : G.dungeon ? (win ? '洞府副本不计入取经之旅：第 1 关和后面的进度都没有变（首通奖励已发）' : '副本失败不扣任何东西，再来一局就是了') : win ? (G.levelId < XY.LEVEL_COUNT ? '取经之旅：全队 Lv' + G.level + '、技能和法宝已存档，带进第 ' + (G.levelId + 1) + ' 关（阵亡的师徒也会带着等级回来）' : '取经之旅：三关全部走完！成长已存档') : '失败不会清掉之前的积累：再来一局会回到本关开始时的状态（' + XY.journey.status(G.levelId).text + '）';
+    var jn = G.mod ? '非官方玩法包：只能玩，不发任何奖励，不记通关，不影响存档' : G.dungeon ? (win ? '洞府副本不计入取经之旅：第 1 关和后面的进度都没有变（首通奖励已发）' : '副本失败不扣任何东西，再来一局就是了') : win ? (G.levelId < XY.LEVEL_COUNT ? '取经之旅：全队 Lv' + G.level + '、技能和法宝已存档，带进第 ' + (G.levelId + 1) + ' 关（阵亡的师徒也会带着等级回来）' : '取经之旅：全部关卡走完！成长已存档') : '失败不会清掉之前的积累：再来一局会回到本关开始时的状态（' + XY.journey.status(G.levelId).text + '）';
     txt(c, jn, W / 2, py + ph - 92, 13, win ? '#2f7d3b' : T.inkSoft, 'center', win);
     var by = py + ph - 74, hasNext = win && !G.dungeon && !G.mod && G.levelId < XY.LEVEL_COUNT;
     if (hasNext) { R.btn(c, app, px + 24, by, 190, 52, '下一关（可换角色）', 'nextLevel', { primary: true }); R.btn(c, app, px + 225, by, 190, 52, '再来一局（R）', 'restart'); R.btn(c, app, px + 426, by, 190, 52, '回到首页', 'home'); }
@@ -18105,7 +18123,7 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
     c.fillStyle = RED; R.rrect(c, x, y + 27, Math.min(46, w), 4, 2); c.fill();
   };
 
-  /* ---------- 版本 / 测试版开关（菜单、选关页、组牌页共用）：小药丸 + 滑块 ---------- */
+  /* ---------- 版本 / 全开开关（菜单、选关页、组牌页共用）：小药丸 + 滑块 ---------- */
   M.verSwitch = function (c, app, x, y, w, h) {
     if (XY.version && XY.version.showToggle && !XY.version.showToggle()) return;
     var test = XY.TEST_BUILD, hov = over(app, x, y, w, h), flash = app.verFlash && app.rt < app.verFlash, kr = h / 2 - 4;
@@ -18746,7 +18764,7 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
       y += 30;
     }
     if (nu.length) { text(c, '★ 新解锁：' + nu.join('、'), cx, y + 8, 14, '#2f7d3b', 'center', true); y += 26; }
-    var jn = G.mod ? '非官方玩法包：只能玩，不发任何奖励，不记通关，不影响存档' : G.dungeon ? (win ? '洞府副本不计入取经之旅：第 1 关和后面的进度都没有变（首通奖励已发）' : '副本失败不扣任何东西，再来一局就是了') : win ? (G.levelId < XY.LEVEL_COUNT ? '取经之旅：全队 Lv' + G.level + '、技能和法宝已存档，带进第 ' + (G.levelId + 1) + ' 关（阵亡的师徒也会带着等级回来）' : '取经之旅：三关全部走完！成长已存档') : '失败不会清掉之前的积累：再来一局会回到本关开始时的状态（' + XY.journey.status(G.levelId).text + '）';
+    var jn = G.mod ? '非官方玩法包：只能玩，不发任何奖励，不记通关，不影响存档' : G.dungeon ? (win ? '洞府副本不计入取经之旅：第 1 关和后面的进度都没有变（首通奖励已发）' : '副本失败不扣任何东西，再来一局就是了') : win ? (G.levelId < XY.LEVEL_COUNT ? '取经之旅：全队 Lv' + G.level + '、技能和法宝已存档，带进第 ' + (G.levelId + 1) + ' 关（阵亡的师徒也会带着等级回来）' : '取经之旅：全部关卡走完！成长已存档') : '失败不会清掉之前的积累：再来一局会回到本关开始时的状态（' + XY.journey.status(G.levelId).text + '）';
     var by = py + ph - 76;
     if (bo) { ov.btn(c, app, cx - 190, by - 98, 380, 46, '挑战 牛魔王 · Boss 战', 'bossGo', { size: 19, sp: 3 }); }
     R.wrap(c, jn, cx, by - 22, pw - 90, 12.5, 18, win ? '#2f7d3b' : INK2, 2);
@@ -22059,7 +22077,7 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
  *  两组：修行（卡牌组牌 / 灵石商店 / 图鉴 / 解锁皮肤 / 自建角色）· 杂务（导入玩法 / 玩法速览 / 新手教程 / 版本 / 重置存档）。
  *  按钮是毛笔墨条（长短、起笔位置各不同）+ 朱红印章，不是一列同样的框；每个点击框 ≥ 44 CSS px。
  *  按钮的 act 全部沿用原来的（menuDeck / menuShop / menuDex / menuUnlock / xchar / menuDungeon / menuBoss / menuVillain / menuBoard / menuMods / menuTutorial / toggleVer / menuReset），
- *  所以点它们的处理逻辑一个字没改，只是挪了位置；Boss 战 / 反派模式仍按 XY.chain09.visible（测试版开关 + 解锁链）决定出不出现。
+ *  所以点它们的处理逻辑一个字没改，只是挪了位置；Boss 战 / 反派模式仍按 XY.chain09.visible（全开开关 + 解锁链）决定出不出现。
  * ============================================================ */
 (function () {
   'use strict';
@@ -23394,7 +23412,7 @@ I.vendorKey=function(G,a,k){var n=X.vendor.stock(G).length;if(k==='ArrowLeft'||k
     paper(c,qb.x-4,qb.y,qb.w+4,qb.h,.86,37);X.INKP.stroke(c,qb.x+2,qb.y+7,qb.x+5,qb.y+qb.h-6,2.8,'167,52,35',.9,91,.02);
     var qt=K.fit('当前目标 · '+goal,qb.w-16,L.small?11.5:16,true,L.small?11.5:16);kai(K,qt.s,qb.x+10,qb.y+qb.h/2,qt.size,INK);
     hit(K,{x:qb.x,y:qb.y+(L.port?2:0),w:qb.w,h:44},'battleGoal',{label:'查看任务、营地、路程与战况'});rec(a,'quest',qb);
-    if(a.debugOn||a.showFps||G.godMode||G.speed!==1&&!(G.speed===2&&spOk)){
+    if(a.debugOn||a.showFps||G.godMode){
       var dbg=(G.godMode?'无敌 · ':'')+((a.debugOn||a.showFps)?Math.round(a.fps)+' FPS · 敌'+G.enemies.length+' · ':'')+'×'+G.speed;
       K.tf('调试 '+dbg,qb.x+10,qb.y+qb.h+12,qb.w-10,10.5,RED,'left',false,10.5);
     }
@@ -23436,7 +23454,7 @@ I.vendorKey=function(G,a,k){var n=X.vendor.stock(G).length;if(k==='ArrowLeft'||k
     var K=P.begin(c,a),L=I.layout(a),b=L.troop;
     c.save();var fw=L.small?370:450;c.translate(L.port?L.W/2:fw*.42,L.port?b.costY+22:L.H+17);c.scale(fw*.64,L.port?94:110);var fog=c.createRadialGradient(0,0,0,0,0,1);fog.addColorStop(0,'rgba(247,240,220,.98)');fog.addColorStop(.6,'rgba(247,240,220,.88)');fog.addColorStop(1,'rgba(247,240,220,0)');c.fillStyle=fog;c.fillRect(-1,-1,2,2);c.restore();
     c.save();c.shadowColor='#f7f0dc';c.shadowBlur=2;
-    K.t('天兵'+G.towers.length+'/'+X.soldierCap(G),b.first-b.r,b.cy-b.r-12,L.small?10.5:12,SOFT,'left',false);
+    K.t('在场 '+G.towers.length+' 名，最多 '+X.soldierCap(G)+' 名',b.first-b.r,b.cy-b.r-12,L.small?10.5:12,SOFT,'left',false);
     IDS.forEach(function(id,i){var d=X.TOWERS[id],price=X.soldierCost(G,id),cx=b.first+i*b.step,own=X.save.solOwned(id),ok=own&&G.coins>=price,on=a.build===id,n=G.towers.filter(function(t){return t.type===id;}).length;
       c.save();c.fillStyle='rgba(247,240,220,.82)';c.beginPath();c.arc(cx,b.cy,b.r,0,PI*2);c.fill();c.globalAlpha=own?1:.4;X.ICONINK.sol(c,id,cx,b.cy,b.r*2,1);c.restore();ring(c,cx,b.cy,b.r+1,on?RED:INK,18+i*23,on);
       kai(K,NAMES[i],cx,b.nameY,L.small?11.5:15,!own?SOFT:on?RED:INK,'center');K.tf(price+'金×'+n,cx,b.costY,b.w-2,L.small?10.5:12,!own?SOFT:!ok||on?RED:SOFT,'center',false,10.5);
@@ -24924,5 +24942,7 @@ X.step=function(g,dt){if(!g._simRandom)return step.apply(this,arguments);var sel
 
 <script src="js/devil_kitty_logic.js"></script>
 <script src="js/devil_kitty_ui.js"></script>
+<script src="js/tdline-rules.js"></script>
+<script src="js/tdline.js"></script>
 </body>
 </html>
