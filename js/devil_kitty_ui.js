@@ -959,7 +959,8 @@
           u = p * p * (3 - 2 * p);
         }
         var leftStart = 0.02;
-        var rightStart = 0.62;
+        /* 右停对准魔化猫的头脸。原图名字比窗口宽，下面换成两行，避免裁掉「化」。 */
+        var rightStart = 0.52;
         var start = leftStart + (rightStart - leftStart) * u;
         dx = -dw * start;
       } else if (ir > W0 / H0) {
@@ -968,6 +969,24 @@
         dw = W0; dh = W0 / ir; dx = 0; dy = (H0 - dh) / 2;
       }
       c.drawImage(scene, dx, dy, dw, dh);
+      if (port && u > 0.62) {
+        var nf = Math.max(0, Math.min(1, (u - 0.62) / 0.22));
+        c.save();
+        c.globalAlpha = nf;
+        var y0 = H0 * 0.60;
+        var wash = c.createLinearGradient(0, y0, 0, H0 * 0.70);
+        wash.addColorStop(0, 'rgba(7,5,4,0)');
+        wash.addColorStop(1, 'rgba(7,5,4,1)');
+        c.fillStyle = wash;
+        c.fillRect(0, y0, W0, H0 * 0.10);
+        c.fillStyle = '#070504';
+        c.fillRect(0, H0 * 0.70, W0, H0 * 0.30);
+        var nameSize = Math.round(Math.min(W0 * 0.16, H0 * 0.052));
+        brushFit(c, '猫叔', W0 / 2, H0 * 0.76, W0 * 0.86, nameSize, '#f6f0e4', 'center');
+        brushFit(c, '· 魔化', W0 / 2, H0 * 0.76 + nameSize * 1.15, W0 * 0.86, nameSize, '#f6f0e4', 'center');
+        brushFit(c, API.HANDLE, W0 / 2, H0 * 0.76 + nameSize * 2.25, W0 * 0.72, Math.round(nameSize * 0.46), '#f3ead8', 'center');
+        c.restore();
+      }
       c.restore();
       hit(0, 0, W0, H0, 'dkSkip');
       return;
@@ -1557,17 +1576,23 @@
     if (run.formLeft > 0) paintForm(c, app, run);
     if (G.dkDrops && G.dkDrops.t < 6) paintDrop(c, app, G.dkDrops);
   }
-  function obtainPaper(c, W, H) {
+  function obtainPaper(c, W, H, port) {
     var im = img('obtainPaper', 'obtain/paper.webp');
     if (!im) {
       c.fillStyle = '#f3ead6';
       c.fillRect(0, 0, W, H);
       return;
     }
-    var ir = im.naturalWidth / im.naturalHeight, br = W / H, dw, dh, dx, dy;
-    if (ir < br) { dw = W; dh = W / ir; dx = 0; dy = (H - dh) / 2; }
-    else { dh = H; dw = H * ir; dy = 0; dx = (W - dw) / 2; }
-    c.drawImage(im, dx, dy, dw, dh);
+    var sw = im.naturalWidth, sh = im.naturalHeight;
+    if (port) {
+      /* 整幅山水铺满竖屏，左右下角的竹子和墨点留在屏幕角上。 */
+      c.drawImage(im, 0, 0, sw, sh, 0, 0, W, H);
+      return;
+    }
+    var ir = sw / sh, br = W / H, dwL, dhL, dx, dy;
+    if (ir < br) { dwL = W; dhL = W / ir; dx = 0; dy = (H - dhL) / 2; }
+    else { dhL = H; dwL = H * ir; dy = 0; dx = (W - dwL) / 2; }
+    c.drawImage(im, dx, dy, dwL, dhL);
   }
   function obtainCut(id) {
     return img('obtain-' + id, 'obtain/' + id + '.webp');
@@ -1639,29 +1664,47 @@
     var fade = Math.max(0, Math.min(1, (t - 0.85) / 0.4));
     c.save();
     c.globalAlpha = 0.2 + 0.8 * open;
-    obtainPaper(c, W, H);
+    obtainPaper(c, W, H, port);
     c.globalAlpha = 1;
     if (item.kind === 'gear') {
       var piece = API.gearById[item.id];
       if (piece && revealed(piece.owner)) {
-        var titleSize = Math.round(port ? Math.min(H * 0.055, W * 0.11) : H * 0.08);
         var title = '获得 · ' + piece.name;
-        var tim = inkCanvas(title, titleSize, '#24180f');
-        var tx = port ? W * 0.04 : W * 0.045;
-        var ty = port ? H * 0.07 : H * 0.09;
+        var titleSize, sealS, gap, tx, ty, tim;
+        if (port) {
+          titleSize = Math.round(W * 0.072);
+          sealS = Math.round(titleSize * 1.12);
+          gap = Math.round(titleSize * 0.28);
+          tim = inkCanvas(title, titleSize, '#24180f');
+          while (titleSize > 16 && tim._tw + gap + sealS > W * 0.92) {
+            titleSize -= 2;
+            sealS = Math.round(titleSize * 1.12);
+            gap = Math.round(titleSize * 0.28);
+            tim = inkCanvas(title, titleSize, '#24180f');
+          }
+          tx = W * 0.04;
+          ty = Math.max(sealS * 0.7 + 8, H * 0.045);
+        } else {
+          titleSize = Math.round(H * 0.08);
+          sealS = Math.round(titleSize * 1.15);
+          gap = Math.round(titleSize * 0.45);
+          tim = inkCanvas(title, titleSize, '#24180f');
+          tx = W * 0.045;
+          ty = H * 0.09;
+        }
         c.globalAlpha = fade;
         brush(c, title, tx, ty, titleSize, '#24180f', 'left');
-        gradeSeal(c, tx + tim._tw + titleSize * 0.85, ty, piece.seal, Math.round(titleSize * 1.15));
+        gradeSeal(c, tx + tim._tw + gap + sealS / 2, ty, piece.seal, sealS);
         c.globalAlpha = 1;
         var im = obtainCut(piece.id);
         var rot = piece.id === 'phyrex_w' ? 0 : -0.08;
-        var dropY = (1 - gearIn) * (-H * 0.12);
+        var dropY = (1 - gearIn) * (-H * 0.08);
         if (port) {
-          drawCut(c, im, W * 0.46, H * 0.42 + dropY, W * 0.78, H * 0.4, rot, gearIn);
+          drawCut(c, im, W * 0.5, H * 0.40 + dropY, W * 0.86, H * 0.32, rot, gearIn);
           var hd = heroDef(piece.owner);
-          ownerMark(c, piece.owner, hd && hd.name, W * 0.74, H * 0.58, W * 0.15, fade);
+          ownerMark(c, piece.owner, hd && hd.name, W * 0.68, H * 0.66, W * 0.13, fade);
           c.globalAlpha = fade;
-          brushFit(c, piece.desc, W / 2, H * 0.78, W * 0.9, Math.round(H * 0.028), '#24180f', 'center');
+          brushFit(c, piece.desc, W / 2, H * 0.90, W * 0.88, Math.round(Math.min(W * 0.042, 26)), '#24180f', 'center');
         } else {
           drawCut(c, im, W * 0.42, H * 0.52 + dropY, W * 0.52, H * 0.62, rot, gearIn);
           var hdL = heroDef(piece.owner);
