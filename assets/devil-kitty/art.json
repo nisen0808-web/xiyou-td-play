@@ -6,10 +6,11 @@
   "stage1": "stage1.webp",
   "form": "form.webp",
   "formVideo": "form.mp4",
+  "introScene": "",
   "formDurationMs": 9000,
   "stage1Cut": "stage1-cut.webp",
   "formCut": "form-cut.webp",
   "frameCount": 31,
   "framePattern": "frames/frame-{nnn}.webp",
-  "note": "一阶段透明立绘 stage1.webp，变身九尾镰刀 form.webp，变身动画 form.mp4（720×960，约 5.58 秒，可跳过）。31 帧 webp 与 mp4 等长，视频播不出来时按帧顶上。开战或点开活动才加载。换最终文件时保持这些文件名。"
+  "note": "登场整图：把 introScene 设成文件名（例如 intro-scene.webp）后全屏铺这张图，不再叠名字。变身：form.mp4 全屏播放、可点跳过；视频缺失、报错或还没出画时用静态泼墨。时长 8 到 12 秒会跟视频走，否则用 formDurationMs。换文件保持这些名字。"
 }

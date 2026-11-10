@@ -418,37 +418,44 @@ async function shot(page, name) {
   });
   console.log('dead', JSON.stringify(dead));
   if (!dead.dead || !dead.drop || !dead.drop.card) fail('no drop ' + JSON.stringify(dead));
-  async function showDrop(drop) {
-    await page.evaluate(function (d) {
-      window.__xy.G.dkDrops = d;
-      var ids = [d.card, d.gear].filter(Boolean);
-      return Promise.all(ids.map(function (id) {
-        return new Promise(function (res) {
+  async function showObtain(ids, index, t) {
+    await page.evaluate(function (ids, index, t) {
+      var items = ids.map(function (id) { return { kind: 'gear', id: id }; });
+      var g0 = XY_DEVIL_KITTY.gearById[ids[index] || ids[0]];
+      window.__xy.G.dkDrops = {
+        card: 'yuanzhang', cardName: '园长', gear: ids[0], gearName: g0 ? g0.name : '',
+        items: items, i: index, t: t, pin: true
+      };
+      var jobs = [];
+      ids.forEach(function (id) {
+        jobs.push(new Promise(function (res) {
           var im = new Image();
-          im.onload = function () { res(1); };
-          im.onerror = function () { res(0); };
-          im.src = id === d.gear ? ('assets/devil-kitty/gear/' + id + '.webp') : ('assets/art/bg/' + id + '.webp');
-        });
-      }));
-    }, drop);
-    await frames(page, 2);
+          im.onload = im.onerror = function () { res(1); };
+          im.src = 'assets/devil-kitty/gear/' + id + '.webp';
+        }));
+        var owner = XY_DEVIL_KITTY.gearById[id] && XY_DEVIL_KITTY.gearById[id].owner;
+        if (owner) jobs.push(new Promise(function (res) {
+          var im = new Image();
+          im.onload = im.onerror = function () { res(1); };
+          im.src = 'assets/art/x-avatars/' + owner + '.webp';
+        }));
+      });
+      return Promise.all(jobs);
+    }, ids, index, t);
+    await frames(page, 4);
   }
-  var cardOnly = { card: 'yuanzhang', cardName: '园长', gear: null, gearName: '', t: 0 };
-  var bothDrop = { card: 'yuanzhang', cardName: '园长', gear: 'phyrex_w', gearName: '冷钱包短刃', t: 0 };
-  await setSize(1920, 1080);
-  await showDrop(cardOnly);
-  await shot(page, 'drop-card-desktop');
-  await setSize(390, 844);
-  await showDrop(cardOnly);
-  await shot(page, 'drop-card-mobile');
-  await setSize(1920, 1080);
-  await showDrop(bothDrop);
-  await shot(page, 'drop-both-desktop');
-  await shot(page, 'drop-desktop');
-  await setSize(390, 844);
-  await showDrop(bothDrop);
-  await shot(page, 'drop-both-mobile');
-  await shot(page, 'drop-mobile');
+  async function obtainBoth(name, ids, index, t) {
+    await setSize(1920, 1080);
+    await showObtain(ids, index, t);
+    await shot(page, name + '-desktop');
+    await setSize(390, 844);
+    await showObtain(ids, index, t);
+    await shot(page, name + '-mobile');
+  }
+  await obtainBoth('obtain-blade', ['phyrex_w'], 0, 1.8);
+  await obtainBoth('obtain-bell', ['yuanzhang_w'], 0, 1.8);
+  await obtainBoth('obtain-seq-1', ['phyrex_w', 'yuanzhang_w'], 0, 0.85);
+  await obtainBoth('obtain-seq-2', ['phyrex_w', 'yuanzhang_w'], 1, 1.8);
   await setSize(1920, 1080);
 
   await page.evaluate(function () { window.__xy.app.screen = 'pause'; });
