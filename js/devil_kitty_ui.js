@@ -8,7 +8,7 @@
   if (!API || !XY || !XY.step || !XY.save) return;
 
   var BASE = 'assets/devil-kitty/';
-  var art = { version: 7, stage1: 'stage1.webp', form: 'form.webp', stage1Cut: 'stage1-cut.webp', formCut: 'form-cut.webp', formVideo: 'form.mp4', introScene: 'intro-scene.webp', formDurationMs: 10000, frameCount: 31, formName: '九尾咆哮' };
+  var art = { version: 9, stage1: 'stage1.webp', form: 'form.webp', stage1Cut: 'stage1-cut.webp', formCut: 'form-cut.webp', formVideo: 'form.mp4', introScene: 'intro-scene.webp', formDurationMs: 12000, frameCount: 31, formName: '九尾咆哮' };
   var imgs = {};
   var vid = null;
   var frameImgs = [];
@@ -97,29 +97,69 @@
   function ensureVideo() {
     if (vid) return vid;
     vid = document.createElement('video');
-    vid.src = BASE + (art.formVideo || 'form.mp4') + '?v=' + (art.version || 7);
+    vid.src = BASE + (art.formVideo || 'form.mp4') + '?v=' + (art.version || 9);
     vid.playsInline = true;
     vid.setAttribute('playsinline', '');
-    vid.muted = true;
     vid.preload = 'auto';
     vid.style.display = 'none';
     vid._dkBad = false;
+    vid._dkSeen = -1;
+    applyVideoMute();
     vid.addEventListener('error', function () { vid._dkBad = true; });
-    vid.addEventListener('loadedmetadata', function () {
-      var d = vid.duration;
-      if (d && isFinite(d) && d >= 8 && d <= 12) API.setFormDuration(d);
-    });
+    vid.addEventListener('loadedmetadata', function () { noteVideoDuration(); });
+    vid.addEventListener('ended', function () { vid._dkEnded = true; });
     document.body.appendChild(vid);
     return vid;
   }
   function videoFrame() {
     return !!(vid && !vid._dkBad && vid.readyState >= 2 && vid.videoWidth > 0 && !vid.ended);
   }
+  function videoSoundOff() {
+    return !!(XY.audio && XY.audio.mute);
+  }
+  function applyVideoMute() {
+    if (!vid) return;
+    var off = videoSoundOff();
+    vid.muted = off;
+    vid.volume = off ? 0 : 1;
+  }
+  function noteVideoDuration() {
+    if (!vid) return;
+    var d = vid.duration;
+    if (d && isFinite(d) && d >= 0.5 && d <= 20) API.setFormDuration(d);
+  }
+  /* 计时跟着视频走：播到哪，剩余时间就不短于视频剩下的部分，ended 才收场。视频卡住时不再把计时往回拨。 */
+  function followVideo(run) {
+    if (!vid || vid._dkBad || !run || run.formLeft <= 0) return;
+    applyVideoMute();
+    noteVideoDuration();
+    var d = vid.duration;
+    var t = isFinite(vid.currentTime) ? vid.currentTime : 0;
+    if (d && isFinite(d) && d >= 0.5 && d <= 20) {
+      run.formDur = d;
+      var advanced = t > (vid._dkSeen || -1) + 0.02;
+      if (t < 0.3 || advanced) {
+        var remain = Math.max(0, d - t);
+        if (run.formLeft < remain) run.formLeft = remain;
+        vid._dkSeen = t;
+      }
+    }
+    if (vid.ended || vid._dkEnded) run.formLeft = Math.min(run.formLeft, 0.0001);
+  }
   function startVideo() {
     var v = ensureVideo();
+    v._dkEnded = false;
+    v._dkSeen = -1;
+    applyVideoMute();
     try { v.currentTime = 0; } catch (e) {}
     var p = v.play();
-    if (p && p.catch) p.catch(function () {});
+    if (p && p.catch) p.catch(function () {
+      if (!v.muted) {
+        v.muted = true;
+        var again = v.play();
+        if (again && again.catch) again.catch(function () {});
+      }
+    });
   }
   function stopVideo() {
     if (!vid) return;
@@ -300,7 +340,8 @@
   }
   function ensureRun(G) {
     if (!G.dkRun) G.dkRun = API.freshRun();
-    if (art.formDurationMs) G.dkRun.formDur = art.formDurationMs / 1000;
+    var live = API.formDuration();
+    if (!G.dkRun.formDur || live > G.dkRun.formDur) G.dkRun.formDur = live;
     return G.dkRun;
   }
 
@@ -492,6 +533,7 @@
       if (XY.banner) XY.banner(G, API.HERO2, 2.4);
       return;
     }
+    if (run.formLeft > 0) followVideo(run);
     var res = API.tickRun(run, ctxFrom(G), dt);
     G.dkRun = res.run;
     consume(G, res.events);

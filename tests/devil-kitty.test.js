@@ -113,6 +113,23 @@ test('变身演出可被跳过，跳过即满血进入二阶段', function () {
   assert.equal(mid.run.hold, false);
 });
 
+test('12 秒变身在第 10 秒还没结束，走完才进入二阶段', function () {
+  DK.setFormDuration(12);
+  var run = DK.freshRun();
+  run.spawned = true;
+  DK.spawnUnit(run, 1);
+  DK.hurtUnit(run, 1e9);
+  assert.ok(Math.abs(run.formLeft - 12) < 1e-6);
+  var mid = DK.tickRun(run, restCtx(), 10);
+  assert.ok(mid.run.formLeft > 1.5);
+  assert.equal(mid.run.hold, true);
+  assert.equal(mid.run.unit.phase, 1);
+  var end = DK.tickRun(mid.run, restCtx(), mid.run.formLeft);
+  assert.equal(end.run.formLeft, 0);
+  assert.equal(end.run.unit.phase, 2);
+  assert.ok(end.events.indexOf('formed') >= 0);
+});
+
 test('开关默认开，不看版本标志，?cato=0 或存档关掉后不登场', function () {
   assert.equal(DK.enabled({ testBuild: true, query: null, saved: null }), true);
   assert.equal(DK.enabled({ testBuild: false, query: null, saved: null }), true);
@@ -215,10 +232,11 @@ test('变身素材清单和动画时间轴可替换', function () {
   assert.equal(art.formId, 'B');
   assert.equal(art.form, 'form.webp');
   assert.equal(art.formVideo, 'form.mp4');
-  assert.equal(art.version, 7);
+  assert.equal(art.version, 9);
+  assert.equal(art.formDurationMs, 12000);
   var formBuf = fs.readFileSync(path.join(root, 'form.mp4'));
-  assert.equal(formBuf.length, 8551265);
-  assert.equal(require('crypto').createHash('sha256').update(formBuf).digest('hex'), 'dbcfde5749b4b929f39c6b0174973566bc65462b5c2c52ca47fd42c3ceb0791e');
+  assert.equal(formBuf.length, 9532964);
+  assert.equal(require('crypto').createHash('sha256').update(formBuf).digest('hex'), '38d5ca9455856346f0a1a98bc3fd97ed8142a5a608783807cf79f60366ce00ec');
   assert.equal(art.stage1, 'stage1.webp');
   assert.equal(art.frameCount, 31);
   ['stage1.webp', 'form.webp', 'form.mp4', 'frames/frame-001.webp', 'frames/frame-031.webp'].forEach(function (f) {

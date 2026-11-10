@@ -23,8 +23,8 @@
   var MOB_MUL = 1.5;
   var BOSS_MUL = 2;
   var INTRO_T = 4.2;
-  /* 变身视频 10 秒。换时长时改 art.json 的 formDurationMs，或调用 setFormDuration。 */
-  var FORM_T = 10000 / 1000;
+  /* 变身视频 12 秒。真正播放时以视频 duration 为准，这里只是还没读到时长时的兜底。 */
+  var FORM_T = 12000 / 1000;
   var formDurLive = FORM_T;
   function setFormDuration(sec) {
     if (typeof sec === 'number' && sec >= 0.5 && sec <= 20) formDurLive = sec;
