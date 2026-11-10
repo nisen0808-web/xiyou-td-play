@@ -373,8 +373,14 @@ async function shot(page, name) {
   });
   console.log('dead', JSON.stringify(dead));
   if (!dead.dead || !dead.drop || !dead.drop.card) fail('no drop ' + JSON.stringify(dead));
-  await frames(page, 3);
+  await frames(page, 2);
+  await page.evaluate(function () { if (window.__xy.G.dkDrops) window.__xy.G.dkDrops.t = 0; });
+  await setSize(1920, 1080);
   await shot(page, 'drop-desktop');
+  await page.evaluate(function () { if (window.__xy.G.dkDrops) window.__xy.G.dkDrops.t = 0; });
+  await setSize(390, 844);
+  await shot(page, 'drop-mobile');
+  await setSize(1920, 1080);
 
   await page.evaluate(function () { window.__xy.app.screen = 'pause'; });
   await frames(page, 3);

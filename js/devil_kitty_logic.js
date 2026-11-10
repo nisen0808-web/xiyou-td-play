@@ -35,7 +35,7 @@
   var GEAR_P2 = 0.55;
   var PHASE2 = { hp: 1.6, dmg: 1.4, atk: 1.2 };
 
-  /* 每个特殊角色 1 武器 + 1 道具。数值克制，只对应该角色。图标是墨笔圆章占位。 */
+  /* 每个特殊角色 1 武器 + 1 道具。数值克制，只对应该角色。画面上画成水墨器物。 */
   var GEAR = [
     { id: 'phyrex_w', owner: 'phyrex', slot: 'weapon', name: '冷钱包短刃', seal: '刃', desc: '贴合「燃烧的 BTC」：法术伤害 +6%。', fx: { dmg: 0.06 } },
     { id: 'phyrex_i', owner: 'phyrex', slot: 'item', name: '币息残页', seal: '息', desc: '贴合「币值暴涨」的余息：每秒回复 +0.4。', fx: { regen: 0.4 } },

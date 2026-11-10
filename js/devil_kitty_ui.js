@@ -898,8 +898,8 @@
     var m = port ? 6 : 12;
     var x = m, y = m, w = W - m * 2, hh = H - m * 2;
     paper(c, x, y, w, hh);
-    brush(c, '特别活动 · 猫叔 登场', x + w / 2, y + (port ? 28 : 34), port ? 22 : 30, '#24180f', 'center');
-    var top = y + (port ? 48 : 56);
+    brush(c, '特别活动 · 猫叔 登场', x + w / 2, y + (port ? 36 : 46), port ? 34 : 52, '#24180f', 'center');
+    var top = y + (port ? 68 : 84);
     var gap = port ? 8 : 12;
     var availH = hh - (top - y) - 10;
     var stage = img('stage1', art.stage1 || 'stage1.webp');
@@ -1048,78 +1048,228 @@
     c.stroke();
     c.restore();
   }
+  function inkCorners(c, x, y, w, h) {
+    var L = Math.min(16, w * 0.14, h * 0.1);
+    c.save();
+    c.strokeStyle = '#8d1f18';
+    c.lineWidth = 2.2;
+    c.lineCap = 'round';
+    c.beginPath();
+    c.moveTo(x, y + L); c.lineTo(x, y); c.lineTo(x + L, y);
+    c.moveTo(x + w - L, y); c.lineTo(x + w, y); c.lineTo(x + w, y + L);
+    c.moveTo(x, y + h - L); c.lineTo(x, y + h); c.lineTo(x + L, y + h);
+    c.moveTo(x + w - L, y + h); c.lineTo(x + w, y + h); c.lineTo(x + w, y + h - L);
+    c.stroke();
+    c.restore();
+  }
+  function inkShape(c, kind, w, h) {
+    var ink = '#24180f';
+    c.save();
+    c.strokeStyle = ink;
+    c.fillStyle = ink;
+    c.lineCap = 'round';
+    c.lineJoin = 'round';
+    c.lineWidth = Math.max(2.2, Math.min(w, h) * 0.035);
+    if (kind === 'blade') {
+      c.beginPath();
+      c.moveTo(w * 0.46, h * 0.82);
+      c.lineTo(w * 0.54, h * 0.82);
+      c.lineTo(w * 0.52, h * 0.58);
+      c.quadraticCurveTo(w * 0.78, h * 0.28, w * 0.62, h * 0.12);
+      c.quadraticCurveTo(w * 0.44, h * 0.36, w * 0.42, h * 0.58);
+      c.closePath();
+      c.fill();
+      c.lineWidth = Math.max(3, w * 0.035);
+      c.beginPath(); c.moveTo(w * 0.28, h * 0.6); c.lineTo(w * 0.72, h * 0.56); c.stroke();
+    } else if (kind === 'page') {
+      c.beginPath(); c.moveTo(w * 0.28, h * 0.18); c.lineTo(w * 0.74, h * 0.22); c.lineTo(w * 0.7, h * 0.82); c.lineTo(w * 0.24, h * 0.76); c.closePath(); c.globalAlpha = 0.12; c.fill(); c.globalAlpha = 1; c.stroke();
+      c.lineWidth = 1.3; c.beginPath(); c.moveTo(w * 0.34, h * 0.36); c.lineTo(w * 0.64, h * 0.38); c.moveTo(w * 0.34, h * 0.48); c.lineTo(w * 0.6, h * 0.5); c.moveTo(w * 0.34, h * 0.6); c.lineTo(w * 0.58, h * 0.62); c.stroke();
+    } else if (kind === 'ribbon') {
+      c.lineWidth = Math.max(3, w * 0.05); c.beginPath(); c.moveTo(w * 0.2, h * 0.3); c.quadraticCurveTo(w * 0.55, h * 0.15, w * 0.78, h * 0.38); c.quadraticCurveTo(w * 0.4, h * 0.55, w * 0.28, h * 0.78); c.stroke();
+    } else if (kind === 'pouch') {
+      c.beginPath(); c.moveTo(w * 0.32, h * 0.32); c.quadraticCurveTo(w * 0.5, h * 0.2, w * 0.68, h * 0.32); c.lineTo(w * 0.72, h * 0.72); c.quadraticCurveTo(w * 0.5, h * 0.86, w * 0.28, h * 0.72); c.closePath(); c.globalAlpha = 0.16; c.fill(); c.globalAlpha = 1; c.stroke();
+      c.beginPath(); c.moveTo(w * 0.38, h * 0.32); c.quadraticCurveTo(w * 0.5, h * 0.12, w * 0.62, h * 0.32); c.stroke();
+    } else if (kind === 'horn') {
+      c.beginPath(); c.moveTo(w * 0.28, h * 0.62); c.quadraticCurveTo(w * 0.48, h * 0.58, w * 0.78, h * 0.28); c.quadraticCurveTo(w * 0.7, h * 0.48, w * 0.42, h * 0.7); c.closePath(); c.fill();
+    } else if (kind === 'slip') {
+      c.beginPath(); c.moveTo(w * 0.38, h * 0.14); c.lineTo(w * 0.66, h * 0.16); c.lineTo(w * 0.62, h * 0.86); c.lineTo(w * 0.34, h * 0.82); c.closePath(); c.stroke();
+      c.lineWidth = 1.2; c.beginPath(); c.moveTo(w * 0.44, h * 0.32); c.lineTo(w * 0.56, h * 0.33); c.moveTo(w * 0.44, h * 0.46); c.lineTo(w * 0.55, h * 0.47); c.stroke();
+    } else if (kind === 'pick') {
+      c.lineWidth = Math.max(3, w * 0.045); c.beginPath(); c.moveTo(w * 0.58, h * 0.38); c.lineTo(w * 0.4, h * 0.84); c.stroke();
+      c.beginPath(); c.moveTo(w * 0.22, h * 0.42); c.quadraticCurveTo(w * 0.5, h * 0.16, w * 0.8, h * 0.36); c.lineWidth = Math.max(4, w * 0.06); c.stroke();
+    } else if (kind === 'chip') {
+      c.strokeRect(w * 0.28, h * 0.28, w * 0.44, h * 0.4);
+      c.lineWidth = 1.4; c.beginPath(); c.moveTo(w * 0.38, h * 0.4); c.lineTo(w * 0.62, h * 0.4); c.moveTo(w * 0.5, h * 0.4); c.lineTo(w * 0.5, h * 0.58); c.stroke();
+    } else if (kind === 'frame') {
+      c.lineWidth = Math.max(3, w * 0.04); c.strokeRect(w * 0.24, h * 0.2, w * 0.52, h * 0.58);
+      c.lineWidth = 1.2; c.strokeRect(w * 0.32, h * 0.3, w * 0.36, h * 0.38);
+    } else if (kind === 'stamp') {
+      c.fillRect(w * 0.3, h * 0.22, w * 0.4, h * 0.36);
+      c.lineWidth = Math.max(3, w * 0.05); c.beginPath(); c.moveTo(w * 0.5, h * 0.58); c.lineTo(w * 0.5, h * 0.84); c.stroke();
+    } else if (kind === 'bell') {
+      c.beginPath(); c.moveTo(w * 0.32, h * 0.28); c.quadraticCurveTo(w * 0.5, h * 0.7, w * 0.68, h * 0.28); c.quadraticCurveTo(w * 0.5, h * 0.18, w * 0.32, h * 0.28); c.fill();
+      c.beginPath(); c.arc(w * 0.5, h * 0.74, Math.min(w, h) * 0.06, 0, Math.PI * 2); c.fill();
+    } else if (kind === 'mound') {
+      c.beginPath();
+      c.moveTo(w * 0.16, h * 0.72);
+      c.quadraticCurveTo(w * 0.28, h * 0.48, w * 0.42, h * 0.58);
+      c.quadraticCurveTo(w * 0.55, h * 0.3, w * 0.72, h * 0.5);
+      c.quadraticCurveTo(w * 0.86, h * 0.42, w * 0.9, h * 0.72);
+      c.closePath();
+      c.fill();
+      c.globalAlpha = 0.35;
+      c.beginPath(); c.arc(w * 0.4, h * 0.62, w * 0.05, 0, Math.PI * 2); c.arc(w * 0.62, h * 0.58, w * 0.035, 0, Math.PI * 2); c.fill();
+      c.globalAlpha = 1;
+    } else if (kind === 'brush') {
+      c.lineWidth = Math.max(2.5, w * 0.03); c.beginPath(); c.moveTo(w * 0.3, h * 0.78); c.lineTo(w * 0.68, h * 0.22); c.stroke();
+      c.beginPath(); c.moveTo(w * 0.6, h * 0.18); c.quadraticCurveTo(w * 0.82, h * 0.16, w * 0.74, h * 0.36); c.quadraticCurveTo(w * 0.64, h * 0.28, w * 0.6, h * 0.18); c.fill();
+    } else if (kind === 'cup') {
+      c.beginPath(); c.moveTo(w * 0.32, h * 0.32); c.lineTo(w * 0.38, h * 0.7); c.quadraticCurveTo(w * 0.5, h * 0.82, w * 0.62, h * 0.7); c.lineTo(w * 0.68, h * 0.32); c.stroke();
+      c.beginPath(); c.moveTo(w * 0.68, h * 0.4); c.quadraticCurveTo(w * 0.84, h * 0.48, w * 0.68, h * 0.58); c.stroke();
+    } else if (kind === 'rod') {
+      c.lineWidth = Math.max(2.2, w * 0.025); c.beginPath(); c.moveTo(w * 0.3, h * 0.78); c.quadraticCurveTo(w * 0.55, h * 0.4, w * 0.78, h * 0.18); c.stroke();
+      c.lineWidth = 1.2; c.beginPath(); c.moveTo(w * 0.78, h * 0.18); c.quadraticCurveTo(w * 0.7, h * 0.4, w * 0.55, h * 0.55); c.stroke();
+    } else if (kind === 'bottle') {
+      c.beginPath(); c.moveTo(w * 0.42, h * 0.28); c.lineTo(w * 0.38, h * 0.42); c.lineTo(w * 0.32, h * 0.74); c.quadraticCurveTo(w * 0.5, h * 0.88, w * 0.68, h * 0.74); c.lineTo(w * 0.62, h * 0.42); c.lineTo(w * 0.58, h * 0.28); c.closePath(); c.stroke();
+    } else if (kind === 'note') {
+      c.beginPath(); c.moveTo(w * 0.3, h * 0.24); c.lineTo(w * 0.7, h * 0.2); c.lineTo(w * 0.66, h * 0.78); c.lineTo(w * 0.26, h * 0.74); c.closePath(); c.stroke();
+    } else if (kind === 'scroll') {
+      c.lineWidth = Math.max(4, w * 0.06); c.beginPath(); c.moveTo(w * 0.22, h * 0.32); c.lineTo(w * 0.78, h * 0.32); c.moveTo(w * 0.22, h * 0.68); c.lineTo(w * 0.78, h * 0.68); c.stroke();
+      c.lineWidth = 1.4; c.beginPath(); c.moveTo(w * 0.3, h * 0.44); c.lineTo(w * 0.7, h * 0.44); c.moveTo(w * 0.3, h * 0.54); c.lineTo(w * 0.62, h * 0.54); c.stroke();
+    } else if (kind === 'pillow') {
+      c.beginPath(); c.ellipse(w * 0.5, h * 0.55, w * 0.32, h * 0.2, -0.2, 0, Math.PI * 2); c.globalAlpha = 0.2; c.fill(); c.globalAlpha = 1; c.stroke();
+    }
+    c.restore();
+  }
+  function gearKind(id) {
+    var map = {
+      phyrex_w: 'blade', phyrex_i: 'page', sisi_w: 'ribbon', sisi_i: 'pouch',
+      laosiji_w: 'horn', laosiji_i: 'slip', kuanggong_w: 'pick', kuanggong_i: 'chip',
+      cato_w: 'frame', cato_i: 'page', haiteng_w: 'stamp', haiteng_i: 'slip',
+      yuanzhang_w: 'bell', yuanzhang_i: 'mound', heyuxi_w: 'brush', heyuxi_i: 'cup',
+      diaoyulao_w: 'rod', diaoyulao_i: 'bottle', martin_w: 'horn', martin_i: 'note',
+      qinba_w: 'scroll', qinba_i: 'note', traders18_w: 'stamp', traders18_i: 'pillow'
+    };
+    return map[id] || 'scroll';
+  }
+  function inkGear(c, id, x, y, w, h) {
+    c.save();
+    c.beginPath();
+    c.rect(x, y, w, h);
+    c.clip();
+    c.fillStyle = '#f4ead6';
+    c.fillRect(x, y, w, h);
+    var wash = c.createRadialGradient(x + w * 0.5, y + h * 0.42, 6, x + w * 0.5, y + h * 0.5, Math.max(w, h) * 0.62);
+    wash.addColorStop(0, 'rgba(36,24,16,0.06)');
+    wash.addColorStop(1, 'rgba(36,24,16,0)');
+    c.fillStyle = wash;
+    c.fillRect(x, y, w, h);
+    c.translate(x, y);
+    if (id) inkShape(c, gearKind(id), w, h);
+    c.restore();
+  }
+  function heroDef(id) {
+    var list = XY.SPECIALS_ALL || XY.SPECIALS || [], i;
+    for (i = 0; i < list.length; i++) if (list[i].id === id) return list[i];
+    return (XY.SP_BY && XY.SP_BY[id]) || null;
+  }
+  function heroGrid(c, ids, sel, x, y, w, h) {
+    var n = ids.length, cols = 4, gap = 8;
+    var rows = Math.ceil(n / cols);
+    var cw = Math.floor((w - gap * (cols - 1)) / cols);
+    var ch = Math.floor((h - gap * (rows - 1)) / rows);
+    var i;
+    for (i = 0; i < n; i++) {
+      var col = i % cols, row = Math.floor(i / cols);
+      var cx = x + col * (cw + gap), cy = y + row * (ch + gap);
+      var id = ids[i];
+      var d = heroDef(id);
+      var nm = d ? d.name : id;
+      var artIm = spArt(id);
+      if (artIm) {
+        inkWash(c, artIm, cx, cy, cw, ch, '');
+        cardName(c, nm, cx, cy, cw, ch);
+      } else {
+        c.save();
+        c.fillStyle = '#f3ead6';
+        c.fillRect(cx, cy, cw, ch);
+        c.fillStyle = 'rgba(36,24,16,0.1)';
+        c.beginPath();
+        c.ellipse(cx + cw / 2, cy + ch / 2, cw * 0.28, ch * 0.18, 0.15, 0, Math.PI * 2);
+        c.fill();
+        c.restore();
+        if (/[\u4e00-\u9fff]/.test(nm)) brushVert(c, nm, cx + cw / 2, cy + ch * 0.22, Math.min(34, cw * 0.2), '#24180f');
+        else brushFit(c, nm, cx + cw / 2, cy + ch * 0.55, cw - 10, Math.min(ch * 0.14, 30), '#24180f', 'center');
+      }
+      if (id === sel) inkCorners(c, cx, cy, cw, ch);
+      hit(cx, cy, cw, ch, 'dkHero', { id: id });
+    }
+  }
+  function gearSlot(c, piece, slotName, x, y, w, h) {
+    inkGear(c, piece ? piece.id : '', x, y, w, h);
+    brush(c, slotName, x + 12, y + 16, Math.min(18, w * 0.1), '#8d1f18', 'left');
+    if (piece) brushFit(c, piece.name, x + w / 2, y + h - 18, w - 16, Math.min(26, w * 0.14), '#24180f', 'center');
+    else brush(c, '空', x + w / 2, y + h * 0.55, Math.min(36, w * 0.16), '#24180f', 'center');
+  }
   function paintGear(c, app) {
     var W = app.lw, H = app.lh, port = H > W * 1.05;
     c.save();
-    c.fillStyle = 'rgba(246,239,224,0.72)';
+    c.fillStyle = 'rgba(246,239,224,0.78)';
     c.fillRect(0, 0, W, H);
-    paper(c, 10, 10, W - 20, H - 20);
-    latin(c, 'Gear', 28, 36, 18, '#7d1c14', 'left');
-    cursive(c, '专属装备', 28, port ? 58 : 64, port ? 28 : 36, '#24180f', 'left');
-    kai(c, '一人一武器、一道具。只能装给对应的人。圆章是占位，待换正式美术。', 28, port ? 88 : 98, 13, '#6a5438', 'left', false);
-    redSeal(c, W - 96, 22, 70, 46, '返回');
-    hit(W - 96, 22, 70, 46, 'dkGearClose');
+    paper(c, 8, 8, W - 16, H - 16);
+    brush(c, '专属装备', 24, port ? 32 : 36, port ? 28 : 36, '#24180f', 'left');
+    redSeal(c, W - 96, 16, 70, 44, '返回');
+    hit(W - 96, 16, 70, 44, 'dkGearClose');
     var ids = (XY.SPECIALS_ALL || XY.SPECIALS || []).map(function (d) { return d.id; });
     var sel = app.dkHero && ids.indexOf(app.dkHero) >= 0 ? app.dkHero : (ids[0] || 'phyrex');
     app.dkHero = sel;
-    var sealD = port ? 48 : 54, gap = 8, x0 = 24, y0 = port ? 112 : 124, maxW = W - 48;
-    var x = x0, y = y0, i;
-    for (i = 0; i < ids.length; i++) {
-      if (x + sealD > x0 + maxW) { x = x0; y += sealD + 22; }
-      var id = ids[i], on = id === sel;
-      c.beginPath();
-      c.arc(x + sealD / 2, y + sealD / 2, sealD / 2, 0, Math.PI * 2);
-      c.fillStyle = on ? '#a6281c' : '#f7f1e4';
-      c.fill();
-      c.lineWidth = on ? 3 : 1.4;
-      c.strokeStyle = on ? '#f0d7a4' : '#2a2118';
-      c.stroke();
-      var nm = (XY.SP_BY && XY.SP_BY[id] && XY.SP_BY[id].name) || id;
-      cursive(c, nm.slice(0, 1), x + sealD / 2, y + sealD / 2, 22, on ? '#fff6e4' : '#24180f', 'center');
-      hit(x, y, sealD, sealD, 'dkHero', { id: id });
-      x += sealD + gap;
-    }
-    var def = XY.SP_BY && XY.SP_BY[sel];
-    var cardY = y + sealD + 28;
-    var cardH = H - cardY - 28;
-    if (cardH < 160) cardH = 160;
-    paper(c, 24, cardY, W - 48, cardH);
-    cursive(c, def ? def.name : sel, 44, cardY + 32, 30, '#24180f', 'left');
-    kai(c, def && def.handle ? def.handle : '', 44, cardY + 60, 14, '#8d1f18', 'left', false);
-    if (sel === 'cato') kai(c, '猫叔只作为敌方登场，不能编入队伍。装备先替他收着。', 44, cardY + 82, 13, '#6a5438', 'left', false);
+    var top = port ? 62 : 68;
+    var bodyH = H - top - 16;
     var gdoc = gear();
     var row = (gdoc.equip && gdoc.equip[sel]) || { weapon: null, item: null };
-    ['weapon', 'item'].forEach(function (slot, si) {
-      var sx = 40 + si * Math.min(280, (W - 100) / 2);
-      var sy = cardY + 108;
-      var piece = row[slot] && API.gearById[row[slot]];
-      rr(c, sx, sy, Math.min(250, (W - 120) / 2), 118, 8);
-      c.fillStyle = '#fffaf0';
-      c.fill();
-      c.strokeStyle = '#2a2118';
-      c.stroke();
-      c.beginPath();
-      c.arc(sx + 36, sy + 40, 22, 0, Math.PI * 2);
-      c.fillStyle = '#f3e6c8';
-      c.fill();
-      c.stroke();
-      cursive(c, piece ? piece.seal : (slot === 'weapon' ? '武' : '具'), sx + 36, sy + 40, 20, '#7d1c14', 'center');
-      kai(c, slot === 'weapon' ? '武器' : '道具', sx + 68, sy + 28, 13, '#8a7048', 'left', false);
-      cursive(c, piece ? piece.name : '空', sx + 68, sy + 52, 20, '#24180f', 'left');
-      kai(c, piece ? piece.desc : '尚未装备', sx + 68, sy + 78, 12, '#5c4a36', 'left', false);
-    });
-    var owned = API.GEAR.filter(function (g) { return g.owner === sel && ((gdoc.bag && gdoc.bag[g.id]) || 0) > 0; });
-    var oy = cardY + 240;
-    if (oy < cardY + cardH - 20) {
-      kai(c, owned.length ? '行囊里可以装上：' : (row.weapon || row.item ? '这件已经装上了。' : '行囊里还没有这位的专属装备。'), 44, oy, 14, '#3a2e22', 'left', false);
+    var owned = API.GEAR.filter(function (g) { return g.owner === sel && ((gdoc.bag && gdoc.bag[g.id]) || 0) > 0 && row.weapon !== g.id && row.item !== g.id; });
+    if (!port) {
+      var leftW = Math.floor((W - 40) * 0.56);
+      heroGrid(c, ids, sel, 20, top, leftW, bodyH);
+      var rx = 28 + leftW, rw = W - rx - 20;
+      var portH = Math.floor(bodyH * 0.58);
+      var hd = heroDef(sel);
+      inkWash(c, spArt(sel), rx, top, rw, portH, '');
+      captionOn(c, rx, top, rw, portH, (hd && hd.name) || sel, (hd && hd.handle) || '');
+      var slotY = top + portH + 10;
+      var slotH = Math.max(90, bodyH - portH - 10 - (owned.length ? 78 : 0));
+      var gap = 10, sw = Math.floor((rw - gap) / 2);
+      gearSlot(c, row.weapon && API.gearById[row.weapon], '武器', rx, slotY, sw, slotH);
+      gearSlot(c, row.item && API.gearById[row.item], '道具', rx + sw + gap, slotY, sw, slotH);
       owned.forEach(function (g, n) {
-        var bx = 44 + (n % 3) * 180, by = oy + 22 + Math.floor(n / 3) * 48;
-        if (by > cardY + cardH - 36) return;
-        redSeal(c, bx, by, 168, 40, g.seal + ' ' + g.name);
-        hit(bx, by, 168, 40, 'dkEquip', { id: g.id, hero: sel });
+        var bw = 150, bx = rx + n * (bw + 8), by = slotY + slotH + 8;
+        if (bx + bw > rx + rw) return;
+        inkGear(c, g.id, bx, by, bw, 64);
+        brushFit(c, g.name, bx + bw / 2, by + 46, bw - 12, 16, '#24180f', 'center');
+        hit(bx, by, bw, 64, 'dkEquip', { id: g.id, hero: sel });
+      });
+    } else {
+      var gridH = Math.floor(bodyH * 0.42);
+      heroGrid(c, ids, sel, 16, top, W - 32, gridH);
+      var restY = top + gridH + 10;
+      var restH = bodyH - gridH - 10;
+      var pw = Math.floor((W - 40) * 0.56);
+      inkWash(c, spArt(sel), 16, restY, pw, restH, '');
+      var hdM = heroDef(sel);
+      captionOn(c, 16, restY, pw, restH, (hdM && hdM.name) || sel, (hdM && hdM.handle) || '');
+      var sx = 24 + pw, sww = W - sx - 16;
+      var bagH = owned.length ? 72 : 0;
+      var sh = Math.floor((restH - 8 - bagH) / 2);
+      gearSlot(c, row.weapon && API.gearById[row.weapon], '武器', sx, restY, sww, sh);
+      gearSlot(c, row.item && API.gearById[row.item], '道具', sx, restY + sh + 8, sww, sh);
+      owned.forEach(function (g, n) {
+        if (n > 0) return;
+        var by = restY + sh * 2 + 16;
+        inkGear(c, g.id, sx, by, sww, 64);
+        brushFit(c, g.name, sx + sww / 2, by + 46, sww - 12, 16, '#24180f', 'center');
+        hit(sx, by, sww, 64, 'dkEquip', { id: g.id, hero: sel });
       });
     }
-    kai(c, '图标为墨笔圆章占位，说明待换正式美术。', 44, cardY + cardH - 18, 12, '#8a7048', 'left', false);
     c.restore();
   }
 
@@ -1234,11 +1384,37 @@
     }
     if (run.introLeft > 0) paintIntro(c, app, run);
     if (run.formLeft > 0) paintForm(c, app, run);
-    if (G.dkDrops && G.dkDrops.t < 6) {
-      paper(c, app.lw / 2 - 180, app.lh * 0.18, 360, 64);
-      cursive(c, '掉落', app.lw / 2 - 150, app.lh * 0.18 + 22, 18, '#7d1c14', 'left');
-      kai(c, '角色卡 · ' + G.dkDrops.cardName + (G.dkDrops.gearName ? '  ·  ' + G.dkDrops.gearName : ''), app.lw / 2 - 150, app.lh * 0.18 + 44, 14, '#24180f', 'left', false);
+    if (G.dkDrops && G.dkDrops.t < 6) paintDrop(c, app, G.dkDrops);
+  }
+  function paintDrop(c, app, drop) {
+    var W = app.lw, H = app.lh, port = H > W * 1.05;
+    var pieces = [];
+    if (drop.card) pieces.push({ kind: 'hero', id: drop.card, name: drop.cardName || drop.card });
+    if (drop.gear) pieces.push({ kind: 'gear', id: drop.gear, name: drop.gearName || '' });
+    if (!pieces.length) return;
+    var n = pieces.length, gap = 14, cw, ch, x0, y0;
+    if (port) {
+      cw = Math.min(W - 24, 520);
+      ch = Math.min(H * 0.36, 620);
+      x0 = (W - cw) / 2;
+      y0 = Math.max(64, (H - (n * ch + (n - 1) * gap)) / 2);
+    } else {
+      ch = Math.min(H * 0.7, 500);
+      cw = Math.min(380, (W - 36 - gap * (n - 1)) / n);
+      x0 = (W - (n * cw + (n - 1) * gap)) / 2;
+      y0 = (H - ch) / 2;
     }
+    pieces.forEach(function (p, i) {
+      var x = port ? x0 : x0 + i * (cw + gap);
+      var y = port ? y0 + i * (ch + gap) : y0;
+      if (p.kind === 'hero') {
+        inkWash(c, spArt(p.id), x, y, cw, ch, p.name.slice(0, 1));
+        captionOn(c, x, y, cw, ch, p.name, '');
+      } else {
+        inkGear(c, p.id, x, y, cw, ch);
+        brushFit(c, p.name, x + cw / 2, y + ch - 28, cw - 24, Math.min(32, cw * 0.12), '#24180f', 'center');
+      }
+    });
   }
   function paintPause(c, app) {
     var W = app.lw, H = app.lh, w = Math.min(300, W - 24), h = 56;
