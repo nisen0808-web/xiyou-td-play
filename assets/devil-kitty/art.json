@@ -7,7 +7,7 @@
   "form": "form.webp",
   "formVideo": "form.mp4",
   "introScene": "intro-scene.webp",
-  "formDurationMs": 9000,
+  "formDurationMs": 10000,
   "stage1Cut": "stage1-cut.webp",
   "formCut": "form-cut.webp",
   "frameCount": 31,

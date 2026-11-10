@@ -8,7 +8,7 @@
   if (!API || !XY || !XY.step || !XY.save) return;
 
   var BASE = 'assets/devil-kitty/';
-  var art = { stage1: 'stage1.webp', form: 'form.webp', stage1Cut: 'stage1-cut.webp', formCut: 'form-cut.webp', formVideo: 'form.mp4', introScene: 'intro-scene.webp', formDurationMs: 9000, frameCount: 31, formName: '九尾咆哮' };
+  var art = { stage1: 'stage1.webp', form: 'form.webp', stage1Cut: 'stage1-cut.webp', formCut: 'form-cut.webp', formVideo: 'form.mp4', introScene: 'intro-scene.webp', formDurationMs: 10000, frameCount: 31, formName: '九尾咆哮' };
   var imgs = {};
   var vid = null;
   var frameImgs = [];
@@ -949,19 +949,17 @@
       c.fillStyle = '#d8c6a4';
       c.fillRect(0, 0, W0, H0);
       if (port) {
-        /* 先铺满高度停在左名。右名一行更宽，平移时略缩小，停住时「猫叔 · 魔化」和 @Cato_KT 都在画面里。 */
-        var dwCover = H0 * ir;
-        var dwFit = W0 / 0.40;
+        /* 竖屏全程按高度铺满，先停在左「猫叔」，再平移到右「猫叔 · 魔化」。 */
+        dh = H0;
+        dw = H0 * ir;
+        dy = 0;
         var elapsed = (API.INTRO_T || 4.2) - ((run && run.introLeft) || 0);
         if (elapsed > 1.2) {
           var p = Math.max(0, Math.min(1, (elapsed - 1.2) / 2.5));
           u = p * p * (3 - 2 * p);
         }
-        dw = dwCover + (dwFit - dwCover) * u;
-        dh = dw / ir;
-        dy = (H0 - dh) * u;
         var leftStart = 0.02;
-        var rightStart = 0.56;
+        var rightStart = 0.62;
         var start = leftStart + (rightStart - leftStart) * u;
         dx = -dw * start;
       } else if (ir > W0 / H0) {
@@ -1040,11 +1038,14 @@
     return true;
   }
   function paintFormVideo(c, W, H) {
-    var vr = vid.videoWidth / vid.videoHeight, br = W / Math.max(1, H);
+    var vr = vid.videoWidth / vid.videoHeight;
     var dw, dh, dx, dy;
-    if (vr > br) { dw = W; dh = W / vr; dx = 0; dy = (H - dh) / 2; }
-    else { dh = H; dw = H * vr; dy = 0; dx = (W - dw) / 2; }
-    c.fillStyle = '#f6efe2';
+    if (W / Math.max(1, H) > vr) {
+      dw = W; dh = W / vr; dx = 0; dy = (H - dh) / 2;
+    } else {
+      dh = H; dw = H * vr; dy = 0; dx = (W - dw) / 2;
+    }
+    c.fillStyle = '#16120e';
     c.fillRect(0, 0, W, H);
     c.drawImage(vid, dx, dy, dw, dh);
   }
@@ -1053,10 +1054,8 @@
     if (videoFrame()) {
       c.save();
       paintFormVideo(c, W, H);
-      redSeal(c, W - 124, H - 56, 110, 44, '跳过');
-      hit(W - 124, H - 56, 110, 44, 'dkSkip');
-      hit(0, 0, W, H, 'dkSkip');
       c.restore();
+      hit(0, 0, W, H, 'dkSkip');
       return;
     }
     var dur = (run && (run.formDur || API.formDuration())) || 9;
