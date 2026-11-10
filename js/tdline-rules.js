@@ -1,12 +1,12 @@
-/* 第二关、第三关天兵层的纯规则。不改英雄伤害、不改关卡怪的血量和出怪表。
- * 浏览器和 node 测试共用。
+/* 第二关、第三关天兵层的纯规则。不改英雄伤害、不改关卡怪的血量。
+ * 第二关起另加飞妖（出怪表里只加这一项）。浏览器和 node 测试共用。
  */
 (function (root) {
   'use strict';
   var R = {};
   R.VERSION = '0.8.7';
-  /* 初值。实战占比超出 ±10% 时只改这两个数。 */
-  R.TOWER_DMG_MUL = { 2: 1.5, 3: 1.7 };
+  /* 天兵打不死、飞妖只有天兵能打之后，按实测占比改这两个数。 */
+  R.TOWER_DMG_MUL = { 2: 55, 3: 96 };
   R.START_GRANT = { 2: 120, 3: 160 };
   R.WAVE_BOUNTY = { 2: 6, 3: 8 };
   R.TIDE_BOUNTY = { 2: 15, 3: 20 };
@@ -47,6 +47,37 @@
     hp: { 1: 1, 2: 1.15, 3: 1.3 }
   };
   R.rankOf = function (table, lv) { return table[lv] || table[1]; };
+
+  /* 炮是地面溅射，打不着飞妖。弓、寒冰、破阵弹道、佛光脉冲打得着。 */
+  R.hitsFlyer = function (type) {
+    return type === 'arrow' || type === 'frost' || type === 'siege' || type === 'heal';
+  };
+  /* 飞妖伤害门。返回 true 表示这一下要取消。炮、英雄、法宝、大招、援军都取消。 */
+  R.blockFlyer = function (hit) {
+    if (!hit || !hit.flyer) return false;
+    if (hit.cannon) return true;
+    if (hit.tower || hit.combo) return false;
+    return true;
+  };
+  R.towerUntargetable = function (tdOn) { return !!tdOn; };
+
+  R.COMBOS = {
+    sancai: { name: '佛光护行', sec: 16 },
+    yanyue: { name: '寒锋横扫', sec: 16 },
+    bagua: { name: '天罗地网', sec: 18 },
+    jinchan: { name: '金蝉引怪', sec: 16 },
+    sixiang: { name: '四象守营', sec: 18 },
+    fengshi: { name: '锋矢破阵', sec: 16 }
+  };
+  R.charge = function (cur, dt, sec) { return Math.min(1, (cur || 0) + (dt || 0) / (sec || 16)); };
+
+  /* 每波额外飞妖。第一关不走这里。 */
+  R.flyerPack = function (levelId, wave) {
+    var lv = levelId | 0, n = wave | 0;
+    if (lv < 2) return { bat: 0, owl: 0 };
+    if (lv === 2) return { bat: 3, owl: n % 2 === 1 ? 1 : 0 };
+    return { bat: 4, owl: 1 };
+  };
 
   /* 弓 ×1.3 对飞妖；炮不对空（调用方直接不打）；破阵对 tank/shield/elite ×1.4。返回额外倍率（0 表示不加）。 */
   R.counterExtra = function (towerType, enemy) {
@@ -131,8 +162,9 @@
     return R.FORMATIONS.slice();
   };
 
+  R.FLY_HINT = '这一关有飞妖。飞妖直扑唐僧，只有天兵能打。';
   R.GUIDE2 = [
-    { id: 'wait', text: '出发前先安排天兵。现在时间不走，怪也不会出来。' },
+    { id: 'wait', text: '出发前先安排天兵。现在时间不走，怪也不会出来。飞妖只有天兵打得着。' },
     { id: 'pick', text: '点选一名已经在场的弓兵。' },
     { id: 'move', text: '把他调到唐僧前方的推荐位。虚线是他现在的真实射程。' },
     { id: 'hire', text: '再请一名已经有、也买得起的天兵。弓打飞妖，炮清地面上的一群，寒冰拖慢，破阵攻坚，佛光回血。' },
@@ -143,7 +175,7 @@
     { id: 'open', text: '第三关可以布阵。点「阵型」。' },
     { id: 'sancai', text: '选三才护法阵：两名弓兵在前，佛光在后。没有佛光就会显示缺员。' },
     { id: 'confirm', text: '选阵心，看槽位，再确认。站稳半秒才算成阵。' },
-    { id: 'break', text: '有人战死、被遣返或离开槽位，阵效马上停。只是脚步抖开会有三秒宽限。' },
+    { id: 'break', text: '徒弟阵亡、天兵被遣返或离开槽位，阵效马上停。天兵不会被妖怪打死。脚步抖开有三秒宽限。' },
     { id: 'jinchan', text: '再选金蝉护法阵，把两位徒弟设为守护，站到唐僧身前。' },
     { id: 'go', text: '阵看过了。到休息点还可以换成八卦阵和四象守营阵。自己点出发。' }
   ];

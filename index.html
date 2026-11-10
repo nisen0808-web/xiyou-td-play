@@ -358,7 +358,7 @@ XY.TRAITS = {
         var list = this.cells[cy * this.cols + cx];
         for (var i = 0; i < list.length; i++) {
           var e = list[i];
-          if (e.dead || e.veil) continue;                        // v0.9 洞府塔：英雄没走进塔的射程之前，塔被妖气罩着，选不中也打不到
+          if (e.dead || e.veil || (e.tdSky && !XY._skyOn)) continue;                        // v0.9 洞府塔：英雄没走进塔的射程之前，塔被妖气罩着，选不中也打不到；天兵层的飞妖不进英雄的索敌
           var dx = e.x - x, dy = e.y - y, rr = r + e.r;
           var d2 = dx * dx + dy * dy;
           if (d2 <= rr * rr) fn(e, d2);
@@ -3774,6 +3774,7 @@ XY.TRAITS = {
     if (e.dead) return;
     if (e.hidden) { if (!o || !o.dot) { e.flash = 0.1; if (Math.random() < 0.3) text(G, e.x, e.y - e.r - 4, '躲在洞里', 'resist'); } return; }   // 已经躲进洞里养伤的洞主：打不到；路上逃跑（还没进洞）时可以被打死
     o = o || {};
+    if (XY.tdHitBlock && XY.tdHitBlock(G, e, o)) { e.flash = 0.05; return; }
     if (e.fly && o.ground && C.AIR_GROUND_IMMUNE) { e.flash = 0.06; if (G.t - (G._airTxtT === undefined ? -9 : G._airTxtT) > 0.7) { G._airTxtT = G.t; text(G, e.x, e.y - e.r - 24, '飞在天上 · 够不着', 'resist'); } return; }   // v0.8.4：地面范围伤害打不到飞妖
     if (e.lt) dmg = Math.min(dmg, e.maxHp * VD_TOWER_HIT);       // v0.9 洞府塔：单次伤害最多掉最大血量的一小截（英雄大招动辄几千，不封顶塔一下就没了）
     if (e.def.boss && G.P.boss) dmg *= 1 + G.P.boss;          // 照妖镜：对洞府 BOSS 伤害更高
@@ -3929,6 +3930,7 @@ XY.TRAITS = {
   }
 
   function hurtHeroBy(G, h, dmg, contact, cause, dt, el) {
+    if (XY.tdTangSave && XY.tdTangSave(G, h)) return;
     G._dt = dt; G._el = el;
     hurtHero(G, h, dmg, contact, cause);
     G._dt = null; G._el = null;
@@ -4602,7 +4604,7 @@ XY.TRAITS = {
       var a = G.allies[j]; if (a.dead) continue;
       var dl = XY.dist(a.x, a.y, e.x, e.y); if (dl < ad) { ad = dl; al = a; }
     }
-    for (j = 0; j < G.towers.length; j++) {                // v0.5：护法天兵（原来的塔）和降临天兵同级，优先级都是最低
+    for (j = 0; j < G.towers.length && !(G.td && G.td.on); j++) {                // 天兵层：妖怪不拿天兵当目标
       var tw0 = G.towers[j], dl2 = XY.dist(tw0.x, tw0.y, e.x, e.y); if (dl2 < ad) { ad = dl2; al = tw0; }
     }
     return al || best;
@@ -4624,7 +4626,7 @@ XY.TRAITS = {
       o = G.heroes[i]; if (o.down || (i === 0 && false)) continue;
       dd = XY.dist(o.x, o.y, e.x, e.y); if (dd < R && dd < bd) { bd = dd; best = o; }
     }
-    if (!best) {                                            // v0.5：天兵（塔 + 降临天兵）统一排在最后
+    if (!best && !(G.td && G.td.on)) {                                            // 天兵层：妖塔也不打天兵
       var soldiers = XY.soldiersOf(G);
       for (i = 0; i < soldiers.length; i++) {
         o = soldiers[i]; dd = XY.dist(o.x, o.y, e.x, e.y); if (dd < R && dd < bd) { bd = dd; best = o; }
@@ -4914,6 +4916,7 @@ XY.TRAITS = {
 
   // 塔受伤（只有妖塔 / 洞府 BOSS 的震地能伤到）。塔永远不能收回，被打爆是它唯一消失的方式
   function hurtTower(G, t, dmg) {
+    if (G && G.td && G.td.on) return;                 // 天兵层：妖怪打不到天兵
     if (G.godMode) return;
     if (t.treatT > 0 && C.SOLBUFF) dmg *= 1 - C.SOLBUFF.treat.dr;           // v0.8.3：犒赏期间受伤 −20%
     t.hp -= dmg; t.hurtT = 0.25;
@@ -4955,7 +4958,7 @@ XY.TRAITS = {
         t.cd = s.cd; var any = false;
         G.grid.query(t.x, t.y, s.range, function (e) {
           any = true; e.slowT = Math.max(e.slowT, 0.9); e.slowF = Math.max(e.slowF, d.slow * (e.def.boss ? 0.5 : 1));
-          hurtEnemy(G, e, s.dmg, { dot: true, type: 'magic', elem: 'water' });
+          hurtEnemy(G, e, s.dmg, { dot: true, type: 'magic', elem: 'water', kind: 'frost' });
         });
         if (any) { t.pulse = 0.4; t.atkT = 0.3; }
         continue;
@@ -5048,7 +5051,7 @@ XY.TRAITS = {
           p.hits.push(e.id); p.hitAny = true;
           if (p.kind === 'shell') { alive = false; explode(G, p); return; }
           if (p.anti && e.def.etower) { var amul = p.anti; hurtEnemy(G, e, p.dmg * amul, { src: p.src, kb: 0, fx: p.x, fy: p.y }); if (p.pierce-- <= 0) alive = false; return; }
-          hurtEnemy(G, e, p.dmg, { anti: p.anti, src: p.src, kb: p.kind === 'water' ? 90 : 40, fx: p.x - p.vx, fy: p.y - p.vy, crit: p.crit, type: p.dtype, elem: p.elem });
+          hurtEnemy(G, e, p.dmg, { anti: p.anti, src: p.src, kb: p.kind === 'water' ? 90 : 40, fx: p.x - p.vx, fy: p.y - p.vy, crit: p.crit, type: p.dtype, elem: p.elem, kind: p.kind });
           if (p.onHit) p.onHit(G, e, p);                   // v0.5：12 位常驻角色的独有效果（藤蔓缠绕 / 拉钩 / 标记 …）
           if (p.pierce-- <= 0) alive = false;
         });
@@ -10246,7 +10249,7 @@ XY.BGS1={"src": "data:image/webp;base64,UklGRtT1GgBXRUJQVlA4IMj1GgCQwWGdASoAEAAK
     if (t.pulse > 0 && TY === 'frost') { c.strokeStyle = 'rgba(80,160,230,' + (t.pulse * 1.5) + ')'; c.lineWidth = 3; c.beginPath(); c.arc(x, y, s.range * (1 - t.pulse), 0, PI2); c.stroke(); }
     // 血条（受伤才显示）
     var mh = XY.towerMaxHp ? XY.towerMaxHp(t) : t.maxHp;
-    if (t.hp < mh - 0.5) T.bar(c, x - 20, y + 31, 40, 5, t.hp / mh, '#e0533d', 'rgba(255,255,255,0.85)');
+    if (t.hp < mh - 0.5 && !(G.td && G.td.on)) T.bar(c, x - 20, y + 31, 40, 5, t.hp / mh, '#e0533d', 'rgba(255,255,255,0.85)');
     if (t.maxLife) { T.bar(c, x - 20, y + 37, 40, 3, Math.max(0, t.life / t.maxLife), '#6bb7e8', 'rgba(255,255,255,0.7)'); }
     if (t.mode === 'garrison') T.otxt(c, '驻守', x, inkd ? gy - XY.SINK.top(t) - 6 : y - 52, 10.5, '#a8700a', 'center', true);
     // 升级闪光（t.upT 倒计时）

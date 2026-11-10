@@ -1,5 +1,6 @@
-/* 第二关、第三关的天兵层。不改英雄伤害，不改关卡出怪表，不新增关卡。
- * 布阵时整段模拟停住；开战之后仍是原来的西行，只是天兵更顶用，第三关可以布阵。
+/* 第二关、第三关的天兵层。不改英雄伤害，不改原有怪的血量。
+ * 第二关起多一队直扑唐僧的飞妖，只有天兵和阵法连携打得着。
+ * 布阵时整段模拟停住；开战之后仍是原来的西行。
  */
 (function () {
   'use strict';
@@ -57,7 +58,9 @@
       surges: G.stats.surges || 0, restHint: false, restFormHint: false,
       dmg: { hero: 0, tower: 0 }, dmgRest: { hero: 0, tower: 0 }, byType: {},
       toastBat: false, toastLife: false, baguaTill: 0, form: { tower: null, hero: null },
-      clock: 0
+      clock: 0, tangSafe: 0, campShield: 0,
+      fly: { n: 0, waves: 0, towerKills: 0, leak: 0 },
+      combos: {}, fx: []
     };
     G.towers.forEach(function (t) {
       t.free = true; t.paid = 0; t._rank = t.lv || 1;
@@ -139,30 +142,79 @@
   XY.onHurt = function (G, e, dmg, em, el, dt, o) {
     if (prevHurt) prevHurt(G, e, dmg, em, el, dt, o);
     if (!G || !G.td || !G.td.on || !o || !(dmg > 0)) return;
-    var towerHit = !!(o.anti || o._tower || (!o.src && !o.fb));
+    if (o.combo) { noteComboHit(G, o, dmg, e); return; }
+    var towerHit = !!(o.anti || o.tower || o._tower || (!o.src && !o.fb));
     var heroHit = !!(o.src && o.src.i !== undefined && !o.fb);
     if (towerHit && !heroHit) {
-      var kind = o.anti ? 'siege' : (o.ground && !o.dot) ? 'cannon' : (o.dot && o.elem === 'water') ? 'frost' : 'arrow';
-      var extra = R.counterExtra(kind, { fly: e.fly, type: e.type, elite: !!(e.def && (e.def.elite || e.type === 'elite')) });
-      if (extra > 0) { e.hp -= dmg * extra; dmg += dmg * extra; }
-      G.td.dmg.tower += dmg;
-      if (G.tang && G.tang.phase === 'rest') G.td.dmgRest.tower += dmg;
+      var kind = o.kind || (o.anti ? 'siege' : (o.ground && !o.dot) ? 'cannon' : (o.dot && o.elem === 'water') ? 'frost' : 'arrow');
+      if (kind === 'bolt') kind = 'siege';
+      if (kind === 'glow') kind = 'heal';
+      var extra = R.counterExtra(kind, { fly: e.fly || e.tdSky, type: e.type, elite: !!(e.def && (e.def.elite || e.type === 'elite')) });
+      var bonus = extra > 0 ? dmg * extra : 0;
+      if (bonus) e.hp -= bonus;
+      var dealt = dmg + bonus;
+      G.td.dmg.tower += dealt;
+      if (G.tang && G.tang.phase === 'rest') G.td.dmgRest.tower += dealt;
       var tk = e.type || 'other';
-      G.td.byType[tk] = (G.td.byType[tk] || 0) + dmg;
-      if (G.td.form.tower && G.td.form.tower.id === 'fengshi') { /* hero formation, ignore */ }
+      G.td.byType[tk] = (G.td.byType[tk] || 0) + dealt;
+      if (e.tdSky && e.hp - dmg <= 0 && !e._skyKill) { e._skyKill = 1; G.td.fly.towerKills++; }
+      var form = G.td.form.tower;
+      if (form && form.state === 'active' && o.srcTower && form.members && form.members.indexOf(o.srcTower) >= 0) {
+        var spec = R.COMBOS[form.id];
+        form.charge = Math.min(1, (form.charge || 0) + dmg / (spec ? 5000 : 5000));
+      }
     } else if (heroHit) {
-      var bonus = o.src._fengshi && e._fengshi ? 0.12 : 0;
-      if (bonus && e.def && (e.def.boss || e.def.etower)) bonus = 0;
-      if (bonus) { e.hp -= dmg * bonus; dmg += dmg * bonus; }
-      G.td.dmg.hero += dmg;
-      if (G.tang && G.tang.phase === 'rest') G.td.dmgRest.hero += dmg;
+      var heroBonus = o.src._fengshi && e._fengshi ? 0.12 : 0;
+      if (heroBonus && e.def && (e.def.boss || e.def.etower)) heroBonus = 0;
+      if (heroBonus) e.hp -= dmg * heroBonus;
+      G.td.dmg.hero += dmg * (1 + heroBonus);
+      if (G.tang && G.tang.phase === 'rest') G.td.dmgRest.hero += dmg * (1 + heroBonus);
     }
   };
   var prevTowerHurt = XY.hurtTower;
   if (prevTowerHurt) XY.hurtTower = function (G, t, dmg) {
+    if (G && G.td && G.td.on) return;
     if (G && G.td && t && t._formDr) dmg *= 1 - Math.min(0.5, t._formDr);
     return prevTowerHurt(G, t, dmg);
   };
+  XY.tdHitBlock = function (G, e, o) {
+    if (!G || !G.td || !G.td.on || !e || !e.tdSky) return false;
+    o = o || {};
+    var cannon = o.kind === 'shell' || (o.ground && !o.tower && !o.combo);
+    return R.blockFlyer({
+      flyer: true,
+      cannon: cannon,
+      tower: !!(o.tower || o.kind === 'arrow' || o.kind === 'bolt' || o.kind === 'frost' || o.kind === 'glow'),
+      combo: !!o.combo
+    });
+  };
+  XY.tdTangSave = function (G, h) {
+    return !!(G && G.td && G.td.on && h && G.heroes && h === G.heroes[0] && G.td.tangSafe > G.td.clock);
+  };
+  if (XY.pickTarget) {
+    var pick0 = XY.pickTarget;
+    XY.pickTarget = function (G, e) {
+      if (e && e.tdSky && G && G.td && G.td.on) {
+        if (G.camp && G.camp.active) return G.camp;
+        return G.heroes[0];
+      }
+      return pick0(G, e);
+    };
+  }
+  function noteComboHit(G, o, dmg, e) {
+    var id = o.combo;
+    var row = G.td.combos[id] || (G.td.combos[id] = { casts: 0, dmg: 0 });
+    row.dmg += dmg;
+    if (e && e.tdSky) {
+      G.td.dmg.tower += dmg;
+      if (e.hp - dmg <= 0 && !e._skyKill) { e._skyKill = 1; G.td.fly.towerKills++; }
+    } else if (o.comboHero) {
+      G.td.dmg.hero += dmg;
+    } else {
+      G.td.dmg.tower += dmg;
+      if (G.tang && G.tang.phase === 'rest') G.td.dmgRest.tower += dmg;
+    }
+  }
 
   /* ---------- 放置：原来的禁区都还在，靠近推荐位才吸附 ---------- */
   var origPlace = XY.placeTower;
@@ -288,6 +340,7 @@
       G.td.form.hero.members.forEach(function (h) { if (h && !h.down) h.speed *= 0.9; });
     }
     splashBoost(G);
+    skyVolley(G, dt);
     try { origStep(G, dt); } finally {
       G.tang.speed = sp;
       restoreRanks(G);
@@ -304,7 +357,9 @@
       G.coins += R.WAVE_BOUNTY[G.levelId] || R.WAVE_BOUNTY[3];
       G.enemies.forEach(function (e) { if (!ids[e.id] && e.road) e.coinM = R.WAVE_COIN; });
       G.td.inSurge = true;
+      spawnSky(G);
     }
+    if (G.td.fly.waves === 0 && G.td.clock > 0.8) spawnSky(G);
     if (G.td.inSurge && G.enemies.filter(function (e) { return !e.dead && !e.def.denBoss; }).length < 6) {
       G.td.inSurge = false;
       G.td.gapT = R.GAP;
@@ -314,6 +369,8 @@
     restWatch(G);
     campForm(G, camp0, dt);
     formTick(G, dt);
+    skyLeak(G);
+    fadeFx(G, dt);
     toasts(G);
     if (G.td.look) { G.cam.x = G.td.look.x; G.cam.y = G.td.look.y; }
   };
@@ -352,6 +409,13 @@
   function restWatch(G) {
     var rest = G.tang && G.tang.phase === 'rest';
     if (rest && !G.td.wasRest) {
+      var hf = G.td.form.hero;
+      if (hf && (hf.id === 'sixiang' || hf.id === 'fengshi') && G.camp && hf.state !== 'broken' && hf.state !== 'ended') {
+        var hd = R.formById(hf.id);
+        hf.cx = G.camp.x; hf.cy = G.camp.y;
+        hf.state = 'assembling'; hf.held = 0;
+        if (hd && hd.order) hf.members.forEach(function (h) { if (h) h.order = hd.order; });
+      }
       if (!G.td.restHint) {
         G.td.restHint = true;
         G.td.offer = true;
@@ -369,6 +433,12 @@
     var f = G.td.form.hero;
     if (f && f.id === 'sixiang' && f.state === 'active' && G.camp) {
       var lost = camp0 - G.camp.hp;
+      if (G.td.campShield > 0 && lost > 0) {
+        var back = Math.min(lost, G.td.campShield);
+        G.camp.hp += back;
+        G.td.campShield -= back;
+        lost -= back;
+      }
       if (lost > 0) G.camp.hp = Math.min(G.camp.maxHp, G.camp.hp + lost * 0.15);
       var n = (f.members || []).filter(function (h) { return h && !h.down && h._inSlot; }).length;
       if (n) G.camp.hp = Math.min(G.camp.maxHp, G.camp.hp + 0.8 * dt);
@@ -404,6 +474,99 @@
     G.td.hold.deploy = !!G.td.deploy;
   }
 
+  /* ---------- 飞妖：直扑唐僧 / 营地，只有天兵和连携打得着 ---------- */
+  function spawnSky(G) {
+    if (!G.td || (G.levelId | 0) < 2 || !XY.makeEnemy) return;
+    var pack = R.flyerPack(G.levelId, G.td.fly.waves);
+    var tang = G.heroes[0];
+    if (!tang) return;
+    var total = pack.bat + pack.owl, i, e, ang, dist;
+    for (i = 0; i < total; i++) {
+      if (G.enemies.length >= (C.MAX_ENEMIES || 400) - 8) break;
+      ang = Math.random() * PI2;
+      dist = 560 + Math.random() * 160;
+      e = XY.makeEnemy(G, i < pack.bat ? 'bat' : 'owl', tang.x + Math.cos(ang) * dist, tang.y + Math.sin(ang) * dist, null);
+      if (!e) continue;
+      e.fly = true; e.tdSky = true; e.air = true; e.flow = true; e.road = true;
+      e.fs = 'cruise'; e.fsT = 0; e.diveCd = 0.35; e.lock = null; e.coinM = R.FILL_COIN; e.xpM = C.FLOW_XP || 0.2;
+      G.td.fly.n++;
+    }
+    G.td.fly.waves++;
+  }
+  function nearestSky(G, x, y, range) {
+    var best = null, bd = Infinity, tang = G.heroes[0], i, e, d, threat;
+    for (i = 0; i < G.enemies.length; i++) {
+      e = G.enemies[i];
+      if (!e.tdSky || e.dead) continue;
+      d = hypot(e.x - x, e.y - y);
+      if (d > range + e.r) continue;
+      threat = tang ? hypot(e.x - tang.x, e.y - tang.y) : d;
+      if (threat < bd) { bd = threat; best = e; }
+    }
+    return best;
+  }
+  function skyVolley(G, dt) {
+    var i, t, s, sky, dmg;
+    for (i = 0; i < G.towers.length; i++) {
+      t = G.towers[i];
+      if (!R.hitsFlyer(t.type)) continue;
+      s = XY.towerStat(G, t);
+      if (t.type === 'heal') {
+        t._skyCd = (t._skyCd || 0) - dt;
+        if (t._skyCd > 0) continue;
+        sky = nearestSky(G, t.x, t.y, s.range);
+        if (!sky) continue;
+        t._skyCd = s.cd;
+        dmg = 9 * (R.rankOf(R.rank.dmg, t._rank || t.lv || 1)) * mulOf(G);
+        XY.core.hurtEnemy(G, sky, dmg, { tower: true, kind: 'glow', type: 'magic', elem: 'metal', srcTower: t });
+        sky.slowT = Math.max(sky.slowT || 0, 0.6);
+        pushFx(G, { kind: 'bolt', x: t.x, y: t.y, x2: sky.x, y2: sky.y, life: 0.18, name: '' });
+        continue;
+      }
+      if (t.cd > dt) continue;
+      sky = nearestSky(G, t.x, t.y, s.range);
+      if (!sky) continue;
+      G.td.fly.shots = (G.td.fly.shots || 0) + 1;
+      t.cd = s.cd + dt;
+      t.ang = Math.atan2(sky.y - t.y, sky.x - t.x);
+      t.atkT = 0.3;
+      if (t.type === 'frost') {
+        sky.slowT = Math.max(sky.slowT || 0, 0.9 * R.rankOf(R.rank.slowTime, t._rank || 1));
+        sky.slowF = Math.max(sky.slowF || 0, (XY.TOWERS.frost.slow || 0.45) * (sky.def && sky.def.boss ? 0.5 : 1));
+        XY.core.hurtEnemy(G, sky, s.dmg, { tower: true, kind: 'frost', dot: true, type: 'magic', elem: 'water', srcTower: t });
+      } else if (t.type === 'siege') {
+        XY.core.hurtEnemy(G, sky, s.dmg, { tower: true, kind: 'bolt', type: 'phys', srcTower: t });
+      } else {
+        XY.core.hurtEnemy(G, sky, s.dmg, { tower: true, kind: 'arrow', type: 'phys', srcTower: t });
+      }
+      pushFx(G, { kind: 'bolt', x: t.x, y: t.y - 10, x2: sky.x, y2: sky.y, life: 0.16, name: '' });
+    }
+  }
+  function skyLeak(G) {
+    var tang = G.heroes[0], i, e, hit;
+    if (!tang) return;
+    for (i = 0; i < G.enemies.length; i++) {
+      e = G.enemies[i];
+      if (!e.tdSky || e.dead || e._leaked) continue;
+      if (e._skyKill || e.dead) continue;
+      hit = hypot(e.x - tang.x, e.y - tang.y) < 56;
+      if (!hit && e.type === 'owl' && G.eprojs) {
+        hit = G.eprojs.some(function (q) {
+          return q.feather && hypot(q.x - tang.x, q.y - tang.y) < 56 && hypot(q.x - e.x, q.y - e.y) < 420;
+        });
+      }
+      if (hit) { e._leaked = 1; G.td.fly.leak++; }
+    }
+  }
+  function pushFx(G, fx) { fx.t = fx.life; G.td.fx.push(fx); if (G.td.fx.length > 24) G.td.fx.shift(); }
+  function fadeFx(G, dt) {
+    var i, fx, keep = [];
+    for (i = 0; i < G.td.fx.length; i++) {
+      fx = G.td.fx[i]; fx.t -= dt; if (fx.t > 0) keep.push(fx);
+    }
+    G.td.fx = keep;
+  }
+
   /* ---------- 阵 ---------- */
   function breakForms(G, who, why) {
     ['tower', 'hero'].forEach(function (k) {
@@ -420,6 +583,14 @@
     return { x: f.cx + slot.x * c - slot.y * s, y: f.cy + slot.x * s + slot.y * c };
   }
   function formTick(G, dt) {
+    var jf = G.td.form.hero;
+    if (jf && jf.id === 'jinchan' && G.heroes[0] && jf.state !== 'broken' && jf.state !== 'ended' && jf.state !== 'draft') {
+      var tang = G.heroes[0];
+      jf.cx = tang.x; jf.cy = tang.y;
+      var ahead = XY.routeAt(G.rt, Math.min(G.rt.total, (G.tang && G.tang.s || 0) + 30));
+      jf.facing = Math.atan2(ahead.y - tang.y, ahead.x - tang.x);
+    }
+    pinForms(G);
     G.towers.forEach(function (t) { t._formDmg = 0; t._formDr = 0; t.holdForm = !!t.holdForm && G.td.form.tower && G.td.form.tower.state === 'active'; });
     G.heroes.forEach(function (h) { h._fengshi = false; });
     if (G.td.baguaTill > G.td.clock) { /* 散阵后的空窗 */ }
@@ -430,7 +601,7 @@
       if (!def) return;
       if (f.id === 'jinchan' || f.id === 'sixiang' || f.id === 'fengshi') {
         if (!(G.camp && G.camp.active) && f.id !== 'jinchan') { f.state = 'planned'; return; }
-        if (f.id === 'jinchan' && !f.members.every(function (h) { return h && h.order === 'guard' && !h.down; })) {
+        if (f.id === 'jinchan' && f.members.some(function (h) { return h && !h.down && h.order !== 'guard'; })) {
           if (f.state === 'active') { f.state = 'broken'; f.why = 'order'; clearMemberFlags(f); }
           return;
         }
@@ -448,11 +619,101 @@
       f.held = (f.held || 0) + dt;
       if (f.state !== 'active') {
         f.state = 'assembling';
-        if (f.held >= 0.5) f.state = 'active';
+        if (f.held >= 0.5) { f.state = 'active'; f.ever = true; }
       }
-      if (f.state === 'active') applyForm(G, f, def);
+      if (f.state === 'active') f.ever = true;
+      if (f.state === 'active') {
+        applyForm(G, f, def);
+        chargeCombo(G, f, dt);
+      }
     });
     splashBoost(G);
+  }
+  function chargeCombo(G, f, dt) {
+    if (G.td.deploy) return;
+    var spec = R.COMBOS[f.id];
+    if (!spec) return;
+    f.charge = R.charge(f.charge, dt, spec.sec);
+    if (f.charge >= 1) castCombo(G, f);
+  }
+  function castCombo(G, f) {
+    var spec = R.COMBOS[f.id];
+    if (!spec) return;
+    f.charge = 0;
+    f.castT = 1.15;
+    var row = G.td.combos[f.id] || (G.td.combos[f.id] = { casts: 0, dmg: 0 });
+    row.casts++;
+    var mul = mulOf(G), dmg, i, e, tang = G.heroes[0];
+    pushFx(G, { kind: 'name', x: f.cx, y: f.cy, life: 1.15, name: spec.name, a: f.facing || 0 });
+    if (f.id === 'sancai') {
+      G.td.tangSafe = G.td.clock + 2.4;
+      dmg = 28 * mul;
+      for (i = 0; i < G.enemies.length; i++) {
+        e = G.enemies[i];
+        if (e.dead || !tang || hypot(e.x - tang.x, e.y - tang.y) > 280) continue;
+        if (e.def && (e.def.boss || e.def.etower || e.def.elite)) continue;
+        XY.core.hurtEnemy(G, e, dmg, { combo: f.id, type: 'magic', elem: 'metal' });
+      }
+      pushFx(G, { kind: 'ring', x: tang ? tang.x : f.cx, y: tang ? tang.y : f.cy, life: 0.7, r: 280, name: '' });
+    } else if (f.id === 'yanyue') {
+      dmg = 36 * mul;
+      for (i = 0; i < G.enemies.length; i++) {
+        e = G.enemies[i];
+        if (e.dead || hypot(e.x - f.cx, e.y - f.cy) > 340) continue;
+        e.slowT = Math.max(e.slowT || 0, 2.8);
+        e.slowF = Math.max(e.slowF || 0, e.def && e.def.boss ? 0.35 : 0.72);
+        e.stunT = Math.max(e.stunT || 0, 0.45);
+        XY.core.hurtEnemy(G, e, dmg * (e.tdSky ? 1.15 : 1), { combo: f.id, type: 'magic', elem: 'water' });
+      }
+      pushFx(G, { kind: 'sweep', x: f.cx, y: f.cy, life: 0.7, a: f.facing || 0, r: 340, name: '' });
+    } else if (f.id === 'bagua') {
+      dmg = 22 * mul;
+      for (i = 0; i < G.enemies.length; i++) {
+        e = G.enemies[i];
+        if (e.dead || hypot(e.x - f.cx, e.y - f.cy) > 360) continue;
+        e.stunT = Math.max(e.stunT || 0, 1.6);
+        XY.core.hurtEnemy(G, e, dmg, { combo: f.id, type: 'magic', elem: 'earth' });
+      }
+      pushFx(G, { kind: 'ring', x: f.cx, y: f.cy, life: 0.8, r: 360, name: '' });
+    } else if (f.id === 'jinchan') {
+      var van = f.members && f.members[0];
+      if (van && tang) {
+        for (i = 0; i < G.enemies.length; i++) {
+          e = G.enemies[i];
+          if (e.dead || (e.def && (e.def.boss || e.def.etower))) continue;
+          if (hypot(e.x - tang.x, e.y - tang.y) > 420) continue;
+          var dx = van.x - e.x, dy = van.y - e.y, len = hypot(dx, dy) || 1;
+          e.x += dx / len * Math.min(140, len * 0.55);
+          e.y += dy / len * Math.min(140, len * 0.55);
+          e.th = van; e.retarget = 3;
+          if (e.tdSky) XY.core.hurtEnemy(G, e, 12 * mul, { combo: f.id, type: 'magic' });
+        }
+      }
+      pushFx(G, { kind: 'pull', x: van ? van.x : f.cx, y: van ? van.y : f.cy, life: 0.7, name: '' });
+    } else if (f.id === 'sixiang') {
+      G.td.campShield = (G.td.campShield || 0) + 900;
+      if (G.camp) G.camp.hp = Math.min(G.camp.maxHp, G.camp.hp + G.camp.maxHp * 0.08);
+      dmg = 16 * mul;
+      for (i = 0; i < G.enemies.length; i++) {
+        e = G.enemies[i];
+        if (e.dead || !G.camp || hypot(e.x - G.camp.x, e.y - G.camp.y) > 260) continue;
+        e.slowT = Math.max(e.slowT || 0, 2.2);
+        e.slowF = Math.max(e.slowF || 0, 0.55);
+        XY.core.hurtEnemy(G, e, dmg, { combo: f.id, type: 'magic', elem: 'earth' });
+      }
+      pushFx(G, { kind: 'ring', x: G.camp ? G.camp.x : f.cx, y: G.camp ? G.camp.y : f.cy, life: 0.8, r: 260, name: '' });
+    } else if (f.id === 'fengshi') {
+      dmg = 48 * mul;
+      var a = f.facing || 0, ux = Math.cos(a), uy = Math.sin(a);
+      for (i = 0; i < G.enemies.length; i++) {
+        e = G.enemies[i];
+        if (e.dead) continue;
+        var rx = e.x - f.cx, ry = e.y - f.cy, along = rx * ux + ry * uy, side = rx * -uy + ry * ux;
+        if (along < 0 || along > 560 || Math.abs(side) > 72) continue;
+        XY.core.hurtEnemy(G, e, dmg * ((e.def && (e.def.boss || e.def.etower)) ? 1 : 0.85), { combo: f.id, comboHero: true, type: 'phys' });
+      }
+      pushFx(G, { kind: 'line', x: f.cx, y: f.cy, life: 0.55, a: a, r: 560, name: '' });
+    }
   }
   function membersReady(G, f, def) {
     var i, m, slots = f.slots || def.slots || [], hard = null;
@@ -538,36 +799,32 @@
   }
   function pinForms(G) {
     var f = G.td.form.tower;
-    if (!f || (f.state !== 'active' && f.state !== 'assembling')) return;
-    if (f.id === 'bagua') {
-      var gates = baguaSlots(G).filter(function (s) { return !s.empty; });
-      f.members.forEach(function (m, i) {
-        var s = gates[i % gates.length];
-        if (!s || !m) return;
-        m.x = s.x; m.y = s.y; m.mode = 'garrison'; m.rs = 1e9; m.holdForm = true; m.anchor = { x: s.x, y: s.y };
-      });
-      return;
+    if (f && (f.state === 'active' || f.state === 'assembling')) {
+      if (f.id === 'bagua' && G.camp) {
+        var gates = baguaSlots(G).filter(function (s) { return !s.empty; });
+        f.members.forEach(function (m, i) {
+          var s = gates[i % gates.length];
+          if (!s || !m) return;
+          m.x = s.x; m.y = s.y; m.mode = 'garrison'; m.rs = 1e9; m.holdForm = true; m.anchor = { x: s.x, y: s.y };
+        });
+      } else {
+        var def = R.formById(f.id);
+        if (def && def.slots) f.members.forEach(function (m, i) {
+          if (!m || !def.slots[i]) return;
+          var w = slotWorld(f, def.slots[i]);
+          m.x = w.x; m.y = w.y; m.mode = 'garrison'; m.rs = 1e9; m.holdForm = true; m.anchor = { x: w.x, y: w.y };
+        });
+      }
     }
-    var def = R.formById(f.id);
-    if (!def || !def.slots) return;
-    f.members.forEach(function (m, i) {
-      if (!m || !def.slots[i]) return;
-      var w = slotWorld(f, def.slots[i]);
-      if (m.type) { m.x = w.x; m.y = w.y; m.mode = 'garrison'; m.rs = 1e9; m.holdForm = true; m.anchor = { x: w.x, y: w.y }; }
-      else { m.x += (w.x - m.x) * 0.45; m.y += (w.y - m.y) * 0.45; }
-    });
     var hf = G.td.form.hero;
     if (hf && (hf.state === 'active' || hf.state === 'assembling')) {
       var hd = R.formById(hf.id);
       if (hd && hd.slots) hf.members.forEach(function (h, i) {
         if (!h || h.down || h.i === G.ctrl || !hd.slots[i]) return;
         var w = slotWorld(hf, hd.slots[i]);
-        if (hf.id === 'jinchan' && hypot(h.x - G.heroes[0].x, h.y - G.heroes[0].y) > 90) {
-          h.x += (w.x - h.x) * 0.5; h.y += (w.y - h.y) * 0.5;
-        } else {
-          h.x += (w.x - h.x) * 0.25; h.y += (w.y - h.y) * 0.25;
-        }
+        h.x = w.x; h.y = w.y;
         if (hd.order) h.order = hd.order;
+        h._inSlot = true;
       });
     }
   }
@@ -582,11 +839,15 @@
     }
     if (def && def.min && (!f.members || f.members.length < def.min)) { if (XY.toast) XY.toast(G, '人数不够'); return false; }
     if (kind === 'hero') {
-      var free = G.heroes.filter(function (h) { return h.id !== 'tang' && !h.down && f.members.indexOf(h) < 0; }).length;
-      if (free < 1) { if (XY.toast) XY.toast(G, '至少留一名徒弟可以指挥'); return false; }
+      var pool = G.heroes.filter(function (h) { return h.id !== 'tang' && !h.down; });
+      var free = pool.filter(function (h) { return f.members.indexOf(h) < 0; }).length;
+      if (pool.length > f.members.length && free < 1) { if (XY.toast) XY.toast(G, '至少留一名徒弟可以指挥'); return false; }
+      if (def && def.order) f.members.forEach(function (h) { if (h) h.order = def.order; });
     }
     f.state = (def && def.order === 'guard') || (G.camp && G.camp.active) || kind === 'tower' ? 'assembling' : 'planned';
     f.held = 0;
+    f.charge = f.charge || 0;
+    pinForms(G);
     var g = guideStep(G);
     if (g && (g.id === 'confirm' || g.id === 'sancai' || g.id === 'jinchan')) advanceGuide(G);
     return true;
@@ -820,8 +1081,43 @@
         ctx.fillStyle = '#9a2e24'; ctx.beginPath(); ctx.arc(f.cx + ctx.measureText(def.name).width + 28, f.cy - 24, 11, 0, PI2); ctx.fill();
         ctx.fillStyle = '#fff6ea'; ctx.font = font(11, true); ctx.textAlign = 'center';
         ctx.fillText('阵', f.cx + ctx.measureText(def.name).width + 28, f.cy - 24);
+        var sealX = f.cx + ctx.measureText(def.name).width + 28, sealY = f.cy - 24;
+        ctx.beginPath(); ctx.arc(sealX, sealY, 14, -Math.PI / 2, -Math.PI / 2 + PI2 * Math.max(0, Math.min(1, f.charge || 0)));
+        ctx.strokeStyle = 'rgba(42,32,22,0.85)'; ctx.lineWidth = 2; ctx.stroke();
       }
     });
+  }
+  function drawFx(ctx, G) {
+    var i, fx, k, p;
+    for (i = 0; i < G.td.fx.length; i++) {
+      fx = G.td.fx[i];
+      k = Math.max(0, fx.t / fx.life);
+      ctx.save();
+      ctx.strokeStyle = 'rgba(28,22,16,' + (0.35 + 0.55 * k) + ')';
+      ctx.fillStyle = 'rgba(28,22,16,' + (0.75 * k) + ')';
+      ctx.lineWidth = 2.2;
+      if (fx.kind === 'bolt') {
+        ctx.beginPath(); ctx.moveTo(fx.x, fx.y); ctx.lineTo(fx.x2, fx.y2); ctx.stroke();
+      } else if (fx.kind === 'ring') {
+        ctx.beginPath(); ctx.arc(fx.x, fx.y, (fx.r || 200) * (1.05 - k), 0.2, 5.6); ctx.stroke();
+      } else if (fx.kind === 'sweep') {
+        ctx.translate(fx.x, fx.y); ctx.rotate(fx.a || 0);
+        ctx.beginPath(); ctx.arc(0, 0, fx.r || 300, -1.1, 1.1); ctx.stroke();
+      } else if (fx.kind === 'line') {
+        ctx.translate(fx.x, fx.y); ctx.rotate(fx.a || 0);
+        ctx.beginPath(); ctx.moveTo(0, -18); ctx.lineTo(fx.r || 500, -18); ctx.moveTo(0, 18); ctx.lineTo(fx.r || 500, 18); ctx.stroke();
+      } else if (fx.kind === 'pull') {
+        ctx.beginPath(); ctx.arc(fx.x, fx.y, 36 + (1 - k) * 40, 0, PI2); ctx.stroke();
+      } else if (fx.kind === 'name' && fx.name) {
+        ctx.translate(fx.x, fx.y - 46); ctx.rotate(-0.08);
+        ctx.font = font(28 + 6 * k, true);
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(fx.name, 0, 0);
+        ctx.globalAlpha = 0.35 * k;
+        ctx.fillText(fx.name, 1.5, 1.2);
+      }
+      ctx.restore();
+    }
   }
   function drawHud(ctx, G, a) {
     var W = G.view.w, H = G.view.h, narrow = phone() || W < 700;
@@ -833,6 +1129,10 @@
       ctx.fillStyle = '#2a241c'; ctx.font = font(narrow ? 14 : 16, true); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       paper(ctx, W / 2 - 150, 46, 300, 30);
       ctx.fillText('布置天兵，准备好后点出发', W / 2, 61);
+      var hw = narrow ? Math.min(W - 24, 460) : 460;
+      paper(ctx, W / 2 - hw / 2, 82, hw, 28);
+      ctx.font = font(narrow ? 13 : 15, false);
+      ctx.fillText(R.FLY_HINT, W / 2, 96);
     }
     if (G.td.offer && !G.td.deploy) {
       paper(ctx, W / 2 - 70, 78, 140, bh);
@@ -994,7 +1294,17 @@
         var p = XY.routeAt(G.rt, Math.min(G.rt.total * 0.2, G.tang.s + 280));
         G.cam.x = p.x; G.cam.y = p.y; G.td.needCam = false;
       }
+      if (G.td.deploy) {
+        var now = a.rt || 0;
+        var pdt = G.td._prt == null ? 0 : Math.min(0.05, Math.max(0, now - G.td._prt));
+        G.td._prt = now;
+        if (pdt > 0) formTick(G, pdt);
+      }
       drawSpots(ctx, G);
+      ctx.save();
+      ctx.translate(G.view.w / 2 - G.cam.x, G.view.h / 2 - G.cam.y);
+      drawFx(ctx, G);
+      ctx.restore();
       drawHud(ctx, G, a);
       if (G.td.guide && G.td.deploy) drawGuide(ctx, G);
     } catch (err) { if (window.console) console.warn('tdline', err); }
