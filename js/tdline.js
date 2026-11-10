@@ -66,13 +66,18 @@
     });
     return d.forms;
   }
+  function shopFail(text) {
+    var G = window.__xy && window.__xy.G;
+    if (G && G.td) G.td.shopNote = { text: text, until: Date.now() + 2600 };
+    if (XY.toast && G) XY.toast(G, text);
+  }
   function formOwned(id) { var b = formBook(); return !!(b && b[id] && b[id].owned); }
   function formRank(id) { var b = formBook(); return (b && b[id] && b[id].rank) || 1; }
   function buyForm(id) {
     var def = R.formById(id), b = formBook();
     if (!def || !b || b[id].owned) return false;
     var price = R.priceOf(def);
-    if ((XY.save.data.lingshi || 0) < price) { if (XY.toast) XY.toast(null, '灵石不够'); return false; }
+    if ((XY.save.data.lingshi || 0) < price) { shopFail('灵石不足，买这阵要 ' + price + ' 灵石'); return false; }
     XY.save.data.lingshi -= price;
     b[id].owned = true;
     XY.save.touch();
@@ -82,7 +87,7 @@
     var def = R.formById(id), b = formBook();
     if (!def || !b || !b[id].owned || b[id].rank >= R.FORM_RANK_MAX) return false;
     var price = R.upPrice(def, b[id].rank);
-    if ((XY.save.data.lingshi || 0) < price) { if (XY.toast) XY.toast(null, '灵石不够'); return false; }
+    if ((XY.save.data.lingshi || 0) < price) { shopFail('灵石不足，升到下一阶要 ' + price + ' 灵石'); return false; }
     XY.save.data.lingshi -= price;
     b[id].rank += 1;
     XY.save.touch();
@@ -1190,9 +1195,12 @@
     if (h.act === 'tdDrawer') { G.td.drawer = G.td.drawer === false; return true; }
     if (h.act === 'tdPanelUp') { G.td.panelScroll = (G.td.panelScroll || 0) - 90; return true; }
     if (h.act === 'tdPanelDown') { G.td.panelScroll = (G.td.panelScroll || 0) + 90; return true; }
-    if (h.act === 'tdShopPage') { G.td.shopPage = h.i | 0; return true; }
-    if (h.act === 'tdShopPrev') { G.td.shopPage = (G.td.shopPage || 0) - 1; return true; }
-    if (h.act === 'tdShopNext') { G.td.shopPage = (G.td.shopPage || 0) + 1; return true; }
+    if (G.td.shopDragged && (h.act === 'tdBuyForm' || h.act === 'tdUpForm' || h.act === 'tdShopPage' || h.act === 'tdShopPrev' || h.act === 'tdShopNext' || h.act === 'tdCloseShop')) {
+      G.td.shopDragged = false; return true;
+    }
+    if (h.act === 'tdShopPage') { G.td.shopPage = h.i | 0; G.td.shopScroll = 0; return true; }
+    if (h.act === 'tdShopPrev') { G.td.shopPage = (G.td.shopPage || 0) - 1; G.td.shopScroll = 0; return true; }
+    if (h.act === 'tdShopNext') { G.td.shopPage = (G.td.shopPage || 0) + 1; G.td.shopScroll = 0; return true; }
     if (h.act === 'tdOpenShop') { if (a) a.tdFormShop = true; return true; }
     if (h.act === 'tdCloseShop') { if (a) a.tdFormShop = false; return true; }
     if (h.act === 'tdBuyForm') { buyForm(h.id); return true; }
@@ -1963,111 +1971,197 @@
     ctx.restore();
   }
 
-  function drawFormShop(ctx, G, a) {
-    var W = G.view.w, H = G.view.h, narrow = phone() || W < 700;
-    var z = (a && a.zoom) || 1;
-    var title = narrow ? Math.max(32, Math.ceil(20 / z)) : 32;
-    var body = narrow ? Math.max(28, Math.ceil(14 / z)) : 16;
-    var sizes = [4, 5, 6, 7, 8];
-    var names = ['四人', '五人', '六人', '七人', '八人'];
-    var page = Math.max(0, Math.min(sizes.length - 1, G.td.shopPage || 0));
-    G.td.shopPage = page;
-    var forms = R.FORMATIONS.filter(function (f) { return f.size === sizes[page]; });
+  var SHOP_IDS = ["sixiang","fengshi","quexie","wuxing","jiejie","hansuo","liuhe","huichun","qixing","tianluo","bagua","zhuxie","zhenyue"];
+  var SHOP_ART = null;
+  function shopArt() {
+    if (SHOP_ART) return SHOP_ART;
+    SHOP_ART = { ready: 0, need: 0, img: {} };
+    window.__formShopArt = SHOP_ART;
+    function load(key, url) {
+      SHOP_ART.need++;
+      var im = new Image();
+      im.onload = function () { SHOP_ART.img[key] = im; SHOP_ART.ready++; };
+      im.onerror = function () { SHOP_ART.ready++; };
+      im.src = url;
+    }
+    var base = "assets/formshop/";
+    load("paper", base + "paper.webp");
+    load("title", base + "title.webp");
+    load("up", base + "seal-up.webp");
+    load("buy", base + "seal-buy.webp");
+    load("close", base + "seal-close.webp");
+    SHOP_IDS.forEach(function (id) {
+      load("name-" + id, base + "name-" + id + ".webp");
+      load("diag-" + id, base + "diag-" + id + ".webp");
+    });
+    return SHOP_ART;
+  }
+  function blitH(ctx, im, x, y, h, alpha) {
+    if (!im || !h) return { w: 0, h: 0 };
+    var w = h * im.width / im.height;
     ctx.save();
-    ctx.fillStyle = '#f3ead7';
-    ctx.fillRect(0, 0, W, H);
-    hit(0, 0, W, H, 'tdShopBg');
-    ctx.strokeStyle = 'rgba(42,32,22,0.18)';
-    ctx.lineWidth = 1;
-    var rule;
-    for (rule = 48; rule < H; rule += 48) { ctx.beginPath(); ctx.moveTo(0, rule); ctx.lineTo(W, rule); ctx.stroke(); }
-    ctx.fillStyle = '#6e211b';
-    ctx.font = brushFont(title);
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('阵谱', 22, 32);
-    ctx.fillStyle = '#2a241c';
-    ctx.font = brushFont(body);
-    ctx.fillText('灵石 ' + ((XY.save && XY.save.data && XY.save.data.lingshi) || 0), 22 + title * 2.2, 32);
-    seal(ctx, W - 36, 32, narrow ? 20 : 16, '关');
-    hit(W - 60, 6, 52, 52, 'tdCloseShop');
-    var tabY = 78;
-    names.forEach(function (nm, i) {
-      var tx = 28 + i * (narrow ? 70 : 92);
-      ctx.fillStyle = i === page ? '#9a2e24' : 'rgba(42,36,28,0.55)';
-      ctx.font = brushFont(i === page ? body + 4 : body);
-      ctx.textAlign = 'left';
-      ctx.fillText(nm, tx, tabY);
-      hit(tx - 6, tabY - 18, narrow ? 64 : 80, 36, 'tdShopPage', { i: i });
+    if (alpha != null) ctx.globalAlpha = alpha;
+    ctx.drawImage(im, x, y, w, h);
+    ctx.restore();
+    return { w: w, h: h };
+  }
+  function coverArt(ctx, im, W, H) {
+    var s = Math.max(W / im.width, H / im.height);
+    var dw = im.width * s, dh = im.height * s;
+    ctx.drawImage(im, (W - dw) / 2, (H - dh) / 2, dw, dh);
+  }
+  function rankWord(rank, maxed) {
+    if (maxed) return "满阶";
+    return ["", "一阶", "二阶", "三阶"][rank] || (rank + "阶");
+  }
+  function drawFormShop(ctx, G, a) {
+    var art = shopArt();
+    var W = G.view.w, H = G.view.h;
+    var narrow = phone() || W < 900;
+    var z = (a && a.zoom) || 1;
+    var S = W / (narrow ? 390 : 1920);
+    var pages = ["四人", "五人", "六人", "七人", "八人"];
+    var page = Math.max(0, Math.min(4, G.td.shopPage || 0));
+    G.td.shopPage = page;
+    var forms = R.FORMATIONS.filter(function (f) { return f.size === page + 4; });
+    var imgs = art.img;
+    ctx.save();
+    if (imgs.paper) coverArt(ctx, imgs.paper, W, H);
+    else { ctx.fillStyle = "#ece2d2"; ctx.fillRect(0, 0, W, H); }
+    hit(0, 0, W, H, "tdShopBg");
+    var titleH = (narrow ? 86 : 150) * S;
+    if (imgs.title) blitH(ctx, imgs.title, 18 * S, 6 * S, titleH, 1);
+    else {
+      ctx.fillStyle = "#241c18"; ctx.font = brushFont(titleH * 0.7); ctx.textAlign = "left"; ctx.textBaseline = "top";
+      ctx.fillText("阵谱", 24 * S, 16 * S);
+    }
+    var tabSize = (narrow ? 26 : 46) * S;
+    var tabX = (narrow ? 16 : 250) * S;
+    var tabY = (narrow ? 102 : 34) * S;
+    var gap = (narrow ? 18 : 40) * S;
+    ctx.textBaseline = "top"; ctx.textAlign = "left";
+    ctx.font = brushFont(tabSize);
+    pages.forEach(function (nm, i) {
+      var tw = ctx.measureText(nm).width;
+      ctx.fillStyle = i === page ? "#241c18" : "rgba(70,58,50,0.72)";
+      ctx.fillText(nm, tabX, tabY);
+      if (i === page) {
+        ctx.strokeStyle = "#9e2a24"; ctx.lineWidth = Math.max(2, tabSize / 12);
+        ctx.beginPath(); ctx.moveTo(tabX, tabY + tabSize + 3 * S); ctx.lineTo(tabX + tw, tabY + tabSize + 3 * S); ctx.stroke();
+      }
+      hit(tabX - 4, tabY - 4, tw + 8, tabSize + 14 * S, "tdShopPage", { i: i });
+      tabX += tw + gap;
     });
-    seal(ctx, W - 86, tabY, 14, '左');
-    seal(ctx, W - 40, tabY, 14, '右');
-    hit(W - 108, tabY - 20, 36, 40, 'tdShopPrev');
-    hit(W - 58, tabY - 20, 40, 40, 'tdShopNext');
-    var top = 108, bot = H - 18;
-    var n = Math.max(1, forms.length);
-    var wide = !narrow && W >= 900;
+    var ling = "灵石  " + ((XY.save && XY.save.data && XY.save.data.lingshi) || 0);
+    ctx.fillStyle = "rgba(70,58,50,0.9)";
+    ctx.font = font((narrow ? 18 : 32) * S, false);
+    if (narrow) ctx.fillText(ling, 108 * S, 22 * S);
+    else ctx.fillText(ling, Math.max(tabX + 20 * S, 980 * S), 46 * S);
+    var sealH = (narrow ? 54 : 86) * S;
+    var minHit = Math.max(sealH, 44 / z);
+    if (narrow) {
+      var cx = 334 * S, cy = 12 * S;
+      if (imgs.close) blitH(ctx, imgs.close, cx, cy, 46 * S, 0.92);
+      hit(cx - 4, cy - 4, Math.max(46 * S, minHit), Math.max(46 * S, minHit), "tdCloseShop");
+    } else {
+      var sealX = W - 210 * S, sealY = 16 * S;
+      var prevOk = page > 0, nextOk = page < 4;
+      ctx.font = font(30 * S, false); ctx.textBaseline = "middle";
+      var py = sealY + sealH / 2;
+      var prevW = ctx.measureText("上一页").width;
+      var px = sealX - 18 * S - prevW;
+      ctx.fillStyle = prevOk ? "#241c18" : "rgba(150,140,130,0.7)";
+      ctx.textAlign = "left";
+      ctx.fillText("上一页", px, py);
+      if (prevOk) hit(px - 12 * S, py - 22 * S, prevW + 16 * S, 44 * S, "tdShopPrev");
+      if (imgs.close) blitH(ctx, imgs.close, sealX, sealY, sealH, 0.92);
+      hit(sealX, sealY, Math.max(sealH, minHit), Math.max(sealH, minHit), "tdCloseShop");
+      var nx = sealX + sealH + 14 * S;
+      ctx.fillStyle = nextOk ? "#241c18" : "rgba(150,140,130,0.7)";
+      ctx.fillText("下一页", nx, py);
+      if (nextOk) hit(nx - 8 * S, py - 22 * S, ctx.measureText("下一页").width + 16 * S, 44 * S, "tdShopNext");
+    }
+    if (G.td.shopNote && Date.now() < G.td.shopNote.until) {
+      ctx.fillStyle = "#9e2a24";
+      ctx.font = font((narrow ? 18 : 30) * S, true);
+      ctx.textAlign = "center"; ctx.textBaseline = "top";
+      ctx.fillText(G.td.shopNote.text, W / 2, (narrow ? 148 : 118) * S);
+    }
+    var headerH = (narrow ? 146 : 168) * S;
+    var scroll = G.td.shopScroll || 0;
+    var rowPitch = (narrow ? 230 : 0) * S;
+    var contentH = narrow ? forms.length * rowPitch + 40 * S : H - headerH;
+    var maxScroll = Math.max(0, contentH - (H - headerH));
+    scroll = Math.max(0, Math.min(maxScroll, scroll));
+    G.td.shopScroll = scroll;
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, headerH, W, H - headerH);
+    ctx.clip();
     forms.forEach(function (f, i) {
-      var own = formOwned(f.id), rank = formRank(f.id);
-      var b = R.bonus(f, own ? rank : 1);
-      var x, y, cw, ch;
-      if (wide) { cw = (W - 48) / n; ch = bot - top; x = 24 + i * cw; y = top; }
-      else { cw = W - 24; ch = (bot - top) / n; x = 12; y = top + i * ch; }
-      ctx.fillStyle = own ? '#2a241c' : 'rgba(42,36,28,0.42)';
-      ctx.font = brushFont(wide ? 42 : 36);
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(f.name, x + cw / 2, y + 28);
-      var noteH = body * 4 + 30;
-      var diagram, dx, dy, nx, ny, noteW;
-      if (wide) {
-        noteW = Math.min(cw - 28, 280);
-        diagram = Math.min(cw - 36, ch - noteH - 78);
-        dx = x + cw / 2;
-        dy = y + 52 + diagram / 2;
-        nx = x + (cw - noteW) / 2;
-        ny = dy + diagram / 2 + 12;
+      var own = formOwned(f.id);
+      var rank = own ? formRank(f.id) : 1;
+      var maxed = own && rank >= R.FORM_RANK_MAX;
+      var bns = R.bonus(f, own ? rank : 1);
+      var lines = [
+        R.ROLE_NAME[f.role] || "",
+        "攻 +" + Math.round(bns.atk * 100) + "%",
+        "防 +" + Math.round(bns.dr * 100) + "%",
+        "连携 · " + (f.comboName || ""),
+        own ? rankWord(rank, maxed) : (R.priceOf(f) + " 灵石")
+      ];
+      var inkA = own ? 1 : 0.5;
+      var nameIm = imgs["name-" + f.id];
+      var diagIm = imgs["diag-" + f.id];
+      if (narrow) {
+        var y = headerH + i * rowPitch - scroll;
+        var nameBox = nameIm ? blitH(ctx, nameIm, 6 * S, y + 4 * S, 108 * S, inkA) : { w: 70 * S, h: 0 };
+        if (diagIm) blitH(ctx, diagIm, 6 * S + nameBox.w + 4 * S, y + 18 * S, 150 * S, inkA);
+        var tx = 206 * S, ty = y + 24 * S, lh = 24 * S;
+        ctx.fillStyle = own ? "#241c18" : "rgba(70,58,50,0.85)";
+        ctx.font = font(18 * S, false);
+        ctx.textAlign = "left"; ctx.textBaseline = "top";
+        lines.forEach(function (line, k) { ctx.fillText(line, tx, ty + k * lh); });
+        var sh = 54 * S;
+        var sx = tx, sy = ty + lines.length * lh + 8 * S;
+        var sealIm = own ? (maxed ? null : imgs.up) : imgs.buy;
+        if (sealIm) blitH(ctx, sealIm, sx, sy, sh, 0.95);
+        var hitS = Math.max(sh, 44 / z);
+        if (!own) hit(sx, sy, hitS, hitS, "tdBuyForm", { id: f.id });
+        else if (!maxed) hit(sx, sy, hitS, hitS, "tdUpForm", { id: f.id });
       } else {
-        diagram = Math.min(ch - 64, cw * 0.58);
-        dx = x + 8 + diagram / 2;
-        dy = y + 52 + (ch - 60) / 2;
-        noteW = Math.max(120, cw - diagram - 36);
-        nx = x + 16 + diagram;
-        ny = dy - noteH / 2;
-      }
-      inkDiagram(ctx, f, dx, dy, diagram, !own);
-      paper(ctx, nx, ny, noteW, noteH);
-      ctx.fillStyle = '#6e211b';
-      ctx.font = brushFont(body);
-      ctx.textAlign = 'left';
-      ctx.textBaseline = 'top';
-      ctx.fillText('攻+' + Math.round(b.atk * 100) + '%', nx + 10, ny + 8);
-      ctx.fillText('防+' + Math.round(b.dr * 100) + '%', nx + 10, ny + 8 + body);
-      ctx.fillStyle = '#2a241c';
-      ctx.fillText(f.comboName, nx + 10, ny + 10 + body * 2);
-      var actY = ny + 12 + body * 3;
-      var sealX = nx + noteW - 18;
-      if (!own) {
-        ctx.fillStyle = '#9a2e24';
-        ctx.font = brushFont(body);
-        ctx.textAlign = 'left';
-        ctx.fillText(R.priceOf(f) + ' 灵石', nx + 10, actY);
-        seal(ctx, sealX, actY + body * 0.35, narrow ? 16 : 14, '购');
-        hit(nx + 4, actY - 6, noteW - 8, body + 16, 'tdBuyForm', { id: f.id });
-      } else if (rank < R.FORM_RANK_MAX) {
-        ctx.fillStyle = '#6e211b';
-        ctx.font = brushFont(body);
-        ctx.textAlign = 'left';
-        ctx.fillText(rank + ' 阶', nx + 10, actY);
-        seal(ctx, sealX, actY + body * 0.35, 14, '升');
-        hit(sealX - 22, actY - 8, 44, body + 18, 'tdUpForm', { id: f.id });
-      } else {
-        ctx.fillStyle = '#6e211b';
-        ctx.font = brushFont(body);
-        ctx.textAlign = 'left';
-        ctx.fillText(rank + ' 阶', nx + 10, actY);
+        var n = forms.length;
+        var lefts = n === 3 ? [40, 430, 820] : [160, 700];
+        var colW = n === 3 ? 390 : 460;
+        var lx = lefts[i] * S;
+        var nameH = (n === 3 ? 200 : 230) * S;
+        var nameW = 0;
+        if (nameIm) nameW = blitH(ctx, nameIm, lx, headerH + 8 * S, nameH, inkA).w;
+        var dx = lx + nameW + 12 * S;
+        var diagH = (n === 3 ? 360 : 420) * S;
+        var diagW = 0, diagTop = headerH + 16 * S;
+        if (diagIm) {
+          diagW = blitH(ctx, diagIm, dx, diagTop, diagH, inkA).w;
+        }
+        var kai = 22 * S, lh = 28 * S;
+        var coloX = dx + diagW * 0.28;
+        var coloY = diagTop + diagH + 8 * S;
+        if (coloX > W - 220 * S) coloX = W - 220 * S;
+        ctx.fillStyle = own ? "#241c18" : "rgba(70,58,50,0.88)";
+        ctx.font = font(kai, false);
+        ctx.textAlign = "left"; ctx.textBaseline = "top";
+        lines.forEach(function (line, k) { ctx.fillText(line, coloX, coloY + k * lh); });
+        var sh = 72 * S;
+        var sx = coloX, sy = coloY + lines.length * lh + 6 * S;
+        if (sy + sh > H - 8 * S) sy = H - sh - 10 * S;
+        var sealIm = own ? (maxed ? null : imgs.up) : imgs.buy;
+        if (sealIm) blitH(ctx, sealIm, sx, sy, sh, 0.95);
+        var hitS = Math.max(sh, 44 / z);
+        if (!own) hit(sx, sy, hitS, hitS, "tdBuyForm", { id: f.id });
+        else if (!maxed) hit(sx, sy, hitS, hitS, "tdUpForm", { id: f.id });
       }
     });
+    ctx.restore();
     ctx.restore();
   }
   if (XY.phDrawHeroOver) {
@@ -2134,4 +2228,37 @@
       heroN: d.hero, towerN: d.tower
     };
   };
+  if (!XY._formShopScroll) {
+    XY._formShopScroll = true;
+    var drag = null;
+    window.addEventListener("wheel", function (ev) {
+      var ap = app();
+      var G = window.__xy && window.__xy.G;
+      if (!ap || !ap.tdFormShop || !G || !G.td) return;
+      if (!(phone() || G.view.w < 900)) return;
+      G.td.shopScroll = (G.td.shopScroll || 0) + ev.deltaY / ((ap.zoom) || 1);
+      ev.preventDefault();
+    }, { passive: false });
+    window.addEventListener("pointerdown", function (ev) {
+      var ap = app();
+      var G = window.__xy && window.__xy.G;
+      if (!ap || !ap.tdFormShop || !G || !G.td) return;
+      if (!(phone() || G.view.w < 900)) return;
+      drag = { y: ev.clientY, s: G.td.shopScroll || 0, moved: false };
+    });
+    window.addEventListener("pointermove", function (ev) {
+      if (!drag) return;
+      var dy = drag.y - ev.clientY;
+      if (Math.abs(dy) > 8) drag.moved = true;
+      var ap = app();
+      var zz = (ap && ap.zoom) || 1;
+      var G = window.__xy && window.__xy.G;
+      if (G && G.td) G.td.shopScroll = drag.s + dy / zz;
+    });
+    window.addEventListener("pointerup", function () {
+      var G = window.__xy && window.__xy.G;
+      if (drag && drag.moved && G && G.td) G.td.shopDragged = true;
+      drag = null;
+    });
+  }
 })();
