@@ -1424,6 +1424,9 @@
       G.rt.pts.forEach(function (p, i) { if (i) ctx.lineTo(p.x, p.y); else ctx.moveTo(p.x, p.y); });
       ctx.stroke();
       G.td.spots.forEach(function (p) {
+        if (G.td.tab === 'form') return;
+        var s0 = w2s(G, p.x, p.y);
+        if (s0.x < 36 || s0.y < 36 || s0.x > G.view.w - 36 || s0.y > G.view.h - 36) return;
         ctx.save(); ctx.translate(p.x, p.y);
         ctx.strokeStyle = 'rgba(42,32,22,0.8)';
         ctx.lineWidth = 1.5; ctx.lineCap = 'round';
@@ -2094,7 +2097,7 @@
       if (G.td.deploy && G.td.needCam !== false && G.heroes && G.heroes[0]) {
         var tang0 = G.heroes[0], narrowCam = phone() || G.view.w < 700;
         var sx = narrowCam ? G.view.w * 0.5 : G.view.w * 0.34;
-        var sy = narrowCam ? G.view.h * 0.30 : G.view.h * 0.40;
+        var sy = narrowCam ? G.view.h * 0.36 : G.view.h * 0.40;
         G.cam.x = tang0.x + G.view.w / 2 - sx;
         G.cam.y = tang0.y + G.view.h / 2 - sy;
         G.td.needCam = false;
