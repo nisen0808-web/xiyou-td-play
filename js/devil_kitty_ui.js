@@ -550,8 +550,16 @@
     }
   }
   function spArt(id) {
+    if (id === 'qinba' || id === 'traders18') {
+      var local = img('hero-' + id, 'heroes/' + id + '.webp');
+      if (local) return local;
+    }
     if (!id || !XY.bgArt) return null;
     try { return XY.bgArt(id); } catch (e) { return null; }
+  }
+  function gearArt(id) {
+    if (!id) return null;
+    return img('gear-' + id, 'gear/' + id + '.webp');
   }
   /* 未领取：可抽池每人一张。可见特殊角色 9 位，猫叔在隐藏名单里，不进十连。
    * 以前用下标取余把池子凑成 10 张，会多画一张 Phyrex，那不是抽卡结果。
@@ -584,16 +592,6 @@
     lg.addColorStop(1, 'rgba(0,0,0,0)');
     c.fillStyle = lg;
     c.fillRect(x, y, w, h);
-    c.restore();
-    c.save();
-    c.strokeStyle = 'rgba(36,28,20,0.45)';
-    c.lineWidth = 1.3;
-    c.beginPath();
-    c.moveTo(x + w * 0.08, y + h * 0.06);
-    c.quadraticCurveTo(x + w * 0.4, y - h * 0.02, x + w * 0.78, y + h * 0.05);
-    c.moveTo(x + w * 0.12, y + h * 0.9);
-    c.quadraticCurveTo(x + w * 0.55, y + h * 1.02, x + w * 0.9, y + h * 0.82);
-    c.stroke();
     c.restore();
   }
   function namePlate(c, s, x, y, maxW) {
@@ -1164,8 +1162,12 @@
     wash.addColorStop(1, 'rgba(36,24,16,0)');
     c.fillStyle = wash;
     c.fillRect(x, y, w, h);
-    c.translate(x, y);
-    if (id) inkShape(c, gearKind(id), w, h);
+    var painted = id && gearArt(id);
+    if (painted) drawContain(c, painted, x, y, w, h);
+    else if (id) {
+      c.translate(x, y);
+      inkShape(c, gearKind(id), w, h);
+    }
     c.restore();
   }
   function heroDef(id) {
@@ -1191,25 +1193,83 @@
         cardName(c, nm, cx, cy, cw, ch);
       } else {
         c.save();
+        c.beginPath();
+        c.rect(cx, cy, cw, ch);
+        c.clip();
         c.fillStyle = '#f3ead6';
         c.fillRect(cx, cy, cw, ch);
+        c.fillStyle = 'rgba(36,24,16,0.16)';
+        c.beginPath();
+        c.ellipse(cx + cw * 0.35, cy + ch * 0.3, cw * 0.55, ch * 0.28, -0.4, 0, Math.PI * 2);
+        c.fill();
         c.fillStyle = 'rgba(36,24,16,0.1)';
         c.beginPath();
-        c.ellipse(cx + cw / 2, cy + ch / 2, cw * 0.28, ch * 0.18, 0.15, 0, Math.PI * 2);
+        c.ellipse(cx + cw * 0.7, cy + ch * 0.72, cw * 0.5, ch * 0.3, 0.3, 0, Math.PI * 2);
         c.fill();
         c.restore();
-        if (/[\u4e00-\u9fff]/.test(nm)) brushVert(c, nm, cx + cw / 2, cy + ch * 0.22, Math.min(34, cw * 0.2), '#24180f');
-        else brushFit(c, nm, cx + cw / 2, cy + ch * 0.55, cw - 10, Math.min(ch * 0.14, 30), '#24180f', 'center');
+        if (mostlyCjk(nm)) {
+          var vsize = Math.min(cw * 0.34, (ch * 0.7) / Math.max(1, nm.length));
+          brushVert(c, nm, cx + cw / 2, cy + (ch - nm.length * vsize) / 2, vsize, '#24180f');
+        } else {
+          var cut = nm.length > 8 ? Math.ceil(nm.length / 2) : nm.length;
+          var lines = nm.length > 8 ? [nm.slice(0, cut), nm.slice(cut)] : [nm];
+          var li;
+          for (li = 0; li < lines.length; li++) {
+            brushFit(c, lines[li], cx + cw / 2, cy + ch * (lines.length === 1 ? 0.52 : 0.4 + li * 0.22), cw - 10, Math.min(ch * 0.2, 40), '#24180f', 'center');
+          }
+        }
       }
       if (id === sel) inkCorners(c, cx, cy, cw, ch);
       hit(cx, cy, cw, ch, 'dkHero', { id: id });
     }
   }
+  function emptyGear(c, x, y, w, h) {
+    c.save();
+    c.beginPath();
+    c.rect(x, y, w, h);
+    c.clip();
+    c.strokeStyle = 'rgba(36,28,20,0.12)';
+    c.lineWidth = 1.1;
+    var i;
+    for (i = 0; i < 5; i++) {
+      c.beginPath();
+      c.moveTo(x + w * 0.12, y + h * (0.18 + i * 0.14));
+      c.quadraticCurveTo(x + w * 0.5, y + h * (0.14 + i * 0.14), x + w * 0.88, y + h * (0.2 + i * 0.14));
+      c.stroke();
+    }
+    c.strokeStyle = 'rgba(36,28,20,0.28)';
+    c.lineWidth = 1.5;
+    c.beginPath();
+    c.moveTo(x + w * 0.4, y + h * 0.62);
+    c.lineTo(x + w * 0.47, y + h * 0.62);
+    c.lineTo(x + w * 0.49, y + h * 0.36);
+    c.quadraticCurveTo(x + w * 0.68, y + h * 0.16, x + w * 0.56, y + h * 0.12);
+    c.quadraticCurveTo(x + w * 0.42, y + h * 0.26, x + w * 0.4, y + h * 0.36);
+    c.closePath();
+    c.stroke();
+    c.restore();
+  }
   function gearSlot(c, piece, slotName, x, y, w, h) {
     inkGear(c, piece ? piece.id : '', x, y, w, h);
+    if (!piece) emptyGear(c, x, y, w, h);
     brush(c, slotName, x + 12, y + 16, Math.min(18, w * 0.1), '#8d1f18', 'left');
     if (piece) brushFit(c, piece.name, x + w / 2, y + h - 18, w - 16, Math.min(26, w * 0.14), '#24180f', 'center');
-    else brush(c, '空', x + w / 2, y + h * 0.55, Math.min(36, w * 0.16), '#24180f', 'center');
+    else {
+      brush(c, '空', x + w / 2, y + h * 0.46, Math.min(28, w * 0.14), '#24180f', 'center');
+      brushFit(c, '击败魔化之身有机会得到', x + w / 2, y + h * 0.78, w - 12, 14, '#5c4a36', 'center');
+    }
+  }
+  function paperHandle(c, handle, x, y) {
+    if (!handle) return;
+    var size = 16;
+    var im = inkCanvas(handle, size, '#24180f');
+    c.save();
+    c.fillStyle = 'rgba(246,239,224,0.92)';
+    c.beginPath();
+    c.ellipse(x, y, Math.max(40, im._tw / 2 + 14), 14, 0, 0, Math.PI * 2);
+    c.fill();
+    c.restore();
+    brush(c, handle, x, y, size, '#24180f', 'center');
   }
   function paintGear(c, app) {
     var W = app.lw, H = app.lh, port = H > W * 1.05;
@@ -1220,7 +1280,7 @@
     brush(c, '专属装备', 24, port ? 32 : 36, port ? 28 : 36, '#24180f', 'left');
     redSeal(c, W - 96, 16, 70, 44, '返回');
     hit(W - 96, 16, 70, 44, 'dkGearClose');
-    var ids = (XY.SPECIALS_ALL || XY.SPECIALS || []).map(function (d) { return d.id; });
+    var ids = (XY.SPECIALS_ALL || XY.SPECIALS || []).map(function (d) { return d.id; }).filter(function (id) { return id !== 'cato'; });
     var sel = app.dkHero && ids.indexOf(app.dkHero) >= 0 ? app.dkHero : (ids[0] || 'phyrex');
     app.dkHero = sel;
     var top = port ? 62 : 68;
@@ -1235,7 +1295,8 @@
       var portH = Math.floor(bodyH * 0.58);
       var hd = heroDef(sel);
       inkWash(c, spArt(sel), rx, top, rw, portH, '');
-      captionOn(c, rx, top, rw, portH, (hd && hd.name) || sel, (hd && hd.handle) || '');
+      captionOn(c, rx, top, rw, portH, (hd && hd.name) || sel, '');
+      paperHandle(c, hd && hd.handle, rx + rw / 2, top + portH - 18);
       var slotY = top + portH + 10;
       var slotH = Math.max(90, bodyH - portH - 10 - (owned.length ? 78 : 0));
       var gap = 10, sw = Math.floor((rw - gap) / 2);
@@ -1256,7 +1317,8 @@
       var pw = Math.floor((W - 40) * 0.56);
       inkWash(c, spArt(sel), 16, restY, pw, restH, '');
       var hdM = heroDef(sel);
-      captionOn(c, 16, restY, pw, restH, (hdM && hdM.name) || sel, (hdM && hdM.handle) || '');
+      captionOn(c, 16, restY, pw, restH, (hdM && hdM.name) || sel, '');
+      paperHandle(c, hdM && hdM.handle, 16 + pw / 2, restY + restH - 18);
       var sx = 24 + pw, sww = W - sx - 16;
       var bagH = owned.length ? 72 : 0;
       var sh = Math.floor((restH - 8 - bagH) / 2);
@@ -1386,34 +1448,115 @@
     if (run.formLeft > 0) paintForm(c, app, run);
     if (G.dkDrops && G.dkDrops.t < 6) paintDrop(c, app, G.dkDrops);
   }
+  function tornPath(c, x, y, w, h) {
+    var n = 22, i, t;
+    function j(k) { return Math.sin(k * 1.7) * 0.045 + Math.sin(k * 4.1) * 0.02; }
+    c.beginPath();
+    for (i = 0; i <= n; i++) {
+      t = i / n;
+      var px = x + w * (0.05 + t * 0.9);
+      var py = y + h * (0.04 + j(i));
+      if (i === 0) c.moveTo(px, py); else c.lineTo(px, py);
+    }
+    for (i = 0; i <= n; i++) {
+      t = i / n;
+      c.lineTo(x + w * (0.96 + j(i + 3)), y + h * (0.05 + t * 0.9));
+    }
+    for (i = n; i >= 0; i--) {
+      t = i / n;
+      c.lineTo(x + w * (0.05 + t * 0.9), y + h * (0.96 + j(i + 6)));
+    }
+    for (i = n; i >= 0; i--) {
+      t = i / n;
+      c.lineTo(x + w * (0.04 + j(i + 9)), y + h * (0.05 + t * 0.9));
+    }
+    c.closePath();
+  }
+  function fadePlate(c, im, x, y, w, h) {
+    c.save();
+    c.fillStyle = 'rgba(36,24,16,0.35)';
+    var s;
+    for (s = 0; s < 10; s++) {
+      c.beginPath();
+      c.arc(x + w * (0.08 + (s % 5) * 0.2), y + h * (s < 5 ? 0.02 : 0.98), 2 + (s % 3), 0, Math.PI * 2);
+      c.fill();
+    }
+    tornPath(c, x, y, w, h);
+    c.clip();
+    c.fillStyle = '#f6efe0';
+    c.fillRect(x, y, w, h);
+    if (im) drawContain(c, im, x, y, w, h);
+    c.globalCompositeOperation = 'destination-in';
+    var bands = [
+      c.createLinearGradient(x, y, x, y + h * 0.28),
+      c.createLinearGradient(x, y + h, x, y + h * 0.72),
+      c.createLinearGradient(x, y, x + w * 0.22, y),
+      c.createLinearGradient(x + w, y, x + w * 0.78, y)
+    ];
+    var i;
+    for (i = 0; i < bands.length; i++) {
+      bands[i].addColorStop(0, 'rgba(0,0,0,0)');
+      bands[i].addColorStop(1, 'rgba(0,0,0,1)');
+      c.fillStyle = bands[i];
+      c.fillRect(x, y, w, h);
+    }
+    c.restore();
+  }
+  function obtainTitle(c, W, H, lines) {
+    var byy = Math.max(72, Math.min(H * 0.11, 108));
+    var cy = byy + 30;
+    c.save();
+    c.fillStyle = 'rgba(246,239,224,0.96)';
+    c.beginPath();
+    c.ellipse(W / 2, cy, Math.min(W * 0.46, 320), 16 + lines.length * 18, 0, 0, Math.PI * 2);
+    c.fill();
+    c.restore();
+    var i;
+    for (i = 0; i < lines.length; i++) {
+      brushFit(c, lines[i], W / 2, cy + (i - (lines.length - 1) / 2) * 30, Math.min(W - 24, 560), 28, '#24180f', 'center');
+    }
+  }
   function paintDrop(c, app, drop) {
     var W = app.lw, H = app.lh, port = H > W * 1.05;
     var pieces = [];
     if (drop.card) pieces.push({ kind: 'hero', id: drop.card, name: drop.cardName || drop.card });
     if (drop.gear) pieces.push({ kind: 'gear', id: drop.gear, name: drop.gearName || '' });
     if (!pieces.length) return;
+    var lines = pieces.map(function (p) { return '获得 · ' + p.name; });
+    obtainTitle(c, W, H, lines);
     var n = pieces.length, gap = 14, cw, ch, x0, y0;
+    var topLimit = Math.max(150, Math.min(H * 0.2, 190));
     if (port) {
-      cw = Math.min(W - 24, 520);
-      ch = Math.min(H * 0.36, 620);
+      cw = Math.min(W - 36, 480);
+      ch = Math.min((H - topLimit - 40 - gap) / n, 520);
       x0 = (W - cw) / 2;
-      y0 = Math.max(64, (H - (n * ch + (n - 1) * gap)) / 2);
+      y0 = topLimit;
     } else {
-      ch = Math.min(H * 0.7, 500);
-      cw = Math.min(380, (W - 36 - gap * (n - 1)) / n);
+      ch = Math.min(H - topLimit - 24, 460);
+      cw = Math.min(360, (W - 48 - gap * (n - 1)) / n);
       x0 = (W - (n * cw + (n - 1) * gap)) / 2;
-      y0 = (H - ch) / 2;
+      y0 = topLimit;
     }
     pieces.forEach(function (p, i) {
       var x = port ? x0 : x0 + i * (cw + gap);
       var y = port ? y0 + i * (ch + gap) : y0;
       if (p.kind === 'hero') {
-        inkWash(c, spArt(p.id), x, y, cw, ch, p.name.slice(0, 1));
+        fadePlate(c, spArt(p.id), x, y, cw, ch);
         captionOn(c, x, y, cw, ch, p.name, '');
       } else {
-        inkGear(c, p.id, x, y, cw, ch);
-        brushFit(c, p.name, x + cw / 2, y + ch - 28, cw - 24, Math.min(32, cw * 0.12), '#24180f', 'center');
+        fadePlate(c, gearArt(p.id), x, y, cw, ch);
+        brushFit(c, p.name, x + cw / 2, y + ch - 36, cw - 28, Math.min(28, cw * 0.1), '#24180f', 'center');
       }
+      var head = '获得 · ' + p.name;
+      var hs = 18;
+      var him = inkCanvas(head, hs, '#24180f');
+      c.save();
+      c.fillStyle = 'rgba(246,239,224,0.9)';
+      c.beginPath();
+      c.ellipse(x + cw / 2, y + 26, Math.min(cw * 0.46, him._tw / 2 + 16), 16, 0, 0, Math.PI * 2);
+      c.fill();
+      c.restore();
+      brushFit(c, head, x + cw / 2, y + 26, cw - 28, hs, '#24180f', 'center');
     });
   }
   function paintPause(c, app) {

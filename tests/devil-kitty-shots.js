@@ -245,6 +245,17 @@ async function shot(page, name) {
     XY_DEVIL_KITTY.equipGear(g, 'phyrex', 'phyrex_w');
     XY_DEVIL_KITTY.writeGear(XY.save.data, g);
   });
+  await page.evaluate(function () {
+    var files = ['heroes/qinba.webp', 'heroes/traders18.webp', 'gear/phyrex_w.webp', 'gear/yuanzhang_i.webp'];
+    return Promise.all(files.map(function (f) {
+      return new Promise(function (res) {
+        var im = new Image();
+        im.onload = function () { res(1); };
+        im.onerror = function () { res(0); };
+        im.src = 'assets/devil-kitty/' + f;
+      });
+    }));
+  });
   await frames(page, 3);
   await shot(page, 'gear-desktop');
   await setSize(390, 844);
@@ -373,12 +384,36 @@ async function shot(page, name) {
   });
   console.log('dead', JSON.stringify(dead));
   if (!dead.dead || !dead.drop || !dead.drop.card) fail('no drop ' + JSON.stringify(dead));
-  await frames(page, 2);
-  await page.evaluate(function () { if (window.__xy.G.dkDrops) window.__xy.G.dkDrops.t = 0; });
+  async function showDrop(drop) {
+    await page.evaluate(function (d) {
+      window.__xy.G.dkDrops = d;
+      var ids = [d.card, d.gear].filter(Boolean);
+      return Promise.all(ids.map(function (id) {
+        return new Promise(function (res) {
+          var im = new Image();
+          im.onload = function () { res(1); };
+          im.onerror = function () { res(0); };
+          im.src = id === d.gear ? ('assets/devil-kitty/gear/' + id + '.webp') : ('assets/art/bg/' + id + '.webp');
+        });
+      }));
+    }, drop);
+    await frames(page, 2);
+  }
+  var cardOnly = { card: 'yuanzhang', cardName: '园长', gear: null, gearName: '', t: 0 };
+  var bothDrop = { card: 'yuanzhang', cardName: '园长', gear: 'phyrex_w', gearName: '冷钱包短刃', t: 0 };
   await setSize(1920, 1080);
-  await shot(page, 'drop-desktop');
-  await page.evaluate(function () { if (window.__xy.G.dkDrops) window.__xy.G.dkDrops.t = 0; });
+  await showDrop(cardOnly);
+  await shot(page, 'drop-card-desktop');
   await setSize(390, 844);
+  await showDrop(cardOnly);
+  await shot(page, 'drop-card-mobile');
+  await setSize(1920, 1080);
+  await showDrop(bothDrop);
+  await shot(page, 'drop-both-desktop');
+  await shot(page, 'drop-desktop');
+  await setSize(390, 844);
+  await showDrop(bothDrop);
+  await shot(page, 'drop-both-mobile');
   await shot(page, 'drop-mobile');
   await setSize(1920, 1080);
 
