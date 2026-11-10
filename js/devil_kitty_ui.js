@@ -8,7 +8,7 @@
   if (!API || !XY || !XY.step || !XY.save) return;
 
   var BASE = 'assets/devil-kitty/';
-  var art = { stage1: 'stage1.webp', form: 'form.webp', stage1Cut: 'stage1-cut.webp', formCut: 'form-cut.webp', formVideo: 'form.mp4', formDurationMs: 9000, frameCount: 31, formName: '九尾咆哮' };
+  var art = { stage1: 'stage1.webp', form: 'form.webp', stage1Cut: 'stage1-cut.webp', formCut: 'form-cut.webp', formVideo: 'form.mp4', introScene: 'intro-scene.webp', formDurationMs: 9000, frameCount: 31, formName: '九尾咆哮' };
   var imgs = {};
   var vid = null;
   var frameImgs = [];
@@ -937,10 +937,13 @@
     var scene = art.introScene ? img('introScene', art.introScene) : null;
     if (scene) {
       var W0 = app.lw, H0 = app.lh;
+      var ir = scene.naturalWidth / scene.naturalHeight, br = W0 / H0, dw, dh, dx, dy;
       c.save();
-      c.fillStyle = '#f3ead6';
+      c.fillStyle = '#e7d7be';
       c.fillRect(0, 0, W0, H0);
-      drawContain(c, scene, 0, 0, W0, H0);
+      if (ir > br) { dw = W0; dh = W0 / ir; dx = 0; dy = (H0 - dh) / 2; }
+      else { dh = H0; dw = H0 * ir; dy = 0; dx = (W0 - dw) / 2; }
+      c.drawImage(scene, dx, dy, dw, dh);
       c.restore();
       return;
     }

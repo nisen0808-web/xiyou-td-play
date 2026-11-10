@@ -6,7 +6,7 @@
   "stage1": "stage1.webp",
   "form": "form.webp",
   "formVideo": "form.mp4",
-  "introScene": "",
+  "introScene": "intro-scene.webp",
   "formDurationMs": 9000,
   "stage1Cut": "stage1-cut.webp",
   "formCut": "form-cut.webp",

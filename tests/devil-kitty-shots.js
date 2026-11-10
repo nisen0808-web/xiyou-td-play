@@ -326,7 +326,14 @@ async function shot(page, name) {
   });
   console.log('battle-intro', JSON.stringify(battle));
   if (!battle.spawned || !battle.hold) fail('intro did not start ' + JSON.stringify(battle));
-  await frames(page, 5);
+  await page.evaluate(function () {
+    return new Promise(function (res) {
+      var im = new Image();
+      im.onload = im.onerror = function () { res(1); };
+      im.src = 'assets/devil-kitty/intro-scene.webp';
+    });
+  });
+  await frames(page, 6);
   await both('intro');
 
   await page.evaluate(function () {
