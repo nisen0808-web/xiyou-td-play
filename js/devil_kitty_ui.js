@@ -716,6 +716,82 @@
     else if (align === 'right') dx = x - im._pad - im._tw;
     c.drawImage(im, dx, y - im.height / 2);
   }
+  /* 右停把原图被裁开的浅色署名抹进周围的纸色，再把两行书法压上去。只动很亮的笔画，不铺底板。 */
+  function erasePaintedName(c, x, y, w, h) {
+    var t = c.getTransform ? c.getTransform() : null;
+    var sx = t ? t.a : 1, sy = t ? t.d : 1, ox = t ? t.e : 0, oy = t ? t.f : 0;
+    var canvas = c.canvas;
+    var x0 = Math.max(0, Math.floor(x * sx + ox));
+    var y0 = Math.max(0, Math.floor(y * sy + oy));
+    var w0 = Math.min(canvas.width - x0, Math.ceil(w * sx));
+    var h0 = Math.min(canvas.height - y0, Math.ceil(h * sy));
+    if (w0 < 4 || h0 < 4) return;
+    var img;
+    try { img = c.getImageData(x0, y0, w0, h0); } catch (e) { return; }
+    var d = img.data, n = w0 * h0, mask = new Uint8Array(n), i, p, r, g, b, lum;
+    for (i = 0; i < n; i++) {
+      p = i * 4; r = d[p]; g = d[p + 1]; b = d[p + 2];
+      lum = (r + g + b) / 3;
+      if (lum > 165 && r > 175 && g > 140 && r + 10 > b) mask[i] = 1;
+    }
+    var dil = new Uint8Array(n), yy, xx, y1, x1, y2, x2;
+    for (yy = 0; yy < h0; yy++) {
+      for (xx = 0; xx < w0; xx++) {
+        if (!mask[yy * w0 + xx]) continue;
+        y1 = yy > 2 ? yy - 2 : 0; y2 = yy + 2 < h0 ? yy + 2 : h0 - 1;
+        x1 = xx > 2 ? xx - 2 : 0; x2 = xx + 2 < w0 ? xx + 2 : w0 - 1;
+        for (y1; y1 <= y2; y1++) for (x1 = xx > 2 ? xx - 2 : 0; x1 <= x2; x1++) dil[y1 * w0 + x1] = 1;
+      }
+    }
+    var valid = new Uint8Array(n);
+    for (i = 0; i < n; i++) valid[i] = dil[i] ? 0 : 1;
+    var steps = [32, 16, 8, 4, 2, 1], dirs = [0, 1, 0, -1, 1, 0, -1, 0, 1, 1, 1, -1, -1, 1, -1, -1];
+    var si, step, di, dy, dx, ny, nx, i2, p2;
+    for (si = 0; si < steps.length; si++) {
+      step = steps[si];
+      for (di = 0; di < dirs.length; di += 2) {
+        dy = dirs[di] * step; dx = dirs[di + 1] * step;
+        for (yy = 0; yy < h0; yy++) {
+          ny = yy + dy;
+          if (ny < 0 || ny >= h0) continue;
+          for (xx = 0; xx < w0; xx++) {
+            i = yy * w0 + xx;
+            if (valid[i]) continue;
+            nx = xx + dx;
+            if (nx < 0 || nx >= w0) continue;
+            i2 = ny * w0 + nx;
+            if (!valid[i2]) continue;
+            p = i * 4; p2 = i2 * 4;
+            d[p] = d[p2]; d[p + 1] = d[p2 + 1]; d[p + 2] = d[p2 + 2];
+            valid[i] = 1;
+          }
+        }
+      }
+    }
+    c.putImageData(img, x0, y0);
+  }
+  function inkLine(c, text, x, y, size, alpha) {
+    var halo = Math.max(2, size * 0.045);
+    var fat = Math.max(1, size * 0.016);
+    var k, ox, oy;
+    c.save();
+    c.globalAlpha = Math.max(0, alpha) * 0.16;
+    for (k = 0; k < 8; k++) {
+      ox = Math.cos(k * Math.PI / 4) * halo;
+      oy = Math.sin(k * Math.PI / 4) * halo;
+      brush(c, text, x + ox, y + oy, size, '#1a100c', 'center');
+    }
+    c.restore();
+    c.save();
+    c.globalAlpha = alpha;
+    for (k = 0; k < 4; k++) {
+      ox = (k % 2 ? fat : -fat);
+      oy = (k < 2 ? fat : -fat);
+      brush(c, text, x + ox, y + oy, size, '#f4ecdc', 'center');
+    }
+    brush(c, text, x, y, size, '#f6f0e4', 'center');
+    c.restore();
+  }
   function brushFit(c, s, x, y, maxW, size, col, align) {
     var px = size;
     var im = inkCanvas(String(s), px, col || '#24180f');
@@ -959,8 +1035,8 @@
           u = p * p * (3 - 2 * p);
         }
         var leftStart = 0.02;
-        /* 右停对准魔化猫的头脸。原图名字比窗口宽，下面换成两行，避免裁掉「化」。 */
-        var rightStart = 0.52;
+        /* 右停保住左上「猫叔登场」和魔化猫的头脸，脚和地面仍在画面里。 */
+        var rightStart = 0.448;
         var start = leftStart + (rightStart - leftStart) * u;
         dx = -dw * start;
       } else if (ir > W0 / H0) {
@@ -969,23 +1045,15 @@
         dw = W0; dh = W0 / ir; dx = 0; dy = (H0 - dh) / 2;
       }
       c.drawImage(scene, dx, dy, dw, dh);
-      if (port && u > 0.62) {
-        var nf = Math.max(0, Math.min(1, (u - 0.62) / 0.22));
-        c.save();
-        c.globalAlpha = nf;
-        var y0 = H0 * 0.60;
-        var wash = c.createLinearGradient(0, y0, 0, H0 * 0.70);
-        wash.addColorStop(0, 'rgba(7,5,4,0)');
-        wash.addColorStop(1, 'rgba(7,5,4,1)');
-        c.fillStyle = wash;
-        c.fillRect(0, y0, W0, H0 * 0.10);
-        c.fillStyle = '#070504';
-        c.fillRect(0, H0 * 0.70, W0, H0 * 0.30);
-        var nameSize = Math.round(Math.min(W0 * 0.16, H0 * 0.052));
-        brushFit(c, '猫叔', W0 / 2, H0 * 0.76, W0 * 0.86, nameSize, '#f6f0e4', 'center');
-        brushFit(c, '· 魔化', W0 / 2, H0 * 0.76 + nameSize * 1.15, W0 * 0.86, nameSize, '#f6f0e4', 'center');
-        brushFit(c, API.HANDLE, W0 / 2, H0 * 0.76 + nameSize * 2.25, W0 * 0.72, Math.round(nameSize * 0.46), '#f3ead8', 'center');
-        c.restore();
+      if (port && u > 0.82) {
+        var nf = Math.max(0, Math.min(1, (u - 0.82) / 0.12));
+        erasePaintedName(c, 0, H0 * 0.66, W0, H0 * 0.32);
+        /* 字号对齐左停原图「猫叔」。署名用同一支粗墨，略小，和左边的落款一样。 */
+        var nameSize = Math.round(H0 * 0.117);
+        var yName = H0 * 0.72;
+        inkLine(c, '猫叔', W0 / 2, yName, nameSize, nf);
+        inkLine(c, '· 魔化', W0 / 2, yName + nameSize * 0.92, nameSize, nf);
+        inkLine(c, API.HANDLE, W0 / 2, yName + nameSize * 1.72, Math.round(nameSize * 0.48), nf);
       }
       c.restore();
       hit(0, 0, W0, H0, 'dkSkip');
