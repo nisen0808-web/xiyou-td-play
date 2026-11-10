@@ -1035,8 +1035,8 @@
           u = p * p * (3 - 2 * p);
         }
         var leftStart = 0.02;
-        /* 右停保住左上「猫叔登场」和魔化猫的头脸，脚和地面仍在画面里。 */
-        var rightStart = 0.448;
+        /* 右停从「猫」起笔，整行「猫叔登场」在屏内，头脸和地面仍在。前面的「特别活动」整段留在画面外。 */
+        var rightStart = 972 / 1920;
         var start = leftStart + (rightStart - leftStart) * u;
         dx = -dw * start;
       } else if (ir > W0 / H0) {
@@ -1045,6 +1045,15 @@
         dw = W0; dh = W0 / ir; dx = 0; dy = (H0 - dh) / 2;
       }
       c.drawImage(scene, dx, dy, dw, dh);
+      if (port && u < 0.96) {
+        /* 左停原图标题在画面外。固定一行在左上，按宽度缩小，不跟着平移。 */
+        var tf = u < 0.72 ? 1 : Math.max(0, (0.96 - u) / 0.24);
+        c.save();
+        c.globalAlpha = tf;
+        var ts = Math.round(Math.min(W0 * 0.105, H0 * 0.058));
+        brushFit(c, '特别活动 · 猫叔登场', W0 * 0.04, Math.max(ts * 0.78, H0 * 0.048), W0 * 0.92, ts, '#1c140e', 'left');
+        c.restore();
+      }
       if (port && u > 0.82) {
         var nf = Math.max(0, Math.min(1, (u - 0.82) / 0.12));
         erasePaintedName(c, 0, H0 * 0.66, W0, H0 * 0.32);
