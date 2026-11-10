@@ -77,7 +77,7 @@
     var def = R.formById(id), b = formBook();
     if (!def || !b || b[id].owned) return false;
     var price = R.priceOf(def);
-    if ((XY.save.data.lingshi || 0) < price) { shopFail('灵石不足，买这阵要 ' + price + ' 灵石'); return false; }
+    if ((XY.save.data.lingshi || 0) < price) { shopFail('灵石不足，买这阵要' + zhCount(price) + '灵石'); return false; }
     XY.save.data.lingshi -= price;
     b[id].owned = true;
     XY.save.touch();
@@ -87,7 +87,7 @@
     var def = R.formById(id), b = formBook();
     if (!def || !b || !b[id].owned || b[id].rank >= R.FORM_RANK_MAX) return false;
     var price = R.upPrice(def, b[id].rank);
-    if ((XY.save.data.lingshi || 0) < price) { shopFail('灵石不足，升到下一阶要 ' + price + ' 灵石'); return false; }
+    if ((XY.save.data.lingshi || 0) < price) { shopFail('灵石不足，升到下一阶要' + zhCount(price) + '灵石'); return false; }
     XY.save.data.lingshi -= price;
     b[id].rank += 1;
     XY.save.touch();
@@ -1986,6 +1986,7 @@
     }
     var base = "assets/formshop/";
     load("paper", base + "paper.webp");
+    load("paperDesk", base + "paper-desk.webp");
     load("title", base + "title.webp");
     load("up", base + "seal-up.webp");
     load("buy", base + "seal-buy.webp");
@@ -2014,6 +2015,43 @@
     if (maxed) return "满阶";
     return ["", "一阶", "二阶", "三阶"][rank] || (rank + "阶");
   }
+  function zhCount(n) {
+    n = Math.max(0, Math.round(n));
+    var d = "零一二三四五六七八九";
+    function u99(x) {
+      if (x < 10) return d[x];
+      if (x < 20) return "十" + (x % 10 ? d[x % 10] : "");
+      return d[Math.floor(x / 10)] + "十" + (x % 10 ? d[x % 10] : "");
+    }
+    if (n < 100) return u99(n);
+    if (n < 1000) {
+      var h = Math.floor(n / 100), r = n % 100, s = d[h] + "百";
+      if (!r) return s;
+      if (r < 10) return s + "零" + d[r];
+      return s + u99(r);
+    }
+    if (n < 10000) {
+      var th = Math.floor(n / 1000), r = n % 1000, s = d[th] + "千";
+      if (!r) return s;
+      if (r < 100) return s + "零" + (r < 10 ? d[r] : u99(r));
+      return s + zhCount(r);
+    }
+    return String(n);
+  }
+  function liftPaper(ctx, x, y, w, h) {
+    var cx = x + w * 0.5, cy = y + h * 0.46;
+    var rx = Math.max(8, w * 0.58), ry = Math.max(8, h * 0.55);
+    var g = ctx.createRadialGradient(cx, cy, Math.min(rx, ry) * 0.15, cx, cy, Math.max(rx, ry));
+    g.addColorStop(0, "rgba(236,226,210,0.88)");
+    g.addColorStop(0.62, "rgba(236,226,210,0.42)");
+    g.addColorStop(1, "rgba(236,226,210,0)");
+    ctx.save();
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
   function drawFormShop(ctx, G, a) {
     var art = shopArt();
     var W = G.view.w, H = G.view.h;
@@ -2026,19 +2064,20 @@
     var forms = R.FORMATIONS.filter(function (f) { return f.size === page + 4; });
     var imgs = art.img;
     ctx.save();
-    if (imgs.paper) coverArt(ctx, imgs.paper, W, H);
+    var bgIm = narrow ? imgs.paper : (imgs.paperDesk || imgs.paper);
+    if (bgIm) coverArt(ctx, bgIm, W, H);
     else { ctx.fillStyle = "#ece2d2"; ctx.fillRect(0, 0, W, H); }
     hit(0, 0, W, H, "tdShopBg");
-    var titleH = (narrow ? 86 : 150) * S;
-    if (imgs.title) blitH(ctx, imgs.title, 18 * S, 6 * S, titleH, 1);
+    var titleH = (narrow ? 86 : 168) * S;
+    if (imgs.title) blitH(ctx, imgs.title, (narrow ? 18 : 22) * S, (narrow ? 6 : 8) * S, titleH, 1);
     else {
       ctx.fillStyle = "#241c18"; ctx.font = brushFont(titleH * 0.7); ctx.textAlign = "left"; ctx.textBaseline = "top";
       ctx.fillText("阵谱", 24 * S, 16 * S);
     }
-    var tabSize = (narrow ? 26 : 46) * S;
-    var tabX = (narrow ? 16 : 250) * S;
-    var tabY = (narrow ? 102 : 34) * S;
-    var gap = (narrow ? 18 : 40) * S;
+    var tabSize = (narrow ? 26 : 52) * S;
+    var tabX = (narrow ? 16 : 268) * S;
+    var tabY = (narrow ? 102 : 26) * S;
+    var gap = (narrow ? 18 : 44) * S;
     ctx.textBaseline = "top"; ctx.textAlign = "left";
     ctx.font = brushFont(tabSize);
     pages.forEach(function (nm, i) {
@@ -2052,11 +2091,11 @@
       hit(tabX - 4, tabY - 4, tw + 8, tabSize + 14 * S, "tdShopPage", { i: i });
       tabX += tw + gap;
     });
-    var ling = "灵石  " + ((XY.save && XY.save.data && XY.save.data.lingshi) || 0);
+    var ling = "灵石  " + zhCount((XY.save && XY.save.data && XY.save.data.lingshi) || 0);
     ctx.fillStyle = "rgba(70,58,50,0.9)";
-    ctx.font = font((narrow ? 18 : 32) * S, false);
+    ctx.font = font((narrow ? 18 : 34) * S, false);
     if (narrow) ctx.fillText(ling, 108 * S, 22 * S);
-    else ctx.fillText(ling, Math.max(tabX + 20 * S, 980 * S), 46 * S);
+    else ctx.fillText(ling, Math.max(tabX + 36 * S, 1040 * S), 40 * S);
     var sealH = (narrow ? 54 : 86) * S;
     var minHit = Math.max(sealH, 44 / z);
     if (narrow) {
@@ -2064,7 +2103,7 @@
       if (imgs.close) blitH(ctx, imgs.close, cx, cy, 46 * S, 0.92);
       hit(cx - 4, cy - 4, Math.max(46 * S, minHit), Math.max(46 * S, minHit), "tdCloseShop");
     } else {
-      var sealX = W - 210 * S, sealY = 16 * S;
+      var sealX = 1700 * S, sealY = 18 * S;
       var prevOk = page > 0, nextOk = page < 4;
       ctx.font = font(30 * S, false); ctx.textBaseline = "middle";
       var py = sealY + sealH / 2;
@@ -2094,6 +2133,53 @@
     var maxScroll = Math.max(0, contentH - (H - headerH));
     scroll = Math.max(0, Math.min(maxScroll, scroll));
     G.td.shopScroll = scroll;
+    var desk = null;
+    if (!narrow) {
+      var nCol = forms.length;
+      var lefts, colW, target;
+      if (nCol === 3) {
+        lefts = [250, 780, 1310];
+        colW = 520;
+        target = 470;
+      } else {
+        colW = 620;
+        var gapC = 140, areaL = 260, areaR = 1880;
+        var total = colW * 2 + gapC;
+        var start = areaL + Math.floor((areaR - areaL - total) / 2);
+        lefts = [start, start + colW + gapC];
+        target = 540;
+      }
+      var kaiD = 32, lhD = 38, sealD = 100, gapDC = 12, titleGap = 38;
+      var coloHD = lhD * 5 + 8 + sealD;
+      var contentTop = 176, contentBot = 1056;
+      var laid = forms.map(function (f, i) {
+        var nameIm = imgs["name-" + f.id];
+        var diagIm = imgs["diag-" + f.id];
+        var nameH = (f.id === "zhuxie" || f.id === "zhenyue") ? 268 : 240;
+        var nameW = nameIm ? nameH * nameIm.width / nameIm.height : 96;
+        var titleX = lefts[i] - (nCol === 3 ? 8 : 4);
+        var avail = (lefts[i] + colW) - (titleX + nameW + titleGap) - 22;
+        if (avail < 240) avail = 240;
+        var diagW = target, diagH = target;
+        if (diagIm) {
+          var sc = Math.min(target / Math.max(diagIm.width, diagIm.height), avail / diagIm.width);
+          diagW = diagIm.width * sc;
+          diagH = diagIm.height * sc;
+        }
+        return {
+          titleX: titleX, nameW: nameW, nameH: nameH,
+          diagW: diagW, diagH: diagH,
+          colH: Math.max(nameH, diagH) + gapDC + coloHD
+        };
+      });
+      var tallest = 0;
+      laid.forEach(function (p) { if (p.colH > tallest) tallest = p.colH; });
+      desk = {
+        laid: laid, lefts: lefts, n: nCol,
+        y0: contentTop + Math.max(0, (contentBot - contentTop - tallest) / 2),
+        kai: kaiD, lh: lhD, seal: sealD, gap: gapDC, titleGap: titleGap
+      };
+    }
     ctx.save();
     ctx.beginPath();
     ctx.rect(0, headerH, W, H - headerH);
@@ -2108,7 +2194,7 @@
         "攻 +" + Math.round(bns.atk * 100) + "%",
         "防 +" + Math.round(bns.dr * 100) + "%",
         "连携 · " + (f.comboName || ""),
-        own ? rankWord(rank, maxed) : (R.priceOf(f) + " 灵石")
+        own ? rankWord(rank, maxed) : (zhCount(R.priceOf(f)) + "灵石")
       ];
       var inkA = own ? 1 : 0.5;
       var nameIm = imgs["name-" + f.id];
@@ -2130,30 +2216,38 @@
         if (!own) hit(sx, sy, hitS, hitS, "tdBuyForm", { id: f.id });
         else if (!maxed) hit(sx, sy, hitS, hitS, "tdUpForm", { id: f.id });
       } else {
-        var n = forms.length;
-        var lefts = n === 3 ? [40, 430, 820] : [160, 700];
-        var colW = n === 3 ? 390 : 460;
-        var lx = lefts[i] * S;
-        var nameH = (n === 3 ? 200 : 230) * S;
-        var nameW = 0;
-        if (nameIm) nameW = blitH(ctx, nameIm, lx, headerH + 8 * S, nameH, inkA).w;
-        var dx = lx + nameW + 12 * S;
-        var diagH = (n === 3 ? 360 : 420) * S;
-        var diagW = 0, diagTop = headerH + 16 * S;
-        if (diagIm) {
-          diagW = blitH(ctx, diagIm, dx, diagTop, diagH, inkA).w;
-        }
-        var kai = 22 * S, lh = 28 * S;
-        var coloX = dx + diagW * 0.28;
-        var coloY = diagTop + diagH + 8 * S;
-        if (coloX > W - 220 * S) coloX = W - 220 * S;
+        var lay = desk.laid[i];
+        var ny = Math.max(176, desk.y0) * S;
+        ctx.save();
+        ctx.globalAlpha = inkA;
+        if (nameIm) ctx.drawImage(nameIm, lay.titleX * S, ny, lay.nameW * S, lay.nameH * S);
+        var dx = (lay.titleX + lay.nameW + desk.titleGap) * S;
+        var dy = desk.y0 * S;
+        if (diagIm) ctx.drawImage(diagIm, dx, dy, lay.diagW * S, lay.diagH * S);
+        ctx.restore();
+        var coloXd = i === desk.n - 1 ? (dx / S + lay.diagW * 0.18) : (dx / S + lay.diagW * 0.42);
+        coloXd = Math.min(coloXd, 1920 - 340);
+        coloXd = Math.max(coloXd, desk.lefts[i]);
+        ctx.font = font(desk.kai * S, false);
+        var widest = 0;
+        lines.forEach(function (line) {
+          var w = ctx.measureText(line).width / S;
+          if (w > widest) widest = w;
+        });
+        var limit = (i < desk.n - 1 ? desk.laid[i + 1].titleX : 1890) - 14;
+        if (coloXd + widest > limit) coloXd = Math.max(desk.lefts[i], limit - widest);
+        var coloYd = desk.y0 + lay.diagH + desk.gap;
+        var lh = desk.lh * S;
+        liftPaper(ctx, (coloXd - 12) * S, (coloYd - 8) * S, 330 * S, (desk.lh * lines.length + 8 + desk.seal + 18) * S);
         ctx.fillStyle = own ? "#241c18" : "rgba(70,58,50,0.88)";
-        ctx.font = font(kai, false);
+        ctx.font = font(desk.kai * S, false);
         ctx.textAlign = "left"; ctx.textBaseline = "top";
-        lines.forEach(function (line, k) { ctx.fillText(line, coloX, coloY + k * lh); });
-        var sh = 72 * S;
-        var sx = coloX, sy = coloY + lines.length * lh + 6 * S;
-        if (sy + sh > H - 8 * S) sy = H - sh - 10 * S;
+        lines.forEach(function (line, k) { ctx.fillText(line, coloXd * S, coloYd * S + k * lh); });
+        var sh = desk.seal * S;
+        var sx = coloXd * S, sy = (coloYd + lines.length * desk.lh + 8) * S;
+        if (sy + sh > H - 4) sy = H - sh - 4;
+        if (sx + sh > W - 2) sx = W - sh - 2;
+        if (sx < 2) sx = 2;
         var sealIm = own ? (maxed ? null : imgs.up) : imgs.buy;
         if (sealIm) blitH(ctx, sealIm, sx, sy, sh, 0.95);
         var hitS = Math.max(sh, 44 / z);
