@@ -1228,34 +1228,41 @@
     c.beginPath();
     c.rect(x, y, w, h);
     c.clip();
-    c.strokeStyle = 'rgba(36,28,20,0.12)';
-    c.lineWidth = 1.1;
-    var i;
-    for (i = 0; i < 5; i++) {
-      c.beginPath();
-      c.moveTo(x + w * 0.12, y + h * (0.18 + i * 0.14));
-      c.quadraticCurveTo(x + w * 0.5, y + h * (0.14 + i * 0.14), x + w * 0.88, y + h * (0.2 + i * 0.14));
-      c.stroke();
-    }
-    c.strokeStyle = 'rgba(36,28,20,0.28)';
-    c.lineWidth = 1.5;
+    var wash = c.createRadialGradient(x + w * 0.52, y + h * 0.4, 4, x + w * 0.5, y + h * 0.42, Math.max(w, h) * 0.48);
+    wash.addColorStop(0, 'rgba(36,24,16,0.1)');
+    wash.addColorStop(1, 'rgba(36,24,16,0)');
+    c.fillStyle = wash;
+    c.fillRect(x, y, w, h);
+    c.fillStyle = 'rgba(36,24,16,0.07)';
     c.beginPath();
-    c.moveTo(x + w * 0.4, y + h * 0.62);
-    c.lineTo(x + w * 0.47, y + h * 0.62);
-    c.lineTo(x + w * 0.49, y + h * 0.36);
-    c.quadraticCurveTo(x + w * 0.68, y + h * 0.16, x + w * 0.56, y + h * 0.12);
-    c.quadraticCurveTo(x + w * 0.42, y + h * 0.26, x + w * 0.4, y + h * 0.36);
+    c.ellipse(x + w * 0.52, y + h * 0.4, w * 0.2, h * 0.3, -0.55, 0, Math.PI * 2);
+    c.fill();
+    c.fillStyle = 'rgba(36,24,16,0.2)';
+    c.beginPath();
+    c.moveTo(x + w * 0.4, y + h * 0.7);
+    c.quadraticCurveTo(x + w * 0.44, y + h * 0.36, x + w * 0.56, y + h * 0.16);
+    c.quadraticCurveTo(x + w * 0.74, y + h * 0.08, x + w * 0.66, y + h * 0.32);
+    c.quadraticCurveTo(x + w * 0.56, y + h * 0.48, x + w * 0.5, y + h * 0.72);
     c.closePath();
-    c.stroke();
+    c.fill();
     c.restore();
   }
   function gearSlot(c, piece, slotName, x, y, w, h) {
+    var band = piece ? Math.min(34, Math.max(24, h * 0.2)) : 0;
     inkGear(c, piece ? piece.id : '', x, y, w, h);
     if (!piece) emptyGear(c, x, y, w, h);
     brush(c, slotName, x + 12, y + 16, Math.min(18, w * 0.1), '#8d1f18', 'left');
-    if (piece) brushFit(c, piece.name, x + w / 2, y + h - 18, w - 16, Math.min(26, w * 0.14), '#24180f', 'center');
-    else {
-      brush(c, '空', x + w / 2, y + h * 0.46, Math.min(28, w * 0.14), '#24180f', 'center');
+    if (piece) {
+      var fade = c.createLinearGradient(x, y + h - band - 18, x, y + h - band);
+      fade.addColorStop(0, 'rgba(244,234,214,0)');
+      fade.addColorStop(1, 'rgba(244,234,214,1)');
+      c.fillStyle = fade;
+      c.fillRect(x, y + h - band - 18, w, 18);
+      c.fillStyle = '#f4ead6';
+      c.fillRect(x, y + h - band, w, band);
+      brushFit(c, piece.name, x + w / 2, y + h - band / 2, w - 16, Math.min(22, w * 0.12), '#24180f', 'center');
+    } else {
+      brush(c, '空', x + w / 2, y + h * 0.42, Math.min(26, w * 0.13), '#24180f', 'center');
       brushFit(c, '击败魔化之身有机会得到', x + w / 2, y + h * 0.78, w - 12, 14, '#5c4a36', 'center');
     }
   }
@@ -1488,10 +1495,10 @@
     if (im) drawContain(c, im, x, y, w, h);
     c.globalCompositeOperation = 'destination-in';
     var bands = [
-      c.createLinearGradient(x, y, x, y + h * 0.28),
-      c.createLinearGradient(x, y + h, x, y + h * 0.72),
-      c.createLinearGradient(x, y, x + w * 0.22, y),
-      c.createLinearGradient(x + w, y, x + w * 0.78, y)
+      c.createLinearGradient(x, y, x, y + h * 0.1),
+      c.createLinearGradient(x, y + h, x, y + h * 0.9),
+      c.createLinearGradient(x, y, x + w * 0.08, y),
+      c.createLinearGradient(x + w, y, x + w * 0.92, y)
     ];
     var i;
     for (i = 0; i < bands.length; i++) {
@@ -1502,18 +1509,41 @@
     }
     c.restore();
   }
-  function obtainTitle(c, W, H, lines) {
-    var byy = Math.max(72, Math.min(H * 0.11, 108));
-    var cy = byy + 30;
+  function hudFloor(app) {
+    var z = app.zoom || 1;
+    var cssW = app.lw * z, cssH = app.lh * z;
+    var s = (cssW < 1100 || cssH < 700) ? 1 : Math.min(Math.min(cssW / 1280, cssH / 720), 3.5);
+    var hudW = cssW / s, hudH = cssH / s, port = hudH > hudW * 1.05;
+    var cssBottom = port ? 168 : 108;
+    return cssBottom * s / z;
+  }
+  function dropVeil(c, x, y, w, h) {
     c.save();
-    c.fillStyle = 'rgba(246,239,224,0.96)';
+    var edge = Math.min(18, h * 0.08);
+    var g = c.createLinearGradient(0, y, 0, y + edge);
+    g.addColorStop(0, 'rgba(246,239,224,0)');
+    g.addColorStop(1, 'rgba(246,239,224,0.92)');
+    c.fillStyle = g;
+    c.fillRect(x, y, w, edge);
+    c.fillStyle = 'rgba(246,239,224,0.92)';
+    c.fillRect(x, y + edge, w, Math.max(0, h - edge * 2));
+    var g2 = c.createLinearGradient(0, y + h - edge, 0, y + h);
+    g2.addColorStop(0, 'rgba(246,239,224,0.92)');
+    g2.addColorStop(1, 'rgba(246,239,224,0)');
+    c.fillStyle = g2;
+    c.fillRect(x, y + h - edge, w, edge);
+    c.restore();
+  }
+  function obtainTitle(c, W, cy, lines) {
+    c.save();
+    c.fillStyle = 'rgba(246,239,224,0.94)';
     c.beginPath();
-    c.ellipse(W / 2, cy, Math.min(W * 0.46, 320), 16 + lines.length * 18, 0, 0, Math.PI * 2);
+    c.ellipse(W / 2, cy, Math.min(W * 0.46, 320), 14 + lines.length * 16, 0, 0, Math.PI * 2);
     c.fill();
     c.restore();
     var i;
     for (i = 0; i < lines.length; i++) {
-      brushFit(c, lines[i], W / 2, cy + (i - (lines.length - 1) / 2) * 30, Math.min(W - 24, 560), 28, '#24180f', 'center');
+      brushFit(c, lines[i], W / 2, cy + (i - (lines.length - 1) / 2) * 28, Math.min(W - 24, 560), 26, '#24180f', 'center');
     }
   }
   function paintDrop(c, app, drop) {
@@ -1523,20 +1553,28 @@
     if (drop.gear) pieces.push({ kind: 'gear', id: drop.gear, name: drop.gearName || '' });
     if (!pieces.length) return;
     var lines = pieces.map(function (p) { return '获得 · ' + p.name; });
-    obtainTitle(c, W, H, lines);
+    var floor = hudFloor(app);
+    var titleH = 18 + lines.length * 28;
+    var top = floor + 8;
+    var foot = port ? H * 0.76 : H * 0.88;
     var n = pieces.length, gap = 14, cw, ch, x0, y0;
-    var topLimit = Math.max(150, Math.min(H * 0.2, 190));
+    var cardTop = top + titleH + 8;
     if (port) {
-      cw = Math.min(W - 36, 480);
-      ch = Math.min((H - topLimit - 40 - gap) / n, 520);
+      cw = Math.min(W - 48, 460);
+      ch = Math.min((foot - cardTop - gap * (n - 1)) / n, 420);
       x0 = (W - cw) / 2;
-      y0 = topLimit;
+      y0 = cardTop;
     } else {
-      ch = Math.min(H - topLimit - 24, 460);
-      cw = Math.min(360, (W - 48 - gap * (n - 1)) / n);
+      ch = Math.min(foot - cardTop, 420);
+      cw = Math.min(340, (W - 80 - gap * (n - 1)) / n);
       x0 = (W - (n * cw + (n - 1) * gap)) / 2;
-      y0 = topLimit;
+      y0 = cardTop;
     }
+    var span = port ? n * ch + (n - 1) * gap : ch;
+    var vx = Math.max(8, x0 - 36);
+    var vw = Math.min(W - vx - 8, (port ? cw : n * cw + (n - 1) * gap) + 72);
+    dropVeil(c, vx, top - 4, vw, cardTop - top + span + 28);
+    obtainTitle(c, W, top + titleH / 2, lines);
     pieces.forEach(function (p, i) {
       var x = port ? x0 : x0 + i * (cw + gap);
       var y = port ? y0 + i * (ch + gap) : y0;
@@ -1545,18 +1583,15 @@
         captionOn(c, x, y, cw, ch, p.name, '');
       } else {
         fadePlate(c, gearArt(p.id), x, y, cw, ch);
-        brushFit(c, p.name, x + cw / 2, y + ch - 36, cw - 28, Math.min(28, cw * 0.1), '#24180f', 'center');
+        var ny = y + ch * 0.84;
+        c.save();
+        c.fillStyle = 'rgba(246,239,224,0.94)';
+        c.beginPath();
+        c.ellipse(x + cw / 2, ny, Math.min(cw * 0.42, 130), 16, 0, 0, Math.PI * 2);
+        c.fill();
+        c.restore();
+        brushFit(c, p.name, x + cw / 2, ny, cw - 36, Math.min(26, cw * 0.1), '#24180f', 'center');
       }
-      var head = '获得 · ' + p.name;
-      var hs = 18;
-      var him = inkCanvas(head, hs, '#24180f');
-      c.save();
-      c.fillStyle = 'rgba(246,239,224,0.9)';
-      c.beginPath();
-      c.ellipse(x + cw / 2, y + 26, Math.min(cw * 0.46, him._tw / 2 + 16), 16, 0, 0, Math.PI * 2);
-      c.fill();
-      c.restore();
-      brushFit(c, head, x + cw / 2, y + 26, cw - 28, hs, '#24180f', 'center');
     });
   }
   function paintPause(c, app) {
