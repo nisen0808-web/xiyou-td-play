@@ -8,7 +8,7 @@
   if (!API || !XY || !XY.step || !XY.save) return;
 
   var BASE = 'assets/devil-kitty/';
-  var art = { stage1: 'stage1.webp', form: 'form.webp', stage1Cut: 'stage1-cut.webp', formCut: 'form-cut.webp', formVideo: 'form.mp4', introScene: 'intro-scene.webp', formDurationMs: 10000, frameCount: 31, formName: '九尾咆哮' };
+  var art = { version: 7, stage1: 'stage1.webp', form: 'form.webp', stage1Cut: 'stage1-cut.webp', formCut: 'form-cut.webp', formVideo: 'form.mp4', introScene: 'intro-scene.webp', formDurationMs: 10000, frameCount: 31, formName: '九尾咆哮' };
   var imgs = {};
   var vid = null;
   var frameImgs = [];
@@ -97,7 +97,7 @@
   function ensureVideo() {
     if (vid) return vid;
     vid = document.createElement('video');
-    vid.src = BASE + (art.formVideo || 'form.mp4');
+    vid.src = BASE + (art.formVideo || 'form.mp4') + '?v=' + (art.version || 7);
     vid.playsInline = true;
     vid.setAttribute('playsinline', '');
     vid.muted = true;

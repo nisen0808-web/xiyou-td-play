@@ -215,6 +215,10 @@ test('变身素材清单和动画时间轴可替换', function () {
   assert.equal(art.formId, 'B');
   assert.equal(art.form, 'form.webp');
   assert.equal(art.formVideo, 'form.mp4');
+  assert.equal(art.version, 7);
+  var formBuf = fs.readFileSync(path.join(root, 'form.mp4'));
+  assert.equal(formBuf.length, 8551265);
+  assert.equal(require('crypto').createHash('sha256').update(formBuf).digest('hex'), 'dbcfde5749b4b929f39c6b0174973566bc65462b5c2c52ca47fd42c3ceb0791e');
   assert.equal(art.stage1, 'stage1.webp');
   assert.equal(art.frameCount, 31);
   ['stage1.webp', 'form.webp', 'form.mp4', 'frames/frame-001.webp', 'frames/frame-031.webp'].forEach(function (f) {
