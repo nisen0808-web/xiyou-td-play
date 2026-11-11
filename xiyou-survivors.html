@@ -18739,6 +18739,47 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
       saveLine(st, st.DW / 2, saveY, 'center', Math.max(11, Math.min(16, placed.m.nh * 0.85)));
       return placed.m.d;
     }
+    if (st.mode === 'P') {
+      var pCols = 3, pRows = Math.ceil(n / pCols);
+      var cellW = (st.DW - mg * 2) / pCols;
+      var d = Math.min(d0, cellW * 0.42, dCap);
+      var nh = Math.min(nh0, d * 0.7);
+      var guard = 0, maxNw;
+      function widest(hh) { var m = 0, t; for (t = 0; t < n; t++) maxNw = nwOf(ids[t], hh), m = Math.max(m, maxNw); return m; }
+      while (d + 6 + widest(nh) > cellW - d * 0.15 && nh > 12 && guard < 14) { nh *= 0.92; guard++; }
+      var pitch = d + Math.max(16, Math.round(10 / css));
+      var gridH = d + (pRows - 1) * pitch;
+      var gapSave = Math.max(16, Math.round(12 / css));
+      var gridTop = saveY - saveH - gapSave - gridH;
+      if (gridTop < topLimit) gridTop = topLimit;
+      var washCy = gridTop + gridH / 2, washRy = gridH * 0.78, washRx = st.DW * 0.56;
+      c.save();
+      c.translate(st.DW / 2, washCy);
+      c.scale(washRx, washRy);
+      var wash = c.createRadialGradient(0, 0, 0.02, 0, 0, 1);
+      wash.addColorStop(0, 'rgba(246,239,226,0.94)');
+      wash.addColorStop(0.62, 'rgba(246,239,226,0.78)');
+      wash.addColorStop(0.84, 'rgba(246,239,226,0.28)');
+      wash.addColorStop(1, 'rgba(246,239,226,0)');
+      c.fillStyle = wash;
+      c.beginPath(); c.arc(0, 0, 1, 0, Math.PI * 2); c.fill();
+      c.restore();
+      c.save(); c.globalAlpha = 0.78;
+      var pi;
+      for (pi = 0; pi < n; pi++) {
+        var col = pi % pCols, row = (pi / pCols) | 0;
+        var avCx = mg + col * cellW + d / 2;
+        var avCy = gridTop + d / 2 + row * pitch;
+        var nw = Math.min(nwOf(ids[pi], nh), Math.max(12, cellW - d - 8));
+        faceCircle(st, ids[pi], avCx, avCy, d);
+        paintAt(ids[pi], avCx + d / 2 + 6, avCy - nh / 2, nh, nw);
+      }
+      c.restore();
+      var saveAt = Math.min(st.DH - 4, gridTop + gridH + gapSave + saveH * 0.35);
+      st.geom.credit = { d: Math.round(d * 10) / 10, nh: Math.round(nh * 10) / 10, cssNh: Math.round(nh * css * 10) / 10, grid: true };
+      saveLine(st, st.DW / 2, saveAt, 'center', Math.max(12, Math.min(16, nh * 0.75)));
+      return d;
+    }
     var cols = Math.min(3, n), rows = Math.ceil(n / cols), r, rowIds, worst = null;
     for (r = 0; r < rows; r++) {
       rowIds = ids.slice(r * cols, r * cols + cols);
@@ -18777,23 +18818,52 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
       creditRow(st, by + bh + 6);
       st.how = { s: L ? 1.4 : 1, ax: cx, ay: by }; st.tk = L ? 1.4 : 1; g.bottomY = L ? by + bh + 30 : 714;
     } else {
-      var mg2 = 24, d = 104, nh = 30, rowH = d + 6 + nh, gB = DH - 58, gT = gB - 3 * rowH - 28, bw2 = Math.min(560, DW - 100), bh2 = 96, by2 = gT - 34 - bh2, B = by2 + 44;
-      title(st, cx, 104, 100, 0, 0.9);
-      var pb = 196;
-      var T = Math.min((B - pb - 140) / 0.97, DW * 0.62 / 0.75), tx = DW * 0.265, ty = DW * 0.31;
-      st.lim = { x1: 0, x2: DW, y1: pb + 8, y2: by2 - 4 };
-      drawFig(st, 'wujing', cx - ty * 1.12, B - 215, T * 0.62); drawFig(st, 'horse', cx + ty * 1.1, B - 215, T * 0.62);
-      drawFig(st, 'tang', cx, B, T * 0.94);
-      drawFig(st, 'wukong', cx - tx, B - 14, T * 0.8); drawFig(st, 'bajie', cx + tx, B - 14, T * 0.8);
-      var top = function (h, bot) { return bot - 0.97 * h; }, nmY = function (t) { return Math.max(pb + 18, t - 124); };
-      heroName(st, 'tang', cx, pb + 18, 100);
-      heroName(st, 'wukong', cx - DW * 0.235, nmY(top(T * 0.8, B - 14)), 108); heroName(st, 'bajie', cx + DW * 0.235, nmY(top(T * 0.8, B - 14)), 108);
-      heroName(st, 'wujing', cx - DW * 0.445, nmY(top(T * 0.62, B - 215)), 100); heroName(st, 'horse', cx + DW * 0.445, nmY(top(T * 0.62, B - 215)), 100);
-      var sbw = Math.min(bw2, DW - 2 * mg2), sx0 = cx - sbw / 2;
-      startBtn(st, sx0, by2, sbw, bh2, 42);
-      taper(c, 40, by2 + bh2 + 8, DW - 40, 2, 0.28);
-      creditRow(st, by2 + bh2 + 12);
-      st.how = { s: 1.5, ax: cx, ay: by2 }; st.tk = 1.6; g.bottomY = DH - 12;
+      // 竖屏：五人连武器都留在画面里，名字贴着头顶，按钮压在脚下，下面紧接底排。
+      var edge = 8, titleSize = Math.min(88, DW * 0.112);
+      var titleY = 86;
+      title(st, cx, titleY, titleSize, 0, 0.85);
+      var titleBottom = titleY + titleSize * 0.58;
+      var cssP = Math.max(0.2, (st.k || 1) * ((st.app && st.app.zoom) || 1));
+      var saveH = Math.max(13, Math.round(14 / cssP));
+      var rowD = Math.min(72, Math.max(48, DW * 0.09));
+      var rowPitch = rowD + Math.max(18, Math.round(12 / cssP));
+      var creditH = rowD + 2 * rowPitch + saveH + Math.max(18, Math.round(12 / cssP));
+      var creditTop = DH - creditH;
+      var bh2 = Math.min(84, Math.max(62, DH * 0.05));
+      var bw2 = Math.min(DW - 64, 460);
+      var by2 = creditTop - 8 - bh2;
+      var foot = by2 + bh2 * 0.34;
+      // 桌面那一组的外框（含武器）缩进竖屏，相对位置不变。
+      var specs = [
+        { id: 'wujing', cx: 238, foot: 626, h: 400, nx: 112, ny: 228, nh: 104 },
+        { id: 'horse', cx: 1000, foot: 626, h: 400, nx: 1118, ny: 198, nh: 104 },
+        { id: 'tang', cx: 640, foot: 648, h: 540, nx: 482, ny: 122, nh: 100 },
+        { id: 'wukong', cx: 462, foot: 640, h: 460, nx: 335, ny: 150, nh: 112 },
+        { id: 'bajie', cx: 846, foot: 640, h: 460, nx: 968, ny: 165, nh: 112 }
+      ];
+      var groupL = 88, groupR = 1150, s = (DW - 2 * edge) / (groupR - groupL);
+      var rise = 648 - 122;
+      var sV = (foot - titleBottom - 8) / rise;
+      if (s > sV) s = sV;
+      st.lim = { x1: 0, x2: DW, y1: titleBottom, y2: by2 - 2 };
+      specs.forEach(function (sp) {
+        sp._cx = edge + (sp.cx - groupL) * s;
+        sp._h = sp.h * s;
+        sp._foot = foot + (sp.foot - 648) * s;
+        drawFig(st, sp.id, sp._cx, sp._foot, sp._h);
+      });
+      specs.forEach(function (sp) {
+        var figTop0 = sp.foot - 0.97 * sp.h;
+        var nx = edge + (sp.nx - groupL) * s;
+        var ny = (sp._foot - 0.97 * sp._h) + (sp.ny - figTop0) * s;
+        var nh = Math.max(36, Math.min(72, sp.nh * s));
+        nx = Math.max(16, Math.min(DW - 16, nx));
+        if (ny < titleBottom) ny = titleBottom;
+        heroName(st, sp.id, nx, ny, nh);
+      });
+      startBtn(st, cx - bw2 / 2, by2, bw2, bh2, 36);
+      creditRow(st, by2 + bh2 + 6);
+      st.how = { s: 1.35, ax: cx, ay: by2 }; st.tk = 1.4; g.bottomY = DH - 12;
     }
   }
 

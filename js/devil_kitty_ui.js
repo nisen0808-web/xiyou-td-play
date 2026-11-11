@@ -613,7 +613,7 @@
   function buttonBox(app) {
     var W = app.lw, H = app.lh, port = H > W * 1.05;
     if (app.screen === 'start') {
-      if (port) return { x: W - 124, y: 10, w: 112, h: 52 };
+      if (port) return { x: W - 132, y: 28, w: 112, h: 52 };
       return { x: W - 156, y: 14, w: 136, h: 56 };
     }
     if (port) return { x: 12, y: H - 64, w: 112, h: 52 };
