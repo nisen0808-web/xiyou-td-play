@@ -18750,58 +18750,60 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
       st.how = { s: L ? 1.4 : 1, ax: cx, ay: by }; st.tk = L ? 1.4 : 1; g.bottomY = L ? by + bh + 30 : 714;
     } else {
       // 竖屏：五人连武器都留在画面里，名字贴着头顶，按钮压在脚下，下面紧接底排。
-      var edge = 6, titleSize = Math.min(88, DW * 0.112);
+      var edge = 8, titleSize = Math.min(88, DW * 0.112);
       var titleY = 86;
       title(st, cx, titleY, titleSize, 0, 0.85);
-      var titleBottom = titleY + titleSize * 0.58;
+      var titleBottom = titleY + titleSize * 0.62;
       var cssP = Math.max(0.2, (st.k || 1) * ((st.app && st.app.zoom) || 1));
       var saveH = Math.max(13, Math.round(14 / cssP));
-      var rowD = Math.min(72, Math.max(48, DW * 0.09));
-      var rowPitch = rowD + Math.max(18, Math.round(12 / cssP));
-      var creditH = rowD + 2 * rowPitch + saveH + Math.max(18, Math.round(12 / cssP));
-      var creditTop = DH - creditH;
-      var bh2 = Math.min(84, Math.max(62, DH * 0.05));
-      var bw2 = Math.min(DW - 48, 480);
-      // 五人占标题下沿到按钮上沿，大约半屏高。唐僧最大居中，悟空八戒在前，沙僧白龙马在后排稍高。
-      var bandTop = titleBottom + 4;
-      var H = Math.min(DH * 0.54, (DW - 12) / 0.78);
-      var foot = bandTop + H * 0.97;
-      var by2 = foot - bh2 * 0.32;
-      if (by2 + bh2 > creditTop - 6) {
-        by2 = creditTop - 6 - bh2;
-        foot = by2 + bh2 * 0.32;
-        H = Math.min(H, (foot - bandTop) / 0.97);
-      }
-      var hSide = H * 0.68, hBack = H * 0.62;
+      var estD = Math.min(72, Math.max(48, DW * 0.09));
+      var estPitch = estD + Math.max(16, Math.round(10 / cssP));
+      var gapSave = Math.max(16, Math.round(12 / cssP));
+      var bottom = DH - Math.max(2, Math.round(4 / cssP));
+      var saveY = bottom - saveH * 0.35;
+      var creditTop = saveY - saveH - gapSave - (estD + 2 * estPitch);
+      var bh2 = Math.min(84, Math.max(62, DH * 0.048));
+      var bw2 = Math.min(DW - 56, 460);
+      var by2 = creditTop - 12 - bh2;
+      var footBot = by2 + bh2 * 0.22;
+      // 上排三人并排，下排两人并排。先按宽度算出最大尺寸，高度不够再整组缩小。
+      var gapX = 2;
+      var sideH = (DW - 2 * edge - 2 * gapX) / (0.75 * (2 + 1.22));
+      var tangH = sideH * 1.22;
+      var botH = (DW - 2 * edge - gapX) / (0.75 * 2);
+      var need = 0.97 * tangH + 0.97 * botH + 8;
+      var room = footBot - titleBottom - 8;
+      var fit = room > 40 ? Math.min(1, room / need) : 0.5;
+      sideH *= fit; tangH *= fit; botH *= fit;
       function fw(h) { return h * 0.75; }
-      var cxTang = cx;
-      var cxWj = edge + fw(hBack) / 2;
-      var cxHo = DW - cxWj;
-      var cxWk = cxWj + fw(hBack) * 0.42;
-      var cxBj = DW - cxWk;
-      if (cxWk - fw(hSide) / 2 < edge) cxWk = edge + fw(hSide) / 2;
-      if (cxBj + fw(hSide) / 2 > DW - edge) cxBj = DW - edge - fw(hSide) / 2;
-      var footBack = foot - H * 0.16;
+      var sideW = fw(sideH), tangW = fw(tangH), botW = fw(botH);
+      var cxWj = edge + sideW / 2;
+      var cxHo = DW - edge - sideW / 2;
+      var cxTang = DW / 2;
+      var cxWk = edge + botW / 2;
+      var cxBj = DW - edge - botW / 2;
+      var topOfBot = footBot - 0.97 * botH;
+      var footTop = topOfBot + 6;
       st.lim = { x1: 0, x2: DW, y1: titleBottom, y2: by2 - 2 };
-      drawFig(st, 'wujing', cxWj, footBack, hBack);
-      drawFig(st, 'horse', cxHo, footBack, hBack);
-      drawFig(st, 'tang', cxTang, foot, H);
-      drawFig(st, 'wukong', cxWk, foot, hSide);
-      drawFig(st, 'bajie', cxBj, foot, hSide);
-      var nameH = Math.max(108, Math.min(156, H * 0.2));
-      function placeName(id, figCx, bot, h, lean, drop) {
+      drawFig(st, 'wujing', cxWj, footTop, sideH);
+      drawFig(st, 'horse', cxHo, footTop, sideH);
+      drawFig(st, 'tang', cxTang, footTop, tangH);
+      drawFig(st, 'wukong', cxWk, footBot, botH);
+      drawFig(st, 'bajie', cxBj, footBot, botH);
+      var nameH = Math.max(52, Math.min(78, tangH * 0.2));
+      function placeName(id, figCx, bot, h, lean) {
         var top = bot - 0.97 * h;
-        var nx = figCx + lean * fw(h) * 0.36;
-        nx = Math.max(nameH * 0.26, Math.min(DW - nameH * 0.26, nx));
-        var ny = top + h * drop;
+        var nx = figCx + lean * fw(h) * 0.28;
+        nx = Math.max(18, Math.min(DW - 18, nx));
+        var ny = top + h * 0.04;
         if (ny < titleBottom) ny = titleBottom;
-        heroName(st, id, nx, ny, id === 'tang' ? nameH : nameH * 0.9);
+        heroName(st, id, nx, ny, nameH);
       }
-      placeName('wujing', cxWj, footBack, hBack, -0.05, 0.02);
-      placeName('horse', cxHo, footBack, hBack, 0.05, 0.02);
-      placeName('wukong', cxWk, foot, hSide, -0.46, 0.16);
-      placeName('bajie', cxBj, foot, hSide, 0.46, 0.16);
-      placeName('tang', cxTang, foot, H, -0.16, 0.0);
+      placeName('wujing', cxWj, footTop, sideH, -0.22);
+      placeName('horse', cxHo, footTop, sideH, 0.22);
+      placeName('tang', cxTang, footTop, tangH, -0.12);
+      placeName('wukong', cxWk, footBot, botH, -0.2);
+      placeName('bajie', cxBj, footBot, botH, 0.2);
       startBtn(st, cx - bw2 / 2, by2, bw2, bh2, 36);
       creditRow(st, by2 + bh2 + 6);
       st.how = { s: 1.35, ax: cx, ay: by2 }; st.tk = 1.4; g.bottomY = DH - 12;
