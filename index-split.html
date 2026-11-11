@@ -399,6 +399,8 @@ XY.TRAITS = {
   var MODE = resolveMode(), KEY = MODE === 'test' ? KEY_TEST : KEY_STD;
   var DEFAULT_MODE = MODE;
   var SCHEMA = 5;   // v0.8.8：5 = 反派系列块补全（villain.series[系列] 加 wallet{yaojin,yaodan}/mats/evo/t3Seen/pity/traps/stage，旧的数字钱包迁成妖金）。   // v0.5：4 = 新增 mode（版本开关）+ spT（全开特殊角色状态）。   // v0.5：3 = 新增 journey（取经之旅成长存档）。   // v0.5：2 = 新增 sp 默认（2 张 Phyrex + 已选）、sold（天兵卡）、tutorial；旧档升级不丢任何进度
+  var SAVE_EPOCH = 6;   // 0.8.7 新版：本机旧游戏记录整份清掉，只清一次，不写数据库。
+  var EPOCH_KEY = 'xiyou_save_epoch';
 
   /* ---------- 皮肤（每位英雄一套换装）和变体角色 ---------- */
   XY.SKINS = {
@@ -509,7 +511,7 @@ XY.TRAITS = {
   }
   function defaults() {
     var d = {
-      schema: SCHEMA, gameVersion: XY.VERSION,
+      schema: SCHEMA, saveEpoch: SAVE_EPOCH, gameVersion: XY.VERSION,
       profile: { id: 'local-' + Math.random().toString(36).slice(2, 10), name: '取经人', account: null },   // account：以后绑定账号用
       createdAt: Date.now(), updatedAt: Date.now(),
       stats: { runs: 0, wins: 0, kills: 0, bestTime: 0, totalTime: 0, bossKills: 0, sideDone: 0 },
@@ -578,14 +580,47 @@ XY.TRAITS = {
     if (!record(d.tutorial)) d.tutorial = { done: false, grow: false };
     if (typeof d.tutorial.done !== 'boolean') d.tutorial.done = false;
     if (typeof d.tutorial.grow !== 'boolean') d.tutorial.grow = false;
-    d.schema = SCHEMA; d.gameVersion = XY.VERSION;
+    if ((d.saveEpoch | 0) < SAVE_EPOCH) return defaults();
+    d.schema = SCHEMA; d.saveEpoch = SAVE_EPOCH; d.gameVersion = XY.VERSION;
     return d;
   }
 
+
+  var wipedFlag = false;
+  function gameRecordKey(k) {
+    if (!k || k === EPOCH_KEY || k === 'xy_mute' || k === 'xy_bg') return false;
+    if (k.indexOf('sb-') === 0) return false;
+    return k === KEY_STD || k === KEY_TEST || k === 'xy_auto_v1' || k === 'xiyou_xchars_v1' || k === 'xiyou_mods_v1' || k.indexOf('xiyou_') === 0 || k.indexOf('xy_') === 0;
+  }
+  function saveEpochOf(raw) {
+    if (!raw) return 0;
+    try { var d = JSON.parse(raw); return d && typeof d.saveEpoch === 'number' ? d.saveEpoch : 0; } catch (e) { return 0; }
+  }
+  /* 旧版本地游戏记录整份丢掉。音效 / 背景偏好和登录令牌留下。清完写下版本号，之后同版本不再清。 */
+  function wipeOldSaves() {
+    var ls, mark = null, rawStd = null, rawTest = null, i, k, keys = [];
+    try { ls = window.localStorage; } catch (e) { return; }
+    try { mark = ls.getItem(EPOCH_KEY); rawStd = ls.getItem(KEY_STD); rawTest = ls.getItem(KEY_TEST); } catch (e2) { return; }
+    try { for (i = 0; i < ls.length; i++) { k = ls.key(i); if (gameRecordKey(k)) keys.push(k); } } catch (e3) {}
+    var marked = mark === String(SAVE_EPOCH);
+    var anyOldSave = [rawStd, rawTest].some(function (raw) { return !!raw && saveEpochOf(raw) < SAVE_EPOCH; });
+    var other = keys.some(function (k) { return k !== KEY_STD && k !== KEY_TEST; });
+    var should = anyOldSave || (!marked && other);
+    if (!should) {
+      if (!marked) { try { ls.setItem(EPOCH_KEY, String(SAVE_EPOCH)); } catch (e4) {} }
+      return;
+    }
+    keys.forEach(function (k) { try { ls.removeItem(k); } catch (e5) {} });
+    try { ls.setItem(EPOCH_KEY, String(SAVE_EPOCH)); } catch (e6) {}
+    wipedFlag = true;
+  }
+
   var S = XY.save = {
-    KEY: KEY, SCHEMA: SCHEMA, villainSeriesDefault: villainSeriesDefault, boardsDefault: boardsDefault, data: null, memoryOnly: false, dirty: false, _timer: null, onUnlock: null,
+    KEY: KEY, SCHEMA: SCHEMA, EPOCH: SAVE_EPOCH, wiped: false, holdCloud: false, villainSeriesDefault: villainSeriesDefault, boardsDefault: boardsDefault, data: null, memoryOnly: false, dirty: false, _timer: null, onUnlock: null,
 
     load: function () {
+      wipeOldSaves();
+      if (wipedFlag) { S.wiped = true; S.holdCloud = true; }
       var raw = null;
       try { raw = window.localStorage.getItem(KEY); } catch (e) { S.memoryOnly = true; }
       var d = null;
@@ -12111,7 +12146,14 @@ XY.TRAITS = {
     return { anim: 'idle', i: 0, mix: 0.5 + 0.5 * Math.sin(rt * 2.4 + (h.bob || 0)) };
   };
 
-  /* 没有走路图：移动时仍播待机图集，只在脚底做起伏、摆动和落脚挤压。出招 / 必杀不进这里。 */
+  var HD = {};
+  S.hd = function (id) {
+    if (!id || id === 'phyrex_x') return null;
+    var e = HD[id];
+    if (!e) { e = HD[id] = new Image(); e.src = 'assets/art/battle-hd/' + id + '.webp'; }
+    return e.complete && e.naturalWidth ? e : null;
+  };
+  /* 没有走路图：移动时在高清抠图上做起伏、摆动和落脚挤压。必杀过场不进这里。 */
   S.stepPose = function (h, rt) {
     var horse = h.id === 'horse';
     var ph;
@@ -12124,16 +12166,16 @@ XY.TRAITS = {
       h._stepPh = (h._stepPh || (h.bob || 0)) + dt * pace * Math.PI * 2;
       ph = h._stepPh;
     }
-    var s = Math.sin(ph), amp = horse ? 1.8 : 3.2;
-    var contact = Math.pow(Math.max(0, 1 - Math.abs(s) * 2.4), 1.3);
-    var squash = (horse ? 0.035 : 0.06) * contact;
-    return { bob: Math.abs(s) * amp, rot: s * 3 * Math.PI / 180, sx: 1 + squash * 0.85, sy: 1 - squash };
+    var s = Math.sin(ph), cyc = Math.cos(ph), amp = horse ? 5 : 10;
+    var contact = Math.pow(Math.max(0, 1 - Math.abs(s) * 2.2), 1.2);
+    var squash = (horse ? 0.05 : 0.09) * contact;
+    return { bob: Math.abs(s) * amp, rot: s * 8 * Math.PI / 180, sway: cyc * (horse ? 5 : 9), sx: 1 + squash, sy: 1 - squash };
   };
   S.draw = function (c, G, h, rt, x, y, r) {
     var key = XY.chibiKey(h);
     if (!(XY.wildAnim && XY.wildAnim.ready && XY.wildAnim.ready(key, 'idle')) && XY.wildAnim && XY.wildAnim.ready && XY.wildAnim.ready(h.id, 'idle')) key = h.id;
     var e = load(key), oldOk = ok(e);
-    if (!oldOk && !S.useWild(h)) return false;
+    if (!oldOk && !S.useWild(h) && !S.hd(key)) return false;
     if (h.ultInk) { h._wildTop = null; return true; }            // 大招水墨精灵（ultink.js）在场：本体由它画，这里不重复画
     var d = e && e.d, sz = (d && d.sz) || 1;
     var kWild = r * DRAW_H / WILD_STAND * sz, kOld = e ? r * DRAW_H / e.stand * sz : kWild;
@@ -12144,9 +12186,11 @@ XY.TRAITS = {
     var charging = a.anim === 'atk' && a.i === 6;
     var legacyStrike = a.anim === 'atk' && a.i === 7 && !(XY.wildAnim && XY.wildAnim.clip(key, 'attack'));
     var tangStep = h.id === 'tang' && G && G.tang && (G.tang.phase === 'walk' || G.tang.phase === 'walk2');
-    var acting = !!(h.ultPose || h.ultInk || charging || legacyStrike || (st && st.mode === 'attack'));
+    var acting = !!(h.ultPose || h.ultInk || charging || legacyStrike);
+    var attacking = !!(st && st.mode === 'attack');
     var wildKind = null;
-    if (!acting && st && S.useWild(h)) wildKind = (st.mode === 'attack') ? 'attack' : 'idle';
+    if (!acting && st && S.useWild(h)) wildKind = attacking ? 'attack' : 'idle';
+    if (!acting && !attacking && S.hd(key)) wildKind = 'idle';
     var wantWalk = !!(wildKind === 'idle' && (h.moving || tangStep));
     if (!wildKind && (h.moving || tangStep) && !acting) a = { anim: 'walk', i: 2 + (Math.floor(rt * 10 + (h.bob || 0)) & 3), mix: 0 };
     var moving = !wildKind && a.anim === 'walk', foot = y + r * 0.85;
@@ -12159,9 +12203,19 @@ XY.TRAITS = {
     if (hurt) { hitX = Math.sin(rt * 90) * r * 0.12; if (!wildKind) { sy = 0.95; sx = 1.04; } }
     c.save();
     c.imageSmoothingEnabled = true; c.imageSmoothingQuality = 'high';
-    c.translate(x + hitX, foot + bobY); c.rotate(lean); c.scale(sx * (mir ? -1 : 1), sy);
+    c.translate(x + hitX + (step ? step.sway : 0), foot + bobY); c.rotate(lean); c.scale(sx * (mir ? -1 : 1), sy);
     h._wildTop = null;
     if (wildKind) {
+      var hdIm = S.hd(key);
+      if (hdIm && wildKind === 'idle') {
+        var dh = r * 3.4, dw = hdIm.naturalWidth * dh / hdIm.naturalHeight;
+        c.drawImage(hdIm, -dw / 2, -dh, dw, dh);
+        h._wildTop = foot + bobY - dh;
+        c.restore(); c.globalAlpha = 1;
+        S.drawn++; S.last = { id: key, anim: wantWalk ? 'hd-walk' : 'hd-idle', frame: 0, left: !!fl, hero: h.i, t: rt, ink: true, wild: false, hd: true };
+        (S.lastBy || (S.lastBy = {}))[h.i] = S.last;
+        return true;
+      }
       var wt = wildKind === 'attack' ? (st.t || 0) : (h._wIdleT || 0);
       var clip = XY.wildAnim.clip(key, wildKind);
       var fr = clip ? XY.wildAnim.frameAt(clip, wt) : null;
@@ -18498,26 +18552,54 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
     st.av.push(r); hit(x, y, w, h, 'menuChar', { id: id });
     return r;
   }
+  var FACE_CROP = { phyrex: [0.5, 0.3, 1.8], sisi: [0.5, 0.4, 1.3], laosiji: [0.5, 0.55, 1], kuanggong: [0.5, 0.5, 1], haiteng: [0.5, 0.5, 1.2], yuanzhang: [0.5, 0.45, 1.1], heyuxi: [0.36, 0.4, 2], diaoyulao: [0.5, 0.55, 1.15], martin: [0.42, 0.5, 1.8] };
+  function faceCircle(st, id, cx, cy, d) {
+    var c = st.c, oi = origAv(id), cr = FACE_CROP[id] || [0.5, 0.42, 1.2];
+    c.save();
+    c.beginPath(); c.arc(cx, cy, d / 2, 0, Math.PI * 2); c.closePath(); c.clip();
+    if (oi && (oi.naturalWidth || oi.width)) {
+      var iw = oi.naturalWidth || oi.width, ih = oi.naturalHeight || oi.height, side = Math.min(iw, ih) / cr[2];
+      var sx = Math.max(0, Math.min(iw - side, cr[0] * iw - side / 2)), sy = Math.max(0, Math.min(ih - side, cr[1] * ih - side / 2));
+      c.imageSmoothingEnabled = true; c.imageSmoothingQuality = 'high';
+      c.drawImage(oi, sx, sy, side, side, cx - d / 2, cy - d / 2, d, d);
+    }
+    c.restore();
+    var r = { id: id, cx: cx, cy: cy, r: d / 2, x: cx - d / 2, y: cy - d / 2, w: d, h: d };
+    st.av.push(r); hit(r.x, r.y, r.w, r.h, 'menuChar', { id: id });
+  }
+  function nameAspect(id) {
+    if (id === 'kuanggong') return 4.6;
+    var n = nameImg(id, 'h');
+    return n && n.h ? n.w / n.h : 3.2;
+  }
   function creditRow(st, btnBottom) {
-    var ids = menuIds(), n = ids.length || 1, margin = 14;
-    var gap = Math.max(8, Math.min(14, st.DW * 0.008));
-    var css = (st.k || 1) * ((st.app && st.app.zoom) || 1);
-    var bottom = st.DH - 6, topMin = (btnBottom || 0) + 12;
-    var avail = Math.max(48, bottom - topMin);
-    var large = css >= 0.8 && st.DH / Math.max(1, st.DW) >= 0.42;
-    var chWant = large ? Math.round(st.DH * 0.30) : Math.max(120, (18 / css) / 0.24);
-    var ch = Math.min(chWant, avail), top = bottom - ch;
-    if (top < topMin) { top = topMin; ch = Math.max(48, bottom - top); }
-    var cw = (st.DW - margin * 2 - gap * (n - 1)) / n;
-    var labels = ids.map(cardLabel), c = st.c;
-    var prefer = large ? Math.min(42, ch * 0.28) : Math.min(ch * 0.32, 28 / Math.max(0.4, css));
-    var sz = XY.xAvIcon && XY.xAvIcon.fitSize ? XY.xAvIcon.fitSize(c, labels, Math.max(28, cw - 4), prefer) : 16;
-    var total = n * cw + (n - 1) * gap, x = Math.max(6, (st.DW - total) / 2);
-    var shortRow = st.DH / Math.max(1, st.DW) < 0.42 || css < 0.65;
-    if (shortRow) paperBand(c, 0, Math.max(0, top - 10), st.DW, st.DH - Math.max(0, top - 10) + 4);
-    else inkSplash(c, 0, Math.max(0, top - 6), st.DW, st.DH - Math.max(0, top - 6) + 2);
-    ids.forEach(function (id) { standCard(st, id, x, top, cw, ch, sz); x += cw + gap; });
-    return cw;
+    var ids = menuIds(), n = Math.max(1, ids.length), c = st.c, margin = 10, gapN = 5;
+    var cols = st.DW < 980 ? Math.min(3, n) : n, rows = Math.ceil(n / cols);
+    var saveH = 16, topLimit = (btnBottom || 0) + 8, bottom = st.DH - 3;
+    var saveY = bottom - saveH * 0.2, roomH = Math.max(22, saveY - 6 - topLimit);
+    var cellW = (st.DW - margin * 2) / cols;
+    var worst = 2; ids.forEach(function (id) { var a = nameAspect(id); if (a > worst) worst = a; });
+    var dCap = cols === n ? 58 : 72;
+    var d = Math.min(dCap, roomH / rows - 4, cellW * 0.46);
+    var nameRoom = cellW - d - gapN - 8;
+    var nameH = Math.min(d * 0.62, nameRoom / worst);
+    if (nameH < 9) { d = Math.max(16, (cellW - gapN - 8) / (1 + worst * 0.42)); nameRoom = cellW - d - gapN - 8; nameH = Math.min(d * 0.62, nameRoom / worst); }
+    d = Math.max(16, Math.min(d, roomH / rows - 2));
+    nameH = Math.max(8, Math.min(nameH, d * 0.7, (cellW - d - gapN - 8) / worst));
+    var pitch = d + 16, x0 = margin, yFirst = saveY - 36 - (rows - 1) * pitch - d / 2;
+    if (yFirst < topLimit + d / 2) yFirst = topLimit + d / 2;
+    ids.forEach(function (id, i) {
+      var col = i % cols, row = (i / cols) | 0, cellX = x0 + col * cellW, cy = yFirst + row * pitch;
+      var room = Math.max(8, cellW - d - gapN - 8), nh = nameH, nwGuess = nh * nameAspect(id);
+      if (nwGuess > room) nh = room / nameAspect(id);
+      faceCircle(st, id, cellX + d / 2 + 2, cy, d);
+      c.save();
+      c.beginPath(); c.rect(cellX + d + gapN, cy - pitch * 0.45, room, pitch * 0.9); c.clip();
+      drawName(st, id, cellX + d + gapN, cy - nh / 2, nh, 'h', 'left', 'rgba(250,244,228,0)');
+      c.restore();
+    });
+    saveLine(st, st.DW / 2, saveY, 'center', Math.max(10, Math.min(14, nameH * 0.85)));
+    return d;
   }
   function V2(st) {
     var c = st.c, DW = st.DW, DH = st.DH, cx = DW / 2, m = st.mode, g = st.geom;
@@ -18535,8 +18617,7 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
       heroName(st, 'wujing', fx(112), 228, 104); heroName(st, 'horse', fx(1118), 198, 104); heroName(st, 'wukong', fx(335), 150, 112); heroName(st, 'bajie', fx(968), 165, 112); heroName(st, 'tang', fx(482), 122, 100);
       title(st, cx, 62, 68, 0, 0.85);
       startBtn(st, cx - bw / 2, by, bw, bh, L ? 30 : 26);
-      saveLine(st, cx, by + bh + 16, 'center', L ? 14 : 12);
-      creditRow(st, by + bh + 22);
+      creditRow(st, by + bh + 6);
       st.how = { s: L ? 1.4 : 1, ax: cx, ay: by }; st.tk = L ? 1.4 : 1; g.bottomY = L ? by + bh + 30 : 714;
     } else {
       var mg2 = 24, d = 104, nh = 30, rowH = d + 6 + nh, gB = DH - 58, gT = gB - 3 * rowH - 28, bw2 = Math.min(560, DW - 100), bh2 = 96, by2 = gT - 34 - bh2, B = by2 + 44;
@@ -18551,14 +18632,10 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
       heroName(st, 'tang', cx, pb + 18, 100);
       heroName(st, 'wukong', cx - DW * 0.235, nmY(top(T * 0.8, B - 14)), 108); heroName(st, 'bajie', cx + DW * 0.235, nmY(top(T * 0.8, B - 14)), 108);
       heroName(st, 'wujing', cx - DW * 0.445, nmY(top(T * 0.62, B - 215)), 100); heroName(st, 'horse', cx + DW * 0.445, nmY(top(T * 0.62, B - 215)), 100);
-      inkSplash(c, 0, gT - 36, DW, DH - (gT - 36) + 8);
       var sbw = Math.min(bw2, DW - 2 * mg2), sx0 = cx - sbw / 2;
       startBtn(st, sx0, by2, sbw, bh2, 42);
-      taper(c, 40, gT - 16, DW - 40, 3, 0.35);
-      var colW = Math.min(DW / 3, 260), idsP = menuIds();
-      var labelsP = idsP.map(cardLabel), szP = XY.xAvIcon && XY.xAvIcon.fitSize ? XY.xAvIcon.fitSize(c, labelsP, Math.min(colW - 18, 168), Math.min(28, 16 / ((st.k || 1) * ((st.app && st.app.zoom) || 1)))) : 16;
-      idsP.forEach(function (id, n) { var col = n % 3, row = (n / 3) | 0, gap = 14, cw = Math.min(colW - gap, 176), ch = rowH + 6, x = cx + (col - 1) * colW - cw / 2, y0 = gT + 8 + row * (ch + 12); standCard(st, id, x, y0, cw, ch, szP); });
-      saveLine(st, cx, gT - 18, 'center', 15, true);
+      taper(c, 40, by2 + bh2 + 8, DW - 40, 2, 0.28);
+      creditRow(st, by2 + bh2 + 12);
       st.how = { s: 1.5, ax: cx, ay: by2 }; st.tk = 1.6; g.bottomY = DH - 12;
     }
   }
@@ -18625,7 +18702,6 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
       var st = { k: k, c: c, app: app, A: A, rt: app.rt, mx: A.mouse ? A.mouse.x : -999, my: A.mouse ? A.mouse.y : -999, figs: [], av: [], tip: null, mode: mode, DW: DW, DH: DH, how: null, tk: 1, lim: null };
       var geom = M.geom = st.geom = { cards: [], sp: [], ents: [], title: null, poster: null, mode: mode }; var n0 = ui.hits.length, i;
       drawBg(c, W, H, v === 2 && mode === 'P' ? '2p' : v, app.rt);
-      inkSplash(c, 0, H * 0.86, W, H * 0.14 + 4);
       c.save(); c.translate(ox, oy); c.scale(k, k);
       LAY[v](st);
       var sel = XY.stage && XY.stage.sel && st.rt < XY.stage.sel.until ? XY.stage.sel.id : null;
@@ -20931,6 +21007,14 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
     var W = XY.wildAnim;
     if (!W || !W.ready || !W.frameAt || !W.ready('niumo', 'idle')) return false;
     if (h.down || h.dash) return false;
+    var hdN0 = XY.chibi && XY.chibi.hd && XY.chibi.hd('niumo');
+    if (hdN0 && !(h.atkT > 0) && !(h.hurtT > 0.05)) {
+      var pose0 = h.moving && XY.chibi.stepPose ? XY.chibi.stepPose(h, rt) : null;
+      c.save(); c.imageSmoothingEnabled = true; c.imageSmoothingQuality = 'high';
+      c.translate(x + (pose0 ? pose0.sway : 0), y + r * 0.9 - (pose0 ? pose0.bob : 0)); c.rotate(pose0 ? pose0.rot : 0); c.scale(face * (pose0 ? pose0.sx : 1), pose0 ? pose0.sy : 1);
+      var dh0 = r * 2.7, dw0 = hdN0.naturalWidth * dh0 / hdN0.naturalHeight; c.drawImage(hdN0, -dw0 / 2, -dh0, dw0, dh0);
+      c.restore(); return true;
+    }
     var prev = h._nAtkSeen;
     if (prev != null && h.atkMax > 0.25 && (h.atkT || 0) > prev + 0.15 && W.ready('niumo', 'attack')) {
       h._nAtk0 = rt; h._nAtkDur = ((W.clip('niumo', 'attack').durationMs || 667) / 1000);
@@ -20946,8 +21030,10 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
     var fr = W.frameAt(clip, tMs), cw = clip.cell[0], ch = clip.cell[1], col = fr.index % clip.cols, row = (fr.index / clip.cols) | 0;
     var k = r * 3.15 / (clip.stand || 480) * (clip.fit || 1);
     var pose = (h.moving && clipName === 'idle' && XY.chibi && XY.chibi.stepPose) ? XY.chibi.stepPose(h, rt) : null;
-    c.save(); c.imageSmoothingEnabled = true; c.translate(x, y + r * 0.9 - (pose ? pose.bob : 0)); c.rotate(pose ? pose.rot : 0); c.scale(face * (pose ? pose.sx : 1), pose ? pose.sy : 1);
-    c.drawImage(im, col * cw, row * ch, cw, ch, -clip.anchor[0] * k, -clip.anchor[1] * k, cw * k, ch * k);
+    var hdN = XY.chibi && XY.chibi.hd && XY.chibi.hd('niumo');
+    c.save(); c.imageSmoothingEnabled = true; c.imageSmoothingQuality = 'high'; c.translate(x + (pose ? pose.sway : 0), y + r * 0.9 - (pose ? pose.bob : 0)); c.rotate(pose ? pose.rot : 0); c.scale(face * (pose ? pose.sx : 1), pose ? pose.sy : 1);
+    if (hdN && clipName === 'idle') { var dh = r * 2.7, dw = hdN.naturalWidth * dh / hdN.naturalHeight; c.drawImage(hdN, -dw / 2, -dh, dw, dh); }
+    else c.drawImage(im, col * cw, row * ch, cw, ch, -clip.anchor[0] * k, -clip.anchor[1] * k, cw * k, ch * k);
     c.restore();
     return true;
   }
@@ -24711,10 +24797,12 @@ window.XY_LAZY_CHUNKS = [{"id": "ui", "src": "chunks/ui-008ff700a700.js", "bytes
   }
   function tick() {
     if (!session || choice || !reconciled || drawDone === true || drawDone === 'err') return;
+    if (XY.save && XY.save.holdCloud) return;
     startDraw();
   }
   function push(expected, opts) {
     opts = opts || {};
+    if (XY.save && XY.save.holdCloud) return Promise.resolve(false);
     if (applying || !session || choice) return Promise.resolve(false);
     if (!reconciled && !opts.force) return Promise.resolve(false);
     if (inflight) { queued = true; return Promise.resolve(false); }
@@ -24746,6 +24834,7 @@ window.XY_LAZY_CHUNKS = [{"id": "ui", "src": "chunks/ui-008ff700a700.js", "bytes
     });
   }
   function schedule() {
+    if (XY.save && XY.save.holdCloud) return;
     if (applying || !session || choice || !reconciled || expectVer == null) return;
     if (timer) clearTimeout(timer);
     timer = setTimeout(function () { timer = null; push(); }, 900);
@@ -24755,6 +24844,7 @@ window.XY_LAZY_CHUNKS = [{"id": "ui", "src": "chunks/ui-008ff700a700.js", "bytes
     push();
   }
   function reconcile() {
+    if (XY.save && XY.save.holdCloud) { reconciled = true; return Promise.resolve(); }
     return sbSelect('saves').then(function (res) {
       if (!session) return;
       if (!res || res.error) {
@@ -24764,6 +24854,9 @@ window.XY_LAZY_CHUNKS = [{"id": "ui", "src": "chunks/ui-008ff700a700.js", "bytes
         return;
       }
       var row = res.data, remote = row && row.data, ver = row ? (row.version || 0) : 0;
+      if (remote && progress(remote) && ((remote.saveEpoch | 0) < (XY.save.EPOCH || 0))) {
+        XY.save.holdCloud = true; reconciled = true; return;
+      }
       if (!remote || !progress(remote)) {
         if (!progress(XY.save.data) && remote) { expectVer = ver; reconciled = true; tick(); return; }
         return push(row ? ver : 0, { force: true }).then(function (ok) {
@@ -24860,6 +24953,7 @@ window.XY_LAZY_CHUNKS = [{"id": "ui", "src": "chunks/ui-008ff700a700.js", "bytes
     if (XY.bgArt) pulls.forEach(function (id) { try { XY.bgArt(id); } catch (e) {} });
   }
   function startDraw() {
+    if (XY.save && XY.save.holdCloud) return;
     if (drawBusy || drawDone === true || drawDone === 'err' || !session || choice) return;
     drawBusy = true;
     sbDraw().then(function (res) {
