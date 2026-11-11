@@ -18645,6 +18645,23 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
       cy0 = L ? 668 : 664;
       if (cy0 - preview.d / 2 < topLimit) cy0 = topLimit + preview.d / 2;
       if (cy0 + preview.d / 2 > saveY - saveH) cy0 = saveY - saveH - preview.d / 2;
+      if (L) {
+        // 矮横屏底排正压在按钮下的深墨上。垫一团宣纸色，四周晕开，没有框。
+        var washRx = st.DW * 0.36, washRy = Math.max(preview.d, preview.nh) * 0.72;
+        c.save();
+        c.translate(st.DW / 2, cy0);
+        c.scale(washRx, washRy);
+        var wash = c.createRadialGradient(0, 0, 0.08, 0, 0, 1);
+        wash.addColorStop(0, 'rgba(246,239,226,0.9)');
+        wash.addColorStop(0.42, 'rgba(246,239,226,0.55)');
+        wash.addColorStop(0.72, 'rgba(246,239,226,0.16)');
+        wash.addColorStop(1, 'rgba(246,239,226,0)');
+        c.fillStyle = wash;
+        c.beginPath();
+        c.arc(0, 0, 1, 0, Math.PI * 2);
+        c.fill();
+        c.restore();
+      }
       c.save(); c.globalAlpha = 0.78;
       placed = placeRow(ids, cy0, st.DW, mg);
       gaps = placed.gaps;
