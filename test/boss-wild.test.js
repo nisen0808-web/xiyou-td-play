@@ -56,7 +56,7 @@ test('niumo plays idle, attack, and hit, then returns to idle', function () {
   assert.ok(fs.existsSync(path.join(__dirname, '../assets/wild', hit.file)));
 });
 
-test('boss fight plates for niumo, phyrex, and sisi stay off the journey clips', function () {
+test('boss fight plates stay off the journey clips', function () {
   var manifest = JSON.parse(fs.readFileSync(path.join(__dirname, '../assets/wild/manifest.json'), 'utf8'));
   wild.ingest(manifest);
   assert.equal(manifest.ids.wukong.idle.file, 'wukong-idle.webp');
@@ -70,7 +70,7 @@ test('boss fight plates for niumo, phyrex, and sisi stay off the journey clips',
   ['bajie', 'wujing', 'qinba', 'traders18', 'cato'].forEach(function (id) {
     assert.equal(BF.ORDER.indexOf(id), -1);
   });
-  [['niumo', 250, 3, 'left'], ['phyrex', 333, 4, 'right'], ['sisi', 333, 4, 'right']].forEach(function (row) {
+  [['niumo', 250, 3, 'left'], ['phyrex', 333, 4, 'right'], ['sisi', 333, 4, 'right'], ['wukong', 333, 4, 'right']].forEach(function (row) {
     var id = row[0], atk = wild.api.clip(id, 'bossAttack'), idle = wild.api.clip(id, 'bossIdle'), hit = wild.api.clip(id, 'bossHit');
     assert.equal(idle.loopPolicy, 'pingpong');
     assert.equal(idle.frameCount, 27);
