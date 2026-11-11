@@ -8475,16 +8475,16 @@ XY.TRAITS = {
     c.fill('evenodd');
     if (tr) {
       var pu = 0.5 + 0.5 * Math.sin(rt * 5);
-      c.beginPath(); holePath(c, tr, pad + pu * 2); c.lineWidth = 4; c.strokeStyle = 'rgba(240,160,20,' + (0.65 + 0.35 * pu) + ')'; c.stroke();
+      c.beginPath(); holePath(c, tr, pad + pu * 2); c.lineWidth = 4; c.strokeStyle = 'rgba(168,50,36,' + (0.65 + 0.35 * pu) + ')'; c.stroke();
       var cx = tr.x + tr.w / 2, below = tr.y + tr.h / 2 < H / 2, ay = below ? tr.y + tr.h + pad + 8 + pu * 6 : tr.y - pad - 8 - pu * 6, dir = below ? -1 : 1;
       if (!(L.pos === 'top' && ay > L.y && ay < L.y + L.h) && cx > 0 && cx < W) {
-        c.fillStyle = '#e8892b'; c.strokeStyle = '#fff'; c.lineWidth = 2.5; c.beginPath(); c.moveTo(cx, ay); c.lineTo(cx - 13, ay - dir * 20); c.lineTo(cx + 13, ay - dir * 20); c.closePath(); c.stroke(); c.fill();
+        c.fillStyle = '#a83224'; c.strokeStyle = '#fff'; c.lineWidth = 2.5; c.beginPath(); c.moveTo(cx, ay); c.lineTo(cx - 13, ay - dir * 20); c.lineTo(cx + 13, ay - dir * 20); c.closePath(); c.stroke(); c.fill();
       }
     }
     c.restore();
     if(XY.ui2.on&&XY.inkHud){XY.inkHud.tutorialCard(c,G,app,tt,st,L);return;}
     // 提示卡
-    R.panel(c, L.x, L.y, L.w, L.h, 16, 'rgba(255,251,236,0.98)', '#e0a415');
+    R.panel(c, L.x, L.y, L.w, L.h, 16, 'rgba(255,251,236,0.98)', '#a83224');
     var n = list.length;
     R.txt(c, '新手教程 ' + (tt.i + 1) + '/' + n, L.x + 20, L.y + 18, 12, '#a8700a', 'left', true);
     R.txt(c, st.title, L.x + 20, L.y + 44, L.tsz + 4, '#3a2c10', 'left', true);
@@ -9086,7 +9086,7 @@ XY.TRAITS = {
   function drawEnemyStatus2(c, e, top) {
     var x = e.x, y = e.y, r = e.r;
     if (e.slowT > 0) { c.strokeStyle = 'rgba(74,144,217,0.75)'; c.lineWidth = 2; c.beginPath(); c.ellipse(x, y + r * 0.85, r * 1.05, r * 0.4, 0, 0, PI2); c.stroke(); }
-    if (e.burnT > 0) { c.fillStyle = '#ff8a3c'; c.beginPath(); c.moveTo(x + r * 0.4, y - top * 0.55); c.quadraticCurveTo(x + r * 0.4 + 6, y - top * 0.55 - 8, x + r * 0.4, y - top * 0.55 - 14); c.quadraticCurveTo(x + r * 0.4 - 6, y - top * 0.55 - 6, x + r * 0.4, y - top * 0.55); c.fill(); }
+    if (e.burnT > 0) { c.fillStyle = '#a83224'; c.beginPath(); c.moveTo(x + r * 0.4, y - top * 0.55); c.quadraticCurveTo(x + r * 0.4 + 6, y - top * 0.55 - 8, x + r * 0.4, y - top * 0.55 - 14); c.quadraticCurveTo(x + r * 0.4 - 6, y - top * 0.55 - 6, x + r * 0.4, y - top * 0.55); c.fill(); }
     if (e.stunT > 0) otxt(c, '★ ★', x, y - top - 4, 12, '#e0a415', 'center', true);
   }
   function drawEnemyBase(c, G, e, rt, baked) {
@@ -9139,7 +9139,7 @@ XY.TRAITS = {
     if (baked) return;
     // 状态
     if (e.slowT > 0) { c.strokeStyle = 'rgba(74,144,217,0.8)'; c.lineWidth = 2; c.beginPath(); c.arc(x, y, r + 3, 0, PI2); c.stroke(); }
-    if (e.burnT > 0) { c.fillStyle = '#ff8a3c'; c.beginPath(); c.arc(x + r * 0.5, y - r - 4, 3.5, 0, PI2); c.fill(); }
+    if (e.burnT > 0) { c.fillStyle = '#a83224'; c.beginPath(); c.arc(x + r * 0.5, y - r - 4, 3.5, 0, PI2); c.fill(); }
     if (e.stunT > 0) otxt(c, '★ ★', x, y - r - 12, 12, '#e0a415', 'center', true);
     // 血条（受伤后或强敌）
     if (e.type !== 'small' && (e.hp < e.maxHp || d.elite) && !d.boss) {
@@ -10663,9 +10663,9 @@ XY.TRAITS = {
     if (m) {                                              // 鼠标目的地：脉冲圈 + 小旗
       var k = 0.5 + 0.5 * Math.sin(m.t * 8);
       c.strokeStyle = 'rgba(224,120,30,' + (0.6 + 0.3 * k) + ')'; c.lineWidth = 3; c.beginPath(); c.arc(m.x, m.y, 12 + k * 6, 0, PI2); c.stroke();
-      c.fillStyle = '#e8892b'; c.beginPath(); c.arc(m.x, m.y, 4, 0, PI2); c.fill();
+      c.fillStyle = '#a83224'; c.beginPath(); c.arc(m.x, m.y, 4, 0, PI2); c.fill();
       c.strokeStyle = '#8a4a05'; c.lineWidth = 2; c.beginPath(); c.moveTo(m.x, m.y); c.lineTo(m.x, m.y - 26); c.stroke();
-      c.fillStyle = '#e8892b'; c.beginPath(); c.moveTo(m.x, m.y - 26); c.lineTo(m.x + 14, m.y - 21); c.lineTo(m.x, m.y - 16); c.closePath(); c.fill();
+      c.fillStyle = '#a83224'; c.beginPath(); c.moveTo(m.x, m.y - 26); c.lineTo(m.x + 14, m.y - 21); c.lineTo(m.x, m.y - 16); c.closePath(); c.fill();
     }
     if (XY.synActive) {                                   // 协同技：激活时两位角色之间拉一条粉色光带 + 名字
       var sa = XY.synActive(G);
@@ -10684,7 +10684,7 @@ XY.TRAITS = {
     var T = R(), W = app.lw, H = app.lh, cb = G.combo, k;
     if ((!XY.compactHud || !XY.compactHud.on(G,app)) && ((cb && cb.n >= 3) || G.comboMs)) {                                          // v0.7.0l：连杀小标签；v0.8.0 起放在顶部居中、通知条正下方（原来在通知行右侧，手机竖屏会盖住暂停 / 菜单按钮）
       var M = topMetrics(app), n = G.comboMs ? G.comboMs.n : cb.n, ms = G.comboMs ? Math.sin(Math.min(1, G.comboMs.t / 0.25) * Math.PI) : 0;
-      var cw0 = M.mob ? 140 : 112, cx0 = Math.round(W / 2 - cw0 / 2), cy0 = M.ty + M.th + 6, a0 = G.comboMs ? 1 : Math.min(1, cb.t / 0.6), col = n >= 50 ? '#e8590c' : (n >= 25 ? '#d9822b' : '#7a5a1e');
+      var cw0 = M.mob ? 140 : 112, cx0 = Math.round(W / 2 - cw0 / 2), cy0 = M.ty + M.th + 6, a0 = G.comboMs ? 1 : Math.min(1, cb.t / 0.6), col = n >= 50 ? '#a83224' : (n >= 25 ? '#8a3a22' : '#7a5a1e');
       c.save(); c.globalAlpha = a0; T.panel(c, cx0, cy0, cw0, M.th, 9, 'rgba(255,250,236,0.95)', col);
       var ct = XY.fmtNum(n) + ' 连杀', cs = Math.round((M.mob ? 22 : 16) * (1 + 0.15 * ms)); while (cs > 11 && tw(c, ct, cs, true) > cw0 - 14) cs--;
       T.txt(c, ct, cx0 + cw0 / 2, cy0 + M.th / 2 - (cb ? 2 : 0), cs, col, 'center', true);
@@ -10696,7 +10696,7 @@ XY.TRAITS = {
       var M2 = topMetrics(app); k = G.clearFx.t / G.clearFx.max; var pop = 1 + 0.35 * Math.max(0, 1 - k * 6), by = M2.ty + M2.th + (M2.mob ? 22 : 24) + ((G.combo && G.combo.n >= 3) || G.comboMs ? M2.th + 6 : 0);
       var big = Math.round((M2.mob ? 34 : 30) * pop), lab = G.clearFx.label || '清屏', sub = '一口气扫掉 ' + XY.fmtNum(G.clearFx.n) + ' 只妖怪';
       c.save(); c.globalAlpha = Math.min(1, (1 - k) * 2.2, k * 12 + 0.25);
-      T.otxt(c, lab, W / 2, by, big, '#e8590c', 'center', true);
+      T.otxt(c, lab, W / 2, by, big, '#a83224', 'center', true);
       T.otxt(c, sub, W / 2, by + (M2.mob ? 26 : 24), M2.mob ? 20 : 15, '#7a4a05', 'center', true);
       c.restore(); R4.clearBox = { x: W / 2 - 160, y: by - big / 2, w: 320, h: big + 36 };
     } else R4.clearBox = null;
@@ -18467,14 +18467,15 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
   }
   function standCard(st, id, x, y, w, h, nameSize) {
     var c = st.c;
-    var picH = h * 0.74;
+    var sz = nameSize || 16;
+    var picH = Math.max(h * 0.62, h - sz * 1.05);
     if (XY.xAvIcon) XY.xAvIcon.draw(c, id, x, y, w, picH);
     var label = cardLabel(id);
     c.save();
-    c.beginPath(); c.rect(x, y + picH - 2, w, h - picH + 4); c.clip();
-    c.font = (nameSize || 16) + 'px "Ma Shan Zheng","KaiTi",serif';
+    c.beginPath(); c.rect(x, y + picH - sz * 0.2, w, h - picH + sz * 0.3); c.clip();
+    c.font = sz + 'px "Ma Shan Zheng","KaiTi",serif';
     c.fillStyle = '#24180f'; c.textAlign = 'center'; c.textBaseline = 'middle';
-    c.fillText(label, x + w / 2, y + picH + (h - picH) * 0.45);
+    c.fillText(label, x + w / 2, y + picH + sz * 0.28);
     c.restore();
     var r = { id: id, x: x, y: y, w: w, h: h, cx: x + w / 2, cy: y + h / 2, r: Math.min(w, h) / 2 };
     st.av.push(r); hit(x, y, w, h, 'menuChar', { id: id });
@@ -18492,7 +18493,7 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
     if (top < topMin) { top = topMin; ch = Math.max(48, bottom - top); }
     var cw = (st.DW - margin * 2 - gap * (n - 1)) / n;
     var labels = ids.map(cardLabel), c = st.c;
-    var prefer = large ? ch * 0.2 : Math.min(ch * 0.26, 22 / Math.max(0.4, css));
+    var prefer = large ? Math.min(42, ch * 0.28) : Math.min(ch * 0.32, 28 / Math.max(0.4, css));
     var sz = XY.xAvIcon && XY.xAvIcon.fitSize ? XY.xAvIcon.fitSize(c, labels, Math.max(28, cw - 4), prefer) : 16;
     var total = n * cw + (n - 1) * gap, x = Math.max(6, (st.DW - total) / 2);
     var shortRow = st.DH / Math.max(1, st.DW) < 0.42 || css < 0.65;
@@ -19114,6 +19115,15 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
       c.beginPath(); c.moveTo(x + 2, y + 1); c.lineTo(x + w - 3, y); c.lineTo(x + w - 1, y + h - 2); c.lineTo(x + 1, y + h); c.closePath();
       c.fill(); c.lineWidth = 2.1; c.strokeStyle = '#2a2118'; c.stroke(); c.restore();
     }
+    function fitArt(im, x, y, w, h) {
+      if (!im) return false;
+      var iw = im.naturalWidth || im.width, ih = im.naturalHeight || im.height;
+      if (!iw || !ih) return false;
+      var sc = Math.min(w / iw, h / ih);
+      var dw = iw * sc, dh = ih * sc;
+      c.drawImage(im, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
+      return true;
+    }
     function fillCover(im, x, y, w, h) {
       if (!im) return false;
       var iw = im.naturalWidth || im.width, ih = im.naturalHeight || im.height;
@@ -19142,7 +19152,7 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
       var drew = false;
       if (r.kind === 'sol' && XY.soldierInk) drew = XY.soldierInk.draw(c, r.sol, x + w / 2, y + h * 0.96, h * 1.38, w * 1.22);
       if (!drew && r.inkName && XY.ICONINK) drew = XY.ICONINK.draw(c, r.inkName, x + w / 2, y + h * 0.46, Math.max(w, h) * 1.35);
-      if (!drew && r.spId && XY.bgArt) { try { XY.bgArt(r.spId); } catch (e) {} drew = fillCover(XY.bgArt(r.spId), x + 8, y + 8, w - 16, h - 18); }
+      if (!drew && r.spId && XY.bgArt) { try { XY.bgArt(r.spId); } catch (e) {} var sealRoom = Math.max(44, Math.min(56, w * 0.22)); drew = fitArt(XY.bgArt(r.spId), x + 8, y + 8, Math.max(48, w - 20 - sealRoom), h - 18); }
       if (!drew && r.card) { inkWord(x, y, w, h, String(r.title || '宝').replace(/^.*· /, '').charAt(0) || '宝'); drew = true; }
       if (!drew && r.kind === 'shard') { inkShard(x, y, w, h); drew = true; }
       if (!drew && r.kind === 'reroll') { inkRefresh(x, y, w, h); drew = true; }
