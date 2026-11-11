@@ -18688,12 +18688,14 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
         gap = (st.DW - used) / Math.max(1, n - 1);
         y = topLimit + d / 2;
       }
+      c.save(); c.globalAlpha = 0.78; // 底排九人退到五人后面：头像仍彩色，名字仍可读
       var x = margin;
       ids.forEach(function (id, i) {
         faceCircle(st, id, x + d / 2, y, d);
         var nw = paintName(id, x + d + inner, y - nameH / 2, nameH);
         x += d + inner + nw + (i < n - 1 ? gap : 0);
       });
+      c.restore();
       saveLine(st, st.DW / 2, saveY, 'center', Math.max(11, Math.min(16, nameH * 0.85)));
       return d;
     }
@@ -18712,6 +18714,7 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
     var pitch = d + Math.max(12, Math.round(14 / css));
     var y0 = saveY - saveH - 6 - (rows - 1) * pitch - d / 2;
     if (y0 - d / 2 < topLimit) y0 = topLimit + d / 2;
+    c.save(); c.globalAlpha = 0.78;
     ids.forEach(function (id, i) {
       var col = i % cols, row = (i / cols) | 0;
       var x = margin + col * cellW, cy = y0 + row * pitch;
@@ -18720,6 +18723,7 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
       faceCircle(st, id, x + d / 2, cy, d);
       paintName(id, x + d + inner, cy - nh / 2, nh);
     });
+    c.restore();
     saveLine(st, st.DW / 2, Math.min(st.DH - 4, y0 + (rows - 1) * pitch + d / 2 + saveH * 0.8), 'center', Math.max(11, Math.min(15, nameH * 0.8)));
     return d;
   }
@@ -18728,15 +18732,13 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
     var c = st.c, DW = st.DW, DH = st.DH, cx = DW / 2, m = st.mode, g = st.geom;
     if (m !== 'P') {
       var L = m === 'L', ox0 = cx - 640, fx = function (x) { return ox0 + x; };
-      var cssK = (st.k || 1) * ((st.app && st.app.zoom) || 1);
-      var bw = L ? 400 : 340, bh = L ? 58 : 52, by = cssK < 0.6 ? (L ? 360 : 400) : (cssK >= 0.8 ? (L ? 378 : 408) : (L ? 468 : 496)), ph = L ? 40 : 28, mg = L ? 24 : 22, pmax = DW / 2 - 150 - mg;
+      // 五人立绘按 ea6b2e4（2026-11-08）的首页：原大，脚落在「开始取经」按钮上，名字竖排在各人身边。大屏不再缩小上移。
+      var bw = L ? 400 : 340, bh = L ? 66 : 56, by = L ? 514 : 552, ph = L ? 40 : 28, mg = L ? 24 : 22, pmax = DW / 2 - 150 - mg;
       st.lim = { x1: 0, x2: DW, y1: L ? 110 : 60, y2: by - 4 };
       /* 画序：沙僧 / 白龙马在后排，唐僧居中，孙悟空 / 猪八戒站在唐僧两侧、盖在他前面（v0.8.7b：之前唐僧最后画，把悟空 / 八戒 / 沙僧的脸遮住了） */
-      var short = cssK < 0.7, big = !short && cssK >= 0.8, fk = short ? 0.62 : (big ? 0.7 : 1), foot = short ? by - 8 : (big ? by + bh - 4 : 0);
-      function fy(y) { return (short || big) ? foot - (648 - y) * fk : y; }
-      drawFig(st, 'wujing', fx(238), fy(626), 400 * fk); drawFig(st, 'horse', fx(1000), fy(626), 400 * fk);
-      drawFig(st, 'tang', fx(640), fy(648), 540 * fk);
-      drawFig(st, 'wukong', fx(462), fy(640), 460 * fk); drawFig(st, 'bajie', fx(846), fy(640), 460 * fk);
+      drawFig(st, 'wujing', fx(238), 626, 400); drawFig(st, 'horse', fx(1000), 626, 400);
+      drawFig(st, 'tang', fx(640), 648, 540);
+      drawFig(st, 'wukong', fx(462), 640, 460); drawFig(st, 'bajie', fx(846), 640, 460);
       heroName(st, 'wujing', fx(112), 228, 104); heroName(st, 'horse', fx(1118), 198, 104); heroName(st, 'wukong', fx(335), 150, 112); heroName(st, 'bajie', fx(968), 165, 112); heroName(st, 'tang', fx(482), 122, 100);
       title(st, cx, 62, 68, 0, 0.85);
       startBtn(st, cx - bw / 2, by, bw, bh, L ? 30 : 26);
