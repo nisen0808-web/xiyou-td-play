@@ -1469,114 +1469,25 @@
     };
     return map[id] || 'scroll';
   }
-  var floatCache = {};
-  /* 从四周宣纸色往里抠，裁到墨迹外框。武器和道具留在画面里，不按方框裁。 */
-  function cutout(key, im) {
-    if (floatCache[key]) return floatCache[key];
-    var iw = im.naturalWidth || im.width, ih = im.naturalHeight || im.height;
-    if (!iw || !ih) return null;
-    var sc0 = Math.min(1, 560 / Math.max(iw, ih));
-    var w = Math.max(1, Math.round(iw * sc0)), h = Math.max(1, Math.round(ih * sc0));
-    var cnv = document.createElement('canvas');
-    cnv.width = w; cnv.height = h;
-    var g = cnv.getContext('2d');
-    g.drawImage(im, 0, 0, w, h);
-    var imgd = g.getImageData(0, 0, w, h), d = imgd.data, n = w * h;
-    var scored = [], x, y, p, lum, i;
-    for (x = 0; x < w; x += 3) {
-      p = x * 4; scored.push((d[p] + d[p + 1] + d[p + 2]) / 3, d[p], d[p + 1], d[p + 2]);
-      p = ((h - 1) * w + x) * 4; scored.push((d[p] + d[p + 1] + d[p + 2]) / 3, d[p], d[p + 1], d[p + 2]);
-    }
-    for (y = 0; y < h; y += 3) {
-      p = (y * w) * 4; scored.push((d[p] + d[p + 1] + d[p + 2]) / 3, d[p], d[p + 1], d[p + 2]);
-      p = (y * w + w - 1) * 4; scored.push((d[p] + d[p + 1] + d[p + 2]) / 3, d[p], d[p + 1], d[p + 2]);
-    }
-    var order = [];
-    for (i = 0; i < scored.length; i += 4) order.push(i);
-    order.sort(function (a, b) { return scored[b] - scored[a]; });
-    var take = Math.max(8, Math.floor(order.length / 5));
-    var pr = 0, pg = 0, pb = 0;
-    for (i = 0; i < take; i++) {
-      var at = order[i];
-      pr += scored[at + 1]; pg += scored[at + 2]; pb += scored[at + 3];
-    }
-    pr /= take; pg /= take; pb /= take;
-    var tol = (pr + pg + pb) / 3 < 215 ? 40 : 32;
-    function isPaper(r, g0, b, a) {
-      if (a < 12) return true;
-      if (Math.max(r, g0, b) - Math.min(r, g0, b) > 58) return false;
-      return Math.abs(r - pr) <= tol && Math.abs(g0 - pg) <= tol && Math.abs(b - pb) <= tol;
-    }
-    var seen = new Uint8Array(n), qx = new Int16Array(n), qy = new Int16Array(n), qh = 0, qt = 0;
-    function push(x0, y0) {
-      if (x0 < 0 || y0 < 0 || x0 >= w || y0 >= h) return;
-      var idx = y0 * w + x0;
-      if (seen[idx]) return;
-      seen[idx] = 1;
-      qx[qt] = x0; qy[qt] = y0; qt++;
-    }
-    for (x = 0; x < w; x++) { push(x, 0); push(x, h - 1); }
-    for (y = 0; y < h; y++) { push(0, y); push(w - 1, y); }
-    while (qh < qt) {
-      x = qx[qh]; y = qy[qh]; qh++;
-      p = (y * w + x) * 4;
-      if (!isPaper(d[p], d[p + 1], d[p + 2], d[p + 3])) continue;
-      d[p + 3] = 0;
-      push(x + 1, y); push(x - 1, y); push(x, y + 1); push(x, y - 1);
-    }
-    var pass, t, xx, yy, kill, chroma;
-    for (pass = 0; pass < 4; pass++) {
-      kill = [];
-      for (y = 1; y < h - 1; y++) {
-        for (x = 1; x < w - 1; x++) {
-          p = (y * w + x) * 4;
-          if (d[p + 3] < 12) continue;
-          lum = (d[p] + d[p + 1] + d[p + 2]) / 3;
-          chroma = Math.max(d[p], d[p + 1], d[p + 2]) - Math.min(d[p], d[p + 1], d[p + 2]);
-          if (lum < 168 || chroma > 46) continue;
-          t = 0;
-          for (yy = y - 1; yy <= y + 1; yy++) for (xx = x - 1; xx <= x + 1; xx++) {
-            if (d[(yy * w + xx) * 4 + 3] < 12) t++;
-          }
-          if (t >= 3) kill.push(p);
-        }
-      }
-      for (i = 0; i < kill.length; i++) d[kill[i] + 3] = 0;
-    }
-    var minX = w, minY = h, maxX = 0, maxY = 0, found = false;
-    for (y = 0; y < h; y++) for (x = 0; x < w; x++) {
-      if (d[(y * w + x) * 4 + 3] < 16) continue;
-      found = true;
-      if (x < minX) minX = x;
-      if (y < minY) minY = y;
-      if (x > maxX) maxX = x;
-      if (y > maxY) maxY = y;
-    }
-    g.putImageData(imgd, 0, 0);
-    if (!found) { floatCache[key] = cnv; return cnv; }
-    var tw = maxX - minX + 1, th = maxY - minY + 1;
-    var out = document.createElement('canvas');
-    out.width = tw; out.height = th;
-    out.getContext('2d').putImageData(g.getImageData(minX, minY, tw, th), 0, 0);
-    floatCache[key] = out;
-    return out;
-  }
-  function paintCut(c, cut, x, y, w, h, foot) {
-    if (!cut || !cut.width) return;
-    var sc = Math.min(w / cut.width, h / cut.height);
-    var dw = cut.width * sc, dh = cut.height * sc;
-    c.drawImage(cut, x + (w - dw) / 2, foot ? y + h - dh : y + (h - dh) / 2, dw, dh);
-  }
   function inkGear(c, id, x, y, w, h) {
+    c.save();
+    c.beginPath();
+    c.rect(x, y, w, h);
+    c.clip();
+    c.fillStyle = '#f4ead6';
+    c.fillRect(x, y, w, h);
+    var wash = c.createRadialGradient(x + w * 0.5, y + h * 0.42, 6, x + w * 0.5, y + h * 0.5, Math.max(w, h) * 0.62);
+    wash.addColorStop(0, 'rgba(36,24,16,0.06)');
+    wash.addColorStop(1, 'rgba(36,24,16,0)');
+    c.fillStyle = wash;
+    c.fillRect(x, y, w, h);
     var painted = id && gearArt(id);
-    var cut = painted && cutout('gear-' + id, painted);
-    if (cut) paintCut(c, cut, x, y, w, h, false);
+    if (painted) drawContain(c, painted, x, y, w, h);
     else if (id) {
-      c.save();
       c.translate(x, y);
       inkShape(c, gearKind(id), w, h);
-      c.restore();
     }
+    c.restore();
   }
   function heroDef(id) {
     var list = XY.SPECIALS_ALL || XY.SPECIALS || [], i;
@@ -1686,133 +1597,67 @@
     c.restore();
     brush(c, handle, x, y, size, '#24180f', 'center');
   }
-  function deskWash(c, W, H) {
-    c.fillStyle = '#f3ead6';
-    c.fillRect(0, 0, W, H);
-    var im = anyImg('deskPaper', 'assets/formshop/paper-desk.webp');
-    if (!im) return;
-    var iw = im.naturalWidth || im.width, ih = im.naturalHeight || im.height;
-    var sc = Math.max(W / iw, H / ih);
-    var dw = iw * sc, dh = ih * sc;
-    c.drawImage(im, (W - dw) / 2, (H - dh) / 2, dw, dh);
-  }
-  function inkName(c, s, x, y, maxW, size, ink) {
-    var halo = Math.max(3, size * 0.055), i, ang;
-    for (i = 0; i < 8; i++) {
-      ang = i * Math.PI / 4;
-      brushFit(c, s, x + Math.cos(ang) * halo, y + Math.sin(ang) * halo, maxW, size, '#f6efe2', 'center');
-    }
-    return brushFit(c, s, x, y, maxW, size, ink || '#120c0a', 'center');
-  }
   function paintGear(c, app) {
     var W = app.lw, H = app.lh, port = H > W * 1.05;
     c.save();
-    deskWash(c, W, H);
-    brush(c, '专属器物', port ? 22 : 28, port ? 40 : 46, port ? 32 : 40, '#120c0a', 'left');
-    var backW = 128, backH = 50;
-    redSeal(c, W - backW - 12, 12, backW, backH, '返回');
-    hit(W - backW - 12, 12, backW, backH, 'dkGearClose');
+    c.fillStyle = 'rgba(246,239,224,0.78)';
+    c.fillRect(0, 0, W, H);
+    paper(c, 8, 8, W - 16, H - 16);
+    brush(c, '专属装备', 24, port ? 32 : 36, port ? 28 : 36, '#24180f', 'left');
+    redSeal(c, W - 96, 16, 70, 44, '返回');
+    hit(W - 96, 16, 70, 44, 'dkGearClose');
     var ids = (XY.SPECIALS_ALL || XY.SPECIALS || []).map(function (d) { return d.id; }).filter(revealed);
     var sel = app.dkHero && ids.indexOf(app.dkHero) >= 0 ? app.dkHero : (ids[0] || 'phyrex');
     app.dkHero = sel;
+    var top = port ? 62 : 68;
+    var bodyH = H - top - 16;
     var gdoc = gear();
-    var eq = (gdoc.equip && gdoc.equip[sel]) || { weapon: null, item: null };
-    var catalog = API.GEAR.filter(function (g) { return g.owner === sel; });
-    var weapon = (eq.weapon && API.gearById[eq.weapon]) || catalog.filter(function (g) { return g.slot === 'weapon'; })[0];
-    var item = (eq.item && API.gearById[eq.item]) || catalog.filter(function (g) { return g.slot === 'item'; })[0];
-    var n = Math.max(1, ids.length);
-    var cols = port ? 5 : n;
-    var rows = Math.ceil(n / cols);
-    var gap = port ? 10 : 16;
-    var slot = Math.floor((W - (port ? 20 : 48) - gap * (cols - 1)) / cols);
-    var figH = port ? Math.max(168, Math.round(slot * 1.2)) : Math.round(Math.min(128, slot * 1.15));
-    var selH = Math.round(figH * (port ? 1.12 : 1.32));
-    var nameH = port ? 36 : 32;
-    var heroW, heroH, heroX, heroY, sideW, sideH, sideY, rosterTop;
-    if (port) {
-      var header = 76;
-      var gearNameH = 44;
-      var rowGap = 6;
-      var rosterH = rows * (selH + nameH) + (rows - 1) * rowGap;
-      rosterTop = H - rosterH - 8;
-      var gearRoom = rosterTop - header - 12;
-      sideH = Math.max(220, Math.round(gearRoom * 0.36));
-      heroH = gearRoom - sideH - gearNameH;
-      heroW = Math.min(W - 16, Math.round(heroH * 0.86));
-      heroX = (W - heroW) / 2;
-      heroY = header;
-      sideW = Math.floor((W - 28) / 2);
-      sideY = heroY + heroH + 6;
-    } else {
-      var feet = H - nameH - 8;
-      heroW = W * 0.34;
-      heroH = Math.min(heroW / 0.72, feet - selH - 18);
-      heroX = (W - heroW) / 2;
-      heroY = 8;
-      sideW = Math.max(96, heroX - 18);
-      sideH = Math.min(240, heroH * 0.56);
-      sideY = heroY + heroH * 0.16;
-      rosterTop = feet - figH;
-    }
-    var heroIm = spArt(sel);
-    var heroCut = heroIm && cutout('hero-' + sel, heroIm);
-    if (heroCut) paintCut(c, heroCut, heroX, heroY, heroW, heroH, true);
-    var hd = heroDef(sel);
-    var heroName = (hd && hd.name) || sel;
-    inkName(c, heroName, heroX + heroW / 2, heroY + heroH * 0.62, heroW * 0.96, Math.round(heroW / 3), '#120c0a');
-    function sidePiece(piece, x, y, w, h) {
-      if (!piece) return;
-      var art = gearArt(piece.id);
-      var cut = art && cutout('gear-' + piece.id, art);
-      if (cut) paintCut(c, cut, x, y, w, h, false);
-      inkName(c, piece.name, x + w / 2, y + h + (port ? 22 : 18), w + 36, port ? 36 : 30, '#120c0a');
-      var bagN = (gdoc.bag && gdoc.bag[piece.id]) || 0;
-      var equipped = (piece.slot === 'weapon' ? eq.weapon : eq.item) === piece.id;
-      if (bagN > 0 && !equipped) hit(x, y, Math.max(88, w), Math.max(88, h), 'dkEquip', { id: piece.id, hero: sel });
-    }
-    if (port) {
-      sidePiece(weapon, 12, sideY, sideW, sideH);
-      sidePiece(item, W - sideW - 12, sideY, sideW, sideH);
-    } else {
-      sidePiece(weapon, 16, sideY, sideW, sideH);
-      sidePiece(item, W - sideW - 16, sideY + 18, sideW, sideH);
-    }
-    var deskFeet = H - nameH - 2;
+    var row = (gdoc.equip && gdoc.equip[sel]) || { weapon: null, item: null };
+    var owned = API.GEAR.filter(function (g) { return g.owner === sel && ((gdoc.bag && gdoc.bag[g.id]) || 0) > 0 && row.weapon !== g.id && row.item !== g.id; });
     if (!port) {
-      c.save();
-      c.fillStyle = 'rgba(48,38,28,0.14)';
-      c.beginPath();
-      c.ellipse(W / 2, deskFeet + 2, W * 0.46, 9, 0, 0, Math.PI * 2);
-      c.fill();
-      c.restore();
+      var leftW = Math.floor((W - 40) * 0.56);
+      heroGrid(c, ids, sel, 20, top, leftW, bodyH);
+      var rx = 28 + leftW, rw = W - rx - 20;
+      var portH = Math.floor(bodyH * 0.58);
+      var hd = heroDef(sel);
+      inkWash(c, spArt(sel), rx, top, rw, portH, '');
+      captionOn(c, rx, top, rw, portH, (hd && hd.name) || sel, '');
+      paperHandle(c, hd && hd.handle, rx + rw / 2, top + portH - 18);
+      var slotY = top + portH + 10;
+      var slotH = Math.max(90, bodyH - portH - 10 - (owned.length ? 78 : 0));
+      var gap = 10, sw = Math.floor((rw - gap) / 2);
+      gearSlot(c, row.weapon && API.gearById[row.weapon], '武器', rx, slotY, sw, slotH);
+      gearSlot(c, row.item && API.gearById[row.item], '道具', rx + sw + gap, slotY, sw, slotH);
+      owned.forEach(function (g, n) {
+        var bw = 150, bx = rx + n * (bw + 8), by = slotY + slotH + 8;
+        if (bx + bw > rx + rw) return;
+        inkGear(c, g.id, bx, by, bw, 64);
+        brushFit(c, g.name, bx + bw / 2, by + 46, bw - 12, 16, '#24180f', 'center');
+        hit(bx, by, bw, 64, 'dkEquip', { id: g.id, hero: sel });
+      });
+    } else {
+      var gridH = Math.floor(bodyH * 0.42);
+      heroGrid(c, ids, sel, 16, top, W - 32, gridH);
+      var restY = top + gridH + 10;
+      var restH = bodyH - gridH - 10;
+      var pw = Math.floor((W - 40) * 0.56);
+      inkWash(c, spArt(sel), 16, restY, pw, restH, '');
+      var hdM = heroDef(sel);
+      captionOn(c, 16, restY, pw, restH, (hdM && hdM.name) || sel, '');
+      paperHandle(c, hdM && hdM.handle, 16 + pw / 2, restY + restH - 18);
+      var sx = 24 + pw, sww = W - sx - 16;
+      var bagH = owned.length ? 72 : 0;
+      var sh = Math.floor((restH - 8 - bagH) / 2);
+      gearSlot(c, row.weapon && API.gearById[row.weapon], '武器', sx, restY, sww, sh);
+      gearSlot(c, row.item && API.gearById[row.item], '道具', sx, restY + sh + 8, sww, sh);
+      owned.forEach(function (g, n) {
+        if (n > 0) return;
+        var by = restY + sh * 2 + 16;
+        inkGear(c, g.id, sx, by, sww, 64);
+        brushFit(c, g.name, sx + sww / 2, by + 46, sww - 12, 16, '#24180f', 'center');
+        hit(sx, by, sww, 64, 'dkEquip', { id: g.id, hero: sel });
+      });
     }
-    ids.forEach(function (id, i) {
-      var col = i % cols;
-      var row = Math.floor(i / cols);
-      var inRow = row === rows - 1 ? n - row * cols : cols;
-      var rowW = inRow * slot + (inRow - 1) * gap;
-      var x = (W - rowW) / 2 + col * (slot + gap);
-      var base = port ? rosterTop + row * (selH + nameH + 6) + selH : deskFeet;
-      var tall = id === sel ? selH : figH;
-      var y = base - tall;
-      var artIm = spArt(id);
-      var cut = artIm && cutout('hero-' + id, artIm);
-      if (cut) paintCut(c, cut, x, y, slot, tall, true);
-      var nm = heroDef(id);
-      inkName(c, (nm && nm.name) || id, x + slot / 2, base + nameH * 0.48, slot + 20, port ? 26 : 24, id === sel ? '#8d1f18' : '#120c0a');
-      if (id === sel) {
-        var seal = port ? 22 : 22;
-        var sx = x + slot * 0.78, sy = y + tall * 0.18;
-        c.save();
-        c.translate(sx, sy);
-        c.rotate(-0.08);
-        c.fillStyle = '#9a2e24';
-        c.fillRect(-seal / 2, -seal / 2, seal, seal);
-        c.restore();
-        brush(c, '印', sx, sy, Math.round(seal * 0.62), '#f4e6d4', 'center');
-      }
-      hit(x, y, Math.max(port ? 88 : 44, slot), Math.max(port ? 88 : 44, tall + nameH), 'dkHero', { id: id });
-    });
     c.restore();
   }
 
