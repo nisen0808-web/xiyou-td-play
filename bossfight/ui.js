@@ -6,7 +6,6 @@
    对外接口：XY.bossfight.open(ctx) / close() / state()，见 integrate.md。 */
 (function () {
   'use strict';
-  window.XY_NO_WILD = true;
   var BF = window.BF, Q = new URLSearchParams(location.search);
   var $ = function (id) { return document.getElementById(id); };
   var cv = $('cv'), ctx = cv.getContext('2d'), pcv = $('pcv'), pctx = pcv.getContext('2d');
@@ -41,7 +40,7 @@
     ready = Promise.resolve(window.BF_SPR_META).then(function (m) {
       SMETA = m; if (window.BFUI) window.BFUI.SMETA = m; var jobs = [loadChar('wukong'), loadChar('niumo'), loadBG('land')];
       if (portrait) jobs.push(loadBG('port'));
-      FIGS.forEach(function (k) { jobs.push(loadImg('assets/xav/' + k + '.webp').then(function (i) { AV[k] = i; })); });
+      FIGS.forEach(function (k) { jobs.push(loadColorAv(k)); });
       jobs.push(loadImg('assets/mink-elite.webp').then(function (i) { MINK = i; }),
         Promise.resolve().then(function () { MINK_META = window.BF_MINK_META; }),
         (document.fonts && document.fonts.load ? document.fonts.load('40px "Ma Shan Zheng"', '胜败破招暴击0123456789') : Promise.resolve()));
@@ -578,9 +577,44 @@
 
   /* ---------- 画：HUD ---------- */
   function para(c, x, y, w, h, sk) { c.beginPath(); c.moveTo(x + sk, y); c.lineTo(x + w + sk, y); c.lineTo(x + w, y + h); c.lineTo(x, y + h); c.closePath(); }
+  function colorAvURL(id) {
+    if (id === 'wukong') return '../assets/art/menu-v5/fig_wukong.webp';
+    if (id === 'niumo') return '../assets/wild/niumo-idle.webp';
+    return '../assets/art/x-avatars/' + id + '.webp';
+  }
+  function faceNode(im) {
+    if (!im || !(im.naturalWidth || im.width)) return im;
+    if (im._face) return im._face;
+    if (im.naturalWidth === 384 && im.naturalHeight === 378) return im;
+    return im;
+  }
+  function loadColorAv(id) {
+    return loadImg(colorAvURL(id)).then(function (i) {
+      if (!i.naturalWidth) return loadImg('assets/xav/' + id + '.webp').then(function (j) { AV[id] = j; });
+      if (id === 'niumo') {
+        var cv = document.createElement('canvas');
+        cv.width = 384; cv.height = 378;
+        cv.getContext('2d').drawImage(i, 0, 0, 384, 378, 0, 0, 384, 378);
+        try {
+          Object.defineProperty(cv, 'naturalWidth', { value: 384 });
+          Object.defineProperty(cv, 'naturalHeight', { value: 378 });
+        } catch (e) {}
+        AV[id] = cv;
+        return;
+      }
+      AV[id] = i;
+    });
+  }
+  function blitFace(c, im, cx, cy, r) {
+    var iw = im.naturalWidth || im.width, ih = im.naturalHeight || im.height;
+    if (!iw || !ih) return;
+    var side = r * 2, sc = Math.max(side / iw, side / ih);
+    var dw = iw * sc, dh = ih * sc;
+    c.drawImage(im, cx - dw / 2, cy - Math.min(dh * 0.42, dh - side), dw, dh);
+  }
   function head(c, id, cx, cy, r, ring) {
-    var im = AV[id]; if (!im || !im.naturalWidth) return;
-    c.save(); c.beginPath(); c.arc(cx, cy, r, 0, 7); c.clip(); c.fillStyle = '#f6ecd0'; c.fillRect(cx - r, cy - r, r * 2, r * 2); c.drawImage(im, cx - r, cy - r, r * 2, r * 2); c.restore();
+    var im = faceNode(AV[id]); if (!im || !(im.naturalWidth || im.width)) return;
+    c.save(); c.beginPath(); c.arc(cx, cy, r, 0, 7); c.clip(); c.fillStyle = '#f6ecd0'; c.fillRect(cx - r, cy - r, r * 2, r * 2); blitFace(c, im, cx, cy, r); c.restore();
     c.lineWidth = r * .16; c.strokeStyle = '#2f2a1f'; c.beginPath(); c.arc(cx, cy, r, 0, 7); c.stroke(); c.lineWidth = r * .09; c.strokeStyle = ring || '#e6c474'; c.beginPath(); c.arc(cx, cy, r - r * .02, 0, 7); c.stroke();
   }
   function bar(c, x, y, w, h, sk, frac, chip, colA, colB, dir) {
@@ -660,8 +694,8 @@
   }
   /* ---------- 召唤：随机转盘切入（<1 秒）+ 站场放必杀 ---------- */
   function avDisk(c, id, cx, cy, r, ring, a) {
-    var im = AV[id]; c.save(); c.globalAlpha = a == null ? 1 : a; c.beginPath(); c.arc(cx, cy, r, 0, 7); c.clip(); c.fillStyle = '#f6ecd0'; c.fillRect(cx - r, cy - r, r * 2, r * 2);
-    if (im && im.naturalWidth) c.drawImage(im, cx - r, cy - r, r * 2, r * 2); c.restore();
+    var im = faceNode(AV[id]); c.save(); c.globalAlpha = a == null ? 1 : a; c.beginPath(); c.arc(cx, cy, r, 0, 7); c.clip(); c.fillStyle = '#f6ecd0'; c.fillRect(cx - r, cy - r, r * 2, r * 2);
+    if (im && (im.naturalWidth || im.width)) blitFace(c, im, cx, cy, r); c.restore();
     c.save(); c.globalAlpha = a == null ? 1 : a; c.lineWidth = Math.max(2, r * .12); c.strokeStyle = '#2f2a1f'; c.beginPath(); c.arc(cx, cy, r, 0, 7); c.stroke(); c.lineWidth = Math.max(1.5, r * .07); c.strokeStyle = ring || '#e6c474'; c.beginPath(); c.arc(cx, cy, r - r * .03, 0, 7); c.stroke(); c.restore();
   }
   var ROUL = .42;   // 转盘转动时长；其后 0.48s 大立绘 + 名字 + 必杀名（切入合计 BF.SM.CUT = 0.9s）
@@ -743,7 +777,11 @@
 
   /* ---------- 选人界面 ---------- */
   /* ---------- 选人界面：只选搭档（圆形 X 头像） ---------- */
-  function avatarURL(id) { return 'assets/xav/' + id + '.webp'; }
+  function avatarURL(id) {
+    if (id === 'wukong') return '../assets/art/menu-v5/fig_wukong.webp';
+    if (id === 'niumo') return '../assets/wild/niumo-idle.webp';
+    return '../assets/art/x-avatars/' + id + '.webp';
+  }
   function avaEl(id, o) {
     o = o || {}; var d = BF.SP[id], el = document.createElement('div'); el.className = 'ava' + (o.on ? ' on' : '') + (o.off ? ' off' : '') + (o.sel ? ' sel' : ''); el.dataset.id = id;
     var col = id === 'wukong' ? ELC.fire : ELC[d.elem];
