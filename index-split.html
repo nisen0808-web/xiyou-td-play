@@ -14036,7 +14036,10 @@ XY.chibi.portrait = function (c, id, x, foot, h, alpha) {
     return e.img.complete && e.img.naturalWidth > 0 ? e : null;
   }
   U.has = function (id) { return !!ent(id); };
-  U.preload = function () { if (XY.ULTINK_DATA) for (var k in XY.ULTINK_DATA) ent(k); };
+  U.preload = function () {
+    if (XY.ULTINK_DATA) for (var k in XY.ULTINK_DATA) ent(k);
+    if (!U._close) { U._close = []; for (var i = 1; i <= 5; i++) { var im = new Image(); im.src = 'assets/ult/wukong-close-' + i + '.webp'; U._close.push(im); } }
+  };
   U.bounds = function (hit) {                          // 8 帧的起点（秒）：前摇 3 等分 [0, hit-0.1]，出招 2 帧，收招 3 等分到 T
     var w = (hit - 0.1) / 3, rs = hit + 0.5, rl = (U.T - rs) / 3;
     return [0, w, 2 * w, hit - 0.1, hit + 0.12, rs, rs + rl, rs + 2 * rl, U.T];
@@ -14048,6 +14051,7 @@ XY.chibi.portrait = function (c, id, x, foot, h, alpha) {
     c.globalAlpha = alpha; c.drawImage(en.img, f[0], f[1], f[2], f[3], x - f[4] * k, foot - f[5] * k, f[2] * k, f[3] * k);
   }
   U.sprite = function (c, S, t) {
+    if (S.visualOff || (S.def && S.def.mainHero)) return false;
     var en = ent(S.id); if (!en || t >= U.T) return false;
     var h = S.h, fa = U.frameAt(t, S.def.hit), i = fa.i, k = U.K * (1 + 0.05 * sin(cl(fa.since / 0.3, 0, 1) * PI) * (i === 3 || i === 4 ? 1 : 0));
     var x = h && !h.dead ? h.x : S.x, foot = (h && !h.dead ? h.y : S.y) + 14, a = 1 - seg(t, U.T - 0.25, U.T) * 1;
@@ -14074,6 +14078,7 @@ XY.chibi.portrait = function (c, id, x, foot, h, alpha) {
   /* ---------- 三层 ---------- */
   U.ground = function (c, S, t, G) {
     var d = S.def, hit = d.hit, x = S.x, y = S.y + 14, acc = d.acc, i;
+    if (d.mainHero || S.visualOff) return;
     if (t < hit) {                                              // 前摇：脚下两道旋转的墨笔 + 一点点点缀色
       var k = eo(t / hit); c.fillStyle = 'rgba(' + acc + ',' + (0.10 * k) + ')'; c.beginPath(); c.ellipse(x, y, 40 + 90 * k, 16 + 36 * k, 0, 0, PI2); c.fill();
       for (i = 0; i < 4; i++) { var an = t * (4 + 6 * k) + i * PI / 2, r = 50 + 50 * k; stroke(c, x + cos(an) * r, y + sin(an) * r * 0.45, x + cos(an + 0.9) * r, y + sin(an + 0.9) * r * 0.45, 5 + 4 * k, INK, 0.5 * k, i * 3); }
@@ -14086,6 +14091,7 @@ XY.chibi.portrait = function (c, id, x, foot, h, alpha) {
   };
   U.air = function (c, S, t, G) {
     var d = S.def, hit = d.hit, x = S.x, y = S.y, h = S.h, acc = d.acc, i, tt = t - hit;
+    if (d.mainHero || S.visualOff) return;
     if (h && !h.dead) { x = h.x; y = h.y; }
     U.sprite(c, S, t);
     if (tt >= 0) {
@@ -14119,7 +14125,24 @@ XY.chibi.portrait = function (c, id, x, foot, h, alpha) {
       blot(c, p.x, p.y, 14 + 18 * eo(kk), INK, 0.6 * (1 - kk), 70 + i); stroke(c, p.x - 30, p.y - 26, p.x + 30, p.y + 26, 6, acc, 0.8 * (1 - kk), 90 + i); stroke(c, p.x + 30, p.y - 26, p.x - 30, p.y + 26, 6, acc, 0.8 * (1 - kk), 95 + i);
     }
   };
+  U.closeup = function (c, t, dur, W, H) {
+    var imgs = U._close; if (!imgs) {
+      imgs = U._close = [];
+      for (var i = 1; i <= 5; i++) { var im = new Image(); im.src = 'assets/ult/wukong-close-' + i + '.webp'; imgs.push(im); }
+    }
+    var idx = Math.max(0, Math.min(4, Math.floor(cl(t, 0, Math.max(0.001, dur) - 0.001) / dur * 5))), plate = imgs[idx];
+    c.save(); c.fillStyle = '#f3ecdc'; c.fillRect(0, 0, W, H);
+    if (plate && plate.complete && plate.naturalWidth) {
+      var s = Math.min(W / plate.naturalWidth, H / plate.naturalHeight), dw = plate.naturalWidth * s, dh = plate.naturalHeight * s;
+      c.drawImage(plate, (W - dw) / 2, (H - dh) / 2, dw, dh);
+    }
+    c.fillStyle = '#2a2218'; c.font = '16px sans-serif'; c.textAlign = 'right'; c.textBaseline = 'bottom';
+    c.fillText('点击跳过', W - 18, H - 12);
+    c.restore();
+  };
   U.screen = function (c, S, t, W, H) {
+    if (S.visualOff) return;
+    if (S.def && S.def.mainHero) { U.closeup(c, t, S.def.dur, W, H); return; }
     var d = S.def, tt = t - d.hit; if (tt < 0) return;
     var f = 1 - seg(tt, 0, 0.28); if (f > 0) { c.fillStyle = 'rgba(255,251,238,' + 0.5 * f + ')'; c.fillRect(0, 0, W, H); }
     var v = seg(tt, 0, 0.2) * (1 - seg(tt, 0.9, 1.9)); if (v > 0) { var g = c.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.35, W / 2, H / 2, Math.hypot(W, H) * 0.55); g.addColorStop(0, 'rgba(' + INK + ',0)'); g.addColorStop(1, 'rgba(' + INK + ',' + 0.34 * v + ')'); c.fillStyle = g; c.fillRect(0, 0, W, H); }
@@ -14178,7 +14201,7 @@ XY.chibi.portrait = function (c, id, x, foot, h, alpha) {
   def('heyuxi', '新歌上线', '舞台演唱会', 3.6, 0.6, { windup: 0.6, shape: 'waves' }, [{ t: 1.0, mul: 0.35 }], { acc: '240,90,150', buff: true });
   def('martin', 'GM 早安', 'Bybit 旗冲锋', 4.0, 0.8, { windup: 0.8, shape: 'sweep', ringT: 0.8 }, [{ t: 1.8, mul: 0.35 }], { acc: '250,160,20', buff: true });
 
-  def('wukong', '大圣无双', '金箍棒横扫圈击', 2.8, 0.5, { windup: 0.5, shape: 'none' }, [], { acc: '239,122,44', mainHero: true });       // v0.8.5 主角悟空的大招画面（伤害仍在 game.js castUlt0 里即时结算，这里只负责 6 帧水墨演出）
+  def('wukong', '大圣无双', '金箍棒横扫圈击', 2.8, 0.5, { windup: 0.5, shape: 'none' }, [], { acc: '42,34,24', mainHero: true });       // 特写只换画面。时长 2.8、命中 0.5、伤害仍在 castUlt0 里即时结算
 
   /* ---------- 调度：开场 / 时钟 / 拍子 / 绘制 ---------- */
   US.ids = function () { return Object.keys(US.D).filter(function (k) { return !US.D[k].mainHero; }); };      // 九位特殊人物（悟空等主角的演出另算：US.mainIds）
@@ -14188,13 +14211,26 @@ XY.chibi.portrait = function (c, id, x, foot, h, alpha) {
     var v = viewR(G), S = { id: (h.def && h.def.xid) || h.id, def: d, h: h, t: 0, x: h.x, y: h.y, vw: v.x1 - v.x0, vh: v.y1 - v.y0, pts: [], beatsDone: 0, echoHit: 0, nextBeat: 0, born: G.t };
     G.us = (G.us || []).filter(function (o) { return o.t < o.def.dur; }); G.us.push(S);
     var st = G.stats.ultScenes || (G.stats.ultScenes = {}); st[h.id] = (st[h.id] || 0) + 1; G.usLast = S;
+    US.live = G;
     return S;
   };
+  US.skipCloseup = function (G) {
+    var L = G && G.us, i, hit = false;
+    if (!L) return false;
+    for (i = 0; i < L.length; i++) {
+      if (L[i].def && L[i].def.mainHero && !L[i].visualOff && L[i].t < L[i].def.dur) { L[i].visualOff = true; if (L[i].h) L[i].h.ultInk = false; hit = true; }
+    }
+    return hit;
+  };
+  if (typeof window !== 'undefined' && window.addEventListener && !US._skipBound) {
+    US._skipBound = true;
+    window.addEventListener('pointerdown', function () { if (US.live) US.skipCloseup(US.live); }, true);
+  }
   US.tick = function (G, dt) {
     var L = G.us; if (!L || !L.length) return;
     for (var i = L.length - 1; i >= 0; i--) {
       var S = L[i], d = S.def, h = S.h; S.t += dt;
-      if (h && !h.down && !h.dead) { h.moving = false; h.ultPose = S.t < d.hit ? 6 : (S.t < d.hit + 0.5 ? 7 : 0); h.ultInk = !!(XY.ULTINK && XY.ULTINK.has(S.id)) && S.t >= 0.1 && S.t < XY.ULTINK.T - 0.25; }      // 水墨精灵在场时不画 Q 版小人      // Q 版动作帧：抬手 → 出招 → 回待机（只改画面，不碰攻击冷却）
+      if (h && !h.down && !h.dead) { h.moving = false; h.ultPose = S.t < d.hit ? 6 : (S.t < d.hit + 0.5 ? 7 : 0); h.ultInk = !S.visualOff && !!(XY.ULTINK && XY.ULTINK.has(S.id)) && S.t >= 0.1 && S.t < XY.ULTINK.T - 0.25; }      // 水墨精灵在场时不画 Q 版小人      // Q 版动作帧：抬手 → 出招 → 回待机（只改画面，不碰攻击冷却）
       while (S.nextBeat < d.beats.length && S.t >= d.beats[S.nextBeat].t) { var b = d.beats[S.nextBeat++]; if (G.mode === 'play' && h) echo(G, S, h, b.mul); }
       if (S.t >= d.dur) { if (h) { h.ultPose = 0; h.ultInk = false; } L.splice(i, 1); }
     }

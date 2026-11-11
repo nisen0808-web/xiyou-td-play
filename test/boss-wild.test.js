@@ -55,3 +55,39 @@ test('niumo plays idle, attack, and hit, then returns to idle', function () {
   assert.equal(wild.poseClip('niumo', 'hit'), 'hit');
   assert.ok(fs.existsSync(path.join(__dirname, '../assets/wild', hit.file)));
 });
+
+test('boss fight plates for niumo, phyrex, and sisi stay off the journey clips', function () {
+  var manifest = JSON.parse(fs.readFileSync(path.join(__dirname, '../assets/wild/manifest.json'), 'utf8'));
+  wild.ingest(manifest);
+  assert.equal(manifest.ids.wukong.idle.file, 'wukong-idle.webp');
+  assert.equal(manifest.ids.wukong.idle.frameCount, 90);
+  assert.equal(manifest.ids.tang.idle.file, 'tang-idle.webp');
+  assert.equal(manifest.ids.bajie.idle.file, 'bajie-idle.webp');
+  assert.equal(manifest.ids.wujing.idle.file, 'wujing-idle.webp');
+  assert.equal(manifest.ids.phyrex.idle.file, 'phyrex-idle.webp');
+  assert.equal(manifest.ids.sisi.idle.file, 'sisi-idle.webp');
+  assert.deepEqual(BF.ORDER, ['phyrex', 'sisi', 'laosiji', 'kuanggong', 'haiteng', 'yuanzhang', 'heyuxi', 'diaoyulao', 'martin']);
+  ['bajie', 'wujing', 'qinba', 'traders18', 'cato'].forEach(function (id) {
+    assert.equal(BF.ORDER.indexOf(id), -1);
+  });
+  [['niumo', 250, 3, 'left'], ['phyrex', 333, 4, 'right'], ['sisi', 333, 4, 'right']].forEach(function (row) {
+    var id = row[0], atk = wild.api.clip(id, 'bossAttack'), idle = wild.api.clip(id, 'bossIdle'), hit = wild.api.clip(id, 'bossHit');
+    assert.equal(idle.loopPolicy, 'pingpong');
+    assert.equal(idle.frameCount, 27);
+    assert.equal(idle.durationMs, 2250);
+    assert.equal(atk.loopPolicy, 'oneshot');
+    assert.equal(atk.frameCount, 8);
+    assert.equal(atk.hit.atMs, row[1]);
+    assert.equal(atk.hit.frame, row[2]);
+    assert.equal(wild.frameAt(atk, row[1]).index, row[2]);
+    assert.equal(hit.frameCount, 5);
+    assert.equal(hit.hit.atMs, 167);
+    assert.equal(hit.facing, row[3]);
+    assert.equal(wild.frameAt(idle, 0).index, 0);
+    assert.equal(wild.frameAt(idle, idle.durationMs - 1).index, 26);
+    [idle, atk, hit].forEach(function (clip) {
+      assert.ok(fs.existsSync(path.join(__dirname, '../assets/wild', clip.file)));
+      assert.ok(clip.stand > 400);
+    });
+  });
+});
