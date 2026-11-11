@@ -24088,14 +24088,28 @@ X.step=function(g,dt){if(!g._simRandom)return step.apply(this,arguments);var sel
   function resizeLater() { resize(); setTimeout(resize, 150); setTimeout(resize, 600); }
   window.addEventListener('orientationchange', resizeLater);
   if (window.visualViewport && window.visualViewport.addEventListener) window.visualViewport.addEventListener('resize', resize);
-  // 竖屏提示：只是提示，不拦着（点“知道了”或转成横屏就消失）；屏幕是触屏且竖着时才出
+  // 竖屏提示：左上两列毛笔小字，不挡居中的标题，也不挡右上角「活动」。几秒后自己淡掉，没有白框和按钮。
   var portraitDismissed = false;
   function portraitHint() {
     var touch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
     var portrait = window.innerHeight > window.innerWidth * 1.1;
     var el = document.getElementById('xyPortrait');
     if (touch && portrait && !portraitDismissed) {
-      if (!el && window.XY_bar) { el = window.XY_bar('xyPortrait', '📱 请把手机横过来玩（画面更大）。现在竖着也能进游戏。', '#fff4c2'); el.querySelector('button').addEventListener('click', function () { portraitDismissed = true; }); }
+      if (!el) {
+        el = document.createElement('div');
+        el.id = 'xyPortrait';
+        el.setAttribute('aria-hidden', 'true');
+        el.textContent = '请横过来\n竖着也能';
+        el.style.cssText = 'position:fixed;left:8px;top:14px;z-index:40;width:42px;pointer-events:none;color:#2b1c08;font:15px/1.2 "Ma Shan Zheng","KaiTi","STKaiti","楷体",serif;writing-mode:vertical-rl;letter-spacing:3px;text-shadow:0 0 2px rgba(246,238,220,.96),0 0 8px rgba(246,238,220,.9);background:transparent;border:0;white-space:pre;opacity:.92;animation:xyPortraitFade 8s ease forwards';
+        if (!document.getElementById('xyPortraitStyle')) {
+          var st = document.createElement('style');
+          st.id = 'xyPortraitStyle';
+          st.textContent = '@keyframes xyPortraitFade{0%,70%{opacity:.92}100%{opacity:0}}';
+          document.head.appendChild(st);
+        }
+        (document.body || document.documentElement).appendChild(el);
+        setTimeout(function () { portraitDismissed = true; if (el.parentNode) el.parentNode.removeChild(el); }, 8200);
+      }
     } else if (el && el.parentNode) el.parentNode.removeChild(el);
   }
   XY.portraitHint = portraitHint;
