@@ -29,35 +29,56 @@
     var cv = document.createElement('canvas'); cv.width = cw; cv.height = ch;
     var g = cv.getContext('2d');
     var iw = im.naturalWidth || im.width, ih = im.naturalHeight || im.height;
-    var sc = Math.min(cw / iw, ch / ih) * 0.94;
-    var dw = iw * sc, dh = ih * sc;
+    var sc = Math.min(cw / iw, ch / ih) * 0.98;
+    var dw = iw * sc, dh = ih * sc, ox = (cw - dw) / 2, oy = (ch - dh) / 2;
     g.imageSmoothingEnabled = true;
     g.imageSmoothingQuality = 'high';
-    g.drawImage(im, (cw - dw) / 2, (ch - dh) / 2, dw, dh);
+    g.drawImage(im, ox, oy, dw, dh);
     var mask = document.createElement('canvas'); mask.width = cw; mask.height = ch;
     var q = mask.getContext('2d');
-    var seed = (iw * 13 + ih * 7) % 97, n = 14, i, amp = Math.min(cw, ch) * 0.07;
-    function jig(k) { return Math.sin(seed * 2.1 + k * 1.7) * amp; }
+    var seed = (iw * 13 + ih * 7) % 97, n = 18, i, m = Math.min(dw, dh) * 0.12;
+    function jig(k) { return Math.sin(seed * 0.37 + k * 1.7); }
+    var x0 = ox + m, y0 = oy + m * 0.85, x1 = ox + dw - m, y1 = oy + dh - m * 0.7;
     q.beginPath();
-    q.moveTo(jig(1), amp + jig(2));
-    for (i = 1; i <= n; i++) q.lineTo(cw * i / n + jig(i), jig(i + 4));
-    for (i = 1; i <= n; i++) q.lineTo(cw - amp + jig(i + 20), ch * i / n + jig(i + 8));
-    for (i = n - 1; i >= 0; i--) q.lineTo(cw * i / n + jig(i + 30), ch - amp * 0.4 + jig(i + 12));
-    for (i = n - 1; i >= 1; i--) q.lineTo(jig(i + 40), ch * i / n);
+    q.moveTo(x0, y0 + jig(0) * m * 0.45);
+    for (i = 1; i <= n; i++) q.lineTo(x0 + (x1 - x0) * i / n + jig(i) * m * 0.35, y0 + jig(i + 3) * m * 0.7);
+    for (i = 1; i <= n; i++) q.lineTo(x1 + jig(i + 8) * m * 0.55, y0 + (y1 - y0) * i / n + jig(i + 11) * m * 0.35);
+    for (i = n; i >= 0; i--) q.lineTo(x0 + (x1 - x0) * i / n + jig(i + 16) * m * 0.4, y1 + jig(i + 19) * m * 0.55);
+    for (i = n; i >= 1; i--) q.lineTo(x0 + jig(i + 24) * m * 0.5, y0 + (y1 - y0) * i / n + jig(i + 27) * m * 0.3);
     q.closePath();
     q.fillStyle = '#000';
     q.fill();
-    q.globalCompositeOperation = 'destination-in';
-    var edge = Math.max(8, Math.min(cw, ch) * 0.1);
-    var gx = q.createLinearGradient(0, 0, cw, 0);
-    gx.addColorStop(0, 'rgba(0,0,0,0)'); gx.addColorStop(edge / cw, '#000'); gx.addColorStop(1 - edge / cw, '#000'); gx.addColorStop(1, 'rgba(0,0,0,0)');
-    q.fillStyle = gx; q.fillRect(0, 0, cw, ch);
-    var gy = q.createLinearGradient(0, 0, 0, ch);
-    gy.addColorStop(0, 'rgba(0,0,0,0)'); gy.addColorStop(edge / ch, '#000'); gy.addColorStop(0.9, '#000'); gy.addColorStop(1, 'rgba(0,0,0,0.55)');
-    q.fillStyle = gy; q.fillRect(0, 0, cw, ch);
+    q.globalCompositeOperation = 'destination-out';
+    q.lineCap = 'round';
+    q.strokeStyle = 'rgba(0,0,0,0.9)';
+    for (i = 0; i < 8; i++) {
+      q.lineWidth = 1.1 + (i % 3) * 0.7;
+      q.beginPath();
+      var sx = x0 + ((i * 37) % 90) / 90 * (x1 - x0);
+      var sy = (i % 2) ? y0 + m * 0.15 : y1 - m * 0.1;
+      q.moveTo(sx, sy);
+      q.quadraticCurveTo(sx + m * 0.8, sy + (i % 2 ? m * 0.7 : -m * 0.7), sx + m * 1.5, sy + jig(i) * 2);
+      q.stroke();
+    }
     g.globalCompositeOperation = 'destination-in';
     g.drawImage(mask, 0, 0);
     return cv;
+  }
+  function underBrush(c, x, y, w, h) {
+    c.save();
+    c.lineCap = 'round';
+    c.strokeStyle = 'rgba(96,78,52,0.42)';
+    c.lineWidth = Math.max(1.4, Math.min(w, h) * 0.035);
+    c.beginPath();
+    c.moveTo(x + w * 0.06, y + h * 0.7);
+    c.quadraticCurveTo(x + w * 0.42, y + h * 0.52, x + w * 0.94, y + h * 0.68);
+    c.stroke();
+    c.globalAlpha = 0.55;
+    c.beginPath();
+    c.moveTo(x + w * 0.14, y + h * 0.84);
+    c.quadraticCurveTo(x + w * 0.5, y + h * 0.98, x + w * 0.86, y + h * 0.78);
+    c.stroke();
+    c.restore();
   }
   function brushOnInk(c, text, cx, cy, maxW, maxH, size) {
     text = String(text || '');
@@ -89,6 +110,7 @@
     var key = (im.src || '') + '|' + Math.round(w / 2) * 2 + 'x' + Math.round(h / 2) * 2;
     var cv = feather[key];
     if (!cv) cv = feather[key] = bake(im, Math.round(w / 2) * 2, Math.round(h / 2) * 2);
+    underBrush(c, x, y, w, h);
     c.save();
     c.imageSmoothingEnabled = true;
     c.drawImage(cv, x, y, w, h);

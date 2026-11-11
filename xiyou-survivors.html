@@ -4405,6 +4405,7 @@ XY.TRAITS = {
       if (h.ridden) { XY.rideHorseStep(G, h); continue; }      // 白龙马正被骑：贴着骑手，不攻击不放招
       if (h.ultCd <= 0) autoUlt(G, h);               // 大招自动放
       var sp = h.speed * XY.spsupSpeed(G, h) * (h.boostT > 0 ? 1 + (h.mod.swiftBoost || 0.45) : 1) * (h.mounted ? C.RIDE_SPEED : 1) * (G.lair && h.cc ? XY.heroCC.spdMul(h) : 1), vx = 0, vy = 0;
+      var tangWalk = i === 0 && h.moving;
       h.moving = false;
       if (h.dash) {                                   // 八戒冲锋：强制位移
         var d = h.dash;
@@ -4419,8 +4420,8 @@ XY.TRAITS = {
         });
         if (Math.random() < 0.8) spark(G, h.x, h.y, d.col || '#f28fb0', 1);
         if (d.t <= 0) h.dash = null;
-      } else if (i === 0) {                           // 唐僧：自己走路线，不接受任何输入
-      } else if (i === G.ctrl) {                      // 玩家操控（手动）
+      } else if (i === 0) { if (tangWalk) h.moving = true; }
+      else if (i === G.ctrl) {                      // 玩家操控（手动）
         if (il > 0.01) { vx = inp.mx / il * sp; vy = inp.my / il * sp; h.moving = true; h.face = atan2(vy, vx); }
       } else {                                        // 自动：按命令走
         var gl = orderGoal(G, h, ctrl, fslot, fcount);
@@ -12165,10 +12166,12 @@ XY.CHIBI_INK=Object.assign(XY.CHIBI_INK||{},{"phyrex":{"w":944,"h":392,"fr":[[1,
     var charging = a.anim === 'atk' && a.i === 6;
     var walking = a.anim === 'walk' || (a.anim === 'hit' && h.moving);
     var legacyStrike = a.anim === 'atk' && a.i === 7 && !(XY.wildAnim && XY.wildAnim.clip(key, 'attack'));
+    var tangStep = h.id === 'tang' && G && G.tang && (G.tang.phase === 'walk' || G.tang.phase === 'walk2');
+    if (h.moving || tangStep) { a = { anim: 'walk', i: 2 + (Math.floor(rt * 10 + (h.bob || 0)) & 3), mix: 0 }; walking = true; }
     var wildKind = null;
-    if (!h.ultPose && st && S.useWild(h)) {
+    if (!walking && !h.ultPose && st && S.useWild(h)) {
       if (st.mode === 'attack') wildKind = 'attack';
-      else if (!walking && !charging && !legacyStrike) wildKind = 'idle';
+      else if (!charging && !legacyStrike) wildKind = 'idle';
     }
     var moving = !wildKind && a.anim === 'walk', foot = y + r * 0.85;
     var bobY = wildKind ? 0 : (moving ? -Math.abs(Math.sin(rt * 10 + (h.bob || 0))) * r * 0.14 : -Math.sin(rt * 2.4 + (h.bob || 0)) * r * 0.025);
@@ -18342,7 +18345,7 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
   function drawBg(c, W, H, v, rt) {
     c.fillStyle = '#f3ead4'; c.fillRect(0, 0, W, H);
     var i = im(BASE + 'bg_v' + v + '.webp');
-    if (i) { var s = Math.max(W / i.naturalWidth, H / i.naturalHeight) * 1.28, w = i.naturalWidth * s, h = i.naturalHeight * s; c.drawImage(i, (W - w) / 2, (H - h) / 2, w, h); }
+    if (i) { var s = Math.max(W / i.naturalWidth, H / i.naturalHeight) * 1.28, w = i.naturalWidth * s, h = i.naturalHeight * s, lift = (W / Math.max(1, H) > 2.15) ? Math.min(h * 0.2, H * 0.26) : 0; c.drawImage(i, (W - w) / 2, (H - h) / 2 - lift, w, h); }
     for (var k = 0; k < 3; k++) {
       var cw = 380 + k * 90, x = ((rt * (5 + k * 2) + k * 520) % (W + cw * 2)) - cw, y = H * (0.2 + 0.27 * k) + Math.sin(rt * 0.2 + k) * 8;
       var g = c.createRadialGradient(x, y, 4, x, y, cw * 0.5); g.addColorStop(0, 'rgba(250,244,228,0.30)'); g.addColorStop(1, 'rgba(250,244,228,0)');
@@ -18499,6 +18502,32 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
     }
     c.restore();
   }
+  function paperBand(c, x, y, w, h) {
+    c.save();
+    c.beginPath();
+    c.moveTo(x, y + h);
+    c.lineTo(x + w, y + h);
+    var i, n = 32, px, wave;
+    for (i = n; i >= 0; i--) {
+      px = x + w * i / n;
+      wave = Math.sin(i * 0.85) * Math.min(18, h * 0.12) + Math.sin(i * 2.2) * 3;
+      c.lineTo(px, y + Math.max(0, wave));
+    }
+    c.closePath();
+    c.fillStyle = '#f6efe2';
+    c.fill();
+    c.strokeStyle = 'rgba(96,78,52,0.28)';
+    c.lineCap = 'round';
+    c.lineWidth = 1.2;
+    for (i = 0; i < 3; i++) {
+      c.globalAlpha = 0.35;
+      c.beginPath();
+      c.moveTo(x + w * 0.04, y + h * (0.35 + i * 0.18));
+      c.quadraticCurveTo(x + w * 0.45, y + h * (0.22 + i * 0.12), x + w * 0.96, y + h * (0.4 + i * 0.1));
+      c.stroke();
+    }
+    c.restore();
+  }
   function cardLabel(id) {
     if (id === 'kuanggong') return 'DeFi小矿工';
     var d = XY.SP_BY && XY.SP_BY[id];
@@ -18531,7 +18560,9 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
     var labels = ids.map(cardLabel), c = st.c;
     var sz = XY.xAvIcon && XY.xAvIcon.fitSize ? XY.xAvIcon.fitSize(c, labels, Math.max(28, cw - 4), Math.min(ch * 0.26, 22 / css)) : 16;
     var total = n * cw + (n - 1) * gap, x = Math.max(6, (st.DW - total) / 2);
-    inkSplash(c, 0, Math.max(0, top - 6), st.DW, st.DH - Math.max(0, top - 6) + 2);
+    var shortRow = st.DH / Math.max(1, st.DW) < 0.42 || css < 0.65;
+    if (shortRow) paperBand(c, 0, Math.max(0, top - 10), st.DW, st.DH - Math.max(0, top - 10) + 4);
+    else inkSplash(c, 0, Math.max(0, top - 6), st.DW, st.DH - Math.max(0, top - 6) + 2);
     ids.forEach(function (id) { standCard(st, id, x, top, cw, ch, sz); x += cw + gap; });
     return cw;
   }
@@ -18543,9 +18574,11 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
       var bw = L ? 400 : 340, bh = L ? 58 : 52, by = cssK < 0.6 ? (L ? 390 : 420) : (L ? 468 : 496), ph = L ? 40 : 28, mg = L ? 24 : 22, pmax = DW / 2 - 150 - mg;
       st.lim = { x1: 0, x2: DW, y1: L ? 110 : 60, y2: by - 4 };
       /* 画序：沙僧 / 白龙马在后排，唐僧居中，孙悟空 / 猪八戒站在唐僧两侧、盖在他前面（v0.8.7b：之前唐僧最后画，把悟空 / 八戒 / 沙僧的脸遮住了） */
-      drawFig(st, 'wujing', fx(238), 626, 400); drawFig(st, 'horse', fx(1000), 626, 400);
-      drawFig(st, 'tang', fx(640), 648, 540);
-      drawFig(st, 'wukong', fx(462), 640, 460); drawFig(st, 'bajie', fx(846), 640, 460);
+      var short = cssK < 0.7, fk = short ? 0.62 : 1, foot = short ? by - 8 : 0;
+      function fy(y) { return short ? foot - (648 - y) * fk : y; }
+      drawFig(st, 'wujing', fx(238), fy(626), 400 * fk); drawFig(st, 'horse', fx(1000), fy(626), 400 * fk);
+      drawFig(st, 'tang', fx(640), fy(648), 540 * fk);
+      drawFig(st, 'wukong', fx(462), fy(640), 460 * fk); drawFig(st, 'bajie', fx(846), fy(640), 460 * fk);
       heroName(st, 'wujing', fx(112), 228, 104); heroName(st, 'horse', fx(1118), 198, 104); heroName(st, 'wukong', fx(335), 150, 112); heroName(st, 'bajie', fx(968), 165, 112); heroName(st, 'tang', fx(482), 122, 100);
       title(st, cx, 62, 68, 0, 0.85);
       startBtn(st, cx - bw / 2, by, bw, bh, L ? 30 : 26);
