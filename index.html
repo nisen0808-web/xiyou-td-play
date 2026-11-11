@@ -12190,7 +12190,7 @@ XY.CHIBI_INK=Object.assign(XY.CHIBI_INK||{},{"phyrex":{"w":944,"h":392,"fr":[[1,
 
   var HD = {};
   S.hd = function (id) {
-    if (!id || id === 'phyrex_x') return null;
+    if (!id) return null;
     var e = HD[id];
     if (!e) { e = HD[id] = new Image(); e.src = 'assets/art/battle-hd/' + id + '.webp'; }
     return e.complete && e.naturalWidth ? e : null;
@@ -18642,34 +18642,88 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
     return n && n.h ? n.w / n.h : 3.2;
   }
   function creditRow(st, btnBottom) {
-    var ids = menuIds(), n = Math.max(1, ids.length), c = st.c, margin = 10, gapN = 5;
+    var ids = menuIds(), n = Math.max(1, ids.length), c = st.c;
+    var css = Math.max(0.2, (st.k || 1) * ((st.app && st.app.zoom) || 1));
+    var margin = Math.max(16, Math.ceil(18 / css));
+    var inner = Math.max(8, Math.ceil(10 / css));
     var cols = st.DW < 980 ? Math.min(3, n) : n, rows = Math.ceil(n / cols);
-    var saveH = 16, topLimit = (btnBottom || 0) + 8, bottom = st.DH - 3;
-    var saveY = bottom - saveH * 0.2, roomH = Math.max(22, saveY - 6 - topLimit);
-    var cellW = (st.DW - margin * 2) / cols;
-    var worst = 2; ids.forEach(function (id) { var a = nameAspect(id); if (a > worst) worst = a; });
-    var dCap = cols === n ? 58 : 72;
-    var d = Math.min(dCap, roomH / rows - 4, cellW * 0.46);
-    var nameRoom = cellW - d - gapN - 8;
-    var nameH = Math.min(d * 0.62, nameRoom / worst);
-    if (nameH < 9) { d = Math.max(16, (cellW - gapN - 8) / (1 + worst * 0.42)); nameRoom = cellW - d - gapN - 8; nameH = Math.min(d * 0.62, nameRoom / worst); }
-    d = Math.max(16, Math.min(d, roomH / rows - 2));
-    nameH = Math.max(8, Math.min(nameH, d * 0.7, (cellW - d - gapN - 8) / worst));
-    var pitch = d + 16, x0 = margin, yFirst = saveY - 36 - (rows - 1) * pitch - d / 2;
-    if (yFirst < topLimit + d / 2) yFirst = topLimit + d / 2;
-    ids.forEach(function (id, i) {
-      var col = i % cols, row = (i / cols) | 0, cellX = x0 + col * cellW, cy = yFirst + row * pitch;
-      var room = Math.max(8, cellW - d - gapN - 8), nh = nameH, nwGuess = nh * nameAspect(id);
-      if (nwGuess > room) nh = room / nameAspect(id);
-      faceCircle(st, id, cellX + d / 2 + 2, cy, d);
+    var saveH = Math.max(13, Math.round(14 / css));
+    var topLimit = (btnBottom || 0) + Math.max(8, Math.round(10 / css));
+    var bottom = st.DH - Math.max(2, Math.round(4 / css));
+    var saveY = bottom - saveH * 0.35;
+    var roomH = Math.max(28, saveY - saveH - topLimit);
+    function aspect(id) {
+      var im = nameImg(id, 'h');
+      return im && im.h ? im.w / im.h : 3.2;
+    }
+    function paintName(id, x, y, nh) {
+      var im = nameImg(id, 'h'), nw = nh * aspect(id);
       c.save();
-      c.beginPath(); c.rect(cellX + d + gapN, cy - pitch * 0.45, room, pitch * 0.9); c.clip();
-      drawName(st, id, cellX + d + gapN, cy - nh / 2, nh, 'h', 'left', 'rgba(250,244,228,0)');
+      c.beginPath();
+      c.rect(x - 1, y - nh * 0.25, nw + 2, nh * 1.5);
+      c.clip();
+      if (im && im.img && (im.img.naturalWidth || im.img.width)) c.drawImage(im.img, x, y, nw, nh);
+      else drawName(st, id, x, y, nh, 'h', 'left', 'rgba(250,244,228,0)');
       c.restore();
+      return nw;
+    }
+    function fitName(d, width, count) {
+      var minGap = Math.max(4, Math.ceil(6 / css)), sumA = 0, i;
+      for (i = 0; i < count; i++) sumA += aspect(ids[i]);
+      var spare = width - margin * 2 - count * d - count * inner - Math.max(0, count - 1) * minGap;
+      return Math.max(8, Math.min(d * 0.5, spare > 8 ? spare / Math.max(1, sumA) : 8));
+    }
+    if (cols === n) {
+      var d = Math.min(st.DH * 0.081, Math.max(22, roomH - 4));
+      var nameH = fitName(d, st.DW, n), sumA = 0, i;
+      ids.forEach(function (id) { sumA += aspect(id); });
+      var used = n * d + nameH * sumA + n * inner + margin * 2;
+      var gap = (st.DW - used) / Math.max(1, n - 1);
+      var y = saveY - saveH - 8 - d / 2;
+      if (y - d / 2 < topLimit) {
+        d = Math.max(22, saveY - saveH - 8 - topLimit);
+        nameH = fitName(d, st.DW, n);
+        sumA = 0; ids.forEach(function (id) { sumA += aspect(id); });
+        used = n * d + nameH * sumA + n * inner + margin * 2;
+        gap = (st.DW - used) / Math.max(1, n - 1);
+        y = topLimit + d / 2;
+      }
+      var x = margin;
+      ids.forEach(function (id, i) {
+        faceCircle(st, id, x + d / 2, y, d);
+        var nw = paintName(id, x + d + inner, y - nameH / 2, nameH);
+        x += d + inner + nw + (i < n - 1 ? gap : 0);
+      });
+      saveLine(st, st.DW / 2, saveY, 'center', Math.max(11, Math.min(16, nameH * 0.85)));
+      return d;
+    }
+    var cellW = (st.DW - margin * 2) / cols, worst = 2;
+    ids.forEach(function (id) { var a = aspect(id); if (a > worst) worst = a; });
+    var d = Math.min(st.DH * 0.081, roomH / rows - 8, cellW * 0.46);
+    var nameRoom = cellW - d - inner - 4;
+    var nameH = Math.min(d * 0.5, nameRoom / worst);
+    if (nameH < d * 0.3) {
+      d = Math.max(24, (cellW - inner - 4) / (1 + worst * 0.4));
+      nameRoom = cellW - d - inner - 4;
+      nameH = Math.min(d * 0.5, nameRoom / worst);
+    }
+    d = Math.max(24, Math.min(d, roomH / rows - 6));
+    nameH = Math.max(10, Math.min(nameH, d * 0.5, (cellW - d - inner - 4) / worst));
+    var pitch = d + Math.max(12, Math.round(14 / css));
+    var y0 = saveY - saveH - 6 - (rows - 1) * pitch - d / 2;
+    if (y0 - d / 2 < topLimit) y0 = topLimit + d / 2;
+    ids.forEach(function (id, i) {
+      var col = i % cols, row = (i / cols) | 0;
+      var x = margin + col * cellW, cy = y0 + row * pitch;
+      var nh = nameH, nw = nh * aspect(id), room = cellW - d - inner - 4;
+      if (nw > room) nh = room / aspect(id);
+      faceCircle(st, id, x + d / 2, cy, d);
+      paintName(id, x + d + inner, cy - nh / 2, nh);
     });
-    saveLine(st, st.DW / 2, saveY, 'center', Math.max(10, Math.min(14, nameH * 0.85)));
+    saveLine(st, st.DW / 2, Math.min(st.DH - 4, y0 + (rows - 1) * pitch + d / 2 + saveH * 0.8), 'center', Math.max(11, Math.min(15, nameH * 0.8)));
     return d;
   }
+
   function V2(st) {
     var c = st.c, DW = st.DW, DH = st.DH, cx = DW / 2, m = st.mode, g = st.geom;
     if (m !== 'P') {
@@ -24484,10 +24538,7 @@ X.step=function(g,dt){if(!g._simRandom)return step.apply(this,arguments);var sel
     if (XY.ui2) XY.ui2.end(G, app);
   }
 
-  /* ---------- 开场视频（主菜单之前）----------
-   * 有 assets/intro.mp4 就尝试播。跳过从第一帧起就在右上角，不靠视频先播出来。
-   * 4 秒还没播出画面，或播出后 4 秒画面不再往前走，就收掉进主菜单。失败不能把菜单盖死。
-   * 每次打开都再试一次（和以前一样）。?intro=0 或 XY_NO_INTRO 不播。 */
+  /* 加载片头已去掉。首页自己画，不播 assets/intro.mp4，也不创建跳过按钮。 */
   var introEl = null, introTimer = 0, introWatch = 0;
   function introEnd(why) {
     if (!introEl) return;
@@ -24500,55 +24551,10 @@ X.step=function(g,dt){if(!g._simRandom)return step.apply(this,arguments);var sel
   }
   XY.introSkip = function () { introEnd('skip'); };
   function introStart() {
-    if (window.XY_NO_INTRO || /[?&]intro=0/.test(location.search)) return;
-    var v, skip, born = performance.now(), lastT = -1, lastMove = born;
-    try {
-      v = document.createElement('video');
-      v.id = 'introVideo'; v.playsInline = true; v.preload = 'auto'; v.controls = false; v.muted = false;
-      v.setAttribute('playsinline', ''); v.setAttribute('webkit-playsinline', '');
-      v.style.cssText = 'position:fixed;left:0;top:0;width:100%;height:100%;object-fit:contain;background:#fff7e0;z-index:50;cursor:pointer;opacity:0;pointer-events:none;';
-      skip = document.createElement('button');
-      skip.id = 'introSkip'; skip.type = 'button'; skip.textContent = '跳过 ▸';
-      skip.style.cssText = 'position:fixed;right:max(18px, env(safe-area-inset-right));top:max(16px, env(safe-area-inset-top));z-index:60;font:700 20px sans-serif;padding:10px 20px;min-width:96px;min-height:46px;border-radius:14px;border:3px solid #b9a77a;background:#fff8e0;color:#4a3a1a;cursor:pointer;';
-      introEl = v; app.intro = { t0: born };
-      function alive() { return introEl === v; }
-      function show() {
-        if (!alive()) return;
-        v.style.opacity = '1'; v.style.pointerEvents = 'auto';
-        if (app.intro) app.intro.playing = true;
-      }
-      v.addEventListener('error', function () { if (alive()) introEnd('error'); });
-      v.addEventListener('ended', function () { if (alive()) introEnd('ended'); });
-      v.addEventListener('playing', function () { if (alive()) show(); });
-      v.addEventListener('timeupdate', function () {
-        if (!alive()) return;
-        if (v.currentTime > lastT + 0.05) { lastT = v.currentTime; lastMove = performance.now(); show(); }
-      });
-      v.addEventListener('click', function () { if (alive()) introEnd('skip'); });
-      v.addEventListener('touchend', function (e) { if (!alive()) return; e.preventDefault(); introEnd('skip'); }, { passive: false });
-      skip.addEventListener('click', function (e) { e.stopPropagation(); if (alive()) introEnd('skip'); });
-      document.body.appendChild(v); document.body.appendChild(skip);
-      introWatch = setInterval(function () {
-        if (!alive()) { clearInterval(introWatch); introWatch = 0; return; }
-        var now = performance.now(), started = app.intro && app.intro.playing;
-        if (!started && now - born > 4000) { introEnd('timeout'); return; }
-        if (started && now - lastMove > 4000) { introEnd('frozen'); }
-      }, 400);
-      v.src = window.XY_INTRO_SRC || 'assets/intro.mp4';
-      var pr = v.play();
-      if (pr && pr.catch) pr.catch(function () {
-        if (!alive()) return;
-        v.muted = true;
-        var p2; try { p2 = v.play(); } catch (e2) { introEnd('blocked'); return; }
-        if (p2 && p2.catch) p2.catch(function () { if (alive()) introEnd('blocked'); });
-        if (!alive() || document.getElementById('introMute')) return;
-        var mb = document.createElement('button'); mb.id = 'introMute'; mb.type = 'button'; mb.textContent = '🔊 开声音';
-        mb.style.cssText = 'position:fixed;right:max(18px, env(safe-area-inset-right));top:max(74px, calc(env(safe-area-inset-top) + 58px));z-index:60;font:700 18px sans-serif;padding:8px 16px;min-height:42px;border-radius:14px;border:3px solid #b9a77a;background:#fff8e0;color:#4a3a1a;cursor:pointer;';
-        mb.addEventListener('click', function (e) { e.stopPropagation(); v.muted = false; if (mb.parentNode) mb.parentNode.removeChild(mb); });
-        document.body.appendChild(mb);
-      });
-    } catch (e) { introEnd('exception'); }
+    /* 加载片头已去掉：打开、刷新、竖屏都直接进首页。不挂视频，也不留跳过按钮。猫叔登场和变身视频不在这里。 */
+    return;
   }
+
 
   resize();
   fresh();
