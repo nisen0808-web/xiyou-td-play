@@ -1597,67 +1597,115 @@
     c.restore();
     brush(c, handle, x, y, size, '#24180f', 'center');
   }
+  function gearFill(c, id, x, y, w, h) {
+    var im = id && gearArt(id);
+    c.save();
+    c.beginPath();
+    c.rect(x, y, w, h);
+    c.clip();
+    c.fillStyle = '#f3ead6';
+    c.fillRect(x, y, w, h);
+    if (im && (im.naturalWidth || im.width)) {
+      var iw = im.naturalWidth || im.width, ih = im.naturalHeight || im.height;
+      var sc = Math.max(w / iw, h / ih);
+      var dw = iw * sc, dh = ih * sc;
+      c.drawImage(im, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
+    }
+    c.restore();
+  }
+  function xFace(c, id, x, y, s) {
+    var face = anyImg('xav-' + id, 'assets/art/x-avatars/' + id + '.webp');
+    c.save();
+    c.beginPath();
+    c.rect(x, y, s, s);
+    c.clip();
+    c.fillStyle = '#f3ead6';
+    c.fillRect(x, y, s, s);
+    if (face && (face.naturalWidth || face.width)) {
+      var iw = face.naturalWidth || face.width, ih = face.naturalHeight || face.height;
+      var sc = Math.max(s / iw, s / ih);
+      var dw = iw * sc, dh = ih * sc;
+      c.drawImage(face, x + (s - dw) / 2, y + (s - dh) / 2, dw, dh);
+    }
+    c.restore();
+  }
   function paintGear(c, app) {
     var W = app.lw, H = app.lh, port = H > W * 1.05;
     c.save();
-    c.fillStyle = 'rgba(246,239,224,0.78)';
+    c.fillStyle = '#f6efe2';
     c.fillRect(0, 0, W, H);
-    paper(c, 8, 8, W - 16, H - 16);
-    brush(c, '专属装备', 24, port ? 32 : 36, port ? 28 : 36, '#24180f', 'left');
-    redSeal(c, W - 96, 16, 70, 44, '返回');
-    hit(W - 96, 16, 70, 44, 'dkGearClose');
+    paper(c, 6, 6, W - 12, H - 12);
+    brush(c, '专属器物', 20, port ? 28 : 34, port ? 24 : 32, '#24180f', 'left');
+    redSeal(c, W - 96, 12, 70, 44, '返回');
+    hit(W - 96, 12, 70, 44, 'dkGearClose');
     var ids = (XY.SPECIALS_ALL || XY.SPECIALS || []).map(function (d) { return d.id; }).filter(revealed);
     var sel = app.dkHero && ids.indexOf(app.dkHero) >= 0 ? app.dkHero : (ids[0] || 'phyrex');
     app.dkHero = sel;
-    var top = port ? 62 : 68;
-    var bodyH = H - top - 16;
     var gdoc = gear();
-    var row = (gdoc.equip && gdoc.equip[sel]) || { weapon: null, item: null };
-    var owned = API.GEAR.filter(function (g) { return g.owner === sel && ((gdoc.bag && gdoc.bag[g.id]) || 0) > 0 && row.weapon !== g.id && row.item !== g.id; });
-    if (!port) {
-      var leftW = Math.floor((W - 40) * 0.56);
-      heroGrid(c, ids, sel, 20, top, leftW, bodyH);
-      var rx = 28 + leftW, rw = W - rx - 20;
-      var portH = Math.floor(bodyH * 0.58);
-      var hd = heroDef(sel);
-      inkWash(c, spArt(sel), rx, top, rw, portH, '');
-      captionOn(c, rx, top, rw, portH, (hd && hd.name) || sel, '');
-      paperHandle(c, hd && hd.handle, rx + rw / 2, top + portH - 18);
-      var slotY = top + portH + 10;
-      var slotH = Math.max(90, bodyH - portH - 10 - (owned.length ? 78 : 0));
-      var gap = 10, sw = Math.floor((rw - gap) / 2);
-      gearSlot(c, row.weapon && API.gearById[row.weapon], '武器', rx, slotY, sw, slotH);
-      gearSlot(c, row.item && API.gearById[row.item], '道具', rx + sw + gap, slotY, sw, slotH);
-      owned.forEach(function (g, n) {
-        var bw = 150, bx = rx + n * (bw + 8), by = slotY + slotH + 8;
-        if (bx + bw > rx + rw) return;
-        inkGear(c, g.id, bx, by, bw, 64);
-        brushFit(c, g.name, bx + bw / 2, by + 46, bw - 12, 16, '#24180f', 'center');
-        hit(bx, by, bw, 64, 'dkEquip', { id: g.id, hero: sel });
-      });
+    var eq = (gdoc.equip && gdoc.equip[sel]) || { weapon: null, item: null };
+    var catalog = API.GEAR.filter(function (g) { return g.owner === sel; });
+    var weapon = (eq.weapon && API.gearById[eq.weapon]) || catalog.filter(function (g) { return g.slot === 'weapon'; })[0];
+    var item = (eq.item && API.gearById[eq.item]) || catalog.filter(function (g) { return g.slot === 'item'; })[0];
+    var rosterH = port ? 64 : 92;
+    var rosterY = H - rosterH - 6;
+    var top = port ? 52 : 56;
+    var face = port ? 56 : 84;
+    var ax, ay, gx, gy, gearW, gearH;
+    if (port) {
+      ax = 14;
+      ay = top;
+      var itemH = item ? 110 : 0;
+      gy = ay + face + 20;
+      gearW = W - 28;
+      gearH = Math.max(120, rosterY - gy - itemH - 12);
+      gx = 14;
     } else {
-      var gridH = Math.floor(bodyH * 0.42);
-      heroGrid(c, ids, sel, 16, top, W - 32, gridH);
-      var restY = top + gridH + 10;
-      var restH = bodyH - gridH - 10;
-      var pw = Math.floor((W - 40) * 0.56);
-      inkWash(c, spArt(sel), 16, restY, pw, restH, '');
-      var hdM = heroDef(sel);
-      captionOn(c, 16, restY, pw, restH, (hdM && hdM.name) || sel, '');
-      paperHandle(c, hdM && hdM.handle, 16 + pw / 2, restY + restH - 18);
-      var sx = 24 + pw, sww = W - sx - 16;
-      var bagH = owned.length ? 72 : 0;
-      var sh = Math.floor((restH - 8 - bagH) / 2);
-      gearSlot(c, row.weapon && API.gearById[row.weapon], '武器', sx, restY, sww, sh);
-      gearSlot(c, row.item && API.gearById[row.item], '道具', sx, restY + sh + 8, sww, sh);
-      owned.forEach(function (g, n) {
-        if (n > 0) return;
-        var by = restY + sh * 2 + 16;
-        inkGear(c, g.id, sx, by, sww, 64);
-        brushFit(c, g.name, sx + sww / 2, by + 46, sww - 12, 16, '#24180f', 'center');
-        hit(sx, by, sww, 64, 'dkEquip', { id: g.id, hero: sel });
-      });
+      var midH = Math.max(80, rosterY - top - 4);
+      gearW = gearH = Math.min(W * 0.42, midH * 0.9);
+      gx = (W - gearW) / 2 + face * 0.12;
+      gy = top + Math.max(0, (midH - gearH) / 2);
+      ax = Math.max(12, gx - face - 14);
+      ay = gy + gearH * 0.18;
     }
+    xFace(c, sel, ax, ay, face);
+    var hd = heroDef(sel);
+    brushFit(c, (hd && hd.name) || sel, ax + face / 2, ay + face + 14, face + 36, 15, '#24180f', 'center');
+    if (port) gearFill(c, weapon ? weapon.id : '', gx, gy, gearW, gearH);
+    else inkGear(c, weapon ? weapon.id : '', gx, gy, gearW, gearH);
+    if (weapon) {
+      brushFit(c, weapon.name, gx + gearW / 2, gy + gearH - 18, gearW - 20, port ? 20 : 26, '#24180f', 'center');
+      var bagN = (gdoc.bag && gdoc.bag[weapon.id]) || 0;
+      if (bagN > 0 && eq.weapon !== weapon.id) hit(gx, gy, gearW, gearH, 'dkEquip', { id: weapon.id, hero: sel });
+    } else brush(c, '空', gx + gearW / 2, gy + gearH / 2, 26, '#24180f', 'center');
+    if (item) {
+      var iw = port ? 120 : Math.max(72, gearW * 0.38);
+      var ix = port ? W - iw - 16 : Math.min(W - iw - 10, gx + gearW + 8);
+      var iy = port ? gy + gearH + 6 : gy + gearH * 0.28;
+      inkGear(c, item.id, ix, iy, iw, port ? 100 : iw);
+      brushFit(c, item.name, ix + iw / 2, iy + (port ? 88 : iw - 12), iw - 8, 14, '#24180f', 'center');
+      var itemN = (gdoc.bag && gdoc.bag[item.id]) || 0;
+      if (itemN > 0 && eq.item !== item.id) hit(ix, iy, Math.max(44, iw), Math.max(44, port ? 100 : iw), 'dkEquip', { id: item.id, hero: sel });
+    }
+    var n = Math.max(1, ids.length);
+    var gap = 4;
+    var slot = Math.floor((W - 16 - gap * (n - 1)) / n);
+    slot = Math.max(36, Math.min(port ? 52 : 72, slot));
+    var total = n * slot + (n - 1) * gap;
+    var sx0 = (W - total) / 2;
+    ids.forEach(function (id, i) {
+      var x = sx0 + i * (slot + gap);
+      xFace(c, id, x, rosterY, slot);
+      if (id === sel) {
+        c.strokeStyle = '#9a2e24';
+        c.lineWidth = 2;
+        c.strokeRect(x - 2, rosterY - 2, slot + 4, slot + 4);
+      }
+      if (slot >= 52) {
+        var nm = heroDef(id);
+        brushFit(c, (nm && nm.name) || id, x + slot / 2, rosterY + slot + 11, slot + 8, 12, '#24180f', 'center');
+      }
+      hit(x, rosterY, Math.max(44, slot), Math.max(44, slot + 16), 'dkHero', { id: id });
+    });
     c.restore();
   }
 
