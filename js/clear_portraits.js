@@ -1,10 +1,15 @@
-/* 灰色残影来自失败的阈值头像和运行时滤镜。头像改读仓库里认可过的彩色 X 照片，画的时候不再套滤镜。
- * 不替换成另一套立绘，也不关掉已认可的狂野水墨动画。 */
+/* 人物与暂停页走宣纸、红印、墨条。不套运行时滤镜。 */
 (function () {
   'use strict';
   var XY = window.XY;
   if (!XY) return;
   window.XY_X_AVATARS = null;
+  if (document.head) {
+    var css = document.createElement('style');
+    css.textContent = '@font-face{font-family:"Ma Shan Zheng";src:url("assets/fonts/MaShanZheng-Regular.ttf") format("truetype");font-display:swap}';
+    document.head.appendChild(css);
+  }
+  var BRUSH = '"Ma Shan Zheng","TDBrush","KaiTi",serif';
 
   var FIVE = { tang: 1, wukong: 1, bajie: 1, wujing: 1, horse: 1 };
   var cache = {};
@@ -21,6 +26,22 @@
     if (FIVE[id]) return fileIm('assets/art/menu-v5/fig_' + id + '.webp');
     return fileIm('assets/art/bg/' + id + '.webp');
   }
+  function brush(c, text, x, y, size, col, align) {
+    c.save();
+    c.font = size + 'px ' + BRUSH;
+    c.fillStyle = col || '#24180f';
+    c.textAlign = align || 'left';
+    c.textBaseline = 'middle';
+    c.fillText(text, x, y);
+    c.restore();
+  }
+  function sealBtn(c, K, x, y, w, h, label, act, ex, solid) {
+    var VU = XY.villainUI;
+    if (VU && solid && VU.drawSeal) VU.drawSeal(c, x, y, w, h, label, { style: 'solid', col: '#b8322a', sz: Math.min(22, h * 0.42), rot: -0.02, stack: false });
+    else if (VU && VU.drawBrush) VU.drawBrush(c, x, y, w, h, label, { strong: true, sz: Math.min(18, h * 0.36) });
+    else brush(c, label, x + w / 2, y + h / 2, 18, '#24180f', 'center');
+    if (K.hit) K.hit(x, y, w, Math.max(44, h), act, ex || null);
+  }
 
   function tidyPause(c, G, a) {
     var P = XY.pv2;
@@ -30,13 +51,10 @@
     if (P.paper) P.paper(c, W, H);
     var hero = G.heroes[G.ctrl] || G.heroes[1];
     var hid = hero && ((hero.def && hero.def.id) || hero.id);
-    var colW = Math.min(460, port ? W - 24 : Math.min(440, W * 0.38));
-    var figH = port ? Math.min(H * 0.42, 380) : Math.min(H - 36, 620);
-    var figSpan = figH * 0.62;
-    var groupW = figSpan + 28 + colW;
-    var groupX = port ? 12 : Math.max(16, (W - groupW) / 2);
-    var figX = port ? W / 2 : groupX + figSpan * 0.5;
-    var foot = port ? 48 + figH : H - 18;
+    var colW = port ? W - 28 : Math.min(520, W * 0.42);
+    var figH = port ? Math.min(H * 0.46, 420) : H - 24;
+    var figX = port ? W / 2 : W * 0.28;
+    var foot = port ? 36 + figH : H - 12;
     var im = pauseArt(hid);
     c.save();
     c.filter = 'none';
@@ -44,51 +62,52 @@
       var sc = figH / im.naturalHeight;
       var dw = im.naturalWidth * sc;
       c.drawImage(im, figX - dw / 2, foot - figH, dw, figH);
-    } else if (hid && XY.heroink && XY.heroink.portrait) {
-      XY.heroink.portrait(c, hid, figX, foot, figH);
     }
     c.restore();
-    var x = port ? 12 : groupX + figSpan + 20;
-    var w = port ? W - 24 : colW;
-    var y = port ? foot + 12 : 78;
-    var panelY = Math.max(12, y - 52);
-    var panelH = Math.max(120, H - panelY - 12);
-    c.save();
-    c.fillStyle = 'rgba(246,239,224,0.94)';
-    c.fillRect(x - 16, panelY, w + 32, panelH);
-    c.strokeStyle = 'rgba(58,50,38,0.35)';
-    c.strokeRect(x - 16, panelY, w + 32, panelH);
-    c.restore();
-    K.t('暂驻', x, y - 18, port ? 28 : 34, '#a42d19', 'left', true);
-    var name = (XY.lvPre ? XY.lvPre(G) : '') + ((G.lv && G.lv.name) || '') + '」';
-    if (K.tf) K.tf(name, x, y + 6, w, 15, '#6d6455', 'left', false, 12);
+    var x = port ? 14 : W - colW - 28;
+    var y0 = port ? foot + 8 : 28;
+    var ph = port ? H - y0 - 16 : H - 48;
+    var VU = XY.villainUI;
+    if (VU && VU.artCard) VU.artCard(c, x, y0, colW, ph, { seed: 9, paper: '#f6edd8', edge: '#2a2118' });
+    else {
+      c.fillStyle = '#f6edd8';
+      c.fillRect(x, y0, colW, ph);
+      c.strokeStyle = '#2a2118';
+      c.strokeRect(x, y0, colW, ph);
+    }
+    var pad = 18, inner = colW - pad * 2, y = y0 + 36;
+    brush(c, '暂驻', x + pad, y, port ? 32 : 40, '#a83224', 'left');
     y += 28;
-    K.t('已坚持 ' + XY.fmtTime(G.t), x, y, 18, '#3a3226', 'left', true);
-    K.t('Lv ' + G.level + ' · 击杀 ' + XY.fmtNum(G.kills), x, y + 26, 16, '#3a3226', 'left', true);
-    y += 52;
-    K.btn(x, y, w, 52, '继续 · Esc / P', 'resume', null, { primary: true, size: 22 });
-    y += 60;
-    var half = (w - 10) / 2;
-    K.btn(x, y, half, 48, '重新开始 · R', 'restart', null, { size: 16 });
-    K.btn(x + half + 10, y, half, 48, '回到首页', 'home', null, { size: 16 });
-    y += 56;
+    brush(c, (XY.lvPre ? XY.lvPre(G) : '') + ((G.lv && G.lv.name) || ''), x + pad, y, 16, '#5c4a38', 'left');
+    y += 26;
+    brush(c, '已坚持 ' + XY.fmtTime(G.t) + '    Lv' + G.level + '  击杀 ' + XY.fmtNum(G.kills), x + pad, y, 16, '#24180f', 'left');
+    var rows = [
+      { label: '继续', act: 'resume', solid: true, h: 56 },
+      { label: '重新开始', act: 'restart', h: 48 },
+      { label: '回到首页', act: 'home', h: 48 }
+    ];
+    var rest = y0 + ph - 24 - y;
+    var used = 56 + 48 + 48;
+    var gap = Math.max(8, (rest - used - 120) / 5);
+    y += gap;
+    rows.forEach(function (r) {
+      sealBtn(c, K, x + pad, y, inner, r.h, r.label, r.act, null, r.solid);
+      y += r.h + gap;
+    });
+    brush(c, '音效', x + pad, y + 22, 16, '#5c4a38', 'left');
     var muted = !!(XY.audio && XY.audio.mute);
-    K.t('音效', x, y + 24, 15, '#6d6455', 'left', false);
-    var bw = Math.min(96, (w - 70) / 2);
-    K.btn(x + 52, y, bw, 48, '开', 'muteSet', { mute: false }, { on: !muted, size: 16 });
-    K.btn(x + 60 + bw, y, bw + 16, 48, '关 · M', 'muteSet', { mute: true }, { on: muted, size: 16 });
-    y += 56;
+    sealBtn(c, K, x + pad + 56, y, 72, 44, '开', 'muteSet', { mute: false }, !muted);
+    sealBtn(c, K, x + pad + 136, y, 88, 44, '关', 'muteSet', { mute: true }, muted);
+    y += 52;
     if (XY.auto && XY.auto.LABEL) {
-      K.t('自动', x, y + 24, 15, '#6d6455', 'left', false);
       var keys = ['points', 'treat', 'guest', 'pick'];
-      var aw = (w - 52) / keys.length;
+      var aw = inner / keys.length;
       keys.forEach(function (key, i) {
-        K.btn(x + 52 + i * aw, y, Math.max(44, aw - 6), 48, XY.auto.LABEL[key], 'autoTog', { key: key }, { on: XY.auto.get(key), size: 14 });
+        sealBtn(c, K, x + pad + i * aw, y, aw - 6, 44, XY.auto.LABEL[key], 'autoTog', { key: key }, !!XY.auto.get(key));
       });
-      y += 56;
+      y += 52;
     }
-    var tip = '小怪 +' + Math.round(XY.C.ENEMY_SCALE * G.t / 60 * 100) + '% · BOSS +' + Math.round(XY.C.BOSS_SCALE * G.t / 60 * 100) + '%（每分钟 +1% / +5%）';
-    if (K.tf) K.tf(tip, x, Math.min(H - 28, y + 4), w, 13, '#6d6455', 'left', false, 11);
+    brush(c, '小怪 +' + Math.round(XY.C.ENEMY_SCALE * G.t / 60 * 100) + '%   首领 +' + Math.round(XY.C.BOSS_SCALE * G.t / 60 * 100) + '%', x + pad, Math.min(y0 + ph - 22, y + 16), 14, '#5c4a38', 'left');
     if (P.end) P.end(c);
     return true;
   }

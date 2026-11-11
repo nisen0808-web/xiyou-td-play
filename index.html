@@ -14128,13 +14128,11 @@ XY.ICONINK_DATA={"金箍棒":{"src":"data:image/webp;base64,UklGRjINAABXRUJQVlA4
     var w = im.naturalWidth, h = im.naturalHeight, cv = document.createElement('canvas');
     cv.width = w; cv.height = h;
     var g = cv.getContext('2d'); g.drawImage(im, 0, 0);
-    var c0 = g.getImageData(2, 2, 1, 1).data;
-    if (c0[3] > 200) {
-      g.globalCompositeOperation = 'destination-in';
-      var rg = g.createRadialGradient(w / 2, h * 0.4, h * 0.08, w / 2, h * 0.46, h * 0.58);
-      rg.addColorStop(0, 'rgba(0,0,0,1)'); rg.addColorStop(0.7, 'rgba(0,0,0,0.92)'); rg.addColorStop(1, 'rgba(0,0,0,0)');
-      g.fillStyle = rg; g.fillRect(0, 0, w, h);
-    }
+    g.globalCompositeOperation = 'destination-in';
+    var rad = Math.hypot(w, h) * 0.62;
+    var rg = g.createRadialGradient(w / 2, h * 0.45, rad * 0.25, w / 2, h * 0.48, rad);
+    rg.addColorStop(0, 'rgba(0,0,0,1)'); rg.addColorStop(0.62, 'rgba(0,0,0,1)'); rg.addColorStop(0.84, 'rgba(0,0,0,0.2)'); rg.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = rg; g.fillRect(0, 0, w, h);
     SOFT[id] = { src: im, cv: cv }; return cv;
   }
   U.portraitReady = function (id) { return !!portrait(id); };
@@ -14196,7 +14194,7 @@ XY.ICONINK_DATA={"金箍棒":{"src":"data:image/webp;base64,UklGRjINAABXRUJQVlA4
         for (i = 0; i < n; i++) { an = i / n * PI2; var rb = 70 + 80 * (1 - k); stroke(c, x + cos(an) * (rb + 120), y + sin(an) * (rb + 120) * 0.6, x + cos(an) * rb, y + sin(an) * rb * 0.6, 9 + 6 * hash(i, 36), i % 3 === 0 ? acc : INK, 0.82 * (1 - seg(tt, ringT, ringT + 1.2)), i + 60); }
       } else if (sh === 'pull') {
         k = eo(seg(tt, 0, 0.5)); n = N(20);
-        for (i = 0; i < n; i++) { an = i / n * PI2 + hash(i, 37) * 0.3; var rp = (36 + 80 * hash(i, 38)) * (1 - 0.45 * k); stroke(c, x + cos(an) * (rp + 140), y + sin(an) * (rp + 140) * 0.6, x + cos(an + 0.5) * rp * 0.5, y + sin(an + 0.5) * rp * 0.3, 6 + 7 * hash(i, 39), i % 3 === 0 ? acc : INK, 0.75 * (1 - seg(tt, 0.5, 1.4)), i + 80); }
+        for (i = 0; i < n; i++) { an = i / n * PI2 + hash(i, 37) * 0.3; var rp = (36 + 80 * hash(i, 38)) * (1 - 0.45 * k); stroke(c, x + cos(an) * rp * 0.35, y + sin(an) * rp * 0.2, x + cos(an + 0.5) * rp * 0.5, y + sin(an + 0.5) * rp * 0.3, 6 + 7 * hash(i, 39), i % 3 === 0 ? acc : INK, 0.75 * (1 - seg(tt, 0.5, 1.4)), i + 80); }
       } else if (sh === 'sweep') {                                    // 横扫：墨带前沿从视口左缘冲向右缘，伤害 = 前沿扫到的怪
         var fx = V.x0 + (V.x1 - V.x0) * eo(seg(tt, 0, ringT)), fade = 1 - seg(tt, ringT, ringT + 1.0); n = N(13);
         if (fade > 0) for (i = 0; i < n; i++) { var yy = V.y0 + (V.y1 - V.y0) * (i + 0.5) / n + (hash(i, 40) - 0.5) * 40, len = 260 + 340 * hash(i, 41); stroke(c, fx - len, yy, fx + 30 * hash(i, 42), yy + (hash(i, 43) - 0.5) * 26, 12 + 14 * hash(i, 44), i % 3 === 0 ? acc : INK, 0.8 * fade, i + 100); }
@@ -17121,7 +17119,8 @@ XY.XC_TPL={"scholar":{"w":310,"h":520,"foot":[182,516],"head":[182,45,32],"kb":5
     var W = app.lw, H = app.lh;
     ui.hits.length = 0;                       // 确认框打开时，后面的按钮都点不了
     dim(c, app, 0.55);
-    panel(c, W / 2 - 250, H / 2 - 130, 500, 260, 18, 'rgba(255,255,255,0.98)', '#c0392b');
+    if (XY.villainUI && XY.villainUI.artCard) XY.villainUI.artCard(c, W / 2 - 260, H / 2 - 150, 520, 300, { seed: 4, paper: '#f6edd8', edge: '#2a2118' });
+    else panel(c, W / 2 - 250, H / 2 - 130, 500, 260, 18, 'rgba(255,255,255,0.98)', '#c0392b');
     var jr = app.confirm && app.confirm.kind === 'journey';
     txt(c, jr ? '确定要重新开始取经吗？' : '确定要重置存档吗？', W / 2, H / 2 - 92, 28, '#b8300f', 'center', true);
     lines(c, jr ? ['全队等级、技能和特殊角色的进度会清零。', '这一路带上的法宝也会清掉。', '关卡回到第 1 关。', '法宝收藏、灵石、角色卡和图鉴都保留。'] : ['收藏的法宝、卡组、图鉴、解锁和皮肤都会清空。', '回到新手状态，而且无法恢复。'], W / 2 - 210, H / 2 - 48, 16, 22, T.ink, 420);
@@ -19003,7 +19002,7 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
       st.slots.forEach(function (sl, k) {
         var sold = st.sold[k], r = { sold: sold, kind: sl.kind, price: sl.price, btn: { label: sold ? '已买走' : (sl.kind === 'reroll' ? '刷新 ' : '买 ') + sl.price + (can(sl.price) ? '' : ' 不够'), act: sold ? null : 'shopBuy', ex: { slot: k }, primary: !sold && can(sl.price), off: sold || !can(sl.price) } };
         if (sl.kind === 'sp') { r.spId=sl.id; var d = XY.SP_BY[sl.id], lv = S.spLevel(sl.id), nx = XY.spNext(sl.id); r.title = '角色卡 · ' + d.name; r.sub = d.role; r.l2 = lv ? '已有 ' + S.spCards(sl.id) + ' 张 · Lv' + lv + (nx ? '（再 ' + (nx.need - nx.have) + ' 张升级）' : '（满级）') : '已有 ' + S.spCards(sl.id) + '/' + XY.SP_LV_AT[0] + ' 张'; r.icon = function (x, y, s) { var hd=XY.specialDef(sl.id,Math.max(1,lv)); XY.hud2.face(c,{id:sl.id,def:hd},x+s/2,y+s/2,s*.44,app.rt); }; r.col = d.frame; }
-        else if (sl.kind === 'card') { var cd = XY.CARD_BY[sl.id], Rr = XY.RARITY[cd.r]; r.title = '法宝 · ' + cd.name; r.sub = Rr.name + ' · ' + XY.CARD_SETS[cd.set].name + '套'; r.l2 = XY.cardFxText(cd, 1); r.icon = function (x, y, s) { R.drawCardMini(c, cd, x + s / 2, y + s / 2, s * 0.7, s, 1); }; r.col = Rr.color; }
+        else if (sl.kind === 'card') { var cd = XY.CARD_BY[sl.id], Rr = XY.RARITY[cd.r]; r.card = cd; r.title = '法宝 · ' + cd.name; r.sub = Rr.name + ' · ' + XY.CARD_SETS[cd.set].name + '套'; r.l2 = XY.cardFxText(cd, 1); r.icon = function (x, y, s) { R.drawCardMini(c, cd, x + s / 2, y + s / 2, s * 0.7, s, 1); }; r.col = Rr.color; }
         else if (sl.kind === 'shard') { r.title = '皮肤碎片 ×' + sl.n; r.sub = '集齐解锁皮肤'; r.l2 = '现有 ' + S.data.shards + ' 枚'; r.icon = function (x, y, s) { c.strokeStyle = '#3a3226'; c.fillStyle = 'rgba(58,50,38,0.12)'; c.lineWidth = 1.6; c.beginPath(); c.moveTo(x + s / 2, y + 6); c.lineTo(x + s - 10, y + s / 2); c.lineTo(x + s / 2, y + s - 6); c.lineTo(x + 10, y + s / 2); c.closePath(); c.fill(); c.stroke(); }; }
         else { r.title = '刷新货架'; r.sub = '换一批角色卡和法宝'; r.l2 = ''; r.icon = function (x, y, s) { c.strokeStyle = '#8a7d63'; c.lineWidth = 5; c.lineCap = 'round'; c.beginPath(); c.arc(x + s / 2, y + s / 2, s * 0.3, 0.6, 5.4); c.stroke(); c.lineCap = 'butt'; }; }
         items.push(r);
@@ -19058,28 +19057,52 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
       return true;
     }
     if (!items.length) K.lines('能买的法宝和灵物都已解锁。其余的要靠击败洞主得到。', f.x + 16, gridTop + 36, f.w - 32, 16, 22, T.inkSoft, 4, true);
+    function torn(x, y, w, h, seed) {
+      var VU = XY.villainUI;
+      if (VU && VU.artCard) VU.artCard(c, x, y, w, h, { seed: seed, paper: '#f3e7cf', edge: '#2a2118', lw: 2.2 });
+      else { c.fillStyle = '#f3e7cf'; c.fillRect(x, y, w, h); c.strokeStyle = '#2a2118'; c.strokeRect(x, y, w, h); }
+    }
+    function fillCover(im, x, y, w, h) {
+      if (!im) return false;
+      var iw = im.naturalWidth || im.width, ih = im.naturalHeight || im.height;
+      if (!iw || !ih) return false;
+      var sc = Math.max(w / iw, h / ih) * 1.15, dw = iw * sc, dh = ih * sc;
+      c.drawImage(im, x + (w - dw) / 2, y + (h - dh) * 0.35, dw, dh);
+      return true;
+    }
+    function inkWord(x, y, w, h, word) {
+      c.save();
+      c.font = Math.floor(Math.min(w, h) * 0.46) + 'px "Ma Shan Zheng","KaiTi",serif';
+      c.fillStyle = '#2a2118'; c.textAlign = 'center'; c.textBaseline = 'middle';
+      c.fillText(word, x + w / 2, y + h * 0.42);
+      c.restore();
+    }
+    function inkShard(x, y, w, h) { inkWord(x, y, w, h, '碎'); }
+    function inkRefresh(x, y, w, h) { inkWord(x, y, w, h, '换'); }
     items.slice(from, from + per).forEach(function (r, k) {
       var col = k % cols, row = Math.floor(k / cols);
       var x = x0 + col * (cardW + gap), y = gridTop + row * (cardH + gap), w = cardW, h = cardH;
       var dim = r.sold || (r.btn && r.btn.off);
+      torn(x, y, w, h, 20 + k * 3);
       c.save();
-      if (dim) c.globalAlpha = 0.5;
-      var gy = y + h * 0.8;
-      var wash = c.createRadialGradient(x + w / 2, gy, 4, x + w / 2, gy, w * 0.55);
-      wash.addColorStop(0, 'rgba(36,28,22,0.22)'); wash.addColorStop(1, 'rgba(36,28,22,0)');
-      c.fillStyle = wash; c.beginPath(); c.ellipse(x + w / 2, gy, w * 0.42, Math.max(7, h * 0.05), 0, 0, Math.PI * 2); c.fill();
+      if (dim) c.globalAlpha = 0.55;
+      c.beginPath(); c.rect(x + 8, y + 8, w - 16, h - 18); c.clip();
       var drew = false;
-      if (r.kind === 'sol' && XY.soldierInk) drew = XY.soldierInk.draw(c, r.sol, x + w / 2, y + h * 0.74, h * 0.72, w * 0.98);
-      if (!drew && r.spId && XY.bgArt) drew = coverArt(XY.bgArt(r.spId), x + 4, y + 4, w - 8, h * 0.78);
-      if (!drew && r.icon) r.icon(x + w * 0.12, y + h * 0.06, Math.min(w * 0.76, h * 0.58));
-      var short = String(r.title || '').replace(/^天兵卡 · |^角色卡 · |^法宝 · |^灵物 · /, '');
-      inkName(short, x + w / 2, y + h * 0.86, Math.min(26, Math.max(16, w * 0.16)), '#24180f', w - 16);
-      if (r.kind === 'sol') inkName((r.cards || 0) + '张' + (r.lv ? ' · Lv' + r.lv : ''), x + w / 2, y + 16, 14, '#5c4a38', w - 12);
-      else if (r.sub) inkName(r.sub, x + w / 2, y + 16, 13, '#5c4a38', w - 14);
-      var seal = r.full ? '满' : (r.sold ? '售' : String(r.price == null ? '' : r.price));
-      var ss = Math.max(44, Math.min(52, w * 0.34));
-      cinnabar(x + w - ss - 4, y + h - ss - 2, ss, seal);
+      if (r.kind === 'sol' && XY.soldierInk) drew = XY.soldierInk.draw(c, r.sol, x + w / 2, y + h * 0.78, h * 0.86, w * 0.92);
+      if (!drew && r.spId && XY.bgArt) { try { XY.bgArt(r.spId); } catch (e) {} drew = fillCover(XY.bgArt(r.spId), x + 8, y + 8, w - 16, h - 18); }
+      if (!drew && r.card) { inkWord(x, y, w, h, String(r.title || '宝').replace(/^.*· /, '').charAt(0) || '宝'); drew = true; }
+      if (!drew && r.kind === 'shard') { inkShard(x, y, w, h); drew = true; }
+      if (!drew && r.kind === 'reroll') { inkRefresh(x, y, w, h); drew = true; }
+      if (!drew && r.kind === 'fb' && r.icon) r.icon(x + w * 0.18, y + h * 0.08, Math.min(w * 0.64, h * 0.55));
+      var g = c.createLinearGradient(0, y + h * 0.62, 0, y + h);
+      g.addColorStop(0, 'rgba(243,231,207,0)'); g.addColorStop(1, 'rgba(243,231,207,0.88)');
+      c.fillStyle = g; c.fillRect(x + 8, y + h * 0.62, w - 16, h * 0.38);
       c.restore();
+      inkName(String(r.title || '').replace(/^天兵卡 · |^角色卡 · |^法宝 · |^灵物 · /, ''), x + w / 2, y + h * 0.78, Math.min(28, Math.max(16, w * 0.13)), '#24180f', w - 24);
+      if (r.kind === 'sol') inkName((r.cards || 0) + ' 张' + (r.lv ? '  Lv' + r.lv : ''), x + w / 2, y + h * 0.9, 15, '#5c4034', w - 28);
+      var seal = r.full ? '满' : (r.sold ? '售' : String(r.price == null ? '' : r.price));
+      var ss = Math.max(44, Math.min(56, w * 0.22));
+      cinnabar(x + w - ss - 6, y + 8, ss, seal);
       if (r.btn && !r.btn.off && r.btn.act) K.hit(x, y, w, Math.max(44, h), r.btn.act, r.btn.ex);
     });
     K.tf(note, f.x + 8, noteY, f.w - 16, 13, T.inkSoft, 'left', false, 11);
