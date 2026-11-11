@@ -6,6 +6,7 @@
    对外接口：XY.bossfight.open(ctx) / close() / state()，见 integrate.md。 */
 (function () {
   'use strict';
+  window.XY_NO_WILD = true;
   var BF = window.BF, Q = new URLSearchParams(location.search);
   var $ = function (id) { return document.getElementById(id); };
   var cv = $('cv'), ctx = cv.getContext('2d'), pcv = $('pcv'), pctx = pcv.getContext('2d');
@@ -338,6 +339,7 @@
     return true;
   }
   function drawWildPose(c, id, pose, cx, gyy, fh, p) {
+    if (window.XY_NO_WILD) return false;
     var W = window.XY && XY.wildAnim;
     if (!W || !W.poseClip || !W.frameAt || !W.ready) return false;
     var vt = VT(), want = W.poseClip(id, pose), atk = W.ready(id, 'attack') ? W.clip(id, 'attack') : null;
@@ -363,9 +365,9 @@
     return false;
   }
   function drawSpr1(c, id, pose, cx, gyy, fh, p) {
-    p = p || {}; if (drawWildPose(c, id, pose, cx, gyy, fh, p)) return;
+    p = p || {}; if (!window.XY_NO_WILD && drawWildPose(c, id, pose, cx, gyy, fh, p)) return;
     var Ww = window.XY && XY.wildAnim;
-    if (Ww && Ww.ready && Ww.ready(id, 'idle')) { paintWild(c, id, 'idle', VT() * 1000, cx, gyy, fh, p); return; }
+    if (!window.XY_NO_WILD && Ww && Ww.ready && Ww.ready(id, 'idle')) { paintWild(c, id, 'idle', VT() * 1000, cx, gyy, fh, p); return; }
     var im = spr(id, pose), m = SMETA[id] && (SMETA[id][pose] && has(id, pose) ? SMETA[id][pose] : SMETA[id].stance); if (!im || !im.naturalWidth || !m) { if (SMETA[id] && !/^ret/.test(pose)) inkBlob(c, cx + (p.dx || 0), gyy, (p.fitH || fh * (SZ[id] || 1) * .74), p.alpha); return; }
     var k = p.fitH ? p.fitH / m.h : fh * (SZ[id] || 1) * 0.74 / 480, w = m.w * k, h = m.h * k, fl0 = p.fs != null ? p.fs : (p.flip ? -1 : 1), fl = p.fs != null ? turnW(fl0) : fl0, al = p.alpha == null ? 1 : p.alpha; if (Math.abs(fl) < .05) return;
     var face = (id === 'niumo' ? -1 : 1) * (fl < 0 ? -1 : 1), afl = Math.abs(fl), ref = p.fitH || fh;
