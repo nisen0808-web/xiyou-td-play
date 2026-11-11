@@ -116,12 +116,12 @@
   function softclamp(s) { var W = G.W, lo = W * .09, hi = W * .91, m = W * .05; return s < lo ? lo - m * (1 - Math.exp(-(lo - s) / m)) : (s > hi ? hi + m * (1 - Math.exp(-(s - hi) / m)) : s); }
   function placeAll() {   // 世界 → 屏幕：每个绘制帧算一次；heroVis / bossVis 读缓存
     var V = vcalc(), F = G.F, W = G.W, a = ACC(), k = V.k, cw = V.cw + V.cv * a, bo = vo('boss', F.boss.x), bxw = bo.x + bo.v * a, bxs = W * .5 + (bxw - cw) * k;
-    var A = W * .075, L = 110, pos = { boss: 0, h: {}, fs: { boss: bo.fs } }, hs = [];
+    var A = W * (G.land ? .12 : .2), L = 110, pos = { boss: 0, h: {}, fs: { boss: bo.fs } }, hs = [];
     F.heroes.forEach(function (h) {
       var o = vo('h' + h.id, h.x), d = o.x + o.v * a - bxw, s = bxs + d * k + (d < 0 ? -1 : 1) * A * (1 - Math.exp(-Math.abs(d) / L));   // 靠近 Boss 时屏幕上略拉开，不叠成一团
       hs.push({ h: h, s: s, r: s - bxs }); pos.fs[h.id] = o.fs; });
     if (hs.length === 2) {   // 两个英雄屏幕距离太近：把离 Boss 远的那位往外推（按远近差平滑分摊，不会跳）
-      var ms = W * (G.land ? .105 : .19), dd = Math.abs(hs[1].s - hs[0].s);
+      var ms = W * (G.land ? .24 : .36), dd = Math.abs(hs[1].s - hs[0].s);
       if (dd < ms) { var def = ms - dd, u = clamp((Math.abs(hs[1].r) - Math.abs(hs[0].r)) / ms, -1, 1);
         hs[1].s += (hs[1].r < 0 ? -1 : 1) * def * (.5 + .5 * u); hs[0].s += (hs[0].r < 0 ? -1 : 1) * def * (.5 - .5 * u); } }
     hs.forEach(function (e) { pos.h[e.h.id] = softclamp(e.s); }); pos.boss = softclamp(bxs); G.pos = pos; return pos;
@@ -329,6 +329,10 @@
       if (tx - left + nudge < padX) nudge = padX - (tx - left);
       tx += nudge;
     }
+    if (id !== 'niumo' && !G.land && G.pos && G.pos.boss != null) {
+      var back = (G._ly || 0) < -1, keep = G.W * (back ? .58 : .42), minX = G.W * 0.04;
+      if (tx > G.pos.boss - keep) tx = Math.max(minX, G.pos.boss - keep);
+    }
     if (!p.noShadow) drawShadow(c, cx + nudge, gyy, Math.min(body * .55, ref * .5), fh, p, al, face);
     if (id !== 'niumo' && !(clip.stand > 400) && k > 2.2) k = 2.2;
     c.save(); c.globalAlpha = al; c.imageSmoothingEnabled = true; c.imageSmoothingQuality = 'high';
@@ -402,7 +406,16 @@
     return IDLEP[b] ? .14 : .11;                                // 没有中间帧的大跳：80–140ms 交叉淡入淡出
   }
   function drawSpr(c, id, pose, cx, gyy, fh, p) {
-    p = p || {}; if (!p.key) return drawSpr1(c, id, pose, cx, gyy, fh, p);
+    p = p || {};
+    /*  Boss 战大图不再叠姿势淡出和冲刺残影。旧的小立绘靠这两层做过渡，
+        放大后会在出招角色身上留下一块灰色半透明的人。 */
+    if (p.key && window.XY && XY.wildAnim && XY.wildAnim.ready && XY.wildAnim.ready(id, 'bossIdle')) {
+      var plate = {}; for (var pk in p) plate[pk] = p[pk];
+      if (plate.fs != null) plate.fs = plate.fs < 0 ? -1 : 1;
+      plate.gh = 0;
+      return drawSpr1(c, id, pose, cx, gyy, fh, plate);
+    }
+    if (!p.key) return drawSpr1(c, id, pose, cx, gyy, fh, p);
     var vt = VT(), T = TR[p.key];
     { var q0 = {}, kq; for (kq in p) q0[kq] = p[kq]; p = q0;
       if (p.fs != null && Math.abs(p.fs) < .995) { var tn = 1 - Math.abs(p.fs); p.air = (p.air || 0) + Math.sin(tn * 3.1416 * .5) * fh * .012; p.sy = (p.sy || 1) * (1 - .035 * tn); }   // 转身：身子微微提起一点再落下
@@ -460,7 +473,7 @@
     if (st === 'jump') P.air = Math.max(0, -(P.dy)) ; if (st === 'hurt' || st === 'ko') P.air = Math.max(0, -(P.dy));                                  // 朝左时，前冲/后仰这些“朝前”的量跟着翻
     if (g && (st === 'idle' || st === 'walk') && !(F_over_win()) && P.pose !== 'block' && !(h.w && G.wuUlt > 0)) { P.dy -= g.bob; P.rot += g.lean; P.skew = 0; P.pose = g.m > .4 && g.up ? 'leap' : 'stance'; P.fd = .07; if (g.m > .4 && g.up) P.sy = 1; P.gh = g.m > .9 && Math.abs(g.vs) > 230 * S ? 2 : P.gh; }
     if (!(st === 'hurt' || st === 'ko' || st === 'cast')) P.skew += lagSkew('h' + h.id);
-    if (G.poseLock) { P.pose = G.poseLock; P.dy = 0; P.rot = 0; P.skew = 0; }
+    if ((G.poseBy && G.poseBy[h.id]) || G.poseLock) { P.pose = (G.poseBy && G.poseBy[h.id]) || G.poseLock; P.dy = 0; P.rot = 0; P.skew = 0; P.gh = 0; }
     return P;
   }
   function F_over_win() { var F = G.F; return !!(F.over && F.over.win); }
@@ -477,7 +490,7 @@
     if (st === 'atk') {
       var q = Math.sin(clamp(k / .3, 0, 1) * Math.PI), melee = !h.atk.ranged, cb = u.combo;
       if (k < .3) P.pose = chain(h.id, melee ? COMBO[cb] : (cb === 1 ? 'atk2' : 'attack'), k); if (melee && k > .05 && k < .27) P.gh = 3;
-      P.dx = q * (melee ? 70 + 22 * cb : 12) * S; P.rot = q * (.04 + .02 * cb); P.skew = 0; P.sx = 1 + q * .03;
+      P.dx = q * (melee ? 70 + 22 * cb : 12) * S * (G.land ? 1 : .45); P.rot = q * (.04 + .02 * cb); P.skew = 0; P.sx = 1 + q * .03;
       if (melee && cb === 2) { P.lift = .018 * q; }
     }
     if (st === 'hurt') {
