@@ -8852,6 +8852,13 @@ XY.BGS1={"src": "data:image/webp;base64,UklGRtT1GgBXRUJQVlA4IMj1GgCQwWGdASoAEAAK
     c.lineWidth = 3.5; c.strokeStyle = outline || 'rgba(255,255,255,0.95)'; c.lineJoin = 'round';
     s = XY.fmtStr(s); c.strokeText(s, x, y); c.fillStyle = color; c.fillText(s, x, y);
   }
+  function inkTag(c, s, x, y, sz, color) {                       // 战场名牌 / 命令：毛笔字，不铺白底
+    c.save();
+    c.font = sz + 'px "Ma Shan Zheng","KaiTi","STKaiti",serif';
+    c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillStyle = color || '#24180f';
+    c.fillText(XY.fmtStr(s), x, y);
+    c.restore();
+  }
   function rrect(c, x, y, w, h, r) {
     c.beginPath(); c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r);
     c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath();
@@ -9231,9 +9238,10 @@ XY.BGS1={"src": "data:image/webp;base64,UklGRtT1GgBXRUJQVlA4IMj1GgCQwWGdASoAEAAK
     var posed = !!(XY.MINK && XY.MINK.poseHero && XY.MINK.poseHero(c, h, rt, x, y + bob + ry, rr));
     var useCb = !posed && !(h.id === 'horse' && d.form === 'human') && XY.chibi && XY.chibi.ready(h);
     var tall = useCb || posed, tr = tall ? rr * 2.85 - ry : r;
-    if (!posed && useCb) XY.chibi.draw(c, G, h, rt, x, y + ry, rr);
+    var drewBody = false;
+    if (!posed && useCb) drewBody = XY.chibi.draw(c, G, h, rt, x, y + ry, rr) !== false;
     if (h.id === 'wujing' && h.beads) drawInkBeads(c, x, y + ry, h.beads, h.beadR, h.beadSize, h.orbit);
-    else if (!posed && !((XY.chibiKey && XY.CHIBI && XY.CHIBI[XY.chibiKey(h)]) || (XY.CHIBI_INK && XY.CHIBI_INK[h.id]) || (h.def && h.def.xid))) {
+    if (!drewBody && !posed && !((XY.chibiKey && XY.CHIBI && XY.CHIBI[XY.chibiKey(h)]) || (XY.CHIBI_INK && XY.CHIBI_INK[h.id]) || (h.def && h.def.xid) || (XY.chibi && XY.chibi.useWild && XY.chibi.useWild(h)))) {
       var sq = XY.anim ? XY.anim.squash(h.moving, rt, h.bob || 0) : null;          // 待机呼吸 / 走路挤压（以脚底为轴）
       if (sq) { c.save(); c.translate(x, y + r * 0.85); c.scale(sq[0], sq[1]); c.translate(-x, -(y + r * 0.85)); }
       drawHeroShape(c, d, x, y + bob + ry, rr);
@@ -9248,7 +9256,7 @@ XY.BGS1={"src": "data:image/webp;base64,UklGRtT1GgBXRUJQVlA4IMj1GgCQwWGdASoAEAAK
     else bar(c, x - bw / 2, y + r + 5, bw, 6, f, hpColor(f), 'rgba(255,255,255,0.85)');
     // 命令标签：手动 / 自动命令（唐僧驻守生效时写明“只回血”）
     var lab = isC ? '手动' : (h.id === 'tang' && G.station ? '驻守中·只回血' : (XY.ORDER_SHORT[h.order] || ''));
-    if (lab && !(G.td && G.td.quiet > G.td.clock)) otxt(c, lab, x, XY.R4.placeLabel(c, lab, x, y + r + 20, 11, 1), 11, isC ? '#b8300f' : (G.station && h.id === 'tang' ? '#a8700a' : '#4a6a8a'), 'center', true);
+    if (lab && !(G.td && G.td.quiet > G.td.clock)) inkTag(c, lab, x, XY.R4.placeLabel(c, lab, x, y + r + 20, 15, 1), 15, isC ? '#a42d19' : '#24180f');
     var clash = XY.R4.labelClash(G, x - 50, y + lift - tr - 54, 100, 52);          // v0.7：头顶标签碰到 BOSS 的名牌 / 血条区域 → 名字等挪到脚下
     // 唐僧血量低：红圈 + 感叹号
     if (h.id === 'tang' && (G.tdanger || G.breach) && !(G.td && G.td.quiet > G.td.clock)) {
@@ -9263,7 +9271,7 @@ XY.BGS1={"src": "data:image/webp;base64,UklGRtT1GgBXRUJQVlA4IMj1GgCQwWGdASoAEAAK
     // v0.8.1：名牌延后到所有英雄画完再画（flushHeroNames），避开其他角色的身体 / 血条 / 命令标签和别的名牌，也不会被后画的角色盖住
     heroBodies.push({ h: h, x0: x - Math.max(rr * 1.15, tall ? 30 : 0), x1: x + Math.max(rr * 1.15, tall ? 30 : 0), y0: Math.min(y - (tall ? tr : r) - 2, h._wildTop == null ? 1e9 : h._wildTop), y1: y + r + 12 });
     var nameY = clash ? y + r + (h.sp ? 47 : 34) : y - tr - (isC ? 17 : 13); if (!clash && h._wildTop != null) nameY = Math.min(nameY, h._wildTop - (isC ? 18 : 14));
-    if (!(G.td && G.td.quiet > G.td.clock)) heroNames.push({ h: h, s: d.name + (h.sp ? ' Lv' + d.lv : ''), x: x, y: nameY, sz: isC ? 15 : 13, col: isC ? '#b8300f' : T.ink, dir: clash ? 1 : -1, mark: isC && !clash, a: c.globalAlpha, tri: Math.sin(rt * 6) * 2 });
+    if (!(G.td && G.td.quiet > G.td.clock)) heroNames.push({ h: h, s: d.name + (h.sp ? ' Lv' + d.lv : ''), x: x, y: nameY, sz: isC ? 18 : 16, col: isC ? '#a42d19' : '#24180f', dir: clash ? 1 : -1, mark: isC && !clash, a: c.globalAlpha, tri: Math.sin(rt * 6) * 2 });
   }
   var heroBodies = [], heroNames = [];
   function flushHeroNames(c) {                                  // 名牌防叠：挤在一起超过三人时只留主控的名字；其余左右、上下错开
@@ -9278,7 +9286,7 @@ XY.BGS1={"src": "data:image/webp;base64,UklGRtT1GgBXRUJQVlA4IMj1GgCQwWGdASoAEAAK
     for (j = 0; j < heroBodies.length; j++) { var o = heroBodies[j]; B.push({ h: o.h, x0: m.e + o.x0 * sc, x1: m.e + o.x1 * sc, y0: m.f + o.y0 * sc, y1: m.f + o.y1 * sc }); }
     function ov(r, list, skipH) { var a = 0; for (var q = 0; q < list.length; q++) { var t = list[q]; if (skipH && t.h === skipH) continue; var w = Math.min(r.x1, t.x1) - Math.max(r.x0, t.x0), h = Math.min(r.y1, t.y1) - Math.max(r.y0, t.y0); if (w > 0 && h > 0) a += w * h; } return a; }
     for (i = 0; i < heroNames.length; i++) {
-      var n = heroNames[i], fs = n.sz; c.font = 'bold ' + fs + 'px ' + C.FONT;
+      var n = heroNames[i], fs = n.sz; c.font = fs + 'px "Ma Shan Zheng","KaiTi","STKaiti",serif';
       var tw = c.measureText(XY.fmtStr(n.s)).width + 6, th = fs + 3, best = null, sg = n.dir < 0 ? -1 : 1, dx = 52, cand = [[0, 0], [-dx, 0], [dx, 0], [0, sg * th], [-dx, sg * th], [dx, sg * th], [0, sg * th * 2.2], [-dx, sg * th * 2.2], [dx, sg * th * 2.2]];
       for (k = 0; k < cand.length; k++) {
         var cy = n.y + cand[k][1], cx = n.x + cand[k][0], r = { x0: m.e + (cx - tw / 2) * sc, x1: m.e + (cx + tw / 2) * sc, y0: m.f + (cy - fs / 2 - 1.5) * sc, y1: m.f + (cy - fs / 2 - 1.5 + th) * sc };
@@ -9286,7 +9294,7 @@ XY.BGS1={"src": "data:image/webp;base64,UklGRtT1GgBXRUJQVlA4IMj1GgCQwWGdASoAEAAK
         if (!best || sc0 < best.s) best = { s: sc0, x: cx, y: cy, r: r };
       }
       L.push(best.r);
-      c.save(); c.globalAlpha = n.a; otxt(c, n.s, best.x, best.y, n.sz, n.col, 'center', true);
+      c.save(); c.globalAlpha = n.a; inkTag(c, n.s, best.x, best.y, n.sz, n.col);
       if (n.mark && best.x === n.x && Math.abs(best.y - n.y) < th * 1.5) { var ty = best.y - 19; c.fillStyle = '#e0533d'; c.beginPath(); c.moveTo(best.x - 6, ty + n.tri); c.lineTo(best.x + 6, ty + n.tri); c.lineTo(best.x, ty + 8 + n.tri); c.fill(); }
       c.restore();
     }
@@ -9402,13 +9410,14 @@ XY.BGS1={"src": "data:image/webp;base64,UklGRtT1GgBXRUJQVlA4IMj1GgCQwWGdASoAEAAK
     if (d.life < 8 && Math.sin(rt * 14) < -0.2) return;          // 快消失了：闪烁
     var card = XY.CARD_BY[d.id], R = XY.RARITY[card.r], by = Math.sin(d.bob) * 3 - 6, k = 0.5 + 0.5 * Math.sin(rt * 5 + d.bob), IP = XY.INKP;
     c.fillStyle = 'rgba(' + IP.INK + ',0.2)'; c.beginPath(); c.ellipse(d.x, d.y + 14, 8, 2.6, 0, 0, PI2); c.fill();
-    if (XY.ITEMINK && XY.ITEMINK.draw(c, 'tok_' + card.r.toLowerCase(), d.x, d.y + by + 12, 1, 1 + (card.r === 'SSR' ? 0.06 * k : 0))) {
-      txt(c, card.name.charAt(0), d.x, d.y + by + 1, 11, '#2a2218', 'center', false); return;
-    }
-    var ra = IP.mix(IP.rgb(R.color), 0.1);
-    IP.blot(c, d.x, d.y + by, 15 + k * 4 + (card.r === 'SSR' ? 6 : 0), ra, 0.28 + (card.r === 'SSR' ? 0.12 : 0), (d.bob * 31 | 0) & 63, 0, 1);
-    drawCardMini(c, card, d.x, d.y + by, 19, 26);
-    if (card.r === 'SR' || card.r === 'SSR') IP.ring(c, d.x, d.y + by, 14 + k * 14, 2.4, ra, 0.7 * (1 - k), 5, 4, 1, rt);
+    var ra = IP.mix(IP.rgb(R.color), 0.16);
+    IP.blot(c, d.x, d.y + by, 13 + k * 3, ra, 0.34, (d.bob * 31 | 0) & 63, 0, 1);
+    IP.blot(c, d.x, d.y + by - 1, 7, IP.INK, 0.55, ((d.bob * 17) | 0) & 63, 1, 0.8);
+    c.save();
+    c.font = '14px "Ma Shan Zheng","KaiTi","STKaiti",serif';
+    c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillStyle = '#24180f';
+    c.fillText(card.name.charAt(0), d.x, d.y + by - 1);
+    c.restore();
   }
   function drawChest(c, ch, rt) {                              // v0.8 水墨宝箱（精灵）：关闭；标签「宝箱」不变
     var x = ch.x, y = ch.y, k = 0.5 + 0.5 * Math.sin(rt * 4), IP = XY.INKP, INK = IP.INK, sd = ((ch.x * 3 + ch.y) | 0) & 1023;
@@ -12144,6 +12153,24 @@ XY.CHIBI_INK=Object.assign(XY.CHIBI_INK||{},{"phyrex":{"w":944,"h":392,"fr":[[1,
     return { anim: 'idle', i: 0, mix: 0.5 + 0.5 * Math.sin(rt * 2.4 + (h.bob || 0)) };
   };
 
+  /* 没有走路图：移动时仍播待机图集，只在脚底做起伏、摆动和落脚挤压。出招 / 必杀不进这里。 */
+  S.stepPose = function (h, rt) {
+    var horse = h.id === 'horse';
+    var ph;
+    if (h._stepLock != null) ph = h._stepLock;
+    else {
+      var prev = h._stepAt, dt = prev ? Math.max(0.016, Math.min(0.08, rt - prev.t)) : 0.016;
+      var dist = prev ? Math.hypot(h.x - prev.x, h.y - prev.y) : 0;
+      h._stepAt = { x: h.x, y: h.y, t: rt };
+      var v = dist / dt, pace = (horse ? 8.4 : 5.2) * (0.55 + Math.min(v, 220) / 220);
+      h._stepPh = (h._stepPh || (h.bob || 0)) + dt * pace * Math.PI * 2;
+      ph = h._stepPh;
+    }
+    var s = Math.sin(ph), amp = horse ? 1.8 : 3.2;
+    var contact = Math.pow(Math.max(0, 1 - Math.abs(s) * 2.4), 1.3);
+    var squash = (horse ? 0.035 : 0.06) * contact;
+    return { bob: Math.abs(s) * amp, rot: s * 3 * Math.PI / 180, sx: 1 + squash * 0.85, sy: 1 - squash };
+  };
   S.draw = function (c, G, h, rt, x, y, r) {
     var key = XY.chibiKey(h);
     if (!(XY.wildAnim && XY.wildAnim.ready && XY.wildAnim.ready(key, 'idle')) && XY.wildAnim && XY.wildAnim.ready && XY.wildAnim.ready(h.id, 'idle')) key = h.id;
@@ -12157,20 +12184,19 @@ XY.CHIBI_INK=Object.assign(XY.CHIBI_INK||{},{"phyrex":{"w":944,"h":392,"fr":[[1,
     var set = d ? (fl && d.L ? d.L : d.fr) : null, mir = !!(fl && !(d && d.L));
     var st = S.wildState(h, rt, key);
     var charging = a.anim === 'atk' && a.i === 6;
-    var walking = a.anim === 'walk' || (a.anim === 'hit' && h.moving);
     var legacyStrike = a.anim === 'atk' && a.i === 7 && !(XY.wildAnim && XY.wildAnim.clip(key, 'attack'));
     var tangStep = h.id === 'tang' && G && G.tang && (G.tang.phase === 'walk' || G.tang.phase === 'walk2');
-    if (h.moving || tangStep) { a = { anim: 'walk', i: 2 + (Math.floor(rt * 10 + (h.bob || 0)) & 3), mix: 0 }; walking = true; }
+    var acting = !!(h.ultPose || h.ultInk || charging || legacyStrike || (st && st.mode === 'attack'));
     var wildKind = null;
-    if (!walking && !h.ultPose && st && S.useWild(h)) {
-      if (st.mode === 'attack') wildKind = 'attack';
-      else if (!charging && !legacyStrike) wildKind = 'idle';
-    }
+    if (!acting && st && S.useWild(h)) wildKind = (st.mode === 'attack') ? 'attack' : 'idle';
+    var wantWalk = !!(wildKind === 'idle' && (h.moving || tangStep));
+    if (!wildKind && (h.moving || tangStep) && !acting) a = { anim: 'walk', i: 2 + (Math.floor(rt * 10 + (h.bob || 0)) & 3), mix: 0 };
     var moving = !wildKind && a.anim === 'walk', foot = y + r * 0.85;
-    var bobY = wildKind ? 0 : (moving ? -Math.abs(Math.sin(rt * 10 + (h.bob || 0))) * r * 0.14 : -Math.sin(rt * 2.4 + (h.bob || 0)) * r * 0.025);
-    var lean = wildKind ? 0 : (moving ? (fl ? -0.05 : 0.05) * Math.sin(rt * 10 + (h.bob || 0)) : 0);
-    var sy = 1, sx = 1;
-    if (!wildKind && a.anim === 'idle') { var br = Math.sin(rt * 2.4 + (h.bob || 0)); sy = 1 + br * 0.012; sx = 1 - br * 0.008; }
+    var step = wantWalk ? S.stepPose(h, rt) : null;
+    var bobY = step ? -step.bob : (wildKind ? 0 : (moving ? -Math.abs(Math.sin(rt * 10 + (h.bob || 0))) * r * 0.14 : -Math.sin(rt * 2.4 + (h.bob || 0)) * r * 0.025));
+    var lean = step ? step.rot : (wildKind ? 0 : (moving ? (fl ? -0.05 : 0.05) * Math.sin(rt * 10 + (h.bob || 0)) : 0));
+    var sy = step ? step.sy : 1, sx = step ? step.sx : 1;
+    if (!step && !wildKind && a.anim === 'idle') { var br = Math.sin(rt * 2.4 + (h.bob || 0)); sy = 1 + br * 0.012; sx = 1 - br * 0.008; }
     var hitX = 0, hurt = h.hurtT > 0.05;
     if (hurt) { hitX = Math.sin(rt * 90) * r * 0.12; if (!wildKind) { sy = 0.95; sx = 1.04; } }
     c.save();
@@ -20973,7 +20999,7 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
   function drawNiumoWild(c, h, rt, x, y, r, face) {
     var W = XY.wildAnim;
     if (!W || !W.ready || !W.frameAt || !W.ready('niumo', 'idle')) return false;
-    if (h.down || h.dash || h.moving) return false;
+    if (h.down || h.dash) return false;
     var prev = h._nAtkSeen;
     if (prev != null && h.atkMax > 0.25 && (h.atkT || 0) > prev + 0.15 && W.ready('niumo', 'attack')) {
       h._nAtk0 = rt; h._nAtkDur = ((W.clip('niumo', 'attack').durationMs || 667) / 1000);
@@ -20988,7 +21014,8 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
     if (!clip || !im || !im.naturalWidth) return false;
     var fr = W.frameAt(clip, tMs), cw = clip.cell[0], ch = clip.cell[1], col = fr.index % clip.cols, row = (fr.index / clip.cols) | 0;
     var k = r * 3.15 / (clip.stand || 480) * (clip.fit || 1);
-    c.save(); c.imageSmoothingEnabled = true; c.translate(x, y + r * 0.9); c.scale(face, 1);
+    var pose = (h.moving && clipName === 'idle' && XY.chibi && XY.chibi.stepPose) ? XY.chibi.stepPose(h, rt) : null;
+    c.save(); c.imageSmoothingEnabled = true; c.translate(x, y + r * 0.9 - (pose ? pose.bob : 0)); c.rotate(pose ? pose.rot : 0); c.scale(face * (pose ? pose.sx : 1), pose ? pose.sy : 1);
     c.drawImage(im, col * cw, row * ch, cw, ch, -clip.anchor[0] * k, -clip.anchor[1] * k, cw * k, ch * k);
     c.restore();
     return true;
