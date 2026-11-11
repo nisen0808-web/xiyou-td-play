@@ -18371,7 +18371,7 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
 
   /* ---------- 五人立绘 ---------- */
   function drawFig(st, id, cx, bottom, h, o) {
-    o = o || {}; var i = fileIm('assets/art/menu-v5/fig_' + id + '.webp'), c = st.c; if (!i) return; var w = h * i.naturalWidth / i.naturalHeight;
+    o = o || {}; var i = fileIm(o.src || ('assets/art/menu-v5/fig_' + id + '.webp')), c = st.c; if (!i) return; var w = h * i.naturalWidth / i.naturalHeight;
     if (XY.stage) XY.stage.stats.figs++;
     c.save(); c.translate(cx, bottom); if (o.rot) c.rotate(o.rot); c.scale(1, 1 + 0.005 * Math.sin(st.rt * 1.3 + cx)); c.globalAlpha = o.alpha == null ? 1 : o.alpha;
     c.drawImage(i, -w / 2, -h * 0.97, w, h); c.restore();
@@ -18749,8 +18749,8 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
       creditRow(st, by + bh + 6);
       st.how = { s: L ? 1.4 : 1, ax: cx, ay: by }; st.tk = L ? 1.4 : 1; g.bottomY = L ? by + bh + 30 : 714;
     } else {
-      // 竖屏：五人连武器都留在画面里，名字贴着头顶，按钮压在脚下，下面紧接底排。
-      var edge = 8, titleSize = Math.min(88, DW * 0.112);
+      // 竖屏：上下两排用战场透明抠图，直接站在山水上。名字放在头侧空白，不压脸。
+      var edge = 14, titleSize = Math.min(88, DW * 0.112);
       var titleY = 86;
       title(st, cx, titleY, titleSize, 0, 0.85);
       var titleBottom = titleY + titleSize * 0.62;
@@ -18766,44 +18766,50 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
       var bw2 = Math.min(DW - 56, 460);
       var by2 = creditTop - 12 - bh2;
       var footBot = by2 + bh2 * 0.22;
-      // 上排三人并排，下排两人并排。先按宽度算出最大尺寸，高度不够再整组缩小。
-      var gapX = 2;
-      var sideH = (DW - 2 * edge - 2 * gapX) / (0.75 * (2 + 1.22));
-      var tangH = sideH * 1.22;
-      var botH = (DW - 2 * edge - gapX) / (0.75 * 2);
+      var AS = { wujing: 355 / 497, tang: 428 / 452, horse: 320 / 499, wukong: 412 / 437, bajie: 385 / 469 };
+      var gapX = 8, tangMul = 1.22;
+      var halfRoom = DW / 2 - edge - gapX;
+      var sideH = Math.min(halfRoom / (tangMul * AS.tang / 2 + AS.wujing), halfRoom / (tangMul * AS.tang / 2 + AS.horse));
+      var tangH = sideH * tangMul;
+      var botH = (DW - 2 * edge - gapX) / (AS.wukong + AS.bajie);
       var need = 0.97 * tangH + 0.97 * botH + 8;
-      var room = footBot - titleBottom - 8;
+      var room = footBot - titleBottom - 36;
       var fit = room > 40 ? Math.min(1, room / need) : 0.5;
       sideH *= fit; tangH *= fit; botH *= fit;
-      function fw(h) { return h * 0.75; }
-      var sideW = fw(sideH), tangW = fw(tangH), botW = fw(botH);
-      var cxWj = edge + sideW / 2;
-      var cxHo = DW - edge - sideW / 2;
+      function fw(id, h) { return h * AS[id]; }
+      var sideWj = fw('wujing', sideH), tangW = fw('tang', tangH), sideHo = fw('horse', sideH);
+      var botWk = fw('wukong', botH), botBj = fw('bajie', botH);
       var cxTang = DW / 2;
-      var cxWk = edge + botW / 2;
-      var cxBj = DW - edge - botW / 2;
+      var cxWj = cxTang - tangW / 2 - gapX - sideWj / 2;
+      var cxHo = cxTang + tangW / 2 + gapX + sideHo / 2;
+      var cxWk = edge + botWk / 2;
+      var cxBj = DW - edge - botBj / 2;
       var topOfBot = footBot - 0.97 * botH;
       var footTop = topOfBot + 6;
+      var hd = 'assets/art/battle-hd/';
       st.lim = { x1: 0, x2: DW, y1: titleBottom, y2: by2 - 2 };
-      drawFig(st, 'wujing', cxWj, footTop, sideH);
-      drawFig(st, 'horse', cxHo, footTop, sideH);
-      drawFig(st, 'tang', cxTang, footTop, tangH);
-      drawFig(st, 'wukong', cxWk, footBot, botH);
-      drawFig(st, 'bajie', cxBj, footBot, botH);
-      var nameH = Math.max(52, Math.min(78, tangH * 0.2));
-      function placeName(id, figCx, bot, h, lean) {
-        var top = bot - 0.97 * h;
-        var nx = figCx + lean * fw(h) * 0.28;
-        nx = Math.max(18, Math.min(DW - 18, nx));
-        var ny = top + h * 0.04;
-        if (ny < titleBottom) ny = titleBottom;
+      drawFig(st, 'wujing', cxWj, footTop, sideH, { src: hd + 'wujing.webp' });
+      drawFig(st, 'horse', cxHo, footTop, sideH, { src: hd + 'horse.webp' });
+      drawFig(st, 'tang', cxTang, footTop, tangH, { src: hd + 'tang.webp' });
+      drawFig(st, 'wukong', cxWk, footBot, botH, { src: hd + 'wukong.webp' });
+      drawFig(st, 'bajie', cxBj, footBot, botH, { src: hd + 'bajie.webp' });
+      var nameH = 76;
+      var NAME = { wujing: { x: 0.90, y: 0.08 }, tang: { x: 0.73, y: 0.10 }, horse: { x: 1.06, y: 0.10 }, wukong: { x: 0.10, y: 0.16 }, bajie: { x: 0.91, y: 0.02 } };
+      var cast = [];
+      function placeName(id, figCx, bot, h) {
+        var w = fw(id, h), left = figCx - w / 2, top = bot - 0.97 * h, p = NAME[id];
+        var nx = left + p.x * w, ny = top + p.y * h, half = nameH * 0.16;
+        nx = Math.max(half + 2, Math.min(DW - half - 2, nx));
+        if (ny < titleBottom + 4) ny = titleBottom + 4;
         heroName(st, id, nx, ny, nameH);
+        cast.push({ id: id, x: left, y: top, w: w, h: h, nx: nx, ny: ny, nh: nameH });
       }
-      placeName('wujing', cxWj, footTop, sideH, -0.22);
-      placeName('horse', cxHo, footTop, sideH, 0.22);
-      placeName('tang', cxTang, footTop, tangH, -0.12);
-      placeName('wukong', cxWk, footBot, botH, -0.2);
-      placeName('bajie', cxBj, footBot, botH, 0.2);
+      placeName('wujing', cxWj, footTop, sideH);
+      placeName('horse', cxHo, footTop, sideH);
+      placeName('tang', cxTang, footTop, tangH);
+      placeName('wukong', cxWk, footBot, botH);
+      placeName('bajie', cxBj, footBot, botH);
+      st.geom.cast = cast;
       startBtn(st, cx - bw2 / 2, by2, bw2, bh2, 36);
       creditRow(st, by2 + bh2 + 6);
       st.how = { s: 1.35, ax: cx, ay: by2 }; st.tk = 1.4; g.bottomY = DH - 12;
