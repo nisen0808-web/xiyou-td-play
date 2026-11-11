@@ -18253,7 +18253,7 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
 
   /* ---------- 五人立绘 ---------- */
   function drawFig(st, id, cx, bottom, h, o) {
-    o = o || {}; var i = im(BASE + 'fig_' + id + '.webp'), c = st.c, w = h * 432 / 576; if (!i) return;
+    o = o || {}; var i = im('assets/art/hero-clear/' + id + '.png'), c = st.c; if (!i) return; var w = h * i.naturalWidth / i.naturalHeight;
     if (XY.stage) XY.stage.stats.figs++;
     c.save(); c.translate(cx, bottom); if (o.rot) c.rotate(o.rot); c.scale(1, 1 + 0.005 * Math.sin(st.rt * 1.3 + cx)); c.globalAlpha = o.alpha == null ? 1 : o.alpha;
     c.drawImage(i, -w / 2, -h * 0.97, w, h); c.restore();
@@ -19045,7 +19045,7 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
     function hero(id,x,y,r){var d=XY.SP_BY[id]?XY.specialDef(id,Math.max(1,S.spLevel(id))):XY.HEROES.filter(function(z){return z.id===id;})[0];if(d)XY.hud2.face(c,{id:id,def:d},x,y,r,app.rt);}
     if(tab==='enemy'){
       var ee=S.dexOf(sel),sn=ee&&ee.seen>0,dd=XY.ENEMIES[sel],bz=XY.BESTIARY[sel];title=sn?dd.name:'未曾相逢';sub=sn?'遇见 '+ee.seen+' · 击杀 '+ee.kills:'在战场相逢，才会记进此卷';
-      c.save();if(!sn){c.filter='brightness(0)';c.globalAlpha=.22;}var drawn=XY.MINK&&(XY.MINK.portrait(c,sel,cx,foot,artH)||(XY.MINK.dexPose&&XY.MINK.dexPose(c,sel,cx,foot,artH)));c.restore();if(!drawn)hp.enemyIcon(c,sel,cx,foot-artH/2,Math.min(62,artH*.38),!sn,app.rt);
+      c.save();if(!sn){c.globalAlpha=.22;}var drawn=XY.MINK&&(XY.MINK.portrait(c,sel,cx,foot,artH)||(XY.MINK.dexPose&&XY.MINK.dexPose(c,sel,cx,foot,artH)));c.restore();if(!drawn)hp.enemyIcon(c,sel,cx,foot-artH/2,Math.min(62,artH*.38),!sn,app.rt);
       if(!sn)text='在战斗里遇到它，就会记进图鉴。还看不到详细信息。';
       else if(view===0)text=bz.desc;
       else if(view===1)text='生命 '+dd.hp+' · 速度 '+dd.speed+' · '+(dd.dive?'俯冲伤害 '+Math.round(dd.dmg*dd.dive.mul*10)/10:'碰撞伤害 '+dd.dmg)+(dd.range?' · 远程':'')+(dd.fly?' · 飞行':'')+'\n对付它：'+bz.tip+'\n掉落：'+bz.drop;
@@ -22061,7 +22061,7 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
     var g = c.createLinearGradient(0, 0, 0, ch); g.addColorStop(0, 'rgba(250,244,228,0.55)'); g.addColorStop(1, 'rgba(244,234,208,0.35)'); c.fillStyle = g; c.fillRect(0, 0, cw, ch);
   }
   function figure(c, bx, by, bw, bh, alpha) {                 // 唐僧立绘，贴着区域底、居中；上缘不超出
-    var f = pic('fig_tang', 'assets/art/menu-v5/fig_tang.webp'); if (!f) return;
+    var f = pic('hero_clear_tang', 'assets/art/hero-clear/tang.png'); if (!f) return;
     var sc = Math.min(bh / f.naturalHeight, bw / f.naturalWidth * 1.25), w = f.naturalWidth * sc, h = f.naturalHeight * sc;
     c.save(); c.globalAlpha = alpha; c.drawImage(f, bx + (bw - w) / 2, by + bh - h, w, h); c.restore();
   }
@@ -22362,13 +22362,12 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
       kt(c, '＋', cx, cy, r * 0.95, RED, 'center'); label('自建', INK); c.restore(); hit('xchar'); return;
     }
     var def = XY.SP_BY[id], xcLock = !!(tl.xc && tl.rec && S.xcharOpen && !S.xcharOpen()), owned = xcLock ? false : (tl.xc ? true : S.spOwned(id)), lv = tl.xc ? XC.LV : S.spLevel(id);
-    if (!owned) { c.globalAlpha = 0.5; if ('filter' in c) c.filter = 'grayscale(1)'; }
+    if (!owned) c.globalAlpha = 0.5;
     c.save(); c.fillStyle = 'rgba(58,50,38,0.14)'; c.beginPath(); c.arc(cx + 1, cy + 2, r + 1, 0, PI2); c.fill(); c.restore();
     var usedX = !tl.xc && xDisc(c, id, cx, cy, r, false);
     if (tl.xc || !usedX) { if (!owned) XY.R4._noCosFrame = true; XY.R4.avatarDisc(c, XY.specialDef(id, Math.max(1, lv)), cx, cy, r, a.rt); XY.R4._noCosFrame = false; }
     else if (owned) { var _fr = XY.VD && XY.VD.activeFrame && XY.VD.activeFrame(); if (_fr) XY.VD.drawFrame(c, cx, cy, r, _fr); }
-    if ('filter' in c) c.filter = 'none';
-    c.globalAlpha = 1;
+        c.globalAlpha = 1;
     if (!owned) { var lk = Math.max(18, Math.round(d * 0.46)); VU.drawSeal(c, cx + r * 0.42, cy - r * 0.55, lk, lk, '锁', { style: 'solid', col: RED, sz: Math.round(lk * 0.62), rot: -0.06, stack: false }); }
     if (on && owned) onMark();
     var nm = !tl.xc && stageName(id), nmH = Math.min(nh * 1.05, 17);
@@ -22387,7 +22386,7 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
     var e = figCache[id]; if (e && e.src === im) return e.cv;
     var w = im.width || im.naturalWidth || 0, h = im.height || im.naturalHeight || 0; if (!w || !h) return null;
     var cv = document.createElement('canvas'); cv.width = w; cv.height = h; var o = cv.getContext('2d');
-    o.filter = 'saturate(0.72) contrast(0.94) sepia(0.12)'; o.drawImage(im, 0, 0); o.filter = 'none';
+    o.drawImage(im, 0, 0);
     o.globalCompositeOperation = 'source-atop'; o.fillStyle = 'rgba(244,234,210,0.16)'; o.fillRect(0, 0, w, h);
     o.globalCompositeOperation = 'destination-in';
     var m = document.createElement('canvas'); m.width = w; m.height = h; var q = m.getContext('2d');
@@ -24872,6 +24871,7 @@ window.XY_LAZY_CHUNKS = [{"id": "ui", "src": "chunks/ui-008ff700a700.js", "bytes
 
 </script>
 
+<script src="js/clear_portraits.js"></script>
 <script src="js/devil_kitty_logic.js"></script>
 <script src="js/devil_kitty_ui.js"></script>
 <script src="js/tdline-rules.js"></script>
