@@ -14284,9 +14284,22 @@ XY.ICONINK_DATA={"金箍棒":{"src":"data:image/webp;base64,UklGRjINAABXRUJQVlA4
     }
     return hit;
   };
+  /* 关掉特写的这一下不能再落到战场上：否则会放塔、召唤，或把队伍领到被画面挡住的地方。 */
+  US.eatGesture = function () {
+    var now = Date.now();
+    if (US._eatUntil && now < US._eatUntil) return true;
+    if (US.skipCloseup(US.live)) { US._eatUntil = now + 800; return true; }
+    return false;
+  };
   if (typeof window !== 'undefined' && window.addEventListener && !US._skipBound) {
     US._skipBound = true;
-    window.addEventListener('pointerdown', function () { if (US.live) US.skipCloseup(US.live); }, true);
+    function eatPointer(e) {
+      if (!US.eatGesture()) return;
+      if (e.preventDefault) e.preventDefault();
+      if (e.stopPropagation) e.stopPropagation();
+    }
+    window.addEventListener('pointerdown', eatPointer, true);
+    window.addEventListener('pointerup', eatPointer, true);
   }
   US.tick = function (G, dt) {
     var L = G.us; if (!L || !L.length) return;
@@ -23827,6 +23840,7 @@ X.step=function(g,dt){if(!g._simRandom)return step.apply(this,arguments);var sel
   window.addEventListener('mouseup', function (e) {
     if (e.button !== 0) return;
     var mm = app.mm;
+    if (XY.ultscene && XY.ultscene.eatGesture && XY.ultscene.eatGesture()) { mm.holding = false; return; }
     if (mm.holding) {
       mm.holding = false;
       if (app.rt - mm.downAt < C.MOUSE_HOLD && G && app.screen === 'play' && G.mode === 'play') setDest(mm.start);   // 短按 = 单击：设定目的地
@@ -23835,6 +23849,7 @@ X.step=function(g,dt){if(!g._simRandom)return step.apply(this,arguments);var sel
   canvas.addEventListener('mousedown', function (e) { app.mouse = mpos(e); press(app.mouse, e.button, false); });
   // 按下：鼠标左 / 右键，或触屏的一次点按（touch = true 时，空地不开“按住走”，由虚拟摇杆负责）
   function press(p, button, touch) {
+    if (XY.ultscene && XY.ultscene.eatGesture && XY.ultscene.eatGesture()) return;
     if (introEl && !(app.intro && app.intro.playing)) introEnd('input');     // 视频还没开始播时玩家已经在点了：不再等视频
     var hits = XY.ui.hits;
     if (XY.audio) XY.audio.init();
@@ -23988,12 +24003,14 @@ X.step=function(g,dt){if(!g._simRandom)return step.apply(this,arguments);var sel
   function tpos(t) { var r = canvas.getBoundingClientRect(); return { x: (t.clientX - r.left) / app.zoom, y: (t.clientY - r.top) / app.zoom }; }
   function joyEnd(t, cancel) {
     var j = app.joy; if (!j || j.id !== t.identifier) return;
+    if (XY.ultscene && XY.ultscene.eatGesture && XY.ultscene.eatGesture()) { app.joy = null; updateMove(); return; }
     var armed = !!(app.build || app.summon || app.selTower);      // 正在选点（造天兵 / 降临 / 选中天兵）：没拖动的松手一律算“点这里”，慢一点也行
     if (!j.moved && !cancel && G && app.screen === 'play' && G.mode === 'play' && (armed || app.rt - j.t0 < 0.45)) press(j.p0, 0, true);   // 没拖动：当作轻点
     app.joy = null; updateMove();
   }
   canvas.addEventListener('touchstart', function (e) {
     e.preventDefault(); if (!G) return;
+    if (XY.ultscene && XY.ultscene.eatGesture && XY.ultscene.eatGesture()) return;
     if (introEl && !(app.intro && app.intro.playing)) introEnd('input');
     if (app.joy) { var alive = false; for (var k = 0; k < e.touches.length; k++) if (e.touches[k].identifier === app.joy.id) alive = true; if (!alive) app.joy = null; }   // 保险：摇杆手指早就不在屏幕上了（touchend 丢了）→ 释放，别让摇杆卡死
     for (var i = 0; i < e.changedTouches.length; i++) {
