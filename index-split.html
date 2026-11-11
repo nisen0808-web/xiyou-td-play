@@ -22829,7 +22829,7 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
     6: [[0.08, 0.34, 0.58, 0, -1], [0.26, 0.58, 0.74, 1, -1], [0.46, 0.82, 1.02, 2, -1], [0.62, 0.36, 0.58, 0, 1], [0.78, 0.58, 0.76, 1, 1], [0.92, 0.80, 1.00, 2, 1]],
     7: [[0.08, 0.34, 0.58, 0, -1], [0.24, 0.57, 0.72, 1, -1], [0.40, 0.82, 1.00, 2, -1], [0.56, 0.36, 0.58, 0, 0], [0.70, 0.58, 0.74, 1, 1], [0.84, 0.80, 1.02, 2, 1], [0.94, 0.38, 0.56, 0, 1]],
     8: [[0.07, 0.34, 0.56, 0, -1], [0.20, 0.58, 0.72, 1, -1], [0.36, 0.82, 1.00, 2, -1], [0.50, 0.35, 0.56, 0, 0], [0.64, 0.58, 0.72, 1, 1], [0.78, 0.80, 1.00, 2, 1], [0.90, 0.36, 0.56, 0, 1], [0.96, 0.62, 0.70, 1, 1]],
-    9: [[0.06, 0.34, 0.56, 0, -1], [0.18, 0.58, 0.72, 1, -1], [0.32, 0.82, 1.00, 2, -1], [0.46, 0.35, 0.56, 0, 0], [0.58, 0.58, 0.72, 1, 1], [0.72, 0.80, 1.02, 2, 1], [0.84, 0.36, 0.56, 0, 1], [0.92, 0.60, 0.70, 1, 1], [0.98, 0.82, 0.96, 2, 1]],
+    9: [[0.18, 0.42, 0.82, 0, -1], [0.30, 0.58, 0.86, 1, -1], [0.40, 0.80, 0.98, 2, -1], [0.48, 0.40, 0.82, 0, 0], [0.56, 0.56, 0.86, 1, 1], [0.64, 0.80, 1.00, 2, 1], [0.82, 0.38, 0.82, 0, 1], [0.70, 0.52, 0.90, 1, -1], [0.90, 0.82, 0.96, 2, 1]],
     10: [[0.06, 0.34, 0.56, 0, -1], [0.18, 0.56, 0.70, 1, -1], [0.30, 0.82, 0.98, 2, -1], [0.42, 0.33, 0.54, 0, 0], [0.52, 0.58, 0.72, 1, 1], [0.64, 0.80, 1.00, 2, 1], [0.74, 0.36, 0.56, 0, 1], [0.84, 0.60, 0.70, 1, 1], [0.92, 0.82, 0.96, 2, 1], [0.98, 0.40, 0.54, 0, 1]]
   };
   /* 竖屏按行排：后排靠上、中排居中、前排靠下。每行左中右分开，只在脚下留一点空给名字。 */
@@ -22987,7 +22987,7 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
         var fh = unit * sl.s, fw = fh * 0.75;
         var cx = box.x + sl.x * box.w, cy = box.y + sl.y * box.h;
         var x = cx - fw / 2, y = cy - fh / 2;
-        var padX = land ? 24 : 4, padTop = land ? 36 : 8, bottom = box.y + box.h - 2;
+        var padX = land ? 48 : 4, padTop = land ? 28 : 8, bottom = box.y + box.h - 2;
         if (!land && fw > (cw - padX * 2) * 0.42) {
           var ks0 = ((cw - padX * 2) * 0.42) / fw;
           fw *= ks0; fh *= ks0; x = cx - fw / 2; y = cy - fh / 2;
@@ -23036,8 +23036,9 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
         var left = bd.x > cw - (bd.x + bd.w);
         var cands = [], home;
         if (land) {
-          if (it.z !== 2) cands.push([bd.x + bd.w * (it.ns > 0 ? 0.72 : 0.28), bd.y - th * 0.75]);
-          if (it.z === 2) cands.push([bd.x + bd.w * (it.ns < 0 ? 0.28 : 0.72), bd.y + bd.h + th * 0.75]);
+          var inward = bd.x < cw * 0.22 ? 0.62 : (bd.x + bd.w > cw * 0.82 ? 0.38 : (it.ns > 0 ? 0.62 : 0.4));
+          if (it.z !== 2) cands.push([bd.x + bd.w * inward, bd.y - th * 0.75]);
+          if (it.z === 2) cands.push([bd.x + bd.w * (it.ns < 0 ? 0.38 : 0.62), bd.y + bd.h + th * 0.75]);
           cands.push([left ? bd.x - tw * 0.55 - 4 : bd.x + bd.w + tw * 0.55 + 4, bd.y + th * 0.15]);
           cands.push([left ? bd.x + bd.w + tw * 0.55 + 4 : bd.x - tw * 0.55 - 4, bd.y + bd.h * 0.15]);
           cands.push([bd.x + bd.w * 0.5, bd.y - th * 0.65]);
@@ -23055,7 +23056,8 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
         home = cands[0];
         var best = null, bi, x, y, sc;
         for (bi = 0; bi < cands.length; bi++) {
-          x = Math.max(8 + tw / 2, Math.min(cw - 8 - tw / 2, cands[bi][0]));
+          var inset = land ? 36 : 8;
+          x = Math.max(inset + tw / 2, Math.min(cw - inset - tw / 2, cands[bi][0]));
           y = Math.max(8 + th / 2, Math.min(box.y + box.h - 4 - th / 2, cands[bi][1]));
           var drift = Math.abs(x - home[0]) + Math.abs(y - home[1]);
           sc = onBody(x, y, tw, th) * 24 + onName(x, y, tw, th) * 14 + bi * 20 + (land ? 0 : drift * 0.45);
@@ -23084,7 +23086,8 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
             if (a.y > a.homeY + 22) a.y = a.homeY + 22;
             if (a.y < a.homeY - 22) a.y = a.homeY - 22;
           }
-          a.x = Math.max(8 + a.w / 2, Math.min(cw - 8 - a.w / 2, a.x));
+          var edge = land ? 36 : 8;
+          a.x = Math.max(edge + a.w / 2, Math.min(cw - edge - a.w / 2, a.x));
           a.y = Math.max(8 + a.h / 2, Math.min(box.y + box.h - 4 - a.h / 2, a.y));
         }
       }
@@ -23146,7 +23149,7 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
       if (grouped.length) {
         var placed = placeFigures(grouped, box);
         XY.gacha10.lastCrowd = placed;
-        crowdInk(box.x + box.w * 0.5, box.y + box.h * (land ? 0.48 : 0.52), land ? Math.min(box.w, box.h) * 0.16 : Math.min(box.w, box.h) * 0.2);
+        if (!land) crowdInk(box.x + box.w * 0.5, box.y + box.h * 0.52, Math.min(box.w, box.h) * 0.2);
         var order = placed.slice().sort(function (a, b) { return a.z - b.z || a.y - b.y || a.x - b.x; });
         order.forEach(function (it) {
           var art3 = packArt(it.id, it.x, it.y, it.w, it.h);
