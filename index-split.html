@@ -18575,20 +18575,27 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
   function creditRow(st, btnBottom) {
     var ids = menuIds(), n = Math.max(1, ids.length), c = st.c;
     var css = Math.max(0.2, (st.k || 1) * ((st.app && st.app.zoom) || 1));
-    var margin = Math.max(16, Math.ceil(18 / css));
-    var inner = Math.max(8, Math.ceil(10 / css));
-    var cols = st.DW < 980 ? Math.min(3, n) : n, rows = Math.ceil(n / cols);
+    var L = st.mode === 'L', narrow = st.DW < 980;
+    // ea6b2e4：桌面头像 56、名字高 20、边距 30、缝 10；矮横屏头像 76、名字高 26、边距 26、缝 14。
+    var d0 = narrow ? 64 : (L ? 76 : 56);
+    var nh0 = narrow ? 22 : (L ? 26 : 20);
+    var mg = narrow ? 16 : (L ? 26 : 30);
+    var minGap = narrow ? 8 : (L ? 14 : 10);
     var saveH = Math.max(13, Math.round(14 / css));
-    var topLimit = (btnBottom || 0) + Math.max(8, Math.round(10 / css));
+    var topLimit = (btnBottom || 0) + Math.max(6, Math.round(8 / css));
     var bottom = st.DH - Math.max(2, Math.round(4 / css));
     var saveY = bottom - saveH * 0.35;
     var roomH = Math.max(28, saveY - saveH - topLimit);
-    function aspect(id) {
+    if (nh0 * css < 15) nh0 = 15 / css;
+    var dCap = Math.max(28, roomH - 4);
+    if (d0 > dCap) d0 = dCap;
+    if (nh0 > d0 * 0.9) nh0 = d0 * 0.9;
+    function nwOf(id, nh) {
       var im = nameImg(id, 'h');
-      return im && im.h ? im.w / im.h : 3.2;
+      return im && im.h ? im.w * (nh / im.h) : nh * 3.2;
     }
-    function paintName(id, x, y, nh) {
-      var im = nameImg(id, 'h'), nw = nh * aspect(id);
+    function paintAt(id, x, y, nh, nw) {
+      var im = nameImg(id, 'h');
       c.save();
       c.beginPath();
       c.rect(x - 1, y - nh * 0.25, nw + 2, nh * 1.5);
@@ -18596,67 +18603,75 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
       if (im && im.img && (im.img.naturalWidth || im.img.width)) c.drawImage(im.img, x, y, nw, nh);
       else drawName(st, id, x, y, nh, 'h', 'left', 'rgba(250,244,228,0)');
       c.restore();
-      return nw;
     }
-    function fitName(d, width, count) {
-      var minGap = Math.max(4, Math.ceil(6 / css)), sumA = 0, i;
-      for (i = 0; i < count; i++) sumA += aspect(ids[i]);
-      var spare = width - margin * 2 - count * d - count * inner - Math.max(0, count - 1) * minGap;
-      return Math.max(8, Math.min(d * 0.5, spare > 8 ? spare / Math.max(1, sumA) : 8));
-    }
-    if (cols === n) {
-      var d = Math.min(st.DH * 0.081, Math.max(22, roomH - 4));
-      var nameH = fitName(d, st.DW, n), sumA = 0, i;
-      ids.forEach(function (id) { sumA += aspect(id); });
-      var used = n * d + nameH * sumA + n * inner + margin * 2;
-      var gap = (st.DW - used) / Math.max(1, n - 1);
-      var y = saveY - saveH - 8 - d / 2;
-      if (y - d / 2 < topLimit) {
-        d = Math.max(22, saveY - saveH - 8 - topLimit);
-        nameH = fitName(d, st.DW, n);
-        sumA = 0; ids.forEach(function (id) { sumA += aspect(id); });
-        used = n * d + nameH * sumA + n * inner + margin * 2;
-        gap = (st.DW - used) / Math.max(1, n - 1);
-        y = topLimit + d / 2;
+    // 一组人排进 span。f=1 是旧版大小；放不下就缩小，名字右缘到下一个头像至少半个头像。
+    function pack(group, span) {
+      var gn = group.length, k, sum0 = 0;
+      for (k = 0; k < gn; k++) sum0 += nwOf(group[k], nh0);
+      var T0 = gn * (d0 + 8) + sum0;
+      var inner = Math.max(20, span - 2 * mg);
+      function at(ff) {
+        var d = d0 * ff, nh = nh0 * ff, ws = [], sum = 0, j;
+        for (j = 0; j < gn; j++) { var w = nwOf(group[j], nh); ws.push(w); sum += w; }
+        var T = gn * (d + 8 * ff) + sum;
+        var gap = gn > 1 ? (inner - T) / (gn - 1) : 0;
+        return { f: ff, d: d, nh: nh, ws: ws, gap: gap, between: 2 * ff + gap, T: T, inner: inner };
       }
-      c.save(); c.globalAlpha = 0.78; // 底排九人退到五人后面：头像仍彩色，名字仍可读
-      var x = margin;
-      ids.forEach(function (id, i) {
-        faceCircle(st, id, x + d / 2, y, d);
-        var nw = paintName(id, x + d + inner, y - nameH / 2, nameH);
-        x += d + inner + nw + (i < n - 1 ? gap : 0);
-      });
+      var fFit = Math.min(1, (inner - Math.max(0, gn - 1) * minGap) / Math.max(1, T0));
+      var f = Math.max(0.15, fFit);
+      if (fFit < 0.999) {
+        var lo = 0.15, hi = Math.max(0.15, fFit), t;
+        for (t = 0; t < 24; t++) {
+          var mid = (lo + hi) / 2, mm = at(mid);
+          if (mm.T <= inner + 0.5 && mm.between + 0.25 >= mm.d * 0.5) lo = mid; else hi = mid;
+        }
+        f = lo;
+      }
+      return at(f);
+    }
+    function placeRow(group, y, span, origin) {
+      var m = pack(group, span), x = origin, gaps = [], k;
+      for (k = 0; k < group.length; k++) {
+        faceCircle(st, group[k], x + m.d / 2, y, m.d);
+        paintAt(group[k], x + m.d + 6 * m.f, y - m.nh / 2, m.nh, m.ws[k]);
+        if (k < group.length - 1) gaps.push(2 * m.f + m.gap);
+        x += m.d + 8 * m.f + m.ws[k] + (k < group.length - 1 ? m.gap : 0);
+      }
+      return { m: m, gaps: gaps };
+    }
+    var gaps = [], placed, cy0, preview;
+    if (!narrow) {
+      preview = pack(ids, st.DW);
+      cy0 = L ? 668 : 664;
+      if (cy0 - preview.d / 2 < topLimit) cy0 = topLimit + preview.d / 2;
+      if (cy0 + preview.d / 2 > saveY - saveH) cy0 = saveY - saveH - preview.d / 2;
+      c.save(); c.globalAlpha = 0.78;
+      placed = placeRow(ids, cy0, st.DW, mg);
+      gaps = placed.gaps;
       c.restore();
-      saveLine(st, st.DW / 2, saveY, 'center', Math.max(11, Math.min(16, nameH * 0.85)));
-      return d;
+      st.geom.credit = { d: Math.round(placed.m.d * 10) / 10, nh: Math.round(placed.m.nh * 10) / 10, cssNh: Math.round(placed.m.nh * css * 10) / 10, minBetween: gaps.length ? Math.round(Math.min.apply(null, gaps) * 10) / 10 : 0, half: Math.round(placed.m.d * 5) / 10 };
+      saveLine(st, st.DW / 2, saveY, 'center', Math.max(11, Math.min(16, placed.m.nh * 0.85)));
+      return placed.m.d;
     }
-    var cellW = (st.DW - margin * 2) / cols, worst = 2;
-    ids.forEach(function (id) { var a = aspect(id); if (a > worst) worst = a; });
-    var d = Math.min(st.DH * 0.081, roomH / rows - 8, cellW * 0.46);
-    var nameRoom = cellW - d - inner - 4;
-    var nameH = Math.min(d * 0.5, nameRoom / worst);
-    if (nameH < d * 0.3) {
-      d = Math.max(24, (cellW - inner - 4) / (1 + worst * 0.4));
-      nameRoom = cellW - d - inner - 4;
-      nameH = Math.min(d * 0.5, nameRoom / worst);
+    var cols = Math.min(3, n), rows = Math.ceil(n / cols), r, rowIds, worst = null;
+    for (r = 0; r < rows; r++) {
+      rowIds = ids.slice(r * cols, r * cols + cols);
+      var trial = pack(rowIds, st.DW);
+      if (!worst || trial.f < worst.f) worst = trial;
     }
-    d = Math.max(24, Math.min(d, roomH / rows - 6));
-    nameH = Math.max(10, Math.min(nameH, d * 0.5, (cellW - d - inner - 4) / worst));
-    var pitch = d + Math.max(12, Math.round(14 / css));
-    var y0 = saveY - saveH - 6 - (rows - 1) * pitch - d / 2;
-    if (y0 - d / 2 < topLimit) y0 = topLimit + d / 2;
+    var pitch = worst.d + Math.max(8, Math.round(10 / css));
+    var y0 = saveY - saveH - 4 - (rows - 1) * pitch - worst.d / 2;
+    if (y0 - worst.d / 2 < topLimit) y0 = topLimit + worst.d / 2;
     c.save(); c.globalAlpha = 0.78;
-    ids.forEach(function (id, i) {
-      var col = i % cols, row = (i / cols) | 0;
-      var x = margin + col * cellW, cy = y0 + row * pitch;
-      var nh = nameH, nw = nh * aspect(id), room = cellW - d - inner - 4;
-      if (nw > room) nh = room / aspect(id);
-      faceCircle(st, id, x + d / 2, cy, d);
-      paintName(id, x + d + inner, cy - nh / 2, nh);
-    });
+    for (r = 0; r < rows; r++) {
+      rowIds = ids.slice(r * cols, r * cols + cols);
+      placed = placeRow(rowIds, y0 + r * pitch, st.DW, mg);
+      gaps = gaps.concat(placed.gaps);
+    }
     c.restore();
-    saveLine(st, st.DW / 2, Math.min(st.DH - 4, y0 + (rows - 1) * pitch + d / 2 + saveH * 0.8), 'center', Math.max(11, Math.min(15, nameH * 0.8)));
-    return d;
+    st.geom.credit = { d: Math.round(worst.d * 10) / 10, nh: Math.round(worst.nh * 10) / 10, cssNh: Math.round(worst.nh * css * 10) / 10, minBetween: gaps.length ? Math.round(Math.min.apply(null, gaps) * 10) / 10 : 0, half: Math.round(worst.d * 5) / 10 };
+    saveLine(st, st.DW / 2, Math.min(st.DH - 4, y0 + (rows - 1) * pitch + worst.d / 2 + saveH * 0.9), 'center', Math.max(11, Math.min(15, worst.nh * 0.8)));
+    return worst.d;
   }
 
   function V2(st) {
