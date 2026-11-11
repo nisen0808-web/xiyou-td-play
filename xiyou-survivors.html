@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>西游X v0.8.7</title>
 <style>
-  html, body { margin: 0; height: 100%; overflow: hidden; background: #dfeccb; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #f4ead4; }
   #boot { position: fixed; left: 0; top: 0; right: 0; bottom: 0; z-index: 5; display: flex; align-items: center; justify-content: center; text-align: center; padding: 24px; font: 18px/1.7 sans-serif; color: #4a3a1a; background: #dfeccb; }
   canvas { display: block; touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
 </style>
@@ -10076,7 +10076,7 @@ XY.BGS1={"src": "data:image/webp;base64,UklGRtT1GgBXRUJQVlA4IMj1GgCQwWGdASoAEAAK
     var z = app.zoom * app.dpr;
     ctx.setTransform(z, 0, 0, z, 0, 0);
     ctx.lineCap = 'butt';
-    ctx.fillStyle = T.outside; ctx.fillRect(0, 0, app.lw, app.lh);
+    ctx.fillStyle = (app.screen === 'play' || app.screen === 'pause') ? T.outside : '#f4ead4'; ctx.fillRect(0, 0, app.lw, app.lh);
 
     var s = app.screen, snap = !!(XY.ov && XY.ov.ready(G, app));        // v0.7.0l：弹层打开时背景只在打开那一刻拍一张糊图，之后不再每帧重画世界 + HUD
     if (s === 'start' && window.XY_SPLIT_ENTRY && (!XY.lazy || XY.lazy.state !== 'done')) { XY.screens.draw(ctx, G, app); return; }
@@ -18405,9 +18405,12 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
     var sc = hv || sel ? 1.12 : 1;
     c.save(); c.translate(cx, cy); if (o.rot) c.rotate(o.rot);
     if (oi) {
-      c.save(); c.beginPath(); c.arc(0, 0, d * 0.5 * sc * 0.92, 0, PI2); c.clip();
-      c.drawImage(oi, -d * 0.5 * sc, -d * 0.5 * sc, d * sc, d * sc); c.restore();
-      c.lineWidth = hv || sel ? 2.2 : 1.6; c.strokeStyle = 'rgba(43,28,8,0.82)'; c.beginPath(); c.arc(0, 0, d * 0.5 * sc * 0.92, 0, PI2); c.stroke();
+      if (XY.xAvIcon) XY.xAvIcon.featherImage(c, oi, -d * 0.5 * sc, -d * 0.5 * sc, d * sc, d * sc);
+      else {
+        c.save(); c.beginPath(); c.arc(0, 0, d * 0.5 * sc * 0.92, 0, PI2); c.clip();
+        c.drawImage(oi, -d * 0.5 * sc, -d * 0.5 * sc, d * sc, d * sc); c.restore();
+        c.lineWidth = hv || sel ? 2.2 : 1.6; c.strokeStyle = 'rgba(43,28,8,0.82)'; c.beginPath(); c.arc(0, 0, d * 0.5 * sc * 0.92, 0, PI2); c.stroke();
+      }
     } else {
       var i = im(BASE + 'av_' + variant + '_' + id + '.webp'), Dd = d / (AVK[variant] || 0.9) * sc;
       if (i) c.drawImage(i, -Dd / 2, -Dd / 2, Dd, Dd);
@@ -18464,42 +18467,55 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
   }
 
   /* ================== V2 电影海报（默认）：顶角小按钮、居中标题、五人正面对称、底部 credits 条；D 桌面 / L 手机横屏 / P 手机竖屏 ================== */
-  function standCard(st, id, x, y, w, h) {
-    var c = st.c, im = (XY.bgArt && XY.bgArt(id)) || origAv(id);
-    function edge() { c.beginPath(); c.moveTo(x + 2, y + 1); c.lineTo(x + w - 2, y); c.lineTo(x + w - 1, y + h - 2); c.lineTo(x + 1, y + h); c.closePath(); }
-    c.save(); edge(); c.fillStyle = '#f3e7cf'; c.fill();
-    c.save(); c.clip();
-    if (im && (im.naturalWidth || im.width)) {
-      var iw = im.naturalWidth || im.width, ih = im.naturalHeight || im.height;
-      var sc = Math.max(w / iw, (h * 0.94) / ih), dw = iw * sc, dh = ih * sc;
-      c.drawImage(im, x + (w - dw) / 2, y + h * 0.9 - dh, dw, dh);
+  function menuIds() {
+    var pref = ['sisi', 'laosiji', 'diaoyulao', 'kuanggong', 'phyrex', 'yuanzhang', 'martin', 'haiteng', 'heyuxi'];
+    var seen = {}, out = [];
+    function add(id) {
+      if (!id || seen[id] || !XY.SP_BY || !XY.SP_BY[id]) return;
+      if (XY.isHidden && XY.isHidden(id) && !(XY.save && XY.save.spOwned && XY.save.spOwned(id))) return;
+      seen[id] = 1; out.push(id);
     }
-    var g = c.createLinearGradient(0, y + h * 0.7, 0, y + h);
-    g.addColorStop(0, 'rgba(243,231,207,0)'); g.addColorStop(1, 'rgba(243,231,207,0.9)');
-    c.fillStyle = g; c.fillRect(x, y + h * 0.7, w, h * 0.3);
+    pref.forEach(add);
+    (XY.SPECIALS || []).forEach(function (d) { add(d.id); });
+    return out.length ? out : pref.slice();
+  }
+  function standCard(st, id, x, y, w, h) {
+    var c = st.c;
+    function edge() { c.beginPath(); c.moveTo(x + 3, y + 1); c.lineTo(x + w - 2, y); c.lineTo(x + w - 1, y + h - 3); c.lineTo(x + 2, y + h); c.closePath(); }
+    var band = Math.max(28, Math.min(42, h * 0.36));
+    c.save(); edge(); c.fillStyle = '#f6efe0'; c.fill();
+    c.save(); edge(); c.clip();
+    if (XY.xAvIcon) XY.xAvIcon.draw(c, id, x + 1, y + 1, w - 2, Math.max(8, h - band + 4));
+    c.fillStyle = '#f7f1e4'; c.fillRect(x, y + h - band, w, band + 2);
     c.restore();
-    c.strokeStyle = 'rgba(42,33,24,0.88)'; c.lineWidth = 1.5; edge(); c.stroke();
+    c.strokeStyle = 'rgba(42,33,24,0.45)'; c.lineWidth = 1.15; edge(); c.stroke();
     c.restore();
-    var nh = Math.max(11, Math.min(18, h * 0.16));
-    drawName(st, id, x + w / 2, y + h - nh - 3, nh, 'h', 'center', 'rgba(250,244,228,0)');
+    var d = XY.SP_BY && XY.SP_BY[id];
+    var label = id === 'kuanggong' ? 'DeFi小矿工' : ((d && d.name) || id);
+    if (XY.xAvIcon) XY.xAvIcon.brush(c, label, x + w / 2, y + h - band / 2, Math.max(8, w - 8), band - 6);
     var r = { id: id, x: x, y: y, w: w, h: h, cx: x + w / 2, cy: y + h / 2, r: Math.min(w, h) / 2 };
     st.av.push(r); hit(x, y, w, h, 'menuChar', { id: id });
     return r;
   }
-  function creditRow(st, cy, d0, nh0, mg, minGap) {
-    var n = SP_IDS.length, gap = 8, bottom = st.DH - 18;
-    var ch = Math.max(92, Math.min(128, bottom - (cy - d0 * 0.35)));
-    var top = bottom - ch;
-    var cw = Math.min(ch / 1.55, (st.DW - 2 * mg - gap * (n - 1)) / n);
-    var x = (st.DW - (n * cw + (n - 1) * gap)) / 2;
-    SP_IDS.forEach(function (id) { standCard(st, id, x, top, cw, ch); x += cw + gap; });
+  function creditRow(st, btnBottom) {
+    var ids = menuIds(), n = ids.length || 1, margin = 18;
+    var gap = Math.max(12, Math.min(18, st.DW * 0.012));
+    var bottom = st.DH - 8, topMin = (btnBottom || 0) + 18;
+    var avail = Math.max(44, bottom - topMin), ch = Math.min(132, avail), top = bottom - ch;
+    if (top < topMin) { top = topMin; ch = Math.max(44, bottom - top); }
+    var cw = (st.DW - margin * 2 - gap * (n - 1)) / n;
+    if (cw < 36) { gap = 8; cw = (st.DW - margin * 2 - gap * (n - 1)) / n; }
+    var total = n * cw + (n - 1) * gap, x = Math.max(8, (st.DW - total) / 2), c = st.c;
+    c.fillStyle = '#f4ead4';
+    c.fillRect(0, Math.max(0, top - 12), st.DW, st.DH - Math.max(0, top - 12) + 4);
+    ids.forEach(function (id) { standCard(st, id, x, top, cw, ch); x += cw + gap; });
     return cw;
   }
   function V2(st) {
     var c = st.c, DW = st.DW, DH = st.DH, cx = DW / 2, m = st.mode, g = st.geom;
     if (m !== 'P') {
       var L = m === 'L', ox0 = cx - 640, fx = function (x) { return ox0 + x; };
-      var bw = L ? 400 : 340, bh = L ? 66 : 56, by = L ? 514 : 552, ph = L ? 40 : 28, mg = L ? 24 : 22, pmax = DW / 2 - 150 - mg;
+      var bw = L ? 400 : 340, bh = L ? 58 : 52, by = L ? 468 : 496, ph = L ? 40 : 28, mg = L ? 24 : 22, pmax = DW / 2 - 150 - mg;
       st.lim = { x1: 0, x2: DW, y1: L ? 110 : 60, y2: by - 4 };
       /* 画序：沙僧 / 白龙马在后排，唐僧居中，孙悟空 / 猪八戒站在唐僧两侧、盖在他前面（v0.8.7b：之前唐僧最后画，把悟空 / 八戒 / 沙僧的脸遮住了） */
       drawFig(st, 'wujing', fx(238), 626, 400); drawFig(st, 'horse', fx(1000), 626, 400);
@@ -18508,9 +18524,8 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
       heroName(st, 'wujing', fx(112), 228, 104); heroName(st, 'horse', fx(1118), 198, 104); heroName(st, 'wukong', fx(335), 150, 112); heroName(st, 'bajie', fx(968), 165, 112); heroName(st, 'tang', fx(482), 122, 100);
       title(st, cx, 62, 68, 0, 0.85);
       startBtn(st, cx - bw / 2, by, bw, bh, L ? 30 : 26);
-      taper(c, cx - 500, L ? 620 : 630, cx + 500, 2.5, 0.35);
-      creditRow(st, L ? 668 : 664, L ? 76 : 56, L ? 26 : 20, L ? 26 : 30, L ? 14 : 10);
-      if (L) { U.pill(c, cx - 330, by + bh + 14, 660, 26, 'rgba(250,244,228,0.82)'); saveLine(st, cx, by + bh + 28, 'center', 15); } else saveLine(st, cx, st.DH - 8, 'center', 10);
+      saveLine(st, cx, by + bh + 16, 'center', L ? 14 : 12);
+      creditRow(st, by + bh + 22);
       st.how = { s: L ? 1.4 : 1, ax: cx, ay: by }; st.tk = L ? 1.4 : 1; g.bottomY = L ? by + bh + 30 : 714;
     } else {
       var mg2 = 24, d = 104, nh = 30, rowH = d + 6 + nh, gB = DH - 58, gT = gB - 3 * rowH - 28, bw2 = Math.min(560, DW - 100), bh2 = 96, by2 = gT - 34 - bh2, B = by2 + 44;
@@ -18525,13 +18540,14 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
       heroName(st, 'tang', cx, pb + 18, 100);
       heroName(st, 'wukong', cx - DW * 0.235, nmY(top(T * 0.8, B - 14)), 108); heroName(st, 'bajie', cx + DW * 0.235, nmY(top(T * 0.8, B - 14)), 108);
       heroName(st, 'wujing', cx - DW * 0.445, nmY(top(T * 0.62, B - 215)), 100); heroName(st, 'horse', cx + DW * 0.445, nmY(top(T * 0.62, B - 215)), 100);
-      veil(c, 0, gT - 70, DW, DH - gT + 70, 0.8, 80);
+      veil(c, 0, gT - 78, DW, 56, 0.9, 36);
+      c.fillStyle = '#f4ead4'; c.fillRect(0, gT - 18, DW, DH - (gT - 18) + 4);
       var sbw = Math.min(bw2, DW - 2 * mg2), sx0 = cx - sbw / 2;
       startBtn(st, sx0, by2, sbw, bh2, 42);
       taper(c, 40, gT - 16, DW - 40, 3, 0.35);
-      var colW = Math.min(DW / 3, 260);
-      SP_IDS.forEach(function (id, n) { var col = n % 3, row = (n / 3) | 0, cw = Math.min(colW - 12, 150), ch = rowH + 4, x = cx + (col - 1) * colW - cw / 2, y0 = gT + row * (rowH + 14); standCard(st, id, x, y0, cw, ch); });
-      saveLine(st, cx, DH - 24, 'center', 17, true);
+      var colW = Math.min(DW / 3, 260), idsP = menuIds();
+      idsP.forEach(function (id, n) { var col = n % 3, row = (n / 3) | 0, gap = 14, cw = Math.min(colW - gap, 176), ch = rowH + 6, x = cx + (col - 1) * colW - cw / 2, y0 = gT + 8 + row * (ch + 12); standCard(st, id, x, y0, cw, ch); });
+      saveLine(st, cx, gT - 18, 'center', 15, true);
       st.how = { s: 1.5, ax: cx, ay: by2 }; st.tk = 1.6; g.bottomY = DH - 12;
     }
   }
@@ -18592,12 +18608,17 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
       var W = app.lw, H = app.lh, inl = window.XY_MENU_V5; if (inl && !inl['bg_v' + v]) v = 2;
       var mode = v === 2 ? modeOf(app) : 'D', mo = app.mouse, DW, DH, k, ox, oy;
       if (mode === 'P') { k = Math.min(W / 780, H / 1500); DW = W / k; DH = H / k; ox = 0; oy = 0; }
-      else if (mode === 'L') { DW = W; DH = 720; k = Math.min(1, H / 720); ox = 0; oy = (H - 720 * k) / 2; }
+      else if (mode === 'L') { var kL = Math.min(1, H / 720); if (kL < 0.999) { k = kL; DW = W / k; DH = 720; ox = 0; oy = 0; } else { k = 1; DW = W; DH = 720; ox = 0; oy = (H - 720) / 2; } }
       else { DW = 1280; DH = 720; k = Math.min(W / 1280, H / 720); ox = (W - 1280 * k) / 2; oy = (H - 720 * k) / 2; }
       var A = Object.create(app); A.mouse = mo ? { x: (mo.x - ox) / k, y: (mo.y - oy) / k } : null;
       var st = { k: k, c: c, app: app, A: A, rt: app.rt, mx: A.mouse ? A.mouse.x : -999, my: A.mouse ? A.mouse.y : -999, figs: [], av: [], tip: null, mode: mode, DW: DW, DH: DH, how: null, tk: 1, lim: null };
       var geom = M.geom = st.geom = { cards: [], sp: [], ents: [], title: null, poster: null, mode: mode }; var n0 = ui.hits.length, i;
       drawBg(c, W, H, v === 2 && mode === 'P' ? '2p' : v, app.rt);
+      if (ox > 0.5 || oy > 0.5) {
+        c.fillStyle = '#f4ead4';
+        if (oy > 0.5) { c.fillRect(0, 0, W, oy); c.fillRect(0, H - oy, W, oy + 2); }
+        if (ox > 0.5) { c.fillRect(0, 0, ox, H); c.fillRect(W - ox, 0, ox + 2, H); }
+      }
       c.save(); c.translate(ox, oy); c.scale(k, k);
       LAY[v](st);
       var sel = XY.stage && XY.stage.sel && st.rt < XY.stage.sel.until ? XY.stage.sel.id : null;
@@ -18612,6 +18633,10 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
       c.restore();
       for (i = n1; i < ui.hits.length; i++) { var q = ui.hits[i]; q.x = hw.ax + (q.x - hw.ax) * hw.s; q.y = hw.ay + (q.y - hw.ay) * hw.s; q.w *= hw.s; q.h *= hw.s; }
       c.restore();
+      var rw = DW * k, rh = DH * k;
+      if (ox > 0.5 || oy > 0.5 || ox + rw < W - 1 || oy + rh < H - 1) {
+        c.save(); c.fillStyle = '#f4ead4'; c.beginPath(); c.rect(0, 0, W, H); c.rect(ox, oy, rw, rh); c.fill('evenodd'); c.restore();
+      }
       var cv = function (r) { return r && { x: ox + r.x * k, y: oy + r.y * k, w: r.w * k, h: r.h * k }; };
       var cvi = function (r) { var q = cv(r); q.id = r.id; q.art = true; return q; };
       geom.btn = cv(geom.btn); geom.how = cv(geom.how); geom.title = cv(geom.title); geom.foot = cv(geom.foot) || { x: 0, y: 0, w: 0, h: 0 }; geom.ents = geom.ents.map(cv);
@@ -25121,6 +25146,7 @@ X.step=function(g,dt){if(!g._simRandom)return step.apply(this,arguments);var sel
 
 </script>
 
+<script src="js/xav_icon.js"></script>
 <script src="js/clear_portraits.js"></script>
 <script src="js/devil_kitty_logic.js"></script>
 <script src="js/devil_kitty_ui.js"></script>

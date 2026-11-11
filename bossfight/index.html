@@ -38,7 +38,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
 .ava.on b,.ava.sel b{color:var(--red)}
 .ava.sel .bd{display:none}
 .ava.sel .ring::after{content:"✓";position:absolute;left:50%;top:-8px;transform:translateX(-50%);background:#c8341f;color:#fff6e4;font:700 11px/1 var(--sans);padding:2px 6px;border-radius:4px;box-shadow:0 0 0 1.5px #2f2a1f}
-.ava.off{cursor:default;filter:grayscale(1);opacity:.5}
+.ava.off{cursor:default;filter:none;opacity:.55}
 .ava.off .bd{background:#6d6455;filter:none}
 .ava:not(.off):hover .ring{transform:scale(1.06)}
 /* 选人界面 */
@@ -81,22 +81,25 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
 #pgrid .ava{position:absolute;width:18%;left:calc(var(--x)*1%);top:calc(var(--y)*1%);--d:48px}
 #pgrid .ava:nth-child(1){--x:1;--y:0}#pgrid .ava:nth-child(2){--x:21;--y:5}#pgrid .ava:nth-child(3){--x:41;--y:0}#pgrid .ava:nth-child(4){--x:61;--y:7}#pgrid .ava:nth-child(5){--x:81;--y:0}
 #pgrid .ava:nth-child(6){--x:10;--y:52}#pgrid .ava:nth-child(7){--x:31;--y:57}#pgrid .ava:nth-child(8){--x:52;--y:50}#pgrid .ava:nth-child(9){--x:73;--y:56}
-#pgrid .ava .ring{background:#f4ebd3;box-shadow:none;border:2px dashed rgba(47,42,31,.6);padding:2px}
-#pgrid .ava .ring:before{box-shadow:none}#pgrid .ava.sel .ring{border-color:var(--red);background:rgba(184,48,15,.18);box-shadow:none}
+#pgrid .ava .ring{background:#f4ead4;box-shadow:none;border:none;border-radius:3px 12px 4px 10px;padding:0}
+#pgrid .ava .ring:before{box-shadow:none;border-radius:0}
+#pgrid .ava .face{border-radius:3px 12px 4px 10px;background-size:contain;background-repeat:no-repeat;background-position:center;background-color:#f4ead4;box-shadow:none;-webkit-mask-image:radial-gradient(ellipse at center,#000 60%,transparent 80%);mask-image:radial-gradient(ellipse at center,#000 60%,transparent 80%)}
+#pgrid .ava b{white-space:normal;line-height:1.05;text-align:center;font-size:12px}
+#pgrid .ava.sel .ring{border:none;background:#f4ead4;box-shadow:none}
 #res .card{border:0;border-radius:0;box-shadow:none;background:linear-gradient(90deg,rgba(244,235,211,.12),#f4ebd3 8%,#f4ebd3 92%,rgba(244,235,211,.12));padding:22px 24px}
 #res .rw div{border:0;border-radius:0;background:none;padding:7px 8px;border-bottom:1px solid rgba(90,70,39,.3)}
 @media(orientation:portrait){#pick .stage{flex:.9}#pick .panel{background:linear-gradient(180deg,rgba(244,235,211,0),rgba(244,235,211,.95) 12%)}#pgrid .ava{--d:44px}}
 @media(max-width:950px){#pgrid .ava b{font-size:11px;letter-spacing:0}}
 
-/* 选人：彩色水墨立绘卡，书法名压在画上，不再用圆头像。 */
+/* 选人：彩色 X 头像完整放进宣纸卡，墨晕边，书法名写在浅色底上。 */
 #pgrid .ava{width:17%;height:46%}
-#pgrid .ava .ring{width:100%;height:100%;aspect-ratio:auto;border-radius:2px 8px 3px 6px;padding:0;background:#f4ead4;border:1.6px solid #2a2118;box-shadow:none;overflow:hidden}
+#pgrid .ava .ring{width:100%;height:100%;aspect-ratio:auto;border-radius:2px 8px 3px 6px;padding:0;background:#f4ead4;border:1.4px solid rgba(42,33,24,.55);box-shadow:none;overflow:hidden}
 #pgrid .ava .ring::before,#pgrid .ava .tag,#pgrid .ava i{display:none}
-#pgrid .ava .face{border-radius:0;background-size:cover;background-position:center 8%;box-shadow:none}
-#pgrid .ava b{position:absolute;left:0;right:0;bottom:5px;margin:0;text-align:center;color:#24180f;font-family:var(--kai);font-size:15px;letter-spacing:.04em;text-shadow:0 0 5px #f6edd8,0 0 8px #f6edd8;z-index:3;pointer-events:none}
+#pgrid .ava .face{border-radius:0;background-size:contain;background-repeat:no-repeat;background-position:center 18%;background-color:#f4ead4;box-shadow:none;-webkit-mask-image:linear-gradient(#000 0 68%,transparent 92%);mask-image:linear-gradient(#000 0 68%,transparent 92%)}
+#pgrid .ava b{position:absolute;left:0;right:0;bottom:0;margin:0;padding:3px 2px 4px;text-align:center;color:#24180f;font-family:var(--kai);font-size:13px;line-height:1.05;letter-spacing:0;white-space:normal;background:rgba(247,241,228,.94);text-shadow:none;z-index:3;pointer-events:none}
 #pgrid .ava.on .ring,#pgrid .ava.sel .ring,#pgrid .ava:not(.off):hover .ring{transform:none;background:#f4ead4;box-shadow:none;border-color:#a42d19}
 #pgrid .ava .bd{top:4px;border-radius:2px}
-@media(orientation:portrait){#pgrid .ava{height:31%;width:30%}#pgrid .ava b{font-size:13px}}
+@media(orientation:portrait){#pgrid .ava{height:31%;width:30%}#pgrid .ava b{font-size:12px}}
 </style></head>
 <body><div id="app">
 <canvas id="cv"></canvas>
@@ -113,5 +116,6 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
 <script src="sim.js"></script>
 <script src="../assets/wild/wild-anim.js"></script>
 <script>if(new URLSearchParams(location.search).has("manual"))window.XY_BF_MANUAL=true;</script>
+<script src="../js/xav_icon.js"></script>
 <script src="ui.js"></script>
 </body></html>

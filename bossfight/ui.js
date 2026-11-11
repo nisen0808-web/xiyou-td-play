@@ -338,6 +338,8 @@
     return true;
   }
   function drawWildPose(c, id, pose, cx, gyy, fh, p) {
+    /* 灰粉破碎图集不再上屏。战斗回落到彩色定妆站姿。 */
+    return false;
     if (window.XY_NO_WILD) return false;
     var W = window.XY && XY.wildAnim;
     if (!W || !W.poseClip || !W.frameAt || !W.ready) return false;
@@ -364,9 +366,7 @@
     return false;
   }
   function drawSpr1(c, id, pose, cx, gyy, fh, p) {
-    p = p || {}; if (!window.XY_NO_WILD && drawWildPose(c, id, pose, cx, gyy, fh, p)) return;
-    var Ww = window.XY && XY.wildAnim;
-    if (!window.XY_NO_WILD && Ww && Ww.ready && Ww.ready(id, 'idle')) { paintWild(c, id, 'idle', VT() * 1000, cx, gyy, fh, p); return; }
+    p = p || {}; if (drawWildPose(c, id, pose, cx, gyy, fh, p)) return;
     var im = spr(id, pose), m = SMETA[id] && (SMETA[id][pose] && has(id, pose) ? SMETA[id][pose] : SMETA[id].stance); if (!im || !im.naturalWidth || !m) { if (SMETA[id] && !/^ret/.test(pose)) inkBlob(c, cx + (p.dx || 0), gyy, (p.fitH || fh * (SZ[id] || 1) * .74), p.alpha); return; }
     var k = p.fitH ? p.fitH / m.h : fh * (SZ[id] || 1) * 0.74 / 480, w = m.w * k, h = m.h * k, fl0 = p.fs != null ? p.fs : (p.flip ? -1 : 1), fl = p.fs != null ? turnW(fl0) : fl0, al = p.alpha == null ? 1 : p.alpha; if (Math.abs(fl) < .05) return;
     var face = (id === 'niumo' ? -1 : 1) * (fl < 0 ? -1 : 1), afl = Math.abs(fl), ref = p.fitH || fh;
@@ -614,8 +614,13 @@
   }
   function head(c, id, cx, cy, r, ring) {
     var im = faceNode(AV[id]); if (!im || !(im.naturalWidth || im.width)) return;
+    if (id !== 'wukong' && id !== 'niumo' && window.XY && XY.xAvIcon) {
+      var side = r * 2.25;
+      XY.xAvIcon.featherImage(c, im, cx - side / 2, cy - side / 2, side, side);
+      return;
+    }
     c.save(); c.beginPath(); c.arc(cx, cy, r, 0, 7); c.clip(); c.fillStyle = '#f6ecd0'; c.fillRect(cx - r, cy - r, r * 2, r * 2); blitFace(c, im, cx, cy, r); c.restore();
-    c.lineWidth = r * .16; c.strokeStyle = '#2f2a1f'; c.beginPath(); c.arc(cx, cy, r, 0, 7); c.stroke(); c.lineWidth = r * .09; c.strokeStyle = ring || '#e6c474'; c.beginPath(); c.arc(cx, cy, r - r * .02, 0, 7); c.stroke();
+    c.lineWidth = r * .16; c.strokeStyle = '#2f2a1f'; c.beginPath(); c.arc(cx, cy, r, 0, 7); c.stroke();
   }
   function bar(c, x, y, w, h, sk, frac, chip, colA, colB, dir) {
     // dir=1：左侧血条，满格靠外侧，往外掉；-1 反之
@@ -798,16 +803,56 @@
     var d = BF.SP[G.partner], m = BF.lvMul(5), hpv = Math.round(d.hp * m * BF.K.HPK);
     $('pinfo').innerHTML = '选一位搭档（悟空固定出战）。<b>' + d.name + '</b> ' + ELN[d.elem] + ' · 生命 ' + hpv + ' · 必杀「' + d.ult.name + '」。战中点“召唤援军”随机来一位，每局一次。';
   }
+  var STILL = {};
+  function stillNode(id) {
+    if (STILL[id]) return STILL[id].ok ? STILL[id].im : null;
+    var rec = STILL[id] = { ok: false, im: null };
+    if (id === 'niumo') {
+      var src = new Image();
+      src.onload = function () {
+        var cv = document.createElement('canvas');
+        cv.width = 384; cv.height = 378;
+        cv.getContext('2d').drawImage(src, 0, 0, 384, 378, 0, 0, 384, 378);
+        rec.im = cv; rec.ok = true;
+      };
+      src.src = '../assets/wild/niumo-idle.webp';
+      return null;
+    }
+    var im = new Image();
+    im.onload = function () { if (im.naturalWidth) { rec.im = im; rec.ok = true; } };
+    im.src = id === 'wukong' ? '../assets/art/menu-v5/fig_wukong.webp' : '../assets/art/bg/' + id + '.webp';
+    return null;
+  }
+  function drawStill(c, id, cx, foot, h) {
+    var im = stillNode(id); if (!im) return;
+    var iw = im.naturalWidth || im.width, ih = im.naturalHeight || im.height;
+    if (!iw || !ih) return;
+    var dh = h, dw = iw * (h / ih);
+    c.save();
+    c.imageSmoothingEnabled = true;
+    c.drawImage(im, cx - dw / 2, foot - dh, dw, dh);
+    c.restore();
+  }
+  function brushName(c, text, x, y, size, col) {
+    c.save();
+    c.font = size + 'px "Ma Shan Zheng","KaiTi",serif';
+    c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.fillStyle = col || '#24180f';
+    c.fillText(text, x, y);
+    c.restore();
+  }
   function drawPick() {
     var st = pcv.parentNode.getBoundingClientRect(), W = st.width, H = st.height, dpr = G.dpr, c = pctx; if (W < 4) return;
     c.setTransform(dpr, 0, 0, dpr, 0, 0); c.clearRect(0, 0, W, H);
-    var im = BG.land; if (im) { var r = Math.max(W / im.naturalWidth, H / im.naturalHeight), w = im.naturalWidth * r, h = im.naturalHeight * r; c.save(); c.beginPath(); c.roundRect(0, 0, W, H, 18); c.clip(); c.drawImage(im, (W - w) / 2, H - h, w, h); c.restore(); c.lineWidth = 3; c.strokeStyle = '#b8863b'; c.beginPath(); c.roundRect(0, 0, W, H, 18); c.stroke(); }
-    var gyy = H * .9, fh = Math.min(H * .86, W * .62), t = performance.now() / 1000;
-    var pf = Math.min(H * .76, W * .5), pw = idleV(0), pp = idleV(.37), pb = idleV(.55);
-    drawSpr(c, 'niumo', 'stance', W * .81, gyy, pf * 1.0, { sy: 1 + .013 * pb, skew: .012 * pb, flip: 0 });
-    drawSpr(c, G.partner, 'stance', W * .19, gyy - H * .01, pf * .94, { sy: 1 + .013 * pp, skew: .014 * pp });
-    drawSpr(c, 'wukong', 'stance', W * .49, gyy, pf * 1.0, { sy: 1 + .013 * pw, skew: .014 * pw });
-    label(c, 'VS', W * .66, H * .26, Math.min(70, W * .15), '#c8341f', 'center'); label(c, '孙悟空', W * .5, H * .06, 20, '#2f2a1f', 'center'); label(c, NAMES[G.partner], W * .2, H * .06, 17, '#2f2a1f', 'center'); label(c, '牛魔王', W * .8, H * .08, 20, '#2f2a1f', 'center');
+    c.fillStyle = '#f4ead4'; c.fillRect(0, 0, W, H);
+    var gyy = H * .96, fh = Math.min(H * .92, W * .55);
+    drawStill(c, G.partner, W * .18, gyy, fh * .9);
+    drawStill(c, 'wukong', W * .48, gyy, fh);
+    drawStill(c, 'niumo', W * .8, gyy, fh * .96);
+    brushName(c, '战', W * .64, H * .22, Math.min(72, W * .12), '#a83224');
+    brushName(c, NAMES[G.partner] || '', W * .18, H * .08, 22, '#24180f');
+    brushName(c, '孙悟空', W * .48, H * .08, 26, '#24180f');
+    brushName(c, '牛魔王', W * .8, H * .08, 26, '#24180f');
   }
 
   /* ---------- 结算 ---------- */

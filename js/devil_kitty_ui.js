@@ -2031,31 +2031,25 @@
   function ownerMark(c, id, name, x, y, r, alpha) {
     c.save();
     c.globalAlpha = alpha;
-    c.beginPath();
-    c.arc(x, y, r, 0, Math.PI * 2);
-    c.clip();
     var face = anyImg('xav-' + id, 'assets/art/x-avatars/' + id + '.webp');
-    if (face) {
-      var ir = face.naturalWidth / face.naturalHeight;
-      var side = r * 2;
-      var dw = ir > 1 ? side * ir : side, dh = ir > 1 ? side : side / ir;
-      c.drawImage(face, x - dw / 2, y - dh / 2, dw, dh);
-    } else {
-      c.fillStyle = '#efe6d4';
-      c.fillRect(x - r, y - r, r * 2, r * 2);
+    var drew = XY.xAvIcon && face && XY.xAvIcon.featherImage(c, face, x - r, y - r, r * 2, r * 2);
+    if (!drew) {
+      c.beginPath();
+      c.arc(x, y, r, 0, Math.PI * 2);
+      c.clip();
+      if (face) {
+        var ir = face.naturalWidth / face.naturalHeight;
+        var side = r * 2;
+        var dw = ir > 1 ? side * ir : side, dh = ir > 1 ? side : side / ir;
+        c.drawImage(face, x - dw / 2, y - dh / 2, dw, dh);
+      } else {
+        c.fillStyle = '#efe6d4';
+        c.fillRect(x - r, y - r, r * 2, r * 2);
+      }
     }
     c.restore();
     c.save();
     c.globalAlpha = alpha;
-    c.strokeStyle = 'rgba(28,22,18,0.82)';
-    c.lineWidth = Math.max(4, r * 0.09);
-    c.beginPath();
-    c.arc(x, y, r * 1.06, 0.2, 5.6);
-    c.stroke();
-    c.lineWidth = Math.max(2, r * 0.04);
-    c.beginPath();
-    c.arc(x + 2, y - 1, r * 1.16, 0.4, 2.4);
-    c.stroke();
     var nameSize = Math.round(r * 0.42);
     brushFit(c, name || '', x, y + r + nameSize * 0.85, r * 3.4, nameSize, '#24180f', 'center');
     brush(c, '专属', x, y + r + nameSize * 1.7, Math.round(nameSize * 0.72), '#24180f', 'center');
