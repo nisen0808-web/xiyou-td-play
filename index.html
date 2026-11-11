@@ -18839,37 +18839,47 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
       var leftM = 46, rightM = 28, gapX = 8;
       var botH = (DW - leftM - rightM - gapX) / (AS.wukong + AS.bajie);
       if (botH > 414) botH = 414;
-      // 沙悟净、白龙马回到第24轮的高度，站在唐僧左右下方。唐僧全身最高，袖角最多轻轻碰到。
+      // 沙悟净仍是第24轮的高度。白龙马按看得见的身子放大到和他差不多。唐僧比孙悟空更高更宽。
       var oldTang = 428 / 452;
       var halfRoom = DW / 2 - 14 - gapX;
       var sideH = Math.min(halfRoom / (1.22 * oldTang / 2 + AS.wujing), halfRoom / (1.22 * oldTang / 2 + AS.horse));
-      var shaW = sideH * AS.wujing, hoW = sideH * AS.horse;
-      var shaLeft = leftM, hoLeft = DW - rightM - hoW;
+      var shaH = sideH, hoH = sideH * 1.48;
+      var shaW = shaH * AS.wujing, hoW = hoH * AS.horse;
+      var shaLeft = leftM, hoRight = DW - 8;
+      if (hoW > hoRight - shaLeft - shaW - 24) { hoW = hoRight - shaLeft - shaW - 24; hoH = hoW / AS.horse; }
+      var hoLeft = hoRight - hoW;
       var openW = hoLeft - (shaLeft + shaW);
-      var tangW = Math.min(openW + 28, Math.max(botH + 36, sideH + 140) * AS.tang);
+      var tangW = botH * AS.wukong + 16;
       var tangH = tangW / AS.tang;
-      if (tangH < botH + 24) { tangH = botH + 24; tangW = tangH * AS.tang; }
+      var topOfBot = footBot - 0.97 * botH;
+      var foot0 = topOfBot + 6;
+      var maxH = (foot0 - titleBottom - 64) / 0.97;
+      if (tangH > maxH) tangH = maxH;
+      if (tangH < botH + 48) tangH = botH + 48;
+      tangW = tangH * AS.tang;
       function fw(id, h) { return h * AS[id]; }
+      var tangTop0 = foot0 - 0.97 * tangH;
+      var lift = tangTop0 - (titleBottom + 64);
+      if (lift < 0) lift = 0;
+      if (lift > 120) lift = 120;
+      var footTop = foot0 - lift;
+      if (footTop - 0.97 * hoH < titleBottom + 8) footTop = titleBottom + 8 + 0.97 * hoH;
       var cxWj = shaLeft + shaW / 2;
       var cxHo = hoLeft + hoW / 2;
-      var cxTang = (shaLeft + shaW + hoLeft) / 2;
+      var cxTang = DW / 2 + 22;
+      if (cxTang - tangW / 2 < 4) cxTang = tangW / 2 + 4;
+      if (cxTang + tangW / 2 > DW - 4) cxTang = DW - 4 - tangW / 2;
       var cxWk = leftM + fw('wukong', botH) / 2;
       var cxBj = DW - rightM - fw('bajie', botH) / 2;
-      var topOfBot = footBot - 0.97 * botH;
-      var footTop = topOfBot + 6;
-      if (footTop - 0.97 * tangH < titleBottom + 36) {
-        tangH = Math.max((footTop - titleBottom - 36) / 0.97, botH + 16);
-        tangW = tangH * AS.tang;
-      }
       var hd = 'assets/art/battle-hd/', cut = 'assets/art/portrait-cut/';
       st.lim = { x1: 0, x2: DW, y1: titleBottom, y2: by2 - 2 };
-      drawFig(st, 'wujing', cxWj, footTop, sideH, { src: hd + 'wujing.webp' });
-      drawFig(st, 'horse', cxHo, footTop, sideH, { src: hd + 'horse.webp' });
       drawFig(st, 'tang', cxTang, footTop, tangH, { src: cut + 'tang.webp' });
+      drawFig(st, 'wujing', cxWj, footTop, shaH, { src: hd + 'wujing.webp' });
+      drawFig(st, 'horse', cxHo, footTop, hoH, { src: hd + 'horse.webp' });
       drawFig(st, 'wukong', cxWk, footBot, botH, { src: hd + 'wukong.webp' });
       drawFig(st, 'bajie', cxBj, footBot, botH, { src: cut + 'bajie.webp' });
       var nameH = 76;
-      var NAME = { wujing: { x: 0.90, y: 0.08 }, tang: { x: 0.73, y: 0.10 }, horse: { x: 1.00, y: 0.10 }, wukong: { x: 0.10, y: 0.16 }, bajie: { x: 0.93, y: 0.16 } };
+      var NAME = { wujing: { x: 0.88, y: -0.20 }, tang: { x: 0.72, y: -0.06 }, horse: { x: 0.48, y: -0.22 }, wukong: { x: 0.10, y: 0.16 }, bajie: { x: 0.93, y: 0.16 } };
       var cast = [];
       function placeName(id, figCx, bot, h) {
         var w = fw(id, h), left = figCx - w / 2, top = bot - 0.97 * h, p = NAME[id];
@@ -18879,8 +18889,8 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
         heroName(st, id, nx, ny, nameH);
         cast.push({ id: id, x: left, y: top, w: w, h: h, nx: nx, ny: ny, nh: nameH });
       }
-      placeName('wujing', cxWj, footTop, sideH);
-      placeName('horse', cxHo, footTop, sideH);
+      placeName('wujing', cxWj, footTop, shaH);
+      placeName('horse', cxHo, footTop, hoH);
       placeName('tang', cxTang, footTop, tangH);
       placeName('wukong', cxWk, footBot, botH);
       placeName('bajie', cxBj, footBot, botH);
