@@ -1175,10 +1175,89 @@
     c.drawImage(im, cx - w / 2, foot - ht, w, ht);
     return true;
   }
+  function paintPaperField(c, W, H) {
+    var im = img('obtainPaper', 'obtain/paper.webp');
+    if (im) c.drawImage(im, 0, 0, im.naturalWidth, im.naturalHeight, 0, 0, W, H);
+    else {
+      c.fillStyle = '#f4ead6';
+      c.fillRect(0, 0, W, H);
+    }
+  }
+  var seamBuf = null;
+  /* 视频边缘盖一层同一张宣纸，再按墨晕挖淡，避免硬边，也不另铺深色。 */
+  function paperSeam(c, W, H, x, y, w, h, side) {
+    var along = (side === 'left' || side === 'right') ? w : h;
+    var band = Math.max(8, Math.min(18, along * 0.012));
+    var sx = x, sy = y, sw = w, sh = h;
+    if (side === 'top') sh = band;
+    else if (side === 'bottom') { sy = y + h - band; sh = band; }
+    else if (side === 'left') sw = band;
+    else { sx = x + w - band; sw = band; }
+    var bw = Math.max(1, Math.ceil(sw)), bh = Math.max(1, Math.ceil(sh));
+    if (!seamBuf) seamBuf = document.createElement('canvas');
+    if (seamBuf.width !== bw || seamBuf.height !== bh) {
+      seamBuf.width = bw;
+      seamBuf.height = bh;
+    }
+    var g2 = seamBuf.getContext('2d');
+    g2.setTransform(1, 0, 0, 1, 0, 0);
+    g2.globalCompositeOperation = 'source-over';
+    g2.clearRect(0, 0, bw, bh);
+    var im = img('obtainPaper', 'obtain/paper.webp');
+    if (im) g2.drawImage(im, sx / W * im.naturalWidth, sy / H * im.naturalHeight, Math.max(1, sw / W * im.naturalWidth), Math.max(1, sh / H * im.naturalHeight), 0, 0, bw, bh);
+    else {
+      g2.fillStyle = '#f4ead6';
+      g2.fillRect(0, 0, bw, bh);
+    }
+    g2.globalCompositeOperation = 'destination-in';
+    var fade = (side === 'top') ? g2.createLinearGradient(0, 0, 0, bh)
+      : (side === 'bottom') ? g2.createLinearGradient(0, bh, 0, 0)
+      : (side === 'left') ? g2.createLinearGradient(0, 0, bw, 0)
+      : g2.createLinearGradient(bw, 0, 0, 0);
+    fade.addColorStop(0, 'rgba(0,0,0,1)');
+    fade.addColorStop(0.5, 'rgba(0,0,0,0.28)');
+    fade.addColorStop(1, 'rgba(0,0,0,0)');
+    g2.fillStyle = fade;
+    g2.fillRect(0, 0, bw, bh);
+    g2.globalCompositeOperation = 'source-over';
+    c.drawImage(seamBuf, sx, sy, sw, sh);
+    var ink = (side === 'top') ? c.createLinearGradient(0, sy, 0, sy + sh)
+      : (side === 'bottom') ? c.createLinearGradient(0, sy + sh, 0, sy)
+      : (side === 'left') ? c.createLinearGradient(sx, 0, sx + sw, 0)
+      : c.createLinearGradient(sx + sw, 0, sx, 0);
+    ink.addColorStop(0, 'rgba(72,50,32,0.16)');
+    ink.addColorStop(1, 'rgba(72,50,32,0)');
+    c.fillStyle = ink;
+    c.fillRect(sx, sy, sw, sh);
+  }
   function paintFormVideo(c, W, H) {
-    var vr = vid.videoWidth / vid.videoHeight;
+    var vr = vid.videoWidth > 0 && vid.videoHeight > 0 ? vid.videoWidth / vid.videoHeight : 16 / 9;
+    var view = W / Math.max(1, H);
     var dw, dh, dx, dy;
-    if (W / Math.max(1, H) > vr) {
+    /* 正好 16:9 的桌面横屏仍按原来铺满。更窄的用宽度铺满、上下留宣纸；更宽的（手机横屏）用高度铺满、左右留宣纸，字才不会被裁。 */
+    if (view < vr - 0.02) {
+      dw = W;
+      dh = W / vr;
+      dx = 0;
+      dy = (H - dh) / 2;
+      paintPaperField(c, W, H);
+      c.drawImage(vid, dx, dy, dw, dh);
+      paperSeam(c, W, H, dx, dy, dw, dh, 'top');
+      paperSeam(c, W, H, dx, dy, dw, dh, 'bottom');
+      return;
+    }
+    if (view > vr + 0.08) {
+      dh = H;
+      dw = H * vr;
+      dy = 0;
+      dx = (W - dw) / 2;
+      paintPaperField(c, W, H);
+      c.drawImage(vid, dx, dy, dw, dh);
+      paperSeam(c, W, H, dx, dy, dw, dh, 'left');
+      paperSeam(c, W, H, dx, dy, dw, dh, 'right');
+      return;
+    }
+    if (view > vr) {
       dw = W; dh = W / vr; dx = 0; dy = (H - dh) / 2;
     } else {
       dh = H; dw = H * vr; dy = 0; dx = (W - dw) / 2;
