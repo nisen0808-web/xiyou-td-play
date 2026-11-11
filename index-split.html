@@ -18813,6 +18813,17 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
         var nx = left + p.x * w, ny = top + p.y * h, half = nameH * 0.16;
         nx = Math.max(half + 2, Math.min(DW - half - 2, nx));
         if (ny < titleBottom + 4) ny = titleBottom + 4;
+        if (id === 'wujing') {
+          // 沙悟净的名字落在左边深色松林上。垫一团宣纸色淡雾，中心亮、四周晕开，没有框。
+          var mx = nx, my = ny + nameH * 0.5, rx = nameH * 0.46, ry = nameH * 1.2;
+          var mist = c.createRadialGradient(mx, my, rx * 0.25, mx, my, rx);
+          mist.addColorStop(0, 'rgba(246,239,226,0.9)');
+          mist.addColorStop(0.5, 'rgba(246,239,226,0.7)');
+          mist.addColorStop(0.75, 'rgba(246,239,226,0.22)');
+          mist.addColorStop(1, 'rgba(246,239,226,0)');
+          c.save(); c.translate(mx, my); c.scale(1, ry / rx); c.translate(-mx, -my);
+          c.fillStyle = mist; c.beginPath(); c.arc(mx, my, rx, 0, Math.PI * 2); c.fill(); c.restore();
+        }
         heroName(st, id, nx, ny, nameH);
         cast.push({ id: id, x: left, y: top, w: w, h: h, nx: nx, ny: ny, nh: nameH });
       }
