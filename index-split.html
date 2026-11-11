@@ -18766,20 +18766,27 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
       var bw2 = Math.min(DW - 56, 460);
       var by2 = creditTop - 12 - bh2;
       var footBot = by2 + bh2 * 0.22;
-      var AS = { wujing: 355 / 497, tang: 426 / 450, horse: 320 / 499, wukong: 412 / 437, bajie: 410 / 548 };
+      var AS = { wujing: 355 / 497, tang: 418 / 557, horse: 315 / 526, wukong: 412 / 437, bajie: 410 / 548 };
       var leftM = 46, rightM = 28, gapX = 8;
       var room = footBot - titleBottom - 40;
-      var tangH = Math.min(560, (room - 10) / (0.97 * 1.8));
-      var tangW = tangH * AS.tang, tangLeft = (DW - tangW) / 2;
-      var faceL = tangLeft + tangW * 0.36, faceR = tangLeft + tangW * 0.66;
-      var sideH = Math.min(tangH * 0.72, (faceL - 8 - leftM) / AS.wujing, ((DW - rightM) - faceR - 8) / AS.horse);
-      var botH = Math.min(tangH * 0.8, (DW - leftM - rightM - gapX) / (AS.wukong + AS.bajie));
+      var botH = (DW - leftM - rightM - gapX) / (AS.wukong + AS.bajie);
+      if (botH > 414) botH = 414;
+      var tangH = botH + 56;
+      var gapP = 20;
+      var tangW = tangH * AS.tang;
+      var sideBudget = DW - leftM - rightM - tangW - 2 * gapP;
+      var wjW = sideBudget * (AS.wujing / (AS.wujing + AS.horse));
+      var hoW = sideBudget - wjW;
+      var sideH = Math.min(wjW / AS.wujing, hoW / AS.horse, tangH * 0.82);
+      wjW = sideH * AS.wujing; hoW = sideH * AS.horse;
       var need = 0.97 * tangH + 0.97 * botH + 10;
-      if (room > 40 && need > room) { var fit = room / need; tangH *= fit; sideH *= fit; botH *= fit; }
+      if (room > 40 && need > room) { var fit = room / need; tangH *= fit; sideH *= fit; wjW = sideH * AS.wujing; hoW = sideH * AS.horse; tangW = tangH * AS.tang; if (tangH < botH + 24) tangH = botH + 24; }
       function fw(id, h) { return h * AS[id]; }
-      var cxTang = DW / 2;
-      var cxWj = leftM + fw('wujing', sideH) / 2;
-      var cxHo = DW - rightM - fw('horse', sideH) / 2;
+      var used = wjW + gapP + tangW + gapP + hoW;
+      var left0 = Math.max(leftM, (DW - used) / 2);
+      var cxWj = left0 + wjW / 2;
+      var cxTang = left0 + wjW + gapP + tangW / 2;
+      var cxHo = left0 + wjW + gapP + tangW + gapP + hoW / 2;
       var cxWk = leftM + fw('wukong', botH) / 2;
       var cxBj = DW - rightM - fw('bajie', botH) / 2;
       var topOfBot = footBot - 0.97 * botH;
@@ -18788,7 +18795,7 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
       st.lim = { x1: 0, x2: DW, y1: titleBottom, y2: by2 - 2 };
       drawFig(st, 'tang', cxTang, footTop, tangH, { src: cut + 'tang.webp' });
       drawFig(st, 'wujing', cxWj, footTop, sideH, { src: hd + 'wujing.webp' });
-      drawFig(st, 'horse', cxHo, footTop, sideH, { src: hd + 'horse.webp' });
+      drawFig(st, 'horse', cxHo, footTop, sideH, { src: cut + 'horse.webp' });
       drawFig(st, 'wukong', cxWk, footBot, botH, { src: hd + 'wukong.webp' });
       drawFig(st, 'bajie', cxBj, footBot, botH, { src: cut + 'bajie.webp' });
       var nameH = 76;
