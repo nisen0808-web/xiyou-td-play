@@ -22881,7 +22881,8 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
       c.stroke();
       c.restore();
     }
-    if (stage) st.hit(0, 0, cw, ch, 'gachaSkip');
+    /* 结果页也要挡住出发页上已经登记的返回、商店、携带。后登记的「收下」仍优先。 */
+    st.hit(0, 0, cw, ch, stage ? 'gachaSkip' : 'gachaHold');
     if (stage && elapsed < XY.gacha10.timing.intro) {
       if (land) {
         bamboo(c, cw * 0.05, ch * 0.12, ch * 0.72);
