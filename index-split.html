@@ -18750,7 +18750,7 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
       st.how = { s: L ? 1.4 : 1, ax: cx, ay: by }; st.tk = L ? 1.4 : 1; g.bottomY = L ? by + bh + 30 : 714;
     } else {
       // 竖屏：五人连武器都留在画面里，名字贴着头顶，按钮压在脚下，下面紧接底排。
-      var edge = 8, titleSize = Math.min(88, DW * 0.112);
+      var edge = 6, titleSize = Math.min(88, DW * 0.112);
       var titleY = 86;
       title(st, cx, titleY, titleSize, 0, 0.85);
       var titleBottom = titleY + titleSize * 0.58;
@@ -18761,37 +18761,47 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
       var creditH = rowD + 2 * rowPitch + saveH + Math.max(18, Math.round(12 / cssP));
       var creditTop = DH - creditH;
       var bh2 = Math.min(84, Math.max(62, DH * 0.05));
-      var bw2 = Math.min(DW - 64, 460);
-      var by2 = creditTop - 8 - bh2;
-      var foot = by2 + bh2 * 0.34;
-      // 桌面那一组的外框（含武器）缩进竖屏，相对位置不变。
-      var specs = [
-        { id: 'wujing', cx: 238, foot: 626, h: 400, nx: 112, ny: 228, nh: 104 },
-        { id: 'horse', cx: 1000, foot: 626, h: 400, nx: 1118, ny: 198, nh: 104 },
-        { id: 'tang', cx: 640, foot: 648, h: 540, nx: 482, ny: 122, nh: 100 },
-        { id: 'wukong', cx: 462, foot: 640, h: 460, nx: 335, ny: 150, nh: 112 },
-        { id: 'bajie', cx: 846, foot: 640, h: 460, nx: 968, ny: 165, nh: 112 }
-      ];
-      var groupL = 88, groupR = 1150, s = (DW - 2 * edge) / (groupR - groupL);
-      var rise = 648 - 122;
-      var sV = (foot - titleBottom - 8) / rise;
-      if (s > sV) s = sV;
+      var bw2 = Math.min(DW - 48, 480);
+      // 五人占标题下沿到按钮上沿，大约半屏高。唐僧最大居中，悟空八戒在前，沙僧白龙马在后排稍高。
+      var bandTop = titleBottom + 4;
+      var H = Math.min(DH * 0.54, (DW - 12) / 0.78);
+      var foot = bandTop + H * 0.97;
+      var by2 = foot - bh2 * 0.32;
+      if (by2 + bh2 > creditTop - 6) {
+        by2 = creditTop - 6 - bh2;
+        foot = by2 + bh2 * 0.32;
+        H = Math.min(H, (foot - bandTop) / 0.97);
+      }
+      var hSide = H * 0.68, hBack = H * 0.62;
+      function fw(h) { return h * 0.75; }
+      var cxTang = cx;
+      var cxWj = edge + fw(hBack) / 2;
+      var cxHo = DW - cxWj;
+      var cxWk = cxWj + fw(hBack) * 0.42;
+      var cxBj = DW - cxWk;
+      if (cxWk - fw(hSide) / 2 < edge) cxWk = edge + fw(hSide) / 2;
+      if (cxBj + fw(hSide) / 2 > DW - edge) cxBj = DW - edge - fw(hSide) / 2;
+      var footBack = foot - H * 0.16;
       st.lim = { x1: 0, x2: DW, y1: titleBottom, y2: by2 - 2 };
-      specs.forEach(function (sp) {
-        sp._cx = edge + (sp.cx - groupL) * s;
-        sp._h = sp.h * s;
-        sp._foot = foot + (sp.foot - 648) * s;
-        drawFig(st, sp.id, sp._cx, sp._foot, sp._h);
-      });
-      specs.forEach(function (sp) {
-        var figTop0 = sp.foot - 0.97 * sp.h;
-        var nx = edge + (sp.nx - groupL) * s;
-        var ny = (sp._foot - 0.97 * sp._h) + (sp.ny - figTop0) * s;
-        var nh = Math.max(36, Math.min(72, sp.nh * s));
-        nx = Math.max(16, Math.min(DW - 16, nx));
+      drawFig(st, 'wujing', cxWj, footBack, hBack);
+      drawFig(st, 'horse', cxHo, footBack, hBack);
+      drawFig(st, 'tang', cxTang, foot, H);
+      drawFig(st, 'wukong', cxWk, foot, hSide);
+      drawFig(st, 'bajie', cxBj, foot, hSide);
+      var nameH = Math.max(108, Math.min(156, H * 0.2));
+      function placeName(id, figCx, bot, h, lean, drop) {
+        var top = bot - 0.97 * h;
+        var nx = figCx + lean * fw(h) * 0.36;
+        nx = Math.max(nameH * 0.26, Math.min(DW - nameH * 0.26, nx));
+        var ny = top + h * drop;
         if (ny < titleBottom) ny = titleBottom;
-        heroName(st, sp.id, nx, ny, nh);
-      });
+        heroName(st, id, nx, ny, id === 'tang' ? nameH : nameH * 0.9);
+      }
+      placeName('wujing', cxWj, footBack, hBack, -0.05, 0.02);
+      placeName('horse', cxHo, footBack, hBack, 0.05, 0.02);
+      placeName('wukong', cxWk, foot, hSide, -0.46, 0.16);
+      placeName('bajie', cxBj, foot, hSide, 0.46, 0.16);
+      placeName('tang', cxTang, foot, H, -0.16, 0.0);
       startBtn(st, cx - bw2 / 2, by2, bw2, bh2, 36);
       creditRow(st, by2 + bh2 + 6);
       st.how = { s: 1.35, ax: cx, ay: by2 }; st.tk = 1.4; g.bottomY = DH - 12;
