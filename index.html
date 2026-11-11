@@ -18481,63 +18481,66 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
   }
   function inkSplash(c, x, y, w, h) {
     c.save();
-    c.beginPath();
-    c.moveTo(x, y + h);
-    c.lineTo(x + w, y + h);
-    var i, n = 36, px, wave;
-    for (i = n; i >= 0; i--) {
-      px = x + w * i / n;
-      wave = Math.sin(i * 0.72) * h * 0.22 + Math.sin(i * 2.1) * h * 0.07;
-      c.lineTo(px, y + Math.max(0, wave));
-    }
-    c.closePath();
     var g = c.createLinearGradient(0, y, 0, y + h);
-    g.addColorStop(0, 'rgba(28,20,14,0)');
-    g.addColorStop(0.18, 'rgba(36,26,18,0.45)');
-    g.addColorStop(0.55, 'rgba(22,15,11,0.78)');
-    g.addColorStop(1, 'rgba(14,10,8,0.9)');
-    c.fillStyle = g; c.fill();
-    c.globalAlpha = 0.45; c.strokeStyle = 'rgba(246,236,214,0.55)'; c.lineWidth = 2.2; c.beginPath();
-    c.moveTo(x + w * 0.02, y + h * 0.58);
-    c.quadraticCurveTo(x + w * 0.4, y + h * 0.36, x + w * 0.98, y + h * 0.66);
-    c.stroke();
+    g.addColorStop(0, 'rgba(120,96,64,0)');
+    g.addColorStop(0.45, 'rgba(110,88,58,0.06)');
+    g.addColorStop(1, 'rgba(96,76,50,0.14)');
+    c.fillStyle = g; c.fillRect(x, y, w, h);
+    c.strokeStyle = 'rgba(90,70,46,0.35)'; c.lineCap = 'round'; c.lineWidth = 1.3;
+    var i, yy;
+    for (i = 0; i < 4; i++) {
+      yy = y + h * (0.28 + i * 0.16);
+      c.globalAlpha = 0.28 + (i % 2) * 0.12;
+      c.beginPath();
+      c.moveTo(x + w * 0.02, yy);
+      c.quadraticCurveTo(x + w * (0.3 + i * 0.04), yy - h * 0.06, x + w * 0.72, yy + 1);
+      c.quadraticCurveTo(x + w * 0.86, yy + h * 0.04, x + w * 0.98, yy - 1);
+      c.stroke();
+    }
     c.restore();
   }
-  function standCard(st, id, x, y, w, h) {
-    var c = st.c;
-    if (XY.xAvIcon) XY.xAvIcon.draw(c, id, x, y, w, h);
-    c.save();
-    c.fillStyle = 'rgba(16,10,8,0.78)';
-    c.beginPath();
-    c.ellipse(x + w * 0.5, y + h * 0.86, w * 0.46, Math.max(12, h * 0.16), -0.03, 0, 6.2832);
-    c.fill();
-    c.beginPath(); c.rect(x + 1, y, w - 2, h); c.clip();
+  function cardLabel(id) {
+    if (id === 'kuanggong') return 'DeFi小矿工';
     var d = XY.SP_BY && XY.SP_BY[id];
-    var label = id === 'kuanggong' ? 'DeFi小矿工' : ((d && d.name) || id);
-    if (XY.xAvIcon && XY.xAvIcon.brushOnInk) XY.xAvIcon.brushOnInk(c, label, x + w / 2, y + h * 0.86, Math.max(8, w - 8), Math.max(18, h * 0.3));
+    return (d && d.name) || id;
+  }
+  function standCard(st, id, x, y, w, h, nameSize) {
+    var c = st.c;
+    var picH = h * 0.74;
+    if (XY.xAvIcon) XY.xAvIcon.draw(c, id, x, y, w, picH);
+    var label = cardLabel(id);
+    c.save();
+    c.beginPath(); c.rect(x, y + picH - 2, w, h - picH + 4); c.clip();
+    c.font = (nameSize || 16) + 'px "Ma Shan Zheng","KaiTi",serif';
+    c.fillStyle = '#24180f'; c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.fillText(label, x + w / 2, y + picH + (h - picH) * 0.45);
     c.restore();
     var r = { id: id, x: x, y: y, w: w, h: h, cx: x + w / 2, cy: y + h / 2, r: Math.min(w, h) / 2 };
     st.av.push(r); hit(x, y, w, h, 'menuChar', { id: id });
     return r;
   }
   function creditRow(st, btnBottom) {
-    var ids = menuIds(), n = ids.length || 1, margin = 18;
-    var gap = Math.max(12, Math.min(18, st.DW * 0.012));
-    var bottom = st.DH - 8, topMin = (btnBottom || 0) + 18;
-    var avail = Math.max(44, bottom - topMin), ch = Math.min(132, avail), top = bottom - ch;
-    if (top < topMin) { top = topMin; ch = Math.max(44, bottom - top); }
+    var ids = menuIds(), n = ids.length || 1, margin = 14;
+    var gap = Math.max(8, Math.min(14, st.DW * 0.008));
+    var css = (st.k || 1) * ((st.app && st.app.zoom) || 1);
+    var bottom = st.DH - 6, topMin = (btnBottom || 0) + 12;
+    var avail = Math.max(48, bottom - topMin);
+    var ch = Math.min(Math.max(120, (18 / css) / 0.24), avail), top = bottom - ch;
+    if (top < topMin) { top = topMin; ch = Math.max(48, bottom - top); }
     var cw = (st.DW - margin * 2 - gap * (n - 1)) / n;
-    if (cw < 36) { gap = 8; cw = (st.DW - margin * 2 - gap * (n - 1)) / n; }
-    var total = n * cw + (n - 1) * gap, x = Math.max(8, (st.DW - total) / 2), c = st.c;
-    inkSplash(c, 0, Math.max(0, top - ch * 0.28), st.DW, st.DH - Math.max(0, top - ch * 0.28) + 8);
-    ids.forEach(function (id) { standCard(st, id, x, top, cw, ch); x += cw + gap; });
+    var labels = ids.map(cardLabel), c = st.c;
+    var sz = XY.xAvIcon && XY.xAvIcon.fitSize ? XY.xAvIcon.fitSize(c, labels, Math.max(28, cw - 4), Math.min(ch * 0.26, 22 / css)) : 16;
+    var total = n * cw + (n - 1) * gap, x = Math.max(6, (st.DW - total) / 2);
+    inkSplash(c, 0, Math.max(0, top - 6), st.DW, st.DH - Math.max(0, top - 6) + 2);
+    ids.forEach(function (id) { standCard(st, id, x, top, cw, ch, sz); x += cw + gap; });
     return cw;
   }
   function V2(st) {
     var c = st.c, DW = st.DW, DH = st.DH, cx = DW / 2, m = st.mode, g = st.geom;
     if (m !== 'P') {
       var L = m === 'L', ox0 = cx - 640, fx = function (x) { return ox0 + x; };
-      var bw = L ? 400 : 340, bh = L ? 58 : 52, by = L ? 468 : 496, ph = L ? 40 : 28, mg = L ? 24 : 22, pmax = DW / 2 - 150 - mg;
+      var cssK = (st.k || 1) * ((st.app && st.app.zoom) || 1);
+      var bw = L ? 400 : 340, bh = L ? 58 : 52, by = cssK < 0.6 ? (L ? 390 : 420) : (L ? 468 : 496), ph = L ? 40 : 28, mg = L ? 24 : 22, pmax = DW / 2 - 150 - mg;
       st.lim = { x1: 0, x2: DW, y1: L ? 110 : 60, y2: by - 4 };
       /* 画序：沙僧 / 白龙马在后排，唐僧居中，孙悟空 / 猪八戒站在唐僧两侧、盖在他前面（v0.8.7b：之前唐僧最后画，把悟空 / 八戒 / 沙僧的脸遮住了） */
       drawFig(st, 'wujing', fx(238), 626, 400); drawFig(st, 'horse', fx(1000), 626, 400);
@@ -18567,7 +18570,8 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
       startBtn(st, sx0, by2, sbw, bh2, 42);
       taper(c, 40, gT - 16, DW - 40, 3, 0.35);
       var colW = Math.min(DW / 3, 260), idsP = menuIds();
-      idsP.forEach(function (id, n) { var col = n % 3, row = (n / 3) | 0, gap = 14, cw = Math.min(colW - gap, 176), ch = rowH + 6, x = cx + (col - 1) * colW - cw / 2, y0 = gT + 8 + row * (ch + 12); standCard(st, id, x, y0, cw, ch); });
+      var labelsP = idsP.map(cardLabel), szP = XY.xAvIcon && XY.xAvIcon.fitSize ? XY.xAvIcon.fitSize(c, labelsP, Math.min(colW - 18, 168), Math.min(28, 16 / ((st.k || 1) * ((st.app && st.app.zoom) || 1)))) : 16;
+      idsP.forEach(function (id, n) { var col = n % 3, row = (n / 3) | 0, gap = 14, cw = Math.min(colW - gap, 176), ch = rowH + 6, x = cx + (col - 1) * colW - cw / 2, y0 = gT + 8 + row * (ch + 12); standCard(st, id, x, y0, cw, ch, szP); });
       saveLine(st, cx, gT - 18, 'center', 15, true);
       st.how = { s: 1.5, ax: cx, ay: by2 }; st.tk = 1.6; g.bottomY = DH - 12;
     }
@@ -18635,7 +18639,7 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
       var st = { k: k, c: c, app: app, A: A, rt: app.rt, mx: A.mouse ? A.mouse.x : -999, my: A.mouse ? A.mouse.y : -999, figs: [], av: [], tip: null, mode: mode, DW: DW, DH: DH, how: null, tk: 1, lim: null };
       var geom = M.geom = st.geom = { cards: [], sp: [], ents: [], title: null, poster: null, mode: mode }; var n0 = ui.hits.length, i;
       drawBg(c, W, H, v === 2 && mode === 'P' ? '2p' : v, app.rt);
-      inkSplash(c, 0, H * 0.7, W, H * 0.3 + 6);
+      inkSplash(c, 0, H * 0.86, W, H * 0.14 + 4);
       c.save(); c.translate(ox, oy); c.scale(k, k);
       LAY[v](st);
       var sel = XY.stage && XY.stage.sel && st.rt < XY.stage.sel.until ? XY.stage.sel.id : null;
@@ -23423,7 +23427,7 @@ var si=XY.sweep09&&XY.sweep09.resultStars(G,win);if(si)K.tf(si.show?si.text+(si.
 figure(c,G,port?W*.27:W*.21,port?365:H-72,Math.min(port?216:H-220,440));
 ['战报','任务','收获','足迹'].forEach(function(s,i){K.btn(x+i*w/4,top,w/4-4,44,s,'folio',{key:'endLeaf',i:i},{on:leaf===i,size:16});});var y=top+65,dead=G.heroes.filter(function(h){return h.down;}).map(function(h){return h.def.name;});
 function para(s,col){y=K.lines(s,x+5,y,w-10,13,18,col||T.ink,16,false)+12;}
-if(leaf===0){K.t(XY.fmtTime(G.t),x+4,y+9,32,T.ink,'left',true);y+=47;para('等级 '+G.level+' 级 · 击杀 '+G.kills+' 只 · 镇灭洞府 '+G.dens.filter(function(d){return !d.alive;}).length+'/'+G.dens.length);para('阵亡英雄：'+(dead.join('、')||'无'));if(!win&&G.ending&&(G.ending.why||G.ending.reason))para('死因：'+(G.ending.why||G.ending.reason),'#a42d19');if(si&&si.tip)para(si.tip,'#8a5a12');}
+if(leaf===0){K.t(XY.fmtTime(G.t),x+4,y+9,32,T.ink,'left',true);y+=47;para('等级 '+G.level+' 级 · 击杀 '+G.kills+' 只 · 镇灭洞府 '+G.dens.filter(function(d){return !d.alive;}).length+'/'+G.dens.length);para('阵亡英雄：'+(dead.join('、')||'无'));para('本局战绩','#8a5a12');[G.quests.main].concat(G.quests.sides||[]).forEach(function(q,i){var rw=q.def.reward||{},r=q.done?[(rw.lingshi?'灵石 +'+rw.lingshi:''),(rw.card?'法宝':''),(rw.shard?'碎片 +'+rw.shard:'')].filter(Boolean).join(' · '):'未完成';para((i?'支线':'主线')+' · '+q.def.short+'　'+(q.done?'✔ ':'✘ ')+r,q.done?'#2f663a':T.ink);});para('奖励 · 灵石 +'+XY.fmtNum((G.run&&G.run.clearGain)||0)+' · 法宝 '+((G.cardLog||[]).length)+' 张','#8a5a12');if(!win&&G.ending&&(G.ending.why||G.ending.reason))para('死因：'+(G.ending.why||G.ending.reason),'#a42d19');if(si&&si.tip)para(si.tip,'#8a5a12');var rest=H-96-y;if(!port&&rest>100){[{t:'一星',s:'通关本关'},{t:'二星',s:'至少完成 1 条支线'},{t:'三星',s:'无人阵亡'}].forEach(function(row,i){var yy=y+18+i*Math.max(28,rest/3.4);K.t(row.t,x+6,yy,18,'#8a5a12','left',true);K.t(row.s,x+78,yy,16,T.ink,'left',false);});}}
 else if(leaf===1){[G.quests.main].concat(G.quests.sides).forEach(function(q,i){var rw=q.def.reward||{},r=q.done?[(rw.card?'法宝':''),(rw.lingshi?'灵石 +'+rw.lingshi:''),(rw.shard?'碎片 +'+rw.shard:'')].filter(Boolean).join(' · '):'未完成';para((i?'支线':'主线')+' · '+q.def.short+'　'+(q.done?'✔ ':'✘ ')+r,q.done?'#2f663a':T.inkSoft);});}
 else if(leaf===2){para('法宝 '+(G.cardLog||[]).length+' 张 · 灵石 +'+XY.fmtNum((G.run&&G.run.clearGain)||0),'#8a5a12');var sp=G.spGot||[];if(sp.length){var per=(!port&&H<450)?2:4,from=P.pager(sp.length,per,'end-drops',x,H-174,w),rh=(!port&&H<450)?36:46;sp.slice(from,from+per).forEach(function(g,i){var d=XY.SP_BY[g.id],cy=y+i*rh+15;XY.hud2.face(c,{id:g.id,def:d},x+20,cy,15,a.rt);K.tf(d.name+' ×1',x+47,cy,w-52,14,T.ink,'left',true,11);});}}else{var nu=(rep.newUnlocks||[]).map(function(id){return XY.UNLOCK_BY[id].name;});para(nu.length?'新解锁：'+nu.join('、'):'本局没有新解锁');}
 var jn=G.mod?'非官方玩法包：不发奖励，不记通关，不影响存档':G.dungeon?(win?'洞府副本不计入取经之旅（首通奖励已发）':'副本失败不扣任何东西'):win?(G.levelId<XY.LEVEL_COUNT?'全队成长已存档，第 '+(G.levelId+1)+' 关已解锁':'取经之旅：三关全部走完！成长已存档'):'之前积累保留，再来回到本关开始状态（'+XY.journey.status(G.levelId).text+'）';K.lines(jn,x,H-125,w,12,17,win?'#2f663a':T.inkSoft,3,false);

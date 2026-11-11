@@ -29,11 +29,11 @@
     var cv = document.createElement('canvas'); cv.width = cw; cv.height = ch;
     var g = cv.getContext('2d');
     var iw = im.naturalWidth || im.width, ih = im.naturalHeight || im.height;
-    var sc = Math.max(cw / iw, ch / ih) * 1.12;
+    var sc = Math.min(cw / iw, ch / ih) * 0.94;
     var dw = iw * sc, dh = ih * sc;
     g.imageSmoothingEnabled = true;
     g.imageSmoothingQuality = 'high';
-    g.drawImage(im, (cw - dw) / 2, ch * 0.4 - dh * 0.32, dw, dh);
+    g.drawImage(im, (cw - dw) / 2, (ch - dh) / 2, dw, dh);
     var mask = document.createElement('canvas'); mask.width = cw; mask.height = ch;
     var q = mask.getContext('2d');
     var seed = (iw * 13 + ih * 7) % 97, n = 14, i, amp = Math.min(cw, ch) * 0.07;
@@ -53,38 +53,36 @@
     gx.addColorStop(0, 'rgba(0,0,0,0)'); gx.addColorStop(edge / cw, '#000'); gx.addColorStop(1 - edge / cw, '#000'); gx.addColorStop(1, 'rgba(0,0,0,0)');
     q.fillStyle = gx; q.fillRect(0, 0, cw, ch);
     var gy = q.createLinearGradient(0, 0, 0, ch);
-    gy.addColorStop(0, 'rgba(0,0,0,0)'); gy.addColorStop(edge / ch, '#000'); gy.addColorStop(0.78, '#000'); gy.addColorStop(1, 'rgba(0,0,0,0.15)');
+    gy.addColorStop(0, 'rgba(0,0,0,0)'); gy.addColorStop(edge / ch, '#000'); gy.addColorStop(0.9, '#000'); gy.addColorStop(1, 'rgba(0,0,0,0.55)');
     q.fillStyle = gy; q.fillRect(0, 0, cw, ch);
     g.globalCompositeOperation = 'destination-in';
     g.drawImage(mask, 0, 0);
     return cv;
   }
-  function brushOnInk(c, text, cx, cy, maxW, maxH) {
+  function brushOnInk(c, text, cx, cy, maxW, maxH, size) {
     text = String(text || '');
-    if (!text || maxW < 8 || maxH < 8) return;
+    if (!text || maxW < 8) return;
     var face = '"Ma Shan Zheng","KaiTi","STKaiti",serif';
-    var lines = [text], sz = Math.min(maxH * 0.92, Math.max(18, maxW * 0.22));
+    var sz = size || Math.min(maxH || 22, 22);
     c.save();
     c.font = sz + 'px ' + face;
-    if (c.measureText(text).width > maxW - 4) lines = splitName(text);
-    sz = Math.min(sz, maxH / (lines.length === 1 ? 1.05 : 2.05));
+    c.fillStyle = '#24180f';
+    c.textAlign = 'center';
+    c.textBaseline = 'middle';
+    c.fillText(text, cx, cy);
+    c.restore();
+  }
+  function fitSize(c, labels, maxW, prefer) {
+    var face = '"Ma Shan Zheng","KaiTi","STKaiti",serif';
+    var sz = prefer || 20;
     while (sz > 11) {
       c.font = sz + 'px ' + face;
       var wide = false, i;
-      for (i = 0; i < lines.length; i++) if (c.measureText(lines[i]).width > maxW - 4) wide = true;
+      for (i = 0; i < labels.length; i++) if (c.measureText(labels[i]).width > maxW) wide = true;
       if (!wide) break;
       sz -= 0.5;
     }
-    c.textAlign = 'center';
-    c.textBaseline = 'middle';
-    c.lineJoin = 'round';
-    c.lineWidth = Math.max(3, sz * 0.16);
-    c.strokeStyle = 'rgba(18,12,8,0.88)';
-    var lh = sz * 1.02, y0 = cy - (lines.length - 1) * lh / 2, k;
-    for (k = 0; k < lines.length; k++) c.strokeText(lines[k], cx, y0 + k * lh);
-    c.fillStyle = '#f6efe2';
-    for (k = 0; k < lines.length; k++) c.fillText(lines[k], cx, y0 + k * lh);
-    c.restore();
+    return sz;
   }
   function featherImage(c, im, x, y, w, h) {
     if (!im || !(im.naturalWidth || im.width) || w < 2 || h < 2) return false;
@@ -135,7 +133,7 @@
     c.restore();
   }
 
-  XY.xAvIcon = { isSpecial: isSpecial, img: node, draw: draw, featherImage: featherImage, brush: brush, brushOnInk: brushOnInk };
+  XY.xAvIcon = { isSpecial: isSpecial, img: node, draw: draw, featherImage: featherImage, brush: brush, brushOnInk: brushOnInk, fitSize: fitSize };
   Object.keys(FILES).forEach(node);
 
   function wrapFace() {
