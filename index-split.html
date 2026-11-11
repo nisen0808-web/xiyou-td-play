@@ -22827,17 +22827,18 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
     9: [[0.06, 0.34, 0.56, 0, -1], [0.18, 0.58, 0.72, 1, -1], [0.32, 0.82, 1.00, 2, -1], [0.46, 0.35, 0.56, 0, 0], [0.58, 0.58, 0.72, 1, 1], [0.72, 0.80, 1.02, 2, 1], [0.84, 0.36, 0.56, 0, 1], [0.92, 0.60, 0.70, 1, 1], [0.98, 0.82, 0.96, 2, 1]],
     10: [[0.06, 0.34, 0.56, 0, -1], [0.18, 0.56, 0.70, 1, -1], [0.30, 0.82, 0.98, 2, -1], [0.42, 0.33, 0.54, 0, 0], [0.52, 0.58, 0.72, 1, 1], [0.64, 0.80, 1.00, 2, 1], [0.74, 0.36, 0.56, 0, 1], [0.84, 0.60, 0.70, 1, 1], [0.92, 0.82, 0.96, 2, 1], [0.98, 0.40, 0.54, 0, 1]]
   };
+  /* 竖屏按行排：后排靠上、中排居中、前排靠下。每行左中右分开，只在脚下留一点空给名字。 */
   var GACHA_PORT = {
-    1: [[0.52, 0.58, 1.08, 2, 1]],
-    2: [[0.30, 0.26, 0.82, 0, -1], [0.68, 0.64, 1.08, 2, 1]],
-    3: [[0.26, 0.24, 0.80, 0, -1], [0.72, 0.42, 0.96, 1, 1], [0.40, 0.66, 1.08, 2, -1]],
-    4: [[0.24, 0.24, 0.78, 0, -1], [0.74, 0.28, 0.78, 0, 1], [0.40, 0.44, 0.94, 1, -1], [0.68, 0.66, 1.06, 2, 1]],
-    5: [[0.22, 0.24, 0.78, 0, -1], [0.70, 0.22, 0.74, 0, 1], [0.36, 0.42, 0.92, 1, -1], [0.78, 0.46, 0.90, 1, 1], [0.50, 0.66, 1.06, 2, 1]],
-    6: [[0.22, 0.24, 0.78, 0, -1], [0.72, 0.26, 0.76, 0, 1], [0.32, 0.42, 0.92, 1, -1], [0.70, 0.46, 0.90, 1, 1], [0.24, 0.64, 1.04, 2, -1], [0.64, 0.68, 1.08, 2, 1]],
-    7: [[0.18, 0.22, 0.76, 0, -1], [0.50, 0.26, 0.74, 0, 0], [0.82, 0.22, 0.76, 0, 1], [0.30, 0.44, 0.90, 1, -1], [0.68, 0.42, 0.88, 1, 1], [0.22, 0.64, 1.02, 2, -1], [0.60, 0.68, 1.06, 2, 1]],
-    8: [[0.16, 0.22, 0.74, 0, -1], [0.48, 0.26, 0.72, 0, 0], [0.80, 0.22, 0.74, 0, 1], [0.28, 0.42, 0.88, 1, -1], [0.58, 0.46, 0.90, 1, 1], [0.84, 0.40, 0.84, 1, 1], [0.24, 0.64, 1.02, 2, -1], [0.62, 0.68, 1.06, 2, 1]],
-    9: [[0.16, 0.22, 0.74, 0, -1], [0.48, 0.26, 0.72, 0, 0], [0.82, 0.22, 0.74, 0, 1], [0.24, 0.42, 0.88, 1, -1], [0.52, 0.46, 0.90, 1, 1], [0.80, 0.40, 0.84, 1, 1], [0.18, 0.62, 1.02, 2, -1], [0.48, 0.68, 1.08, 2, 1], [0.78, 0.64, 1.02, 2, 1]],
-    10: [[0.14, 0.20, 0.72, 0, -1], [0.40, 0.26, 0.70, 0, 0], [0.64, 0.20, 0.72, 0, 1], [0.88, 0.26, 0.70, 0, 1], [0.22, 0.42, 0.86, 1, -1], [0.52, 0.46, 0.90, 1, 1], [0.80, 0.40, 0.84, 1, 1], [0.16, 0.62, 1.02, 2, -1], [0.48, 0.68, 1.08, 2, 1], [0.78, 0.64, 1.04, 2, 1]]
+    1: [[0.50, 0.56, 1.50, 2, 0]],
+    2: [[0.28, 0.28, 1.05, 0, -1], [0.72, 0.70, 1.28, 2, 1]],
+    3: [[0.22, 0.16, 0.96, 0, -1], [0.74, 0.44, 1.12, 1, 1], [0.40, 0.76, 1.24, 2, -1]],
+    4: [[0.22, 0.15, 0.92, 0, -1], [0.76, 0.17, 0.92, 0, 1], [0.30, 0.46, 1.08, 1, -1], [0.70, 0.76, 1.20, 2, 1]],
+    5: [[0.20, 0.15, 0.90, 0, -1], [0.78, 0.17, 0.90, 0, 1], [0.28, 0.44, 1.04, 1, -1], [0.74, 0.46, 1.04, 1, 1], [0.48, 0.76, 1.18, 2, 0]],
+    6: [[0.22, 0.15, 0.90, 0, -1], [0.78, 0.17, 0.90, 0, 1], [0.24, 0.44, 1.02, 1, -1], [0.74, 0.46, 1.02, 1, 1], [0.22, 0.76, 1.14, 2, -1], [0.74, 0.78, 1.16, 2, 1]],
+    7: [[0.18, 0.14, 0.86, 0, -1], [0.50, 0.16, 0.84, 0, 0], [0.82, 0.14, 0.86, 0, 1], [0.28, 0.44, 1.04, 1, -1], [0.72, 0.46, 1.04, 1, 1], [0.26, 0.76, 1.14, 2, -1], [0.72, 0.78, 1.16, 2, 1]],
+    8: [[0.18, 0.14, 0.86, 0, -1], [0.50, 0.16, 0.84, 0, 0], [0.82, 0.14, 0.86, 0, 1], [0.20, 0.43, 1.02, 1, -1], [0.50, 0.46, 1.06, 1, 0], [0.80, 0.43, 1.02, 1, 1], [0.28, 0.76, 1.14, 2, -1], [0.72, 0.78, 1.16, 2, 1]],
+    9: [[0.17, 0.13, 0.88, 0, -1], [0.50, 0.155, 0.86, 0, 0], [0.83, 0.13, 0.88, 0, 1], [0.18, 0.42, 1.06, 1, -1], [0.50, 0.45, 1.10, 1, 0], [0.82, 0.42, 1.06, 1, 1], [0.16, 0.76, 1.16, 2, -1], [0.50, 0.80, 1.20, 2, 0], [0.84, 0.76, 1.16, 2, 1]],
+    10: [[0.14, 0.13, 0.74, 0, -1], [0.38, 0.15, 0.74, 0, 0], [0.62, 0.13, 0.74, 0, 1], [0.86, 0.15, 0.74, 0, 1], [0.20, 0.42, 1.02, 1, -1], [0.50, 0.45, 1.06, 1, 0], [0.80, 0.42, 1.02, 1, 1], [0.17, 0.76, 1.12, 2, -1], [0.50, 0.80, 1.16, 2, 0], [0.83, 0.76, 1.12, 2, 1]]
   };
   XY.gacha10.rosterSlots = function (n, land) {
     var key = n < 1 ? 1 : (n > 10 ? 10 : n | 0);
@@ -22973,18 +22974,21 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
       c.restore();
     }
     function placeFigures(list, box) {
-      var unit = (land ? box.h * 0.5 : box.h * 0.5);
+      var unit = land ? box.h * 0.5 : Math.min(box.w * 0.46, box.h * 0.26);
       var slots = XY.gacha10.rosterSlots(list.length, land);
       var placed = [];
       list.forEach(function (g, idx) {
         var sl = slots[Math.min(idx, slots.length - 1)];
         var fh = unit * sl.s, fw = fh * 0.75;
-        var yShift = land ? 0 : (sl.z === 0 ? 0 : (sl.z === 2 ? 0.16 : 0.07));
-        var cx = box.x + sl.x * box.w, cy = box.y + Math.max(0.08, Math.min(0.92, sl.y + yShift)) * box.h;
+        var cx = box.x + sl.x * box.w, cy = box.y + sl.y * box.h;
         var x = cx - fw / 2, y = cy - fh / 2;
-        var padX = land ? 24 : 68, padTop = land ? 36 : 38, bottom = box.y + box.h - 2;
-        if (fw > cw - padX * 2) { var ks = (cw - padX * 2) / fw; fw *= ks; fh *= ks; }
-        if (fh > bottom - padTop) { var ks2 = (bottom - padTop) / fh; fw *= ks2; fh *= ks2; }
+        var padX = land ? 24 : 4, padTop = land ? 36 : 8, bottom = box.y + box.h - 2;
+        if (!land && fw > (cw - padX * 2) * 0.42) {
+          var ks0 = ((cw - padX * 2) * 0.42) / fw;
+          fw *= ks0; fh *= ks0; x = cx - fw / 2; y = cy - fh / 2;
+        }
+        if (fw > cw - padX * 2) { var ks = (cw - padX * 2) / fw; fw *= ks; fh *= ks; x = cx - fw / 2; y = cy - fh / 2; }
+        if (fh > bottom - padTop) { var ks2 = (bottom - padTop) / fh; fw *= ks2; fh *= ks2; x = cx - fw / 2; y = cy - fh / 2; }
         if (x < padX) x = padX;
         if (y < padTop) y = padTop;
         if (x + fw > cw - padX) x = cw - padX - fw;
@@ -23018,30 +23022,42 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
       }
       var order = placed.slice().sort(function (a, b) { return a.z - b.z || a.x - b.x; });
       var names = order.map(function (it) {
-        var size = Math.max(13, Math.min(land ? 26 : 16, box.h * 0.042));
-        var text = it.label, maxW = land ? Math.min(box.w * 0.16, 150) : 64;
+        var size = Math.max(13, Math.min(land ? 26 : 15, box.h * (land ? 0.042 : 0.03)));
+        var text = it.label, maxW = land ? Math.min(box.w * 0.16, 150) : Math.min(102, cw * 0.28);
         c.font = size + 'px GachaBrush, KaiTi, STKaiti, serif';
         while (size > 12 && c.measureText(text).width > maxW) { size -= 1; c.font = size + 'px GachaBrush, KaiTi, STKaiti, serif'; }
         var tw = Math.ceil(c.measureText(text).width), th = Math.ceil(size * 1.2);
         var bd = bodyOf(it);
         var left = bd.x > cw - (bd.x + bd.w);
-        var cands = [];
-        if (!land && it.z === 1) cands.unshift([bd.x + bd.w * 0.5 < cw * 0.48 ? 8 + tw / 2 : cw - 8 - tw / 2, box.y + box.h * (0.28 + (bd.x / cw) * 0.16)]);
-        if (it.z !== 2) cands.push([bd.x + bd.w * (it.ns > 0 ? 0.72 : 0.28), bd.y - th * 0.75]);
-        if (it.z === 2) cands.push(land ? [bd.x + bd.w * (it.ns < 0 ? 0.28 : 0.72), bd.y + bd.h + th * 0.75] : [bd.x + bd.w * 0.5 < cw * 0.5 ? 8 + tw / 2 : cw - 8 - tw / 2, bd.y + bd.h * 0.82]);
-        cands.push([left ? bd.x - tw * 0.55 - 4 : bd.x + bd.w + tw * 0.55 + 4, bd.y + th * 0.15]);
-        cands.push([left ? bd.x + bd.w + tw * 0.55 + 4 : bd.x - tw * 0.55 - 4, bd.y + bd.h * 0.15]);
-        cands.push([bd.x + bd.w * 0.5, bd.y - th * 0.65]);
-        cands.push([bd.x + bd.w * 0.5, bd.y + bd.h + th * 0.7]);
+        var cands = [], home;
+        if (land) {
+          if (it.z !== 2) cands.push([bd.x + bd.w * (it.ns > 0 ? 0.72 : 0.28), bd.y - th * 0.75]);
+          if (it.z === 2) cands.push([bd.x + bd.w * (it.ns < 0 ? 0.28 : 0.72), bd.y + bd.h + th * 0.75]);
+          cands.push([left ? bd.x - tw * 0.55 - 4 : bd.x + bd.w + tw * 0.55 + 4, bd.y + th * 0.15]);
+          cands.push([left ? bd.x + bd.w + tw * 0.55 + 4 : bd.x - tw * 0.55 - 4, bd.y + bd.h * 0.15]);
+          cands.push([bd.x + bd.w * 0.5, bd.y - th * 0.65]);
+          cands.push([bd.x + bd.w * 0.5, bd.y + bd.h + th * 0.7]);
+        } else {
+          var footX = bd.x + bd.w * 0.5, footY = bd.y + bd.h + th * 0.58;
+          var col = footX < cw * 0.36 ? -1 : (footX > cw * 0.64 ? 1 : 0);
+          cands.push([footX, footY]);
+          cands.push([footX + col * 12, footY]);
+          if (col < 0) cands.push([bd.x + Math.min(tw * 0.35, bd.w * 0.2), bd.y + bd.h * 0.84]);
+          else if (col > 0) cands.push([bd.x + bd.w - Math.min(tw * 0.35, bd.w * 0.2), bd.y + bd.h * 0.84]);
+          else cands.push([footX, bd.y + bd.h + th]);
+          cands.push([footX, bd.y - th * 0.7]);
+        }
+        home = cands[0];
         var best = null, bi, x, y, sc;
         for (bi = 0; bi < cands.length; bi++) {
           x = Math.max(8 + tw / 2, Math.min(cw - 8 - tw / 2, cands[bi][0]));
           y = Math.max(8 + th / 2, Math.min(box.y + box.h - 4 - th / 2, cands[bi][1]));
-          sc = onBody(x, y, tw, th) * 24 + onName(x, y, tw, th) * 14 + bi * 20;
+          var drift = Math.abs(x - home[0]) + Math.abs(y - home[1]);
+          sc = onBody(x, y, tw, th) * 24 + onName(x, y, tw, th) * 14 + bi * 20 + (land ? 0 : drift * 0.45);
           if (!best || sc < best.sc) best = { x: x, y: y, sc: sc };
         }
         taken.push({ x: best.x, y: best.y, w: tw, h: th });
-        return { id: it.id, text: text, size: size, x: best.x, y: best.y, w: tw, h: th, unlock: it.unlock, ns: it.ns };
+        return { id: it.id, text: text, size: size, x: best.x, y: best.y, w: tw, h: th, unlock: it.unlock, ns: it.ns, homeX: best.x, homeY: best.y };
       });
       var iter, i, k, a, b, ox, oy, push;
       for (iter = 0; iter < 10; iter++) {
@@ -23056,6 +23072,12 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
               if (a.y <= b.y) { a.y -= push; b.y += push; }
               else { a.y += push; b.y -= push; }
             }
+          }
+          if (!land && a.homeX != null) {
+            if (a.x > a.homeX + 26) a.x = a.homeX + 26;
+            if (a.x < a.homeX - 26) a.x = a.homeX - 26;
+            if (a.y > a.homeY + 22) a.y = a.homeY + 22;
+            if (a.y < a.homeY - 22) a.y = a.homeY - 22;
           }
           a.x = Math.max(8 + a.w / 2, Math.min(cw - 8 - a.w / 2, a.x));
           a.y = Math.max(8 + a.h / 2, Math.min(box.y + box.h - 4 - a.h / 2, a.y));
