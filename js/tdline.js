@@ -2325,6 +2325,131 @@
       heroN: d.hero, towerN: d.tower
     };
   };
+  if (XY.compactHud && XY.compactHud.soldiers && XY.compactHud.layout) {
+    var SOL_IDS = ['arrow', 'cannon', 'frost', 'siege', 'heal'];
+    var SOL_NAMES = ['弓兵', '炮兵', '寒冰', '破阵', '佛光'];
+    function soldierFrame(id) {
+      var en = XY.SINK && XY.SINK.has && XY.SINK.has(id) ? XY.SINK.entry(id) : null;
+      if (!en || !en.d || !en.d.fr || !en.d.fr[0] || !en.img) return null;
+      return { img: en.img, f: en.d.fr[0] };
+    }
+    var SOL_WASH = {};
+    function soldierWash(id) {
+      var fr = soldierFrame(id);
+      if (!fr) return null;
+      var hit = SOL_WASH[id];
+      if (hit && hit.img === fr.img) return hit;
+      var f = fr.f, sw = f[2], sh = f[3], pad = 8, rad = 4;
+      var cnv = document.createElement('canvas');
+      cnv.width = sw + pad * 2;
+      cnv.height = sh + pad * 2;
+      var g = cnv.getContext('2d');
+      g.drawImage(fr.img, f[0], f[1], sw, sh, pad, pad, sw, sh);
+      var img = g.getImageData(0, 0, cnv.width, cnv.height);
+      var d = img.data, ww = cnv.width, hh = cnv.height, n = ww * hh;
+      var alpha = new Uint8Array(n), i, yy, xx, dy, dx, ny, nx, acc, cnt, ink, a, p;
+      for (i = 0; i < n; i++) alpha[i] = d[i * 4 + 3];
+      for (yy = 0; yy < hh; yy++) {
+        for (xx = 0; xx < ww; xx++) {
+          i = yy * ww + xx;
+          if (alpha[i] > 24) continue;
+          acc = 0; cnt = 0;
+          for (dy = -rad; dy <= rad; dy++) {
+            ny = yy + dy;
+            if (ny < 0 || ny >= hh) continue;
+            for (dx = -rad; dx <= rad; dx++) {
+              nx = xx + dx;
+              if (nx < 0 || nx >= ww) continue;
+              acc += alpha[ny * ww + nx];
+              cnt++;
+            }
+          }
+          ink = cnt ? acc / cnt : 0;
+          if (ink < 10) continue;
+          a = Math.min(78, ink * 0.42);
+          p = i * 4;
+          d[p] = 48; d[p + 1] = 38; d[p + 2] = 28; d[p + 3] = a;
+        }
+      }
+      g.putImageData(img, 0, 0);
+      hit = SOL_WASH[id] = { img: fr.img, cnv: cnv, pad: pad, sw: sw, sh: sh };
+      return hit;
+    }
+    function soldierCard(c, id, name, price, x, y, w, h, alpha, on) {
+      var wash = soldierWash(id);
+      var ground = y + h * 0.7;
+      c.save();
+      c.globalAlpha = alpha == null ? 1 : alpha;
+      if (wash) {
+        var boxH = h * 0.66;
+        var sc = Math.min((w * 1.05) / wash.sw, boxH / wash.sh);
+        var dw = wash.cnv.width * sc, dh = wash.cnv.height * sc;
+        c.drawImage(wash.cnv, x + (w - dw) / 2, ground - wash.sh * sc - wash.pad * sc, dw, dh);
+      } else if (XY.ICONINK && XY.ICONINK.sol) {
+        XY.ICONINK.sol(c, id, x + w / 2, y + h * 0.36, Math.min(w, h) * 0.62, 1);
+      }
+      c.globalAlpha = 1;
+      c.textAlign = 'center';
+      c.textBaseline = 'middle';
+      c.font = brushFont(Math.max(11, Math.min(16, w * 0.28)));
+      c.fillStyle = on ? '#9a2e24' : '#241c18';
+      c.fillText(name, x + w / 2, y + h * 0.82);
+      c.font = brushFont(Math.max(10, Math.min(13, w * 0.22)));
+      c.fillStyle = '#9a2e24';
+      c.fillText(price, x + w / 2, y + h * 0.94);
+      c.restore();
+    }
+    XY.compactHud.soldiers = function (c, G, a) {
+      var P = XY.pv2;
+      if (!P || !P.begin || !G) return;
+      var K = P.begin(c, a);
+      var L = XY.compactHud.layout(a);
+      var b = L.troop;
+      c.save();
+      var groundY = b.y + b.h * 0.7;
+      var spanL = b.first - b.w * 0.2;
+      var spanR = b.first + 4 * b.step + b.w * 0.2;
+      c.fillStyle = 'rgba(42,32,24,0.16)';
+      c.beginPath();
+      c.ellipse((spanL + spanR) / 2, groundY, (spanR - spanL) / 2, Math.max(4, b.h * 0.07), 0, 0, Math.PI * 2);
+      c.fill();
+      c.strokeStyle = 'rgba(36,28,22,0.28)';
+      c.lineWidth = 1.2;
+      c.beginPath();
+      c.moveTo(spanL, groundY);
+      c.quadraticCurveTo((spanL + spanR) / 2, groundY - b.h * 0.04, spanR, groundY + 1);
+      c.stroke();
+      if (!L.port) {
+        c.font = brushFont(L.small ? 11 : 13);
+        c.fillStyle = '#4a4034';
+        c.textAlign = 'left';
+        c.textBaseline = 'middle';
+        c.fillText('在场 ' + G.towers.length + ' 名，最多 ' + XY.soldierCap(G) + ' 名', spanR + 8, b.y + 14);
+      }
+      SOL_IDS.forEach(function (id, i) {
+        var d = XY.TOWERS[id];
+        var price = XY.soldierCost(G, id);
+        var own = XY.save.solOwned(id);
+        var on = a.build === id;
+        var x = b.first + i * b.step - b.w / 2;
+        var y = b.y;
+        var w = b.w, h = b.h;
+        soldierCard(c, id, SOL_NAMES[i], own ? (price + '金') : '未有', x, y, w, h, own ? 1 : 0.42, on);
+        if (K.hit) K.hit(x, y, w, h, 'tower', { type: id, label: d.name + ' ' + price + '金币' });
+      });
+      if (XY.ui && XY.ui.hud && XY.kToLog) {
+        XY.ui.hud.push({
+          id: 'tower',
+          x: XY.kToLog(a, b.first - b.w / 2),
+          y: XY.kToLog(a, b.y),
+          w: XY.kToLog(a, b.step * 4 + b.w),
+          h: XY.kToLog(a, b.h)
+        });
+      }
+      c.restore();
+      if (P.end) P.end(c);
+    };
+  }
   if (!XY._formShopScroll) {
     XY._formShopScroll = true;
     var drag = null;
