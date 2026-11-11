@@ -7734,7 +7734,7 @@ XY.TRAITS = {
     G.stats.xforms = (G.stats.xforms || 0) + 1;
     K().banner(G, 'Phyrex 变身！生命、伤害 ×' + C.PH_XF_MUL + '，持续 ' + Math.round(h.xf) + ' 秒', 3);
     G.fx.push({ type: 'xform', x: h.x, y: h.y, t: 0, max: 1.6, follow: h });
-    for (var i = 0; i < 3; i++) K().ring(G, h.x, h.y, 90 + i * 70, '#f0b429', 0.5 + i * 0.15, true);
+    for (var i = 0; i < 3; i++) K().ring(G, h.x, h.y, 90 + i * 70, '#3a3226', 0.5 + i * 0.15, true);
     G.shake = Math.max(G.shake || 0, 12); if (XY.anim) XY.anim.xform(G, h);
     return { ok: true, reason: '' };
   };
@@ -7791,17 +7791,8 @@ XY.TRAITS = {
     if (XY.INKP) XY.INKP.stroke(c, p.x, p.y, p.x - cos(a) * 26, p.y - sin(a) * 26, p.r * 0.7, XY.INKP.INK, 0.4, 2, 0.05);
     coin(c, p.x, p.y, p.r + 2, rt * 10);
   };
-  XY.phDrawHeroUnder = function (c, G, h, x, y, r, rt) {      // 在英雄身体后面：变身光翼
-    if (!(h.xf > 0)) return;
-    c.save(); c.globalAlpha = 0.85;
-    [-1, 1].forEach(function (s) {
-      c.fillStyle = 'rgba(255,226,140,0.75)'; c.strokeStyle = '#e0a415'; c.lineWidth = 2.5;
-      for (var k = 0; k < 3; k++) {
-        var sw = Math.sin(rt * 5 + k) * 0.08; c.beginPath(); c.moveTo(x + s * r * 0.5, y - r * 0.2);
-        c.quadraticCurveTo(x + s * r * (2.2 + k * 0.7), y - r * (1.6 - k * 0.2 + sw * 4), x + s * r * (2.8 + k * 0.5), y - r * (0.2 - k * 0.5)); c.quadraticCurveTo(x + s * r * 1.6, y - r * (0.1 - k * 0.2), x + s * r * 0.5, y + r * 0.2); c.fill(); c.stroke();
-      }
-    });
-    c.restore();
+  XY.phDrawHeroUnder = function (c, G, h, x, y, r, rt) {      // 变身不再另画橙色光翼，只用变身立绘本身
+    return;
   };
   XY.phDrawHeroOver = function (c, G, h, x, y, r, rt) {       // 在英雄身体上面：BTC 环绕
     var n = h.orbitN || 0; if (!n || h.down) return;
@@ -19079,23 +19070,34 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
       var nCard = Math.max(1, cards.length), narrow = port || f.w < 720;
       var cols = narrow ? Math.min(2, nCard) : nCard, rows = Math.ceil(nCard / cols);
       var sealW = narrow ? 52 : 68, gapS = narrow ? 10 : 14;
-      var rowTop = port ? ty0 + 50 : f.y + 6, rowBot = f.y + f.h - (port ? 86 : 56);
+      var rowTop = port ? ty0 + 50 : f.y + 2, rowBot = f.y + f.h - (port ? 86 : 42);
       var availH = Math.max(72, rowBot - rowTop);
-      var availW = Math.max(80, f.w - (narrow ? 12 : sealW + gapS * 2));
-      var cardW = Math.floor((availW - gapS * (cols - 1)) / cols);
-      var cardH = Math.floor(cardW * 4 / 3);
+      var availW = Math.max(80, f.w - (narrow ? 12 : sealW + gapS));
+      var cardH = narrow ? 0 : Math.floor(availH * 0.82);
+      var cardW = narrow ? 0 : Math.floor(cardH * 3 / 4);
+      var step = cardW + gapS;
+      if (!narrow) {
+        var gaps = gapS * Math.max(0, cols - 1);
+        if (cols * cardW + gaps > availW) cardW = Math.floor((availW - gaps) / cols);
+        step = cardW + gapS;
+      } else {
+        cardW = Math.floor((availW - gapS * (cols - 1)) / cols);
+        cardH = Math.floor(cardW * 4 / 3);
+        var stackTry = rows * cardH + gapS * (rows - 1);
+        if (stackTry > availH) { cardH = Math.floor((availH - gapS * (rows - 1)) / rows); cardW = Math.floor(cardH * 3 / 4); }
+        step = cardW + gapS;
+      }
+      var rowW = cardW + (cols - 1) * step;
       var stackH = rows * cardH + gapS * (rows - 1);
-      if (stackH > availH) { cardH = Math.floor((availH - gapS * (rows - 1)) / rows); cardW = Math.floor(cardH * 3 / 4); stackH = rows * cardH + gapS * (rows - 1); }
-      var rowW = cols * cardW + gapS * (cols - 1);
       var x0s = f.x + Math.max(0, ((narrow ? f.w : availW) - rowW) / 2);
-      var y0s = rowTop + Math.max(0, (availH - stackH) / 2);
+      var y0s = rowTop + Math.max(0, (availH - (narrow ? stackH : cardH)) / 2);
       function shelfMask(im, w, h) {
         var key = (im.src || '') + '|' + w + 'x' + h, bag = shop._ink || (shop._ink = {}), cv = bag[key];
         if (cv) return cv;
         var iw = im.naturalWidth || im.width, ih = im.naturalHeight || im.height;
         cv = document.createElement('canvas'); cv.width = Math.max(2, w); cv.height = Math.max(2, h);
-        var g = cv.getContext('2d'), sc = Math.max(w / iw, h / ih), dw = iw * sc, dh = ih * sc;
-        g.drawImage(im, (w - dw) / 2, (h - dh) / 2, dw, dh);
+        var g = cv.getContext('2d'), sc = Math.max(w / iw, h / ih) * 1.08, dw = iw * sc, dh = ih * sc;
+        g.drawImage(im, (w - dw) / 2, (h - dh) / 2 - h * 0.035, dw, dh);
         var mk = document.createElement('canvas'); mk.width = cv.width; mk.height = cv.height;
         var q = mk.getContext('2d'), amp = Math.min(w, h) * 0.028, n = 16, t, seed = (iw * 3 + ih) % 40;
         function jig(k) { return Math.sin(seed + k * 1.7) * amp; }
@@ -19118,7 +19120,7 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
         bag[key] = cv; return cv;
       }
       cards.forEach(function (r, k) {
-        var col = k % cols, row = (k / cols) | 0, x = x0s + col * (cardW + gapS), y = y0s + row * (cardH + gapS), im = r.spId && XY.bgArt ? XY.bgArt(r.spId) : null;
+        var col = k % cols, row = (k / cols) | 0, x = x0s + col * step, y = y0s + row * (cardH + gapS), im = r.spId && XY.bgArt ? XY.bgArt(r.spId) : null;
         if (im && (im.naturalWidth || im.width)) c.drawImage(shelfMask(im, cardW, cardH), x, y, cardW, cardH);
         else {
           c.save(); c.fillStyle = 'rgba(90,70,48,0.08)'; c.fillRect(x, y, cardW, cardH); c.restore();
@@ -19138,7 +19140,9 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
         if (r.btn && !r.btn.off && r.btn.act) K.hit(x, y, cardW, cardH, r.btn.act, r.btn.ex);
       });
       if (reroll && VU0 && VU0.drawSeal) {
-        var rx = f.x + f.w - sealW - (narrow ? 8 : 2), ry = narrow ? (f.y + f.h - sealW - 46) : (y0s + Math.max(0, (cardH - sealW) / 2));
+        var orphan = narrow && (nCard % cols) === 1;
+        var rx = orphan ? (x0s + step + (cardW - sealW) / 2) : (f.x + f.w - sealW - 2);
+        var ry = orphan ? (y0s + (rows - 1) * (cardH + gapS) + (cardH - sealW) / 2) : (y0s + Math.max(0, (cardH - sealW) / 2));
         VU0.drawSeal(c, rx, ry, sealW, sealW, '换', { style: 'solid', sz: Math.round(sealW * 0.46), stack: false, rot: -0.05 });
         if (reroll.btn && !reroll.btn.off) K.hit(rx, ry, sealW, sealW, 'shopBuy', reroll.btn.ex);
       }
