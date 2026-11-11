@@ -2325,6 +2325,92 @@
       heroN: d.hero, towerN: d.tower
     };
   };
+  if (XY.compactHud && XY.compactHud.soldiers && XY.compactHud.layout) {
+    var SOL_IDS = ['arrow', 'cannon', 'frost', 'siege', 'heal'];
+    var SOL_NAMES = ['弓兵', '炮兵', '寒冰', '破阵', '佛光'];
+    function soldierFrame(id) {
+      var en = XY.SINK && XY.SINK.has && XY.SINK.has(id) ? XY.SINK.entry(id) : null;
+      if (!en || !en.d || !en.d.fr || !en.d.fr[0] || !en.img) return null;
+      return { img: en.img, f: en.d.fr[0] };
+    }
+    function soldierCard(c, id, name, price, x, y, w, h, alpha, on) {
+      var fr = soldierFrame(id);
+      c.save();
+      c.beginPath();
+      c.rect(x, y, w, h);
+      c.clip();
+      c.fillStyle = '#f6efe2';
+      c.fillRect(x, y, w, h);
+      c.fillStyle = 'rgba(42,36,28,0.08)';
+      c.beginPath();
+      c.ellipse(x + w * 0.5, y + h * 0.78, w * 0.42, h * 0.12, 0, 0, Math.PI * 2);
+      c.fill();
+      c.globalAlpha = alpha == null ? 1 : alpha;
+      if (fr) {
+        var f = fr.f, sw = f[2], sh = f[3];
+        var boxH = h * 0.72;
+        var sc = Math.min((w * 0.92) / sw, boxH / sh);
+        var dw = sw * sc, dh = sh * sc;
+        c.drawImage(fr.img, f[0], f[1], sw, sh, x + (w - dw) / 2, y + boxH - dh, dw, dh);
+      } else if (XY.ICONINK && XY.ICONINK.sol) {
+        XY.ICONINK.sol(c, id, x + w / 2, y + h * 0.36, Math.min(w, h) * 0.62, 1);
+      }
+      c.globalAlpha = 1;
+      c.textAlign = 'center';
+      c.textBaseline = 'middle';
+      c.font = brushFont(Math.max(11, Math.min(16, w * 0.28)));
+      c.fillStyle = '#241c18';
+      c.fillText(name, x + w / 2, y + h * 0.8);
+      c.font = brushFont(Math.max(10, Math.min(13, w * 0.22)));
+      c.fillStyle = '#9a2e24';
+      c.fillText(price, x + w / 2, y + h * 0.92);
+      c.restore();
+      if (on) {
+        c.save();
+        c.strokeStyle = '#9a2e24';
+        c.lineWidth = 1.6;
+        c.strokeRect(x + 1, y + 1, w - 2, h - 2);
+        c.restore();
+      }
+    }
+    XY.compactHud.soldiers = function (c, G, a) {
+      var P = XY.pv2;
+      if (!P || !P.begin || !G) return;
+      var K = P.begin(c, a);
+      var L = XY.compactHud.layout(a);
+      var b = L.troop;
+      c.save();
+      if (!L.port) {
+        c.font = brushFont(L.small ? 11 : 13);
+        c.fillStyle = '#4a4034';
+        c.textAlign = 'left';
+        c.textBaseline = 'middle';
+        c.fillText('在场 ' + G.towers.length + ' 名，最多 ' + XY.soldierCap(G) + ' 名', b.first + 4 * b.step + b.w / 2 + 8, b.y + 14);
+      }
+      SOL_IDS.forEach(function (id, i) {
+        var d = XY.TOWERS[id];
+        var price = XY.soldierCost(G, id);
+        var own = XY.save.solOwned(id);
+        var on = a.build === id;
+        var x = b.first + i * b.step - b.w / 2;
+        var y = b.y;
+        var w = b.w, h = b.h;
+        soldierCard(c, id, SOL_NAMES[i], own ? (price + '金') : '未有', x, y, w, h, own ? 1 : 0.42, on);
+        if (K.hit) K.hit(x, y, w, h, 'tower', { type: id, label: d.name + ' ' + price + '金币' });
+      });
+      if (XY.ui && XY.ui.hud && XY.kToLog) {
+        XY.ui.hud.push({
+          id: 'tower',
+          x: XY.kToLog(a, b.first - b.w / 2),
+          y: XY.kToLog(a, b.y),
+          w: XY.kToLog(a, b.step * 4 + b.w),
+          h: XY.kToLog(a, b.h)
+        });
+      }
+      c.restore();
+      if (P.end) P.end(c);
+    };
+  }
   if (!XY._formShopScroll) {
     XY._formShopScroll = true;
     var drag = null;
