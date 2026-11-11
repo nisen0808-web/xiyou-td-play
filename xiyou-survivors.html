@@ -18839,11 +18839,11 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
       var leftM = 46, rightM = 28, gapX = 8;
       var botH = (DW - leftM - rightM - gapX) / (AS.wukong + AS.bajie);
       if (botH > 414) botH = 414;
-      // 沙悟净仍是第24轮的高度。白龙马按看得见的身子放大到和他差不多。唐僧比孙悟空更高更宽。
+      // 沙悟净按看得见的身子放大到和白龙马接近。白龙马、唐僧的大小不动。上排的脚收回下排头顶。
       var oldTang = 428 / 452;
       var halfRoom = DW / 2 - 14 - gapX;
       var sideH = Math.min(halfRoom / (1.22 * oldTang / 2 + AS.wujing), halfRoom / (1.22 * oldTang / 2 + AS.horse));
-      var shaH = sideH, hoH = sideH * 1.48;
+      var shaH = sideH * 1.3, hoH = sideH * 1.48;
       var shaW = shaH * AS.wujing, hoW = hoH * AS.horse;
       var shaLeft = leftM, hoRight = DW - 8;
       if (hoW > hoRight - shaLeft - shaW - 24) { hoW = hoRight - shaLeft - shaW - 24; hoH = hoW / AS.horse; }
@@ -18858,11 +18858,7 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
       if (tangH < botH + 48) tangH = botH + 48;
       tangW = tangH * AS.tang;
       function fw(id, h) { return h * AS[id]; }
-      var tangTop0 = foot0 - 0.97 * tangH;
-      var lift = tangTop0 - (titleBottom + 64);
-      if (lift < 0) lift = 0;
-      if (lift > 120) lift = 120;
-      var footTop = foot0 - lift;
+      var footTop = foot0;
       if (footTop - 0.97 * hoH < titleBottom + 8) footTop = titleBottom + 8 + 0.97 * hoH;
       var cxWj = shaLeft + shaW / 2;
       var cxHo = hoLeft + hoW / 2;
