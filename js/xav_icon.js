@@ -164,7 +164,7 @@
     var orig = H.face;
     function face(c, h, x, y, r, rt) {
       var id = h && h.id;
-      if (isSpecial(id) && r <= 40) {
+      if (isSpecial(id) && r <= 64) {
         if (hiddenLocked(id)) return 'x';
         var side = r * 2.2;
         if (!draw(c, id, x - side / 2, y - side / 2, side, side)) {

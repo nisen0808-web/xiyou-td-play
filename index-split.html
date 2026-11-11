@@ -9223,6 +9223,8 @@ XY.TRAITS = {
     }
     var rr = r * (h.xf > 0 ? 1.25 : 1);
     if (h.id === 'phyrex') { if (!(G.td && G.td.quiet > G.td.clock)) XY.phDrawHeroUnder(c, G, h, x, y + bob, r, rt); XY.R4.xfDraw = h.xf > 0; }
+    if (h._lx != null && Math.abs(h.x - h._lx) + Math.abs(h.y - h._ly) > 0.35 && !(XY.cloud && XY.cloud.on && XY.cloud.on(G, h))) h.moving = true;
+    h._lx = h.x; h._ly = h.y;
     var posed = !!(XY.MINK && XY.MINK.poseHero && XY.MINK.poseHero(c, h, rt, x, y + bob + ry, rr));
     var useCb = !posed && !(h.id === 'horse' && d.form === 'human') && XY.chibi && XY.chibi.ready(h);
     var tall = useCb || posed, tr = tall ? rr * 2.85 - ry : r;
@@ -13346,7 +13348,6 @@ XY.chibi.portrait = function (c, id, x, foot, h, alpha) {
     }
     var cf = X_IDS.indexOf(h.id) >= 0 && XY.VD && XY.VD.activeFrame && XY.VD.activeFrame();
     if (cf) XY.VD.drawFrame(c, x, y, r + 1, cf);
-    if (h.id === 'phyrex' && h.xf > 0) { c.lineWidth = 2.5; c.strokeStyle = 'rgba(230,170,40,' + (0.6 + 0.4 * Math.sin(rt * 6)).toFixed(2) + ')'; c.beginPath(); c.arc(x, y, r + 5, 0, PI2); c.stroke(); }
     c.restore();
     S.stats[kind]++; return kind;
   }
@@ -18485,11 +18486,14 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
     var css = (st.k || 1) * ((st.app && st.app.zoom) || 1);
     var bottom = st.DH - 6, topMin = (btnBottom || 0) + 12;
     var avail = Math.max(48, bottom - topMin);
-    var ch = Math.min(Math.max(120, (18 / css) / 0.24), avail), top = bottom - ch;
+    var large = css >= 0.8 && st.DH / Math.max(1, st.DW) >= 0.42;
+    var chWant = large ? Math.round(st.DH * 0.30) : Math.max(120, (18 / css) / 0.24);
+    var ch = Math.min(chWant, avail), top = bottom - ch;
     if (top < topMin) { top = topMin; ch = Math.max(48, bottom - top); }
     var cw = (st.DW - margin * 2 - gap * (n - 1)) / n;
     var labels = ids.map(cardLabel), c = st.c;
-    var sz = XY.xAvIcon && XY.xAvIcon.fitSize ? XY.xAvIcon.fitSize(c, labels, Math.max(28, cw - 4), Math.min(ch * 0.26, 22 / css)) : 16;
+    var prefer = large ? ch * 0.2 : Math.min(ch * 0.26, 22 / Math.max(0.4, css));
+    var sz = XY.xAvIcon && XY.xAvIcon.fitSize ? XY.xAvIcon.fitSize(c, labels, Math.max(28, cw - 4), prefer) : 16;
     var total = n * cw + (n - 1) * gap, x = Math.max(6, (st.DW - total) / 2);
     var shortRow = st.DH / Math.max(1, st.DW) < 0.42 || css < 0.65;
     if (shortRow) paperBand(c, 0, Math.max(0, top - 10), st.DW, st.DH - Math.max(0, top - 10) + 4);
@@ -18502,11 +18506,11 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
     if (m !== 'P') {
       var L = m === 'L', ox0 = cx - 640, fx = function (x) { return ox0 + x; };
       var cssK = (st.k || 1) * ((st.app && st.app.zoom) || 1);
-      var bw = L ? 400 : 340, bh = L ? 58 : 52, by = cssK < 0.6 ? (L ? 390 : 420) : (L ? 468 : 496), ph = L ? 40 : 28, mg = L ? 24 : 22, pmax = DW / 2 - 150 - mg;
+      var bw = L ? 400 : 340, bh = L ? 58 : 52, by = cssK < 0.6 ? (L ? 360 : 400) : (cssK >= 0.8 ? (L ? 378 : 408) : (L ? 468 : 496)), ph = L ? 40 : 28, mg = L ? 24 : 22, pmax = DW / 2 - 150 - mg;
       st.lim = { x1: 0, x2: DW, y1: L ? 110 : 60, y2: by - 4 };
       /* 画序：沙僧 / 白龙马在后排，唐僧居中，孙悟空 / 猪八戒站在唐僧两侧、盖在他前面（v0.8.7b：之前唐僧最后画，把悟空 / 八戒 / 沙僧的脸遮住了） */
-      var short = cssK < 0.7, fk = short ? 0.62 : 1, foot = short ? by - 8 : 0;
-      function fy(y) { return short ? foot - (648 - y) * fk : y; }
+      var short = cssK < 0.7, big = !short && cssK >= 0.8, fk = short ? 0.62 : (big ? 0.7 : 1), foot = short ? by - 8 : (big ? by + bh - 4 : 0);
+      function fy(y) { return (short || big) ? foot - (648 - y) * fk : y; }
       drawFig(st, 'wujing', fx(238), fy(626), 400 * fk); drawFig(st, 'horse', fx(1000), fy(626), 400 * fk);
       drawFig(st, 'tang', fx(640), fy(648), 540 * fk);
       drawFig(st, 'wukong', fx(462), fy(640), 460 * fk); drawFig(st, 'bajie', fx(846), fy(640), 460 * fk);
