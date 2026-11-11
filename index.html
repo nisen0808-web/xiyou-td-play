@@ -19114,7 +19114,12 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
   function shop(c, G, app) {
     var f = P.frame(c, app, '灵石商店'), W = K.W, port = K.port, st = XY.shop.stock(), tab = app.shopTab || 'shelf', i;
     var TABS = [['shelf', '货架'], ['fb', '法宝解锁'], ['sol', '天兵卡']], tx = f.x, ty0 = port ? f.y : f.y - 52, tx0 = port ? f.x : 236, tw = port ? (f.w - 16) / 3 : Math.max(64, Math.min(104, (f.chipX - tx0 - 24) / 3));
-    TABS.forEach(function (tb, k) { K.btn(tx0 + k * (tw + 8), ty0, tw, 44, tb[1], 'shopTab', { k: tb[0] }, { on: tab === tb[0], size: 16 }); });
+    TABS.forEach(function (tb, k) {
+      var bx = tx0 + k * (tw + 8), on = tab === tb[0], VU0 = XY.villainUI;
+      if (VU0 && VU0.drawBrush) VU0.drawBrush(c, bx, ty0, tw, 40, tb[1], { sz: 16, strong: on, vh: 30, rgb: on ? '168,50,36' : '58,50,38' });
+      else K.btn(bx, ty0, tw, 40, tb[1], 'shopTab', { k: tb[0] }, { on: on, size: 16 });
+      K.hit(bx, ty0, tw, 40, 'shopTab', { k: tb[0] });
+    });
     var items = [];                                                            // 统一成行：{icon(fn), title, lines[], btn:{label,act,ex,primary,off}, sold}
     var can = function (p) { return S.data.lingshi >= p; };
     if (tab === 'shelf') {
@@ -19135,12 +19140,84 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
         items.push(r);
       });
     }
-    // 整齐的水墨卡格：每张一样大，购买钮钉在卡底，说明留在格子下面。
+    var note = tab === 'shelf' ? '角色卡和法宝用灵石买。抽一张法宝也会出现在下面。' : (tab === 'fb' ? '买下就永久解锁，开局可以带。洞主专属的不在这里卖。' : '天兵卡：1 张是 Lv1，3 张 Lv2，6 张 Lv3。每次买 1 张。');
+    if (tab === 'shelf') {
+      var VU0 = XY.villainUI;
+      var cards = [], reroll = null, ri;
+      for (ri = 0; ri < items.length; ri++) { if (items[ri].kind === 'reroll') reroll = items[ri]; else cards.push(items[ri]); }
+      var nCard = Math.max(1, cards.length), narrow = port || f.w < 720;
+      var cols = narrow ? Math.min(2, nCard) : nCard, rows = Math.ceil(nCard / cols);
+      var sealW = narrow ? 52 : 68, gapS = narrow ? 10 : 14;
+      var rowTop = port ? ty0 + 50 : f.y + 6, rowBot = f.y + f.h - (port ? 86 : 56);
+      var availH = Math.max(72, rowBot - rowTop);
+      var availW = Math.max(80, f.w - (narrow ? 12 : sealW + gapS * 2));
+      var cardW = Math.floor((availW - gapS * (cols - 1)) / cols);
+      var cardH = Math.floor(cardW * 4 / 3);
+      var stackH = rows * cardH + gapS * (rows - 1);
+      if (stackH > availH) { cardH = Math.floor((availH - gapS * (rows - 1)) / rows); cardW = Math.floor(cardH * 3 / 4); stackH = rows * cardH + gapS * (rows - 1); }
+      var rowW = cols * cardW + gapS * (cols - 1);
+      var x0s = f.x + Math.max(0, ((narrow ? f.w : availW) - rowW) / 2);
+      var y0s = rowTop + Math.max(0, (availH - stackH) / 2);
+      function shelfMask(im, w, h) {
+        var key = (im.src || '') + '|' + w + 'x' + h, bag = shop._ink || (shop._ink = {}), cv = bag[key];
+        if (cv) return cv;
+        var iw = im.naturalWidth || im.width, ih = im.naturalHeight || im.height;
+        cv = document.createElement('canvas'); cv.width = Math.max(2, w); cv.height = Math.max(2, h);
+        var g = cv.getContext('2d'), sc = Math.max(w / iw, h / ih), dw = iw * sc, dh = ih * sc;
+        g.drawImage(im, (w - dw) / 2, (h - dh) / 2, dw, dh);
+        var mk = document.createElement('canvas'); mk.width = cv.width; mk.height = cv.height;
+        var q = mk.getContext('2d'), amp = Math.min(w, h) * 0.028, n = 16, t, seed = (iw * 3 + ih) % 40;
+        function jig(k) { return Math.sin(seed + k * 1.7) * amp; }
+        q.beginPath();
+        q.moveTo(amp + jig(0), amp);
+        for (t = 1; t <= n; t++) q.lineTo(w * t / n + jig(t), amp * 0.4 + jig(t + 2));
+        for (t = 1; t <= n; t++) q.lineTo(w - amp + jig(t + 8), h * t / n + jig(t + 4));
+        for (t = n; t >= 0; t--) q.lineTo(w * t / n + jig(t + 12), h - amp * 0.5 + jig(t + 6));
+        for (t = n; t >= 1; t--) q.lineTo(amp * 0.4 + jig(t + 16), h * t / n);
+        q.closePath(); q.fillStyle = '#000'; q.fill();
+        q.globalCompositeOperation = 'destination-in';
+        var edge = Math.max(6, Math.min(w, h) * 0.045);
+        var gx = q.createLinearGradient(0, 0, w, 0);
+        gx.addColorStop(0, 'rgba(0,0,0,0)'); gx.addColorStop(edge / w, '#000'); gx.addColorStop(1 - edge / w, '#000'); gx.addColorStop(1, 'rgba(0,0,0,0)');
+        q.fillStyle = gx; q.fillRect(0, 0, w, h);
+        var gy = q.createLinearGradient(0, 0, 0, h);
+        gy.addColorStop(0, 'rgba(0,0,0,0)'); gy.addColorStop(edge / h, '#000'); gy.addColorStop(0.92, '#000'); gy.addColorStop(1, 'rgba(0,0,0,0)');
+        q.fillStyle = gy; q.fillRect(0, 0, w, h);
+        g.globalCompositeOperation = 'destination-in'; g.drawImage(mk, 0, 0);
+        bag[key] = cv; return cv;
+      }
+      cards.forEach(function (r, k) {
+        var col = k % cols, row = (k / cols) | 0, x = x0s + col * (cardW + gapS), y = y0s + row * (cardH + gapS), im = r.spId && XY.bgArt ? XY.bgArt(r.spId) : null;
+        if (im && (im.naturalWidth || im.width)) c.drawImage(shelfMask(im, cardW, cardH), x, y, cardW, cardH);
+        else {
+          c.save(); c.fillStyle = 'rgba(90,70,48,0.08)'; c.fillRect(x, y, cardW, cardH); c.restore();
+          c.save(); c.font = Math.min(42, cardW * 0.4) + 'px "Ma Shan Zheng","KaiTi",serif'; c.fillStyle = '#24180f'; c.textAlign = 'center'; c.fillText(String(r.title || '宝').replace(/^.*· /, '').charAt(0), x + cardW / 2, y + cardH * 0.42); c.restore();
+        }
+        var nm = String(r.title || '').replace(/^天兵卡 · |^角色卡 · |^法宝 · |^灵物 · /, '');
+        c.save();
+        c.font = Math.max(14, Math.min(26, cardW * 0.16)) + 'px "Ma Shan Zheng","KaiTi",serif';
+        c.textAlign = 'center'; c.textBaseline = 'middle'; c.lineJoin = 'round';
+        c.lineWidth = 4; c.strokeStyle = 'rgba(246,239,226,0.92)';
+        c.strokeText(nm, x + cardW / 2, y + cardH * 0.9);
+        c.fillStyle = '#24180f'; c.fillText(nm, x + cardW / 2, y + cardH * 0.9);
+        c.restore();
+        var seal = r.full ? '满' : (r.sold ? '售' : String(r.price == null ? '' : r.price));
+        var ss = Math.max(28, Math.min(40, cardW * 0.28));
+        if (VU0 && VU0.drawSeal) VU0.drawSeal(c, x + cardW - ss * 0.72, y + 4, ss, ss, seal, { style: 'solid', col: '#b8322a', sz: Math.round(ss * 0.42), stack: false, rot: -0.05 });
+        if (r.btn && !r.btn.off && r.btn.act) K.hit(x, y, cardW, cardH, r.btn.act, r.btn.ex);
+      });
+      if (reroll && VU0 && VU0.drawSeal) {
+        var rx = f.x + f.w - sealW - (narrow ? 8 : 2), ry = narrow ? (f.y + f.h - sealW - 46) : (y0s + Math.max(0, (cardH - sealW) / 2));
+        VU0.drawSeal(c, rx, ry, sealW, sealW, '换', { style: 'solid', sz: Math.round(sealW * 0.46), stack: false, rot: -0.05 });
+        if (reroll.btn && !reroll.btn.off) K.hit(rx, ry, sealW, sealW, 'shopBuy', reroll.btn.ex);
+      }
+      if (VU0 && VU0.drawBrush) VU0.drawBrush(c, f.x, f.y + f.h - 42, Math.max(80, f.w - sealW - 24), 34, note, { sz: 14, vh: 26 });
+      P.end(c);
+    } else {
     var cols = tab === 'sol' ? (port ? 2 : Math.min(5, Math.max(1, items.length))) : (tab === 'fb' ? (port ? 2 : 4) : (port ? 2 : 3));
     var rowsN = Math.max(1, Math.ceil(Math.max(1, Math.min(items.length || 1, (tab === 'sol' ? items.length : (port ? cols * 3 : cols * 2)))) / cols));
     if (!items.length) rowsN = 1;
     var per = cols * rowsN;
-    var note = tab === 'shelf' ? '角色卡和法宝用灵石买。抽一张法宝也会出现在下面。' : (tab === 'fb' ? '买下就永久解锁，开局可以带。洞主专属的不在这里卖。' : '天兵卡：1 张是 Lv1，3 张 Lv2，6 张 Lv3。每次买 1 张。');
     var needPager = items.length > per;
     var showBuy = tab === 'shelf';
     var ctrlY = f.y + f.h - 8 - 44;
@@ -19246,6 +19323,7 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
       if (!off) K.hit(sx, ctrlY, 146, 48, 'buyCard');
     }
     K.msg(f.x + f.w / 2, noteY - 16, 'center');
+    }
     P.end(c);
   }
 
