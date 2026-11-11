@@ -52,9 +52,20 @@
     var hero = G.heroes[G.ctrl] || G.heroes[1];
     var hid = hero && ((hero.def && hero.def.id) || hero.id);
     var colW = port ? W - 28 : Math.min(520, W * 0.42);
-    var figH = port ? Math.min(H * 0.46, 420) : H - 24;
-    var figX = port ? W / 2 : W * 0.28;
-    var foot = port ? 36 + figH : H - 12;
+    var autoN = XY.auto && XY.auto.LABEL ? 1 : 0;
+    var ctrlH = 100 + 44 + 44 + 44 + 52 + autoN * 52 + 36;
+    var figH, figX, foot;
+    if (port) {
+      var panelTop = Math.max(48, H - 12 - ctrlH);
+      figH = Math.max(64, Math.min(H * 0.42, panelTop - 28));
+      figX = W / 2;
+      foot = 16 + figH;
+      if (foot + 8 > panelTop) foot = panelTop - 8;
+    } else {
+      figH = H - 24;
+      figX = W * 0.28;
+      foot = H - 12;
+    }
     var im = pauseArt(hid);
     c.save();
     c.filter = 'none';
@@ -65,7 +76,7 @@
     }
     c.restore();
     var x = port ? 14 : W - colW - 28;
-    var y0 = port ? foot + 8 : 28;
+    var y0 = port ? Math.max(foot + 8, H - 12 - ctrlH) : 28;
     var ph = port ? H - y0 - 16 : H - 48;
     var VU = XY.villainUI;
     if (VU && VU.artCard) VU.artCard(c, x, y0, colW, ph, { seed: 9, paper: '#f6edd8', edge: '#2a2118' });
@@ -81,14 +92,15 @@
     brush(c, (XY.lvPre ? XY.lvPre(G) : '') + ((G.lv && G.lv.name) || ''), x + pad, y, 16, '#5c4a38', 'left');
     y += 26;
     brush(c, '已坚持 ' + XY.fmtTime(G.t) + '    Lv' + G.level + '  击杀 ' + XY.fmtNum(G.kills), x + pad, y, 16, '#24180f', 'left');
+    var short = port && H < 720;
     var rows = [
-      { label: '继续', act: 'resume', solid: true, h: 56 },
-      { label: '重新开始', act: 'restart', h: 48 },
-      { label: '回到首页', act: 'home', h: 48 }
+      { label: '继续', act: 'resume', solid: true, h: short ? 44 : 56 },
+      { label: '重新开始', act: 'restart', h: short ? 44 : 48 },
+      { label: '回到首页', act: 'home', h: short ? 44 : 48 }
     ];
-    var rest = y0 + ph - 24 - y;
-    var used = 56 + 48 + 48;
-    var gap = Math.max(8, (rest - used - 120) / 5);
+    var rest = y0 + ph - 16 - y;
+    var used = rows[0].h + rows[1].h + rows[2].h + 52 + (XY.auto && XY.auto.LABEL ? 52 : 0) + 24;
+    var gap = Math.max(4, Math.min(14, (rest - used) / 6));
     y += gap;
     rows.forEach(function (r) {
       sealBtn(c, K, x + pad, y, inner, r.h, r.label, r.act, null, r.solid);

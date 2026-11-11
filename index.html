@@ -22995,11 +22995,19 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
       VU.washE(c, cw / 2, linkY + 22, cw * 0.6, 34, '250,244,228', 0.8);
       lb.forEach(function (b, k) { weak(mg + k * (lw3 + 6), linkY, lw3, b[0], b[1]); });
       tl = tiles(a, true); nt = tl.length;
-      cols = Math.min(nt, Math.max(3, Math.floor((cw - 2 * mg) / 86)));
-      rows = Math.ceil(nt / cols); cellW = (cw - 2 * mg) / cols;
-      cellH = Math.round(Math.min(118, Math.max(86, cellW / 0.72)));
+      var reserve = 56 + 96 + 64 + 44 + 10 + 58 + 16;
+      var maxStrip = Math.max(108, linkY - 8 - reserve);
+      cols = Math.min(nt, Math.max(3, Math.floor((cw - 2 * mg) / 78)));
+      rows = Math.ceil(nt / cols);
+      var rg = 4, labHp = 36;
+      cellH = Math.floor((maxStrip - labHp - Math.max(0, rows - 1) * rg) / Math.max(1, rows));
+      if (cellH < 64 && cols < nt) { cols = Math.min(nt, cols + 2); rows = Math.ceil(nt / cols); cellH = Math.floor((maxStrip - labHp - Math.max(0, rows - 1) * rg) / rows); }
+      cellW = (cw - 2 * mg) / cols;
+      cellH = Math.max(48, Math.min(118, cellH, Math.floor(cellW / 0.62)));
+      var stripH = labHp + rows * cellH + (rows - 1) * rg;
+      if (stripH > maxStrip) { cellH = Math.max(44, Math.floor((maxStrip - labHp - (rows - 1) * rg) / rows)); stripH = labHp + rows * cellH + (rows - 1) * rg; }
       d = cellH; nameH = 0;
-      var rg = 4, labHp = 36, stripH = labHp + rows * cellH + (rows - 1) * rg, stripYp = linkY - 8 - stripH;
+      var stripYp = linkY - 8 - stripH;
       VU.washE(c, cw / 2, stripYp + stripH / 2, cw * 0.7, stripH * 0.7, '250,244,228', 0.8);
       taper(c, 24, stripYp - 2, cw - 24, 2.2, 0.32);
       kt(c, '携带常驻', mg + 2, stripYp + 10, 13, RED, 'left', 80);
@@ -23009,7 +23017,7 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
       geo.tiles = nt; geo.strip = { y: stripYp, h: stripH };
       gh = Math.round(Math.max(54, Math.min(84, 62 * s))); gw = Math.min(cw - 2 * mg - 20, Math.round(330 * s)); gx = (cw - gw) / 2; gy = stripYp - 14 - gh;
       var sy3 = gy - 8 - 44;
-      cr = cardRow(c, st, items, cur0, mg, top + 2, cw - 2 * mg, Math.round(Math.min(ch * 0.2, 190 * s)), s, geo);
+      cr = cardRow(c, st, items, cur0, mg, top + 2, cw - 2 * mg, Math.max(72, Math.min(Math.round(Math.min(ch * 0.2, 190 * s)), sy3 - top - 70)), s, geo);
       var dy2 = cr.bottom + 12, dh2 = Math.round(Math.max(64, Math.min(ch * 0.13, 120 * s)));
       dh2 = Math.min(dh2, sy3 - 8 - dy2);
       var free = sy3 - (dy2 + dh2);
