@@ -780,7 +780,7 @@
   function avatarURL(id) {
     if (id === 'wukong') return '../assets/art/menu-v5/fig_wukong.webp';
     if (id === 'niumo') return '../assets/wild/niumo-idle.webp';
-    return '../assets/art/x-avatars/' + id + '.webp';
+    return '../assets/art/bg/' + id + '.webp';
   }
   function avaEl(id, o) {
     o = o || {}; var d = BF.SP[id], el = document.createElement('div'); el.className = 'ava' + (o.on ? ' on' : '') + (o.off ? ' off' : '') + (o.sel ? ' sel' : ''); el.dataset.id = id;

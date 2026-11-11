@@ -1243,7 +1243,7 @@ XY.TRAITS = {
 /* ============================================================
  * specials.js —— 常驻特殊角色（v0.4）：名册 / 头像 / 卡牌升级 / 存档 / 商店
  *
-  * 名册 12 位（v0.5 起 qinbafrank、TraderS 暂时隐藏，v0.6 起 Cato 也隐藏，见 XY.HIDDEN_SPECIALS，可玩 9 位）（Phyrex、Sisi、币圈老司机、DeFi 小矿工、Cato、腾EO、园长、羽溪、钓鱼佬、马丁、qinbafrank、TraderS；不含 CZ、何一）；第一个获得的永远是 Phyrex，其余 11 位随机。
+  * 名册 12 位（v0.5 起 qinbafrank、TraderS 暂时隐藏，v0.6 起 Cato 也隐藏，见 XY.HIDDEN_SPECIALS，可玩 9 位）（Phyrex、Sisi、币圈老司机、DeFi小矿工、Cato、腾EO、园长、羽溪、钓鱼佬、马丁、qinbafrank、TraderS；不含 CZ、何一）；第一个获得的永远是 Phyrex，其余 11 位随机。
  * 这里的数值 / 技能只是“占位原型”（arch 决定玩法：dash 冲刺混合 / heal 治疗法术 / mark 点杀 / tank 坦克 / storm 闪电），
  * 每个人的真实特色以后由 docs/specials-roster-draft.json 的调研结果填进下面的数据，逻辑不用改。
  * 头像：可选图片（assets/specials/<id>.jpg）。dist 里由 build.sh 内联成 data URI（window.XY_AVATAR_DATA）；图片缺失就回退成程序画的头像。
@@ -1255,7 +1255,7 @@ XY.TRAITS = {
   XY.SP_LV_AT = [2, 5, 10, 20, 40];            // 收集到这么多张卡 = Lv1 ~ Lv5
   XY.SP_PRICE = 160;                            // 商店里一张角色卡的灵石价
   // 12 位常驻角色的“人设 / 技能名 / 特性名与 CD / 3 条技能树分支名 / 3 个辅助技能”取自 docs/specials-roster-draft.json（调研草稿，待用户审阅措辞）。
-  // 机制按 5 种玩法原型（arch: dash 冲刺环 / heal 治疗 / mark 点杀 / tank 坦克 / storm 闪电链）实现，每种原型 2~3 位角色（storm: Phyrex/Cato/qinbafrank，tank: 腾EO/DeFi 小矿工/TraderS，其余各两位），靠 元素 / 物法伤害 / 物防法防 / 血量 / 速度 / 技能名 / 特性 CD 区分；
+  // 机制按 5 种玩法原型（arch: dash 冲刺环 / heal 治疗 / mark 点杀 / tank 坦克 / storm 闪电链）实现，每种原型 2~3 位角色（storm: Phyrex/Cato/qinbafrank，tank: 腾EO/DeFi小矿工/TraderS，其余各两位），靠 元素 / 物法伤害 / 物防法防 / 血量 / 速度 / 技能名 / 特性 CD 区分；
   // design.main / design.trait 是调研稿里的“设计意图原文”，只在详情提示里当“设定”展示；wdesc / udesc / trait.desc 才是实装效果。稿里的“塔”一律按我们的 护法天兵 / 友军理解。
   XY.SPECIALS = [
    {
@@ -1438,7 +1438,7 @@ XY.TRAITS = {
    },
    {
     "id": "kuanggong",
-    "name": "DeFi 小矿工",
+    "name": "DeFi小矿工",
     "handle": "@DeFi8362",
     "arch": "tank",
     "elem": "earth",
@@ -8442,12 +8442,12 @@ XY.TRAITS = {
   XY.tutLayout = function (c, G, app, ctx) {
     var tt = G.tut; if (!tt) return;
     var W = app.lw, H = app.lh, list = steps(tt), st = list[tt.i] || list[0];
-    var z=app.zoom||1, s=XY.uiScale?XY.uiScale(W*z,H*z):1, u=s/z, cw=Math.min(W-24*u,620*u),tsz=12*u,lines=wrapLines(c,st.text(G,app,tt),tsz,cw-40*u);
-    var ch = (65 + lines.length*18 + 61)*u;
-    var pos = typeof st.pos === 'function' ? st.pos(G, app) : (st.pos || 'top');
-    var y = pos === 'top' ? ctx.denBottom + 6 : Math.max(ctx.denBottom + 6, Math.round(H * 0.42 - ch / 2));
-    tt.lay = { x: Math.round(W / 2 - cw / 2), y: y, w: cw, h: ch, lines: lines, tsz: tsz, pos: pos };
-    ctx.tutBottom = pos === 'top' ? y + ch : ctx.denBottom + 6;
+    var z=app.zoom||1, s=XY.uiScale?XY.uiScale(W*z,H*z):1, u=s/z, cw=Math.min(W-16*u,280*u),tsz=12*u,lines=wrapLines(c,st.text(G,app,tt),tsz,cw-28*u);
+    var ch = (50 + lines.length*16 + 54)*u;
+    var pos = 'corner';
+    var y = Math.round(8 * u);
+    tt.lay = { x: Math.round(8 * u), y: y, w: cw, h: ch, lines: lines, tsz: tsz, pos: pos };
+    ctx.tutBottom = ctx.denBottom + 6;
   };
   function holePath(c, r, pad) {
     var x = r.x - pad, y = r.y - pad, w = r.w + pad * 2, h = r.h + pad * 2, rad = 12;
@@ -8472,7 +8472,7 @@ XY.TRAITS = {
       else { var below = b.y + b.h + gap; if (below + L.h <= H - 8) L.y = below; }
     });
     L.lines = wrapLines(c, st.text(G, app, tt), L.tsz, Math.max(80, L.w - 40 * uFit));
-    L.h = (65 + L.lines.length * 18 + 61) * uFit;
+    L.h = (50 + L.lines.length * 16 + 54) * uFit;
     if (tr && ov(L.y)) { var cands2 = [tr.y + tr.h + pad + 18, tr.y - pad - 18 - L.h, H - L.h - 8, 8]; for (var q2 = 0; q2 < cands2.length; q2++) if (cands2[q2] >= 8 && cands2[q2] + L.h <= H - 8 && !ov(cands2[q2])) { L.y = cands2[q2]; break; } }
     // 变暗，只留亮着的那一块
     c.save();
@@ -17122,10 +17122,17 @@ XY.XC_TPL={"scholar":{"w":310,"h":520,"foot":[182,516],"head":[182,45,32],"kb":5
     if (XY.villainUI && XY.villainUI.artCard) XY.villainUI.artCard(c, W / 2 - 260, H / 2 - 150, 520, 300, { seed: 4, paper: '#f6edd8', edge: '#2a2118' });
     else panel(c, W / 2 - 250, H / 2 - 130, 500, 260, 18, 'rgba(255,255,255,0.98)', '#c0392b');
     var jr = app.confirm && app.confirm.kind === 'journey';
-    txt(c, jr ? '确定要重新开始取经吗？' : '确定要重置存档吗？', W / 2, H / 2 - 92, 28, '#b8300f', 'center', true);
+    var title = jr ? '确定要重新开始取经吗？' : '确定要重置存档吗？';
+    c.save(); c.font = '34px "Ma Shan Zheng","KaiTi",serif'; c.fillStyle = '#3a2416'; c.textAlign = 'center'; c.textBaseline = 'middle';
+    if (c.measureText(title).width > 460) c.font = Math.max(22, Math.floor(34 * 460 / c.measureText(title).width)) + 'px "Ma Shan Zheng","KaiTi",serif';
+    c.fillText(title, W / 2, H / 2 - 92); c.restore();
     lines(c, jr ? ['全队等级、技能和特殊角色的进度会清零。', '这一路带上的法宝也会清掉。', '关卡回到第 1 关。', '法宝收藏、灵石、角色卡和图鉴都保留。'] : ['收藏的法宝、卡组、图鉴、解锁和皮肤都会清空。', '回到新手状态，而且无法恢复。'], W / 2 - 210, H / 2 - 48, 16, 22, T.ink, 420);
-    sbtn(c, app, W / 2 - 215, H / 2 + 50, 200, 52, '取消（Esc）', 'confirmNo', null, { size: 18, primary: true });
-    sbtn(c, app, W / 2 + 15, H / 2 + 50, 200, 52, (app.confirm && app.confirm.kind === 'journey') ? '确定重来' : '确定清空', 'confirmYes', null, { size: 18, danger: true });
+    var VU = XY.villainUI, x1 = W / 2 - 215, x2 = W / 2 + 15, by = H / 2 + 50, bw = 200, bh = 52;
+    var yes = (app.confirm && app.confirm.kind === 'journey') ? '确定重来' : '确定清空';
+    if (VU && VU.drawBrush) VU.drawBrush(c, x1, by, bw, bh, '取消', { sz: 18, vh: 34, strong: true });
+    if (VU && VU.drawSeal) VU.drawSeal(c, x2, by, bw, bh, yes, { style: 'solid', sz: 18, stack: false, rot: -0.03 });
+    ui.hits.push({ x: x1, y: by, w: bw, h: bh, act: 'confirmNo' });
+    ui.hits.push({ x: x2, y: by, w: bw, h: bh, act: 'confirmYes' });
   }
 
   XY.previewDef = previewDef;
@@ -18371,6 +18378,14 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
   function nameImg(id, k) { var n = D && D.name[id]; return n && n[k] ? { img: im(n[k].src), w: n[k].w, h: n[k].h } : null; }
   /* 毛笔名：orient 'v' 竖排 / 'h' 横排；hgt 为目标高度；返回宽度 */
   function drawName(st, id, x, y, hgt, orient, align, gl) {
+    if (id === 'kuanggong') {
+      var label = (XY.SP_BY && XY.SP_BY.kuanggong && XY.SP_BY.kuanggong.name) || 'DeFi小矿工';
+      var c = st.c; c.save();
+      c.font = Math.max(11, Math.round(hgt * 0.72)) + 'px "Ma Shan Zheng","KaiTi",serif';
+      c.fillStyle = '#24180f'; c.textAlign = align || 'center'; c.textBaseline = 'middle';
+      c.fillText(label, x, y + hgt * 0.45); c.restore();
+      return c.measureText(label).width;
+    }
     var n = nameImg(id, orient); if (!n || !n.img) return 0; if (XY.stage) XY.stage.stats.names++; var s = hgt / n.h, w = n.w * s, c = st.c, x0 = align === 'center' ? x - w / 2 : align === 'right' ? x - w : x;
     c.save(); glow(c, gl || 'rgba(250,244,228,0.95)', 7); c.drawImage(n.img, x0, y, w, hgt); noGlow(c); c.globalAlpha = 0.6; c.drawImage(n.img, x0, y, w, hgt); c.restore(); return w;
   }
@@ -18449,12 +18464,36 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
   }
 
   /* ================== V2 电影海报（默认）：顶角小按钮、居中标题、五人正面对称、底部 credits 条；D 桌面 / L 手机横屏 / P 手机竖屏 ================== */
+  function standCard(st, id, x, y, w, h) {
+    var c = st.c, im = (XY.bgArt && XY.bgArt(id)) || origAv(id);
+    function edge() { c.beginPath(); c.moveTo(x + 2, y + 1); c.lineTo(x + w - 2, y); c.lineTo(x + w - 1, y + h - 2); c.lineTo(x + 1, y + h); c.closePath(); }
+    c.save(); edge(); c.fillStyle = '#f3e7cf'; c.fill();
+    c.save(); c.clip();
+    if (im && (im.naturalWidth || im.width)) {
+      var iw = im.naturalWidth || im.width, ih = im.naturalHeight || im.height;
+      var sc = Math.max(w / iw, (h * 0.94) / ih), dw = iw * sc, dh = ih * sc;
+      c.drawImage(im, x + (w - dw) / 2, y + h * 0.9 - dh, dw, dh);
+    }
+    var g = c.createLinearGradient(0, y + h * 0.7, 0, y + h);
+    g.addColorStop(0, 'rgba(243,231,207,0)'); g.addColorStop(1, 'rgba(243,231,207,0.9)');
+    c.fillStyle = g; c.fillRect(x, y + h * 0.7, w, h * 0.3);
+    c.restore();
+    c.strokeStyle = 'rgba(42,33,24,0.88)'; c.lineWidth = 1.5; edge(); c.stroke();
+    c.restore();
+    var nh = Math.max(11, Math.min(18, h * 0.16));
+    drawName(st, id, x + w / 2, y + h - nh - 3, nh, 'h', 'center', 'rgba(250,244,228,0)');
+    var r = { id: id, x: x, y: y, w: w, h: h, cx: x + w / 2, cy: y + h / 2, r: Math.min(w, h) / 2 };
+    st.av.push(r); hit(x, y, w, h, 'menuChar', { id: id });
+    return r;
+  }
   function creditRow(st, cy, d0, nh0, mg, minGap) {
-    var items = SP_IDS.map(function (id) { var n = nameImg(id, 'h'); return { id: id, nw: n ? n.w * (nh0 / n.h) : nh0 * 2 }; }), T0 = 0, i;
-    items.forEach(function (o) { T0 += d0 + 8 + o.nw; });
-    var f = Math.min(1, (st.DW - 2 * mg - 8 * minGap) / T0), gap = (st.DW - 2 * mg - f * T0) / 8, x = mg, d = d0 * f;
-    items.forEach(function (o) { drawAv(st, o.id, 'mist', x + d / 2, cy, d); drawName(st, o.id, x + d + 6 * f, cy - nh0 * f / 2, nh0 * f, 'h', 'left', 'rgba(250,244,228,0.0)'); x += f * (d0 + 8 + o.nw) + gap; });
-    return d;
+    var n = SP_IDS.length, gap = 8, bottom = st.DH - 18;
+    var ch = Math.max(92, Math.min(128, bottom - (cy - d0 * 0.35)));
+    var top = bottom - ch;
+    var cw = Math.min(ch / 1.55, (st.DW - 2 * mg - gap * (n - 1)) / n);
+    var x = (st.DW - (n * cw + (n - 1) * gap)) / 2;
+    SP_IDS.forEach(function (id) { standCard(st, id, x, top, cw, ch); x += cw + gap; });
+    return cw;
   }
   function V2(st) {
     var c = st.c, DW = st.DW, DH = st.DH, cx = DW / 2, m = st.mode, g = st.geom;
@@ -18471,7 +18510,7 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
       startBtn(st, cx - bw / 2, by, bw, bh, L ? 30 : 26);
       taper(c, cx - 500, L ? 620 : 630, cx + 500, 2.5, 0.35);
       creditRow(st, L ? 668 : 664, L ? 76 : 56, L ? 26 : 20, L ? 26 : 30, L ? 14 : 10);
-      if (L) { U.pill(c, cx - 330, by + bh + 14, 660, 26, 'rgba(250,244,228,0.82)'); saveLine(st, cx, by + bh + 28, 'center', 15); } else saveLine(st, cx, 708, 'center', 11);
+      if (L) { U.pill(c, cx - 330, by + bh + 14, 660, 26, 'rgba(250,244,228,0.82)'); saveLine(st, cx, by + bh + 28, 'center', 15); } else saveLine(st, cx, st.DH - 8, 'center', 10);
       st.how = { s: L ? 1.4 : 1, ax: cx, ay: by }; st.tk = L ? 1.4 : 1; g.bottomY = L ? by + bh + 30 : 714;
     } else {
       var mg2 = 24, d = 104, nh = 30, rowH = d + 6 + nh, gB = DH - 58, gT = gB - 3 * rowH - 28, bw2 = Math.min(560, DW - 100), bh2 = 96, by2 = gT - 34 - bh2, B = by2 + 44;
@@ -18491,7 +18530,7 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
       startBtn(st, sx0, by2, sbw, bh2, 42);
       taper(c, 40, gT - 16, DW - 40, 3, 0.35);
       var colW = Math.min(DW / 3, 260);
-      SP_IDS.forEach(function (id, n) { var col = n % 3, row = (n / 3) | 0, x = cx + (col - 1) * colW, y0 = gT + row * (rowH + 14); drawAv(st, id, 'mist', x, y0 + d / 2, d); drawName(st, id, x, y0 + d + 6, nh, 'h', 'center', 'rgba(250,244,228,0.0)'); });
+      SP_IDS.forEach(function (id, n) { var col = n % 3, row = (n / 3) | 0, cw = Math.min(colW - 12, 150), ch = rowH + 4, x = cx + (col - 1) * colW - cw / 2, y0 = gT + row * (rowH + 14); standCard(st, id, x, y0, cw, ch); });
       saveLine(st, cx, DH - 24, 'center', 17, true);
       st.how = { s: 1.5, ax: cx, ay: by2 }; st.tk = 1.6; g.bottomY = DH - 12;
     }
@@ -18853,7 +18892,7 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
     K.btn = function(x,y,w,h,label,act,ex,o) {
       o=o||{};var hover=K.over(x,y,w,h),red=o.primary&&!o.off,col=o.off?'#948875':red?'#fff0d3':o.on?'#a92e1c':T.ink;
       if(red){c.save();c.translate(x+w/2,y+h/2);c.rotate(-.022);c.fillStyle=hover?'#c64b2d':'#ad321c';c.beginPath();c.moveTo(-w/2+2,-h*.36);c.lineTo(w/2,-h*.42);c.lineTo(w/2-2,h*.39);c.lineTo(-w/2,h*.35);c.closePath();c.fill();c.restore();}
-      else if(o.on||hover){c.save();c.fillStyle=o.on?'rgba(165,46,25,.10)':'rgba(50,39,22,.045)';c.beginPath();c.ellipse(x+w*.48,y+h*.55,w*.47,h*.3,-.03,0,Math.PI*2);c.fill();c.restore();}
+      
       if(o.on) K.ink(x+w*.18,y+h-5,w*.64,.65,label.length+7);
       if(o.wrap){c.save();c.beginPath();c.rect(x+4,y+2,w-8,h-4);c.clip();K.lines(label,x+8,y+h/2-((o.size||15)+3)/2,w-16,o.size||15,(o.size||15)+3,col,0,true);c.restore();}else K.tf(label,x+w/2,y+h/2,w-6,o.size||15,col,'center',true,o.minS||11);
       if(act&&!o.off)K.hit(x,y,w,h,act,ex);
@@ -18902,7 +18941,7 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
   P.objects = function(c,app,list,b,selected,act,paint,label) {
     var n=list.length;if(!n)return;var step=b.w/n,bw=Math.min(82,step-4),hh=Math.min(88,b.h-24);
     list.forEach(function(it,i){var cx=b.x+step*(i+.5),dy=[7,0,11,3,9,1][i%6],yy=b.y+dy,on=selected===it.id;
-      if(on){c.save();c.fillStyle='rgba(156,48,23,.09)';c.beginPath();c.ellipse(cx,yy+hh*.52,Math.min(step*.48,50),hh*.56,-.08,0,Math.PI*2);c.fill();c.restore();}
+      
       paint(it,cx,yy+hh*.48,Math.max(30,bw),hh);
       var name=label(it),nw=step-4;c.font='bold 11.5px '+XY.C.FONT;var wrap=c.measureText(name).width>nw,cut=Math.ceil(name.length/2);K.t(wrap?name.slice(0,cut):name,cx,yy+hh+9,11.5,on?'#a42d19':T.ink,'center',true);if(wrap)K.t(name.slice(cut),cx,yy+hh+23,11.5,on?'#a42d19':T.ink,'center',true);
       if(on)K.ink(cx-Math.min(22,step*.3),yy+hh+(wrap?31:20),Math.min(44,step*.6),.7,i+31);
@@ -19002,7 +19041,7 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
       st.slots.forEach(function (sl, k) {
         var sold = st.sold[k], r = { sold: sold, kind: sl.kind, price: sl.price, btn: { label: sold ? '已买走' : (sl.kind === 'reroll' ? '刷新 ' : '买 ') + sl.price + (can(sl.price) ? '' : ' 不够'), act: sold ? null : 'shopBuy', ex: { slot: k }, primary: !sold && can(sl.price), off: sold || !can(sl.price) } };
         if (sl.kind === 'sp') { r.spId=sl.id; var d = XY.SP_BY[sl.id], lv = S.spLevel(sl.id), nx = XY.spNext(sl.id); r.title = '角色卡 · ' + d.name; r.sub = d.role; r.l2 = lv ? '已有 ' + S.spCards(sl.id) + ' 张 · Lv' + lv + (nx ? '（再 ' + (nx.need - nx.have) + ' 张升级）' : '（满级）') : '已有 ' + S.spCards(sl.id) + '/' + XY.SP_LV_AT[0] + ' 张'; r.icon = function (x, y, s) { var hd=XY.specialDef(sl.id,Math.max(1,lv)); XY.hud2.face(c,{id:sl.id,def:hd},x+s/2,y+s/2,s*.44,app.rt); }; r.col = d.frame; }
-        else if (sl.kind === 'card') { var cd = XY.CARD_BY[sl.id], Rr = XY.RARITY[cd.r]; r.card = cd; r.title = '法宝 · ' + cd.name; r.sub = Rr.name + ' · ' + XY.CARD_SETS[cd.set].name + '套'; r.l2 = XY.cardFxText(cd, 1); r.icon = function (x, y, s) { R.drawCardMini(c, cd, x + s / 2, y + s / 2, s * 0.7, s, 1); }; r.col = Rr.color; }
+        else if (sl.kind === 'card') { var cd = XY.CARD_BY[sl.id], Rr = XY.RARITY[cd.r]; r.card = cd; r.inkName = cd.name; r.title = '法宝 · ' + cd.name; r.sub = Rr.name + ' · ' + XY.CARD_SETS[cd.set].name + '套'; r.l2 = XY.cardFxText(cd, 1); r.icon = function (x, y, s) { R.drawCardMini(c, cd, x + s / 2, y + s / 2, s * 0.7, s, 1); }; r.col = Rr.color; }
         else if (sl.kind === 'shard') { r.title = '皮肤碎片 ×' + sl.n; r.sub = '集齐解锁皮肤'; r.l2 = '现有 ' + S.data.shards + ' 枚'; r.icon = function (x, y, s) { c.strokeStyle = '#3a3226'; c.fillStyle = 'rgba(58,50,38,0.12)'; c.lineWidth = 1.6; c.beginPath(); c.moveTo(x + s / 2, y + 6); c.lineTo(x + s - 10, y + s / 2); c.lineTo(x + s / 2, y + s - 6); c.lineTo(x + 10, y + s / 2); c.closePath(); c.fill(); c.stroke(); }; }
         else { r.title = '刷新货架'; r.sub = '换一批角色卡和法宝'; r.l2 = ''; r.icon = function (x, y, s) { c.strokeStyle = '#8a7d63'; c.lineWidth = 5; c.lineCap = 'round'; c.beginPath(); c.arc(x + s / 2, y + s / 2, s * 0.3, 0.6, 5.4); c.stroke(); c.lineCap = 'butt'; }; }
         items.push(r);
@@ -19011,14 +19050,15 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
       var list = tab === 'fb' ? XY.shop.fbList() : XY.shop.solList();
       list.forEach(function (r0) {
         var ok = can(r0.price) && !r0.full, r = { btn: { label: r0.full ? '已满级' : (tab === 'fb' ? '解锁 ' : '买 1 张 ') + r0.price + (ok || r0.full ? '' : ' 不够'), act: tab === 'fb' ? 'shopBuyFb' : 'shopBuySol', ex: tab === 'fb' ? { id: r0.id } : { t: r0.type }, primary: ok, off: !ok } };
-        if (tab === 'fb') { var it = XY.fabao.BY[r0.id]; r.kind = 'fb'; r.price = r0.price; r.full = r0.full; r.title = (it.kind === 'l' ? '灵物 · ' : '法宝 · ') + it.name; r.sub = it.d; r.l2 = XY.fabao.whereText(r0.id) ? '也可以：' + XY.fabao.whereText(r0.id) : ''; r.icon = function (x, y, s) { if (!(XY.ICONINK && XY.ICONINK.draw(c, it.name, x + s / 2, y + s / 2, s * 0.9))) K.t(it.name.charAt(0), x + s / 2, y + s / 2, Math.max(28, Math.round(s * 0.42)), T.ink, 'center', true); }; }
+        if (tab === 'fb') { var it = XY.fabao.BY[r0.id]; r.kind = 'fb'; r.inkName = it.name; r.price = r0.price; r.full = r0.full; r.title = (it.kind === 'l' ? '灵物 · ' : '法宝 · ') + it.name; r.sub = it.d; r.l2 = XY.fabao.whereText(r0.id) ? '也可以：' + XY.fabao.whereText(r0.id) : ''; r.icon = function (x, y, s) { if (!(XY.ICONINK && XY.ICONINK.draw(c, it.name, x + s / 2, y + s / 2, s * 0.9))) K.t(it.name.charAt(0), x + s / 2, y + s / 2, Math.max(28, Math.round(s * 0.42)), T.ink, 'center', true); }; }
         else { var td = XY.TOWERS[r0.type]; r.kind = 'sol'; r.sol = r0.type; r.price = r0.price; r.cards = r0.cards; r.lv = r0.lv; r.full = r0.full; r.title = td.name; r.sub = '已有 ' + r0.cards + ' 张' + (r0.lv ? ' · Lv' + r0.lv : ' · 还没解锁'); r.l2 = r0.full ? '已满级' : '造价 ' + td.cost + ' 金币'; r.icon = function (x, y, s) { if (!(XY.ICONINK && XY.ICONINK.sol(c, r0.type, x + s / 2, y + s * 0.5, s * 0.92))) K.t(td.name.charAt(0), x + s / 2, y + s / 2, Math.max(28, Math.round(s * 0.42)), T.ink, 'center', true); }; }
         items.push(r);
       });
     }
     // 整齐的水墨卡格：每张一样大，购买钮钉在卡底，说明留在格子下面。
     var cols = tab === 'sol' ? (port ? 2 : Math.min(5, Math.max(1, items.length))) : (tab === 'fb' ? (port ? 2 : 4) : (port ? 2 : 3));
-    var rowsN = tab === 'sol' ? Math.ceil(Math.max(1, items.length) / cols) : (port ? 3 : 2);
+    var rowsN = Math.max(1, Math.ceil(Math.max(1, Math.min(items.length || 1, (tab === 'sol' ? items.length : (port ? cols * 3 : cols * 2)))) / cols));
+    if (!items.length) rowsN = 1;
     var per = cols * rowsN;
     var note = tab === 'shelf' ? '角色卡和法宝用灵石买。抽一张法宝也会出现在下面。' : (tab === 'fb' ? '买下就永久解锁，开局可以带。洞主专属的不在这里卖。' : '天兵卡：1 张是 Lv1，3 张 Lv2，6 张 Lv3。每次买 1 张。');
     var needPager = items.length > per;
@@ -19030,8 +19070,10 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
     var gap = port ? 8 : 14;
     var from = P.pager(items.length, per, 'shop-' + tab, f.x, ctrlY, f.w, true);
     var availW = f.w, availH = Math.max(120, gridBot - gridTop);
+    var shownN = Math.max(1, Math.min(items.length || 1, cols * rowsN));
+    var rowsUsed = Math.max(1, Math.ceil(shownN / cols));
     var cardW = Math.floor((availW - gap * (cols - 1)) / cols);
-    var cardH = Math.floor((availH - gap * (rowsN - 1)) / rowsN);
+    var cardH = Math.floor((availH - gap * (rowsUsed - 1)) / rowsUsed);
     var gridW = cols * cardW + gap * (cols - 1);
     var x0 = f.x + Math.max(0, Math.round((f.w - gridW) / 2));
     function inkName(text, x, y, size, col, maxW) {
@@ -19058,9 +19100,9 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
     }
     if (!items.length) K.lines('能买的法宝和灵物都已解锁。其余的要靠击败洞主得到。', f.x + 16, gridTop + 36, f.w - 32, 16, 22, T.inkSoft, 4, true);
     function torn(x, y, w, h, seed) {
-      var VU = XY.villainUI;
-      if (VU && VU.artCard) VU.artCard(c, x, y, w, h, { seed: seed, paper: '#f3e7cf', edge: '#2a2118', lw: 2.2 });
-      else { c.fillStyle = '#f3e7cf'; c.fillRect(x, y, w, h); c.strokeStyle = '#2a2118'; c.strokeRect(x, y, w, h); }
+      c.save(); c.fillStyle = '#f4ead6';
+      c.beginPath(); c.moveTo(x + 2, y + 1); c.lineTo(x + w - 3, y); c.lineTo(x + w - 1, y + h - 2); c.lineTo(x + 1, y + h); c.closePath();
+      c.fill(); c.lineWidth = 2.1; c.strokeStyle = '#2a2118'; c.stroke(); c.restore();
     }
     function fillCover(im, x, y, w, h) {
       if (!im) return false;
@@ -19086,17 +19128,18 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
       torn(x, y, w, h, 20 + k * 3);
       c.save();
       if (dim) c.globalAlpha = 0.55;
-      c.beginPath(); c.rect(x + 8, y + 8, w - 16, h - 18); c.clip();
+      c.beginPath(); c.rect(x + 2, y + 2, w - 4, h - 4); c.clip();
       var drew = false;
-      if (r.kind === 'sol' && XY.soldierInk) drew = XY.soldierInk.draw(c, r.sol, x + w / 2, y + h * 0.78, h * 0.86, w * 0.92);
+      if (r.kind === 'sol' && XY.soldierInk) drew = XY.soldierInk.draw(c, r.sol, x + w / 2, y + h * 0.96, h * 1.38, w * 1.22);
+      if (!drew && r.inkName && XY.ICONINK) drew = XY.ICONINK.draw(c, r.inkName, x + w / 2, y + h * 0.46, Math.max(w, h) * 1.35);
       if (!drew && r.spId && XY.bgArt) { try { XY.bgArt(r.spId); } catch (e) {} drew = fillCover(XY.bgArt(r.spId), x + 8, y + 8, w - 16, h - 18); }
       if (!drew && r.card) { inkWord(x, y, w, h, String(r.title || '宝').replace(/^.*· /, '').charAt(0) || '宝'); drew = true; }
       if (!drew && r.kind === 'shard') { inkShard(x, y, w, h); drew = true; }
       if (!drew && r.kind === 'reroll') { inkRefresh(x, y, w, h); drew = true; }
       if (!drew && r.kind === 'fb' && r.icon) r.icon(x + w * 0.18, y + h * 0.08, Math.min(w * 0.64, h * 0.55));
-      var g = c.createLinearGradient(0, y + h * 0.62, 0, y + h);
-      g.addColorStop(0, 'rgba(243,231,207,0)'); g.addColorStop(1, 'rgba(243,231,207,0.88)');
-      c.fillStyle = g; c.fillRect(x + 8, y + h * 0.62, w - 16, h * 0.38);
+      var g = c.createLinearGradient(0, y + h * 0.84, 0, y + h);
+      g.addColorStop(0, 'rgba(243,231,207,0)'); g.addColorStop(1, 'rgba(243,231,207,0.7)');
+      c.fillStyle = g; c.fillRect(x + 2, y + h * 0.84, w - 4, h * 0.16);
       c.restore();
       inkName(String(r.title || '').replace(/^天兵卡 · |^角色卡 · |^法宝 · |^灵物 · /, ''), x + w / 2, y + h * 0.78, Math.min(28, Math.max(16, w * 0.13)), '#24180f', w - 24);
       if (r.kind === 'sol') inkName((r.cards || 0) + ' 张' + (r.lv ? '  Lv' + r.lv : ''), x + w / 2, y + h * 0.9, 15, '#5c4034', w - 28);
@@ -19105,8 +19148,14 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
       cinnabar(x + w - ss - 6, y + 8, ss, seal);
       if (r.btn && !r.btn.off && r.btn.act) K.hit(x, y, w, Math.max(44, h), r.btn.act, r.btn.ex);
     });
-    K.tf(note, f.x + 8, noteY, f.w - 16, 13, T.inkSoft, 'left', false, 11);
-    if (showBuy) K.btn(needPager ? f.x + 80 : f.x, ctrlY, needPager ? f.w - 160 : Math.min(f.w, port ? f.w : 300), 44, '抽一张法宝 ' + S.CARD_PRICE, 'buyCard', null, { off: S.data.lingshi < S.CARD_PRICE, size: 14 });
+    var VU = XY.villainUI, noteW = showBuy ? Math.max(120, f.w - 168) : f.w;
+    if (VU && VU.drawBrush) VU.drawBrush(c, f.x, noteY - 16, noteW, 36, note, { sz: 13, vh: 26 });
+    else K.tf(note, f.x + 8, noteY, f.w - 16, 13, T.inkSoft, 'left', false, 11);
+    if (showBuy) {
+      var sx = f.x + f.w - 150, off = S.data.lingshi < S.CARD_PRICE;
+      if (VU && VU.drawSeal) VU.drawSeal(c, sx, ctrlY, 146, 48, '抽' + S.CARD_PRICE, { style: off ? 'ghost' : 'solid', sz: 18, stack: false, rot: -0.03 });
+      if (!off) K.hit(sx, ctrlY, 146, 48, 'buyCard');
+    }
     K.msg(f.x + f.w / 2, noteY - 16, 'center');
     P.end(c);
   }
@@ -19219,7 +19268,7 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
     text.split('\n').forEach(function(t){yy=K.lines(t,rx,yy+12,rw,13,18,T.ink,12,false);});
     K.t(tab==='enemy'?'众生':tab==='card'?'珍藏':'同修',f.x+2,top+20,24,'#a42d19','left',true);
     P.objects(c,app,list.slice(from,from+per),{x:f.x,y:ribbonY,w:port?f.w:lw,h:91},sel,'dexSel',function(z,x,y,w,h){
-      if(tab==='enemy'){var e=S.dexOf(z.id);hp.enemyIcon(c,z.id,x,y,Math.min(24,w*.34),!(e&&e.seen>0),app.rt);}
+      if(tab==='enemy'){var e=S.dexOf(z.id);if(e&&e.seen>0)hp.enemyIcon(c,z.id,x,y,Math.min(24,w*.34),false,app.rt);else{c.save();c.font='22px "Ma Shan Zheng","KaiTi",serif';c.fillStyle='#6d5b45';c.textAlign='center';c.textBaseline='middle';c.fillText('未',x,y);c.restore();}}
       else if(tab==='card')R.drawCardMini(c,S.has(z.id)?z:{name:'？',set:z.set,r:z.r},x,y,Math.min(50,w*.68),Math.min(76,h),S.has(z.id)?1:.45);
       else{hero(z.a,x-w*.12,y-7,Math.min(18,w*.25));hero(z.b,x+w*.14,y+12,Math.min(17,w*.24));}
     },function(z){if(tab==='enemy'){var e=S.dexOf(z.id);return e&&e.seen>0?XY.ENEMIES[z.id].name:'？？？';}if(tab==='card')return S.has(z.id)?z.name:'？？？';return S.data.dex['syn:'+z.id]?z.fullName:'同修 '+(XY.SYNS.indexOf(z)+1);});
@@ -19588,8 +19637,8 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
     txt(c, '携带：' + (cur ? XY.SP_BY[cur].name + ' Lv' + S.spLevel(cur) : '不带常驻角色') + (cw >= 560 ? '（在「出发」页更换）· 法宝 / 卡牌照常携带' : '（出发页更换）'), 22, ch - 62, 12.5, T.inkSoft, 'left', false);
     if (app.menuMsg && app.rt <= app.menuMsg.until) txt(c, app.menuMsg.text, cw - 22, ch - 62, 13, app.menuMsg.bad ? '#b8300f' : '#2f7d3b', 'right', true);
     var bx = 20, bw2 = 120, by2 = ch - 52, bh2 = 40, hb = ov(bx, by2, bw2, bh2);
-    rrect(c, bx, by2, bw2, bh2, 10); c.fillStyle = hb ? '#fff3d6' : '#ffffff'; c.fill(); c.lineWidth = 2; c.strokeStyle = '#b9a77a'; c.stroke();
-    txt(c, '← 返回', bx + bw2 / 2, by2 + bh2 / 2 + 1, 15, T.ink, 'center', true);
+    if (XY.villainUI && XY.villainUI.drawBrush) XY.villainUI.drawBrush(c, bx, by2, bw2, bh2, '返回', { sz: 16, vh: 32, strong: true });
+    else { c.fillStyle = 'rgba(58,50,38,0.16)'; c.fillRect(bx, by2, bw2, bh2); txt(c, '返回', bx + bw2 / 2, by2 + bh2 / 2 + 1, 16, T.ink, 'center', true); }
     hit(bx - 4, by2 - 4, bw2 + 8, bh2 + 8, 'back');
     c.restore();
   }
@@ -21838,7 +21887,7 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
   var SAMPLES = {
     lair: [['sample_moke', '墨客', 92, '最近 10 场守住 9 · 平均漏过 0.2 位英雄'], ['sample_yunshan', '云山', 81, '最近 10 场守住 7 · 平均漏过 0.6 位英雄'], ['sample_qingya', '青崖', 64, '最近 10 场守住 4 · 平均漏过 1.4 位英雄'], ['sample_danzhu', '丹朱', 47, '最近 10 场守住 2 · 平均漏过 2.2 位英雄']],
     progress: [['sample_moke', '墨客', 9, '通关 3/3 关 · 支线 6 个 · 总用时 41:20'], ['sample_yunshan', '云山', 7, '通关 3/3 关 · 支线 4 个 · 总用时 52:05'], ['sample_qingya', '青崖', 4, '通关 2/3 关 · 支线 2 个 · 总用时 30:48'], ['sample_danzhu', '丹朱', 1, '通关 1/3 关 · 支线 0 个 · 总用时 12:36']],
-    boss: [['sample_moke', '墨客', 31, '★3 · 搭档 Phyrex · 未用援军 · 最高伤害 100%'], ['sample_yunshan', '云山', 38, '★3 · 搭档 老司机 · 未用援军 · 最高伤害 100%'], ['sample_qingya', '青崖', 52, '★2 · 搭档 狂攻 · 用了援军 · 最高伤害 100%'], ['sample_danzhu', '丹朱', 74, '★1 · 搭档 思思 · 用了援军 · 最高伤害 100%']],
+    boss: [['sample_moke', '墨客', 31, '★3 · 搭档 Phyrex · 未用援军 · 最高伤害 100%'], ['sample_yunshan', '云山', 38, '★3 · 搭档 老司机 · 未用援军 · 最高伤害 100%'], ['sample_qingya', '青崖', 52, '★2 · 搭档 DeFi小矿工 · 用了援军 · 最高伤害 100%'], ['sample_danzhu', '丹朱', 74, '★1 · 搭档 思思 · 用了援军 · 最高伤害 100%']],
     villain: [['sample_moke', '墨客', 2860, '小妖战力 2260 · 洞府评分 600 · 进化 21 阶'], ['sample_yunshan', '云山', 2210, '小妖战力 1810 · 洞府评分 400 · 进化 14 阶'], ['sample_qingya', '青崖', 1480, '小妖战力 1280 · 洞府评分 200 · 进化 6 阶'], ['sample_danzhu', '丹朱', 920, '小妖战力 820 · 洞府评分 100 · 进化 2 阶']],
     ref: [['sample_moke', '墨客', 12, '有效拉新 12 人'], ['sample_yunshan', '云山', 7, '有效拉新 7 人'], ['sample_qingya', '青崖', 3, '有效拉新 3 人']]
   };
@@ -22377,7 +22426,7 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
   function taper(c, x1, y, x2, th, al, col) {
     var mid = (x1 + x2) / 2; c.save(); c.globalAlpha = al; c.fillStyle = col || INK; c.beginPath(); c.moveTo(x1, y); c.quadraticCurveTo(mid, y - th, x2, y); c.quadraticCurveTo(mid, y + th * 0.45, x1, y); c.fill(); c.restore();
   }
-  function stageName(id) { var D = window.XY_MENU_STAGE, n = D && D.name && D.name[id] && D.name[id].h; if (!n) return null; var i = pic('nm_' + id, n.src, n.src); return i ? { img: i, w: n.w, h: n.h } : null; }
+  function stageName(id) { if (id === 'kuanggong') return null; var D = window.XY_MENU_STAGE, n = D && D.name && D.name[id] && D.name[id].h; if (!n) return null; var i = pic('nm_' + id, n.src, n.src); return i ? { img: i, w: n.w, h: n.h } : null; }
   function itemSeal(it) { return it.k === 'level' ? (NUM[it.id] || String(it.id)) : it.seal; }
 
   /* —— 印帖竖卡：顶上一枚小朱印（关序 / 洞 / 战），中间竖排楷体名，底下一行状态；选中 = 朱砂印边 + 抬起 + 红晕 —— */
@@ -23315,15 +23364,19 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
 P.note=function(c,x,y,w,h){c.save();var g=c.createLinearGradient(x,y,x+w,y+h);g.addColorStop(0,'#eee1c3');g.addColorStop(1,'#fbf3df');c.fillStyle=g;c.fillRect(x,y,w,h);if(XY.INKP)XY.INKP.stroke(c,x+15,y+5,x+w*.44,y+7,2,'64,49,30',.4,73,.01);c.restore();};
 function begin(c,a){XY.ui.hits.length=0;var k=P.begin(c,a);P.paper(c,k.W,k.H);return k;}
 function figure(c,G,x,foot,h){var who=G.heroes[G.ctrl]||G.heroes[1],id=who.def.id||who.id;if(XY.HEROES.some(function(d){return d.id===id;}))XY.heroink.portrait(c,id,x,foot,h);else XY.hud2.face(c,who,x,foot-h*.5,Math.min(h*.4,100),0);}
-XY.ov.pause=function(c,G,a){var K=begin(c,a),W=K.W,H=K.H,port=K.port,x=port?20:W*.43,w=port?W-40:W-x-22,y=port?396:20;
-K.t('暂 驻',22,46,40,'#a42d19','left',true);K.tf(XY.lvPre(G)+G.lv.name+'」',24,83,port?W-48:W*.38,14,T.inkSoft,'left',false,11);
-figure(c,G,port?W*.27:W*.21,port?350:H-20,Math.min(port?248:H-180,460));
-var sx=port?W*.57:24,sy=port?145:112;K.lines('已坚持 '+XY.fmtTime(G.t),sx,sy,port?W*.4:W*.36,14,19,T.ink,2,true);K.t('Lv '+G.level+' · 击杀 '+XY.fmtNum(G.kills),sx,sy+28,14,T.ink,'left',true);
-K.btn(x,y,w,48,'继续 · Esc / P','resume',null,{primary:true,size:22});K.btn(x+5,y+56,w*.46,44,'重新开始 · R','restart',null,{size:16});K.btn(x+w*.56,y+62,w*.43,44,'回到首页','home',null,{size:15});
-if(XY.inkBg)XY.inkBg();var muted=!!(XY.audio&&XY.audio.mute);y+=118;
-K.t('音效',x,y+18,13,T.inkSoft,'left',false);K.btn(x+44,y,w*.28,44,'开','muteSet',{mute:false},{on:!muted});K.btn(x+w*.48,y+2,w*.28,44,'关 · M','muteSet',{mute:true},{on:muted});
-y+=55;if(XY.auto){K.t('自动',x,y+18,13,T.inkSoft,'left',false);['points','treat','guest','pick'].forEach(function(key,i){var ww=(w-46)/4;K.btn(x+46+i*ww,y+[0,3,1,5][i],ww-2,44,XY.auto.LABEL[key],'autoTog',{key:key},{on:XY.auto.get(key),size:12});});}
-K.tf('小怪 +'+Math.round(XY.C.ENEMY_SCALE*G.t/60*100)+'% · BOSS +'+Math.round(XY.C.BOSS_SCALE*G.t/60*100)+'%（每分钟 +1% / +5%）',x,Math.min(H-13,y+65),w,11.5,T.inkSoft,'left',false,10.5);P.end(c);};
+XY.ov.pause=function(c,G,a){var K=begin(c,a),W=K.W,H=K.H,port=K.port;
+K.t('暂驻',22,36,36,'#a42d19','left',true);
+figure(c,G,port?W*.34:W*.24,H-6,Math.min(port?H*.42:H-40,H-30));
+var x=port?10:Math.round(W*.52),w=port?W-20:W-x-14,gap=8,top=port?Math.round(H*.48):52,bot=H-28;
+var n=3+(XY.auto?1:0),bh=Math.max(52,Math.floor((bot-top-gap*(n-1)-18)/n));
+function bar(xx,yy,ww,hh,label,act,ex,hot){c.save();c.translate(xx+ww/2,yy+hh/2);c.rotate(hot?-0.012:0.008);c.fillStyle=hot?'#a83224':'rgba(58,50,38,0.2)';c.beginPath();c.moveTo(-ww/2+3,-hh*.4);c.lineTo(ww/2,-hh*.44);c.lineTo(ww/2-4,hh*.4);c.lineTo(-ww/2,hh*.36);c.closePath();c.fill();c.fillStyle=hot?'#fff6e4':'#2a2118';c.font=Math.max(14,Math.min(26,hh*.36))+'px "Ma Shan Zheng","KaiTi",serif';c.textAlign='center';c.textBaseline='middle';c.fillText(label,0,1);c.restore();K.hit(xx,yy,ww,hh,act,ex);}
+var yy=top;bar(x,yy,w,bh,'继续','resume',null,true);yy+=bh+gap;var hw=(w-gap)/2;
+bar(x,yy,hw,bh,'重来','restart',null,false);bar(x+hw+gap,yy,hw,bh,'回首页','home',null,false);yy+=bh+gap;
+var muted=!!(XY.audio&&XY.audio.mute);bar(x,yy,hw,bh,muted?'声关':'声开','muteSet',{mute:false},!muted);bar(x+hw+gap,yy,hw,bh,muted?'已静':'声静','muteSet',{mute:true},muted);
+if(XY.auto){yy+=bh+gap;['points','treat','guest','pick'].forEach(function(key,i){var ww=(w-3*gap)/4,on=!!XY.auto.get(key);bar(x+i*(ww+gap),yy,ww,bh,XY.auto.LABEL[key],'autoTog',{key:key},on);});}
+K.lines('已坚持 '+XY.fmtTime(G.t)+'  ·  Lv '+G.level+'  ·  击杀 '+XY.fmtNum(G.kills),24,port?78:78,port?W*.5:W*.42,15,20,'#3a3226',2,true);
+K.tf(XY.lvPre(G)+G.lv.name+'」',24,108,port?W*.5:W*.4,14,'#5c4a38','left',false,11);
+if(XY.inkBg)XY.inkBg();P.end(c);};
 var oldEnd=XY.R4.end;
 XY.R4.end=function(c,G,a,win){if(G.villain||G.lair)return oldEnd(c,G,a,win);var K=begin(c,a),W=K.W,H=K.H,port=K.port,rep=G.runReport||{},cause=G.ending&&G.ending.cause,title=win?'过 关':cause==='tang'?'师傅阵亡':'基地被入侵',x=port?20:W*.43,w=port?W-40:W-x-22,top=port?390:30,leaf=P.folio.endLeaf||0;
 K.t(title,22,47,port?37:44,win?'#a8680a':'#a42d19','left',true);K.tf(XY.lvPre(G)+G.lv.name+'」'+(win?' · 关口「'+G.gate.name+'」':''),24,85,port?W-48:W*.38,13,T.inkSoft,'left',false,11);
@@ -23410,7 +23463,7 @@ var ab=/[ab]$/.test(n.id)&&n.tier>=3?(/a$/.test(n.id)?'A路 · ':'B路 · '):'';
 var effect=lv?X.nodeText(n,lv):n.desc?n.desc[0]:n.eff?n.eff(1):'',sz=small?16:18,lh=small?22:26,textKey='skillText'+tab+'-'+sub+'-'+n.id,allLines=[],text='',units=String(effect).match(/[+-]?\d[\d,]*(?:\.\d+)?(?:%|\/\d+|秒|级|点|倍)?|[A-Za-z][A-Za-z0-9_.-]*|[\s\S]/g)||[];c.font=sz+'px '+X.C.FONT;units.forEach(function(ch){if(c.measureText(text+ch).width>dw&&text){allLines.push(text);text=ch;}else text+=ch;});if(text)allLines.push(text);var per=port?8:small?4:6,pages=Math.max(1,Math.ceil(allLines.length/per)),tp=(P.folio[textKey]||0)%pages,shown=allLines.slice(tp*per,tp*per+per);shown.forEach(function(t,i){K.t(t,dx,y+64+i*lh,sz,T.ink,'left',false);});var sy=y+64+shown.length*lh;if(pages>1)K.btn(dx+dw-92,y+8,92,40,'说明 '+(tp+1)+'/'+pages,'folio',{key:textKey,i:(tp+1)%pages},{size:13,minS:12});var reason=st.st==='max'?'已圆满 · 等级 '+lv+'/'+max:can?'费用 '+st.cost+' 点 · 等级 '+lv+'/'+max:st.reason||(st.st==='nopts'?'还差 '+(st.cost-G.points)+' 点 · 要 '+st.cost+' 点':''),by=Math.min(b.y+b.h-48,Math.max(b.y+(port?250:small?120:175),sy+16)),bw=Math.min(168,dw*.48);
 K.lines(reason,dx,by+18,dw-bw-12,port?15:16,20,can?'#795714':T.inkSoft,3,true);K.btn(dx+dw-bw,by,bw,48,lv>=max?'已圆满':'点墨修习','node',{hero:hi,id:n.id},{primary:can,size:16});
 var ny=b.y+b.h+1,step=b.w/Math.max(1,ids.length);ids.forEach(function(nd,i){var letter=/[ab]$/.test(nd.id)&&nd.tier>=3?(/a$/.test(nd.id)?'A':'B'):'';K.btn(b.x+i*step,ny,step-2,44,(nd.tier||i+1)+letter,'folio',{key:leafKey,i:i},{on:i===sel,size:12,minS:10});});a.__inkSkillSpec={key:leafKey,n:ids.length,hi:hi,id:n.id,tab:tab,sub:sub,textKey:textKey,textPages:pages};};
-I.tutorialCard=function(c,G,a,tt,st,L){var K=P.begin(c,a),z=a.zoom,s=K.s||1,x=L.x*z/s,y=L.y*z/s,w=L.w*z/s,h=L.h*z/s,wait=!!st.wait;wash(c,x,y,w,h);K.t('引',x+19,y+46,29,'#a42d19','center',true);K.t('新手教程 '+(tt.i+1)+'/'+(X.tutSteps?X.tutSteps(G):X.TUT_STEPS).length+(wait?(tt.done?' · 做对了':' · 请依提示操作'):''),x+43,y+17,10.5,T.inkSoft,'left',false);K.t(st.title,x+43,y+39,17,T.ink,'left',true);L.lines.forEach(function(v,i){K.t(v,x+20,y+65+i*18,12,T.ink,'left',false);});K.hit(x,y,w,h,'ui');K.btn(x+12,y+h-51,118,44,'跳过教程','tutSkip',null,{size:13});K.btn(x+w-162,y+h-51,150,44,st.last?'开始游戏':wait?'跳过这一步':'下一步','tutNext',null,{primary:!wait,size:14});P.end(c);};
+I.tutorialCard=function(c,G,a,tt,st,L){var K=P.begin(c,a),z=a.zoom,s=K.s||1,x=L.x*z/s,y=L.y*z/s,w=L.w*z/s,h=L.h*z/s,wait=!!st.wait,VU=X.villainUI;c.save();c.fillStyle='#f6edd8';c.beginPath();c.moveTo(x+3,y+1);c.lineTo(x+w-4,y);c.lineTo(x+w-1,y+h-3);c.lineTo(x+2,y+h);c.closePath();c.fill();c.strokeStyle='#2a2118';c.lineWidth=1.6;c.stroke();c.restore();if(VU&&VU.drawSeal)VU.drawSeal(c,x+6,y+6,32,32,'引',{sz:14,stack:false,rot:-0.05});c.save();c.font='18px "Ma Shan Zheng","KaiTi",serif';c.fillStyle='#3a2416';c.textAlign='left';c.textBaseline='middle';var title=String(st.title||'');if(c.measureText(title).width>w-52)c.font=Math.max(13,Math.floor(18*(w-52)/c.measureText(title).width))+'px "Ma Shan Zheng","KaiTi",serif';c.fillText(title,x+42,y+22);c.restore();L.lines.forEach(function(v,i){K.t(v,x+12,y+46+i*16,12,T.ink,'left',false);});K.hit(x,y,w,h,'ui');if(VU&&VU.drawBrush)VU.drawBrush(c,x+8,y+h-46,w*0.38,40,'跳过',{sz:13,vh:26});else K.btn(x+8,y+h-46,w*0.38,40,'跳过教程','tutSkip',null,{size:13});K.hit(x+8,y+h-46,w*0.38,40,'tutSkip');if(VU&&VU.drawSeal)VU.drawSeal(c,x+w*0.46,y+h-46,w*0.5,40,st.last?'开始':wait?'略过':'下一步',{style:wait?'line':'solid',sz:14,stack:false});else K.btn(x+w*0.46,y+h-46,w*0.5,40,'下一步','tutNext',null,{primary:!wait,size:14});K.hit(x+w*0.46,y+h-46,w*0.5,40,'tutNext');P.end(c);};
 I.tip=function(c,a,tip){if(!tip)return;var K=P.begin(c,a),sz=K.W<900?10.5:12,w=Math.min(320,K.W-24),lines=[];c.font=sz+'px '+X.C.FONT;(tip.lines||[tip.text]).forEach(function(txt){var v='';String(txt).split('').forEach(function(ch){if(c.measureText(v+ch).width>w-28&&v){lines.push(v);v=ch;}else v+=ch;});if(v)lines.push(v);});var s=K.s||1,tx=tip.x*a.zoom/s,ty=tip.y*a.zoom/s,h=18+lines.length*17,x=Math.max(8,Math.min(K.W-w-8,tx-w/2)),y=Math.max(8,Math.min(K.H-h-8,tip.below?ty:ty-h));wash(c,x,y,w,h);K.ink(x+10,y+7,Math.min(46,w-20),.5,91);lines.forEach(function(v,i){K.t(v,x+13,y+18+i*17,sz,i?T.inkSoft:T.ink,'left',i===0);});P.end(c);};
 I.vendor=function(c,G,a){X.ui.hits.length=0;var K=P.begin(c,a),W=K.W,H=K.H,port=K.port,V=X.vendor,items=V.stock(G),sel=(P.folio.vendorItem||0)%items.length,it=items[sel],d=V.DEFS[it.id],why=V.why(G,it),dx=port?24:W*.43,dy=port?H*.44:W>=900?H*.24:82,dw=port?W-48:W-dx-26;P.paper(c,W,H);K.t('货郎的担子',20,32,24,T.ink,'left',true);K.btn(W-178,9,164,44,'收摊（N / Esc）','vendorClose',null,{size:13});K.t('金币 '+Math.floor(G.coins),22,65,14,'#8a5a19','left',true);P.object(c,d.name,port?W*.5:W*.23,port?H*.26:H*.47,port?150:Math.min(W>=900?280:184,H*.49),it.sold);K.tf(d.name,dx,dy,dw,27,T.ink,'left',true,20);K.lines(d.d,dx,dy+37,dw,13,20,T.inkSoft,port?5:3,false);var by=Math.min(H-183,dy+(port?119:92));K.btn(dx,by,Math.min(196,dw),44,it.sold?'此处已买':X.C.VENDOR.price[it.id]+' 金币 · 换取','vendorBuy',{i:sel},{primary:!why,size:15});K.tf(why||'每件每个休息点限买一次',dx,by+61,dw,11,why?'#a42d19':T.inkSoft,'left',true,10);if(G.vendorMsg&&G.vendorMsg.t>0){K.tf(G.vendorMsg.text,dx,by+81,dw,11,G.vendorMsg.bad?'#a42d19':'#37643d','left',true,10);G.vendorMsg.t-=1/60;}var step=(W-32)/items.length;items.forEach(function(q,i){var cx=16+step*(i+.5),yy=H-94+[3,0,7,2][i];P.object(c,V.DEFS[q.id].name,cx,yy+20,45,q.sold);K.tf(V.DEFS[q.id].name,cx,yy+56,step-8,11,i===sel?'#a42d19':T.ink,'center',true,10);if(i===sel)K.ink(cx-18,yy+68,36,.6,i+7);K.hit(cx-step/2+2,H-101,step-4,94,'folio',{key:'vendorItem',i:i});});P.end(c);};
 I.skillKey=function(G,a,k){var s=a.__inkSkillSpec;if(!s||s.tab!==a.skillTab||s.sub!==((a._pvSub||{})[a.skillTab]||0))return false;if(k==='ArrowLeft'||k==='ArrowRight'){P.folio[s.key]=((P.folio[s.key]||0)+s.n+(k==='ArrowRight'?1:-1))%s.n;return true;}if(k==='PageDown'||k==='PageUp'){P.folio[s.textKey]=((P.folio[s.textKey]||0)+s.textPages+(k==='PageDown'?1:-1))%s.textPages;return true;}if(k==='Enter'){if(G.tut)return true;var r=X.learn(G,s.hi,s.id);a.skillMsg={text:r.reason,bad:!r.ok,until:a.rt+2.2};return true;}return false;};

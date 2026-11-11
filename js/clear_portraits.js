@@ -36,10 +36,19 @@
     c.restore();
   }
   function sealBtn(c, K, x, y, w, h, label, act, ex, solid) {
-    var VU = XY.villainUI;
-    if (VU && solid && VU.drawSeal) VU.drawSeal(c, x, y, w, h, label, { style: 'solid', col: '#b8322a', sz: Math.min(22, h * 0.42), rot: -0.02, stack: false });
-    else if (VU && VU.drawBrush) VU.drawBrush(c, x, y, w, h, label, { strong: true, sz: Math.min(18, h * 0.36) });
-    else brush(c, label, x + w / 2, y + h / 2, 18, '#24180f', 'center');
+    c.save();
+    c.translate(x + w / 2, y + h / 2);
+    c.rotate(solid ? -0.012 : 0.008);
+    c.beginPath();
+    c.moveTo(-w / 2 + 3, -h * 0.4);
+    c.lineTo(w / 2, -h * 0.44);
+    c.lineTo(w / 2 - 4, h * 0.4);
+    c.lineTo(-w / 2, h * 0.36);
+    c.closePath();
+    c.fillStyle = solid ? '#a83224' : 'rgba(58,50,38,0.22)';
+    c.fill();
+    c.restore();
+    brush(c, label, x + w / 2, y + h / 2, Math.max(16, Math.min(26, h * 0.34)), solid ? '#fff6e4' : '#24180f', 'center');
     if (K.hit) K.hit(x, y, w, Math.max(44, h), act, ex || null);
   }
 
@@ -76,50 +85,44 @@
     }
     c.restore();
     var x = port ? 14 : W - colW - 28;
-    var y0 = port ? Math.max(foot + 8, H - 12 - ctrlH) : 28;
-    var ph = port ? H - y0 - 16 : H - 48;
-    var VU = XY.villainUI;
-    if (VU && VU.artCard) VU.artCard(c, x, y0, colW, ph, { seed: 9, paper: '#f6edd8', edge: '#2a2118' });
-    else {
-      c.fillStyle = '#f6edd8';
-      c.fillRect(x, y0, colW, ph);
-      c.strokeStyle = '#2a2118';
-      c.strokeRect(x, y0, colW, ph);
-    }
-    var pad = 18, inner = colW - pad * 2, y = y0 + 36;
-    brush(c, '暂驻', x + pad, y, port ? 32 : 40, '#a83224', 'left');
-    y += 28;
-    brush(c, (XY.lvPre ? XY.lvPre(G) : '') + ((G.lv && G.lv.name) || ''), x + pad, y, 16, '#5c4a38', 'left');
+    var y0 = port ? Math.max(foot + 8, H - 12 - ctrlH) : 16;
+    var ph = port ? H - y0 - 12 : H - 28;
+    c.save();
+    c.fillStyle = '#f6edd8';
+    c.beginPath();
+    c.moveTo(x + 3, y0 + 1); c.lineTo(x + colW - 2, y0); c.lineTo(x + colW, y0 + ph - 2); c.lineTo(x + 1, y0 + ph);
+    c.closePath();
+    c.fill();
+    c.lineWidth = 2.2; c.strokeStyle = '#2a2118'; c.stroke();
+    c.restore();
+    var pad = 16, inner = colW - pad * 2, y = y0 + 28;
+    brush(c, '暂驻', x + pad, y, port ? 30 : 36, '#a83224', 'left');
     y += 26;
-    brush(c, '已坚持 ' + XY.fmtTime(G.t) + '    Lv' + G.level + '  击杀 ' + XY.fmtNum(G.kills), x + pad, y, 16, '#24180f', 'left');
-    var short = port && H < 720;
-    var rows = [
-      { label: '继续', act: 'resume', solid: true, h: short ? 44 : 56 },
-      { label: '重新开始', act: 'restart', h: short ? 44 : 48 },
-      { label: '回到首页', act: 'home', h: short ? 44 : 48 }
-    ];
-    var rest = y0 + ph - 16 - y;
-    var used = rows[0].h + rows[1].h + rows[2].h + 52 + (XY.auto && XY.auto.LABEL ? 52 : 0) + 24;
-    var gap = Math.max(4, Math.min(14, (rest - used) / 6));
-    y += gap;
-    rows.forEach(function (r) {
-      sealBtn(c, K, x + pad, y, inner, r.h, r.label, r.act, null, r.solid);
-      y += r.h + gap;
-    });
-    brush(c, '音效', x + pad, y + 22, 16, '#5c4a38', 'left');
+    brush(c, (XY.lvPre ? XY.lvPre(G) : '') + ((G.lv && G.lv.name) || ''), x + pad, y, 15, '#5c4a38', 'left');
+    y += 22;
+    brush(c, '已坚持 ' + XY.fmtTime(G.t) + '   Lv' + G.level + '  击杀 ' + XY.fmtNum(G.kills), x + pad, y, 15, '#24180f', 'left');
+    y += 18;
+    var hasAuto = !!(XY.auto && XY.auto.LABEL);
+    var n = 3 + (hasAuto ? 1 : 0);
+    var gap = 8;
+    var bh = Math.max(48, Math.floor((y0 + ph - 36 - y - gap * (n - 1)) / n));
+    sealBtn(c, K, x + pad, y, inner, bh, '继续', 'resume', null, true);
+    y += bh + gap;
+    sealBtn(c, K, x + pad, y, (inner - gap) / 2, bh, '重来', 'restart', null, false);
+    sealBtn(c, K, x + pad + (inner + gap) / 2, y, (inner - gap) / 2, bh, '回首页', 'home', null, false);
+    y += bh + gap;
     var muted = !!(XY.audio && XY.audio.mute);
-    sealBtn(c, K, x + pad + 56, y, 72, 44, '开', 'muteSet', { mute: false }, !muted);
-    sealBtn(c, K, x + pad + 136, y, 88, 44, '关', 'muteSet', { mute: true }, muted);
-    y += 52;
-    if (XY.auto && XY.auto.LABEL) {
+    sealBtn(c, K, x + pad, y, (inner - gap) / 2, bh, muted ? '声关' : '声开', 'muteSet', { mute: false }, !muted);
+    sealBtn(c, K, x + pad + (inner + gap) / 2, y, (inner - gap) / 2, bh, muted ? '已静' : '声静', 'muteSet', { mute: true }, muted);
+    if (hasAuto) {
+      y += bh + gap;
       var keys = ['points', 'treat', 'guest', 'pick'];
-      var aw = inner / keys.length;
+      var aw = (inner - gap * (keys.length - 1)) / keys.length;
       keys.forEach(function (key, i) {
-        sealBtn(c, K, x + pad + i * aw, y, aw - 6, 44, XY.auto.LABEL[key], 'autoTog', { key: key }, !!XY.auto.get(key));
+        sealBtn(c, K, x + pad + i * (aw + gap), y, aw, bh, XY.auto.LABEL[key], 'autoTog', { key: key }, !!XY.auto.get(key));
       });
-      y += 52;
     }
-    brush(c, '小怪 +' + Math.round(XY.C.ENEMY_SCALE * G.t / 60 * 100) + '%   首领 +' + Math.round(XY.C.BOSS_SCALE * G.t / 60 * 100) + '%', x + pad, Math.min(y0 + ph - 22, y + 16), 14, '#5c4a38', 'left');
+    brush(c, '小怪 +' + Math.round(XY.C.ENEMY_SCALE * G.t / 60 * 100) + '%   首领 +' + Math.round(XY.C.BOSS_SCALE * G.t / 60 * 100) + '%', x + pad, y0 + ph - 18, 14, '#5c4a38', 'left');
     if (P.end) P.end(c);
     return true;
   }
