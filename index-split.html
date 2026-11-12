@@ -4282,7 +4282,8 @@ XY.TRAITS = {
     var questBottom = head + 8 + questH;
     var troopTop = port ? (H - 143) : (H - (small ? 75 : 111));
     var mapLeft = port ? (W - 8) : (W - (small ? 82 : 134));
-    return { top: (questBottom + 8) * k, bottom: (troopTop - 10) * k, left: (port ? 18 : 36) * k, right: (mapLeft - 12) * k, vw: vw, vh: vh, z: z };
+    var squat = !port && H < 420;
+    return { top: (questBottom + (squat ? 16 : 8)) * k, bottom: (troopTop - (squat ? 16 : 10)) * k, left: (port ? 18 : 36) * k, right: (mapLeft - 12) * k, vw: vw, vh: vh, z: z };
   }
   function partyRing(G) {
     var safe = partySafe(G), availH = Math.max(80, safe.bottom - safe.top);
@@ -4309,9 +4310,9 @@ XY.TRAITS = {
     }
     if (vh < vw * 0.45 && list.length >= 8) {
       var fig = 108;
-      var scale = Math.max(0.56, Math.min(0.82, (availH * 0.48) / fig));
+      var scale = Math.max(0.5, Math.min(0.66, (availH * 0.36) / fig));
       XY._partyScale = scale;
-      var gapY = Math.max(64, Math.min(availH * 0.46, fig * scale * 0.95));
+      var gapY = Math.max(52, Math.min(availH * 0.34, fig * scale * 0.78));
       var backN = 6, front = list.length - backN;
       var gapX = Math.max(86, Math.min(168, (availW - 90) / Math.max(3, front - 1)));
       var slots = [];
@@ -23398,7 +23399,7 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
   function cardRow(c, st, items, cur0, x, y, w, hMax, s, geo) {
     var groups = [], i; items.forEach(function (it) { if (!groups.length || groups[groups.length - 1].k !== it.k) groups.push({ k: it.k, n: 0 }); groups[groups.length - 1].n++; });
     var n = items.length, gg = Math.round(12 * s), cg = Math.round(6 * s), labH = Math.round(18 * Math.min(s, 1.2));
-    var cwd = Math.max(44, Math.min(Math.round(96 * s), (w - gg * (groups.length - 1) - cg * (n - groups.length)) / n)), chh = Math.max(84, Math.min(cwd * 1.85, hMax - labH));
+    var cwd = Math.max(44, Math.min(Math.round(96 * s), (w - gg * (groups.length - 1) - cg * (n - groups.length)) / n)), cardFloor = hMax < 150 ? 46 : 84, chh = Math.min(cwd * 1.85, Math.max(cardFloor, hMax - labH)); if (chh + labH > hMax) chh = Math.max(36, hMax - labH);
     var xx = x, gi = 0, k = 0;
     groups.forEach(function (g) {
       var gw = g.n * cwd + (g.n - 1) * cg, lbl = GROUP[g.k];
@@ -23817,13 +23818,13 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
       geo.tiles = nt; geo.strip = { y: stripY, h: labH + cellH };
       if (tiny && dkBot) XY.departDk = { bottom: dkBot, top: dkBot - 56 * zLay, right: (22 + 132 + 10 + 120) * zLay };
       // —— 中：左 竖卡 + 说明；右 立绘 + 按钮
-      var y1 = (tiny && dkBot) ? (dkBot - 56 * zLay - 8) : (stripY - 10), LW = Math.round(cw * (cw >= 1000 ? 0.58 : 0.6)), detMin = Math.round(Math.min(150, 84 * s));
+      var y1 = (tiny && dkBot) ? (dkBot - 56 * zLay - 10) : (stripY - 10), LW = Math.round(cw * (cw >= 1000 ? 0.58 : 0.6)), detMin = Math.round(Math.min(150, 84 * s)); if (tiny && dkBot) detMin = Math.min(detMin, Math.max(28, (y1 - (top + 2)) * 0.42));
       // 说明行数（sweep09 已通关会多一行星级）：按最小 13px 行距给够，竖卡相应矮一点，免得「终点 / 最快用时」被挤掉
       var nDet = (cur0.k === 'boss' ? 3 : 4) + (cur0.k !== 'boss' && cur0.cleared && XY.sweep09 ? 1 : 0);
       detMin = Math.max(detMin, Math.round(Math.min(20 * s, 26) * 1.25 + 8 + nDet * Math.max(14, Math.min(12.5 * s, 16) * 1.3)));
       cr = cardRow(c, st, items, cur0, 14, top + 2, LW - 14, y1 - top - 2 - detMin - 10, s, geo);
       var dy = cr.bottom + 12;
-      go = detail(c, cur0, 14, dy, LW - 14, y1 - dy, s);
+      if (tiny && dkBot) { c.save(); c.beginPath(); c.rect(0, 0, LW, y1); c.clip(); } go = detail(c, cur0, 14, dy, LW - 14, y1 - dy, s); if (tiny && dkBot) c.restore();
       var rx = LW + 14, rw = cw - rx - 14;
       gh = Math.round(Math.max(52, Math.min(80, 58 * s))); gw = Math.min(rw, Math.round(300 * s)); gx = rx + (rw - gw) / 2; gy = y1 - gh;
       var sy2 = gy - 10 - 44, fh = Math.min((gy - top) * 1.18, rw * 1.6);
@@ -24568,7 +24569,12 @@ X.step=function(g,dt){if(!g._simRandom)return step.apply(this,arguments);var sel
     var dpr = (XY.app && XY.app.dpr) || window.devicePixelRatio || 1;
     var bodies = (XY.R4 && XY.R4.bodyRects) || [];
     var W = window.innerWidth, H = window.innerHeight, hw = Math.min(228, W - 16), hh = 36;
-    var boxes = bodies.map(function (b) { return { x: b.x0 / dpr, y: b.y0 / dpr, w: (b.x1 - b.x0) / dpr, h: (b.y1 - b.y0) / dpr }; });
+    var boxes = bodies.map(function (b) {
+      var c = { x: b.x0 / dpr, y: b.y0 / dpr, w: (b.x1 - b.x0) / dpr, h: (b.y1 - b.y0) / dpr };
+      var cloud = Math.max(16, c.h * 0.55);
+      c.x -= cloud * 0.35; c.w += cloud * 0.7; c.h += cloud;
+      return c;
+    });
     function area(r) {
       if (r.x < -0.5 || r.y < -0.5 || r.x + r.w > W + 0.5 || r.y + r.h > H + 0.5) return 1;
       var a = 0, i, b, w, h;
