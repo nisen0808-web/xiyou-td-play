@@ -4243,32 +4243,12 @@ XY.TRAITS = {
     var h = G.heroes[G.ctrl].down ? G.heroes[0] : G.heroes[G.ctrl], cam = G.cam, k = Math.min(1, dt * 7);   // 操控者倒下：观察唐僧
     G.station = !G.heroes[0].down && G.tang.phase === 'rest'; G.camp.active = G.station;   // 休息阶段 = 营地规则生效（同一帧内与状态机对齐）
     cam.x += (h.x - cam.x) * k; cam.y += (h.y - cam.y) * k;
-    var vw = G.view.w, vh = G.view.h;                 // 镜头不要拍到地图外面
-    if (G.heroes.length >= 9) {
-      var b0 = 1e9, b1 = -1e9, b2 = 1e9, b3 = -1e9, hi, hb, top, half;
-      for (hi = 0; hi < G.heroes.length; hi++) {
-        hb = G.heroes[hi]; if (!hb || hb.down || hb.ridden) continue;
-        top = (hb._drawBox ? hb._drawBox.y : hb.y - hb.def.r * 2.7) - 28;
-        half = hb._drawBox ? hb._drawBox.w / 2 : hb.def.r * 1.7;
-        if (hb.x - half < b0) b0 = hb.x - half;
-        if (hb.x + half > b1) b1 = hb.x + half;
-        if (top < b2) b2 = top;
-        if (hb.y + hb.def.r * 1.15 > b3) b3 = hb.y + hb.def.r * 1.15;
-      }
-      var pad = 22;
-      if (b1 - b0 < vw - pad * 2 && b3 - b2 < vh - pad * 2) {
-        cam.x = (b0 + b1) / 2; cam.y = (b2 + b3) / 2;
-        if (b3 - b2 < vh * 0.35 && vh < vw * 0.55) cam.y += vh * 0.12;
-      }
-      else {
-        var minCx = b1 - vw / 2 + pad, maxCx = b0 + vw / 2 - pad;
-        if (minCx <= maxCx) cam.x = clamp(cam.x, minCx, maxCx); else cam.x = (b0 + b1) / 2;
-        var minCy = b3 - vh / 2 + pad, maxCy = b2 + vh / 2 - pad;
-        if (minCy <= maxCy) cam.y = clamp(cam.y, minCy, maxCy); else cam.y = (b2 + b3) / 2;
-      }
+    var vw = G.view.w, vh = G.view.h;
+    var framed = G.heroes.length >= 9 && XY.frameParty && XY.frameParty(G);
+    if (!framed) {
+      if (vw < C.WORLD_W) cam.x = clamp(cam.x, vw / 2, C.WORLD_W - vw / 2);
+      if (vh < C.WORLD_H) cam.y = clamp(cam.y, vh / 2, C.WORLD_H - vh / 2);
     }
-    if (vw < C.WORLD_W) cam.x = clamp(cam.x, vw / 2, C.WORLD_W - vw / 2);
-    if (vh < C.WORLD_H) cam.y = clamp(cam.y, vh / 2, C.WORLD_H - vh / 2);
 
     // 结局倒计时
     if (G.ending && !G.ending.sfx) { G.ending.sfx = 1; if (XY.sfx) XY.sfx(G.ending.kind === 'win' ? 'win' : 'lose'); }
@@ -4300,33 +4280,72 @@ XY.TRAITS = {
   }
 
   /* ================= 英雄 ================= */
+  function partySafe(G) {
+    var app = XY.app || {}, z = app.zoom || 1;
+    var vw = (G.view && G.view.w) || 1280, vh = (G.view && G.view.h) || 720;
+    var cssW = vw * z, cssH = vh * z, s = XY.uiScale ? XY.uiScale(cssW, cssH) : 1, k = s / z;
+    var W = cssW / s, H = cssH / s, port = H > W * 1.05, small = W < 900;
+    var head = port ? 64 : (small ? 30 : 39), questH = port ? 22 : (small ? 22 : 30);
+    var questBottom = head + 8 + questH;
+    var troopTop = port ? (H - 143) : (H - (small ? 75 : 111));
+    var mapLeft = port ? (W - 8) : (W - (small ? 82 : 134));
+    return { top: (questBottom + 8) * k, bottom: (troopTop - 10) * k, left: (port ? 18 : 36) * k, right: (mapLeft - 12) * k, vw: vw, vh: vh, z: z };
+  }
   function partyRing(G) {
-    var n = 0, i, hh, vw, vh;
-    for (i = 1; i < G.heroes.length; i++) { hh = G.heroes[i]; if (hh && !hh.down && !hh.ridden) n++; }
-    n = Math.max(1, n);
-    vw = (G.view && G.view.w) || 1280; vh = (G.view && G.view.h) || 720;
-    return Math.max(64, Math.min((vw - 150) / 2, (vh - 190) / 2)) * 0.92;
+    var safe = partySafe(G), availH = Math.max(80, safe.bottom - safe.top);
+    return Math.max(64, Math.min((safe.vw - 150) / 2, (availH - 120) / 2)) * 0.92;
   }
   function partySlots(G) {
-    var list = [], i, hh, tang = G.heroes[0], R = partyRing(G), a, vw, vh, gap;
+    var list = [], i, hh, tang = G.heroes[0], a;
     for (i = 1; i < G.heroes.length; i++) { hh = G.heroes[i]; if (hh && !hh.down && !hh.ridden) list.push(hh); }
-    vw = (G.view && G.view.w) || 1280; vh = (G.view && G.view.h) || 720;
+    var safe = partySafe(G), vw = safe.vw, vh = safe.vh;
+    var availW = Math.max(160, safe.right - safe.left), availH = Math.max(90, safe.bottom - safe.top);
+    var head = 96, cloud = 42;
     if (vh < vw * 0.45 && list.length >= 8) {
       var per = Math.ceil(list.length / 2);
-      var gapX = Math.min(168, Math.max(108, (vw * 0.7) / Math.max(1, per - 1)));
-      var gapY = Math.min(130, Math.max(96, vh * 0.22));
+      var gapY = Math.max(56, Math.min(120, availH - head - cloud));
+      var gapX = (availW - 80) / Math.max(1, per - 1);
+      gapX = Math.max(78, Math.min(176, gapX));
       return list.map(function (hh, k) {
         var row = k < per ? 0 : 1, col = row ? k - per : k, count = row ? list.length - per : per;
-        return { h: hh, x: tang.x + (col - (count - 1) / 2) * gapX + (row ? gapX * 0.45 : 0), y: tang.y + (row - 0.5) * gapY };
+        return { h: hh, x: tang.x + (col - (count - 1) / 2) * gapX + (row ? gapX * 0.48 : 0), y: tang.y + (row - 0.5) * gapY };
       });
     }
+    var rx = Math.max(160, Math.min((availW - 70) / 2, availW * 0.46));
+    var ry = Math.max(110, Math.min((availH - head - cloud) / 2, availH * 0.42));
     return list.map(function (hh, k) {
       a = (k / Math.max(1, list.length)) * Math.PI * 2 + 0.4;
-      return { h: hh, x: tang.x + Math.cos(a) * R, y: tang.y + Math.sin(a) * R };
+      return { h: hh, x: tang.x + Math.cos(a) * rx, y: tang.y + Math.sin(a) * ry };
     });
   }
+  function frameParty(G) {
+    if (!G || !G.heroes || G.heroes.length < 9 || !G.view) return false;
+    var safe = partySafe(G), b0 = 1e9, b1 = -1e9, b2 = 1e9, b3 = -1e9, i, hb, top, foot, half, rr;
+    for (i = 0; i < G.heroes.length; i++) {
+      hb = G.heroes[i]; if (!hb || hb.down || hb.ridden) continue;
+      rr = (hb.def && hb.def.r) || 18;
+      if (hb._drawBox) { top = hb._drawBox.y - 18; foot = hb._drawBox.y + hb._drawBox.h; half = hb._drawBox.w / 2; }
+      else { top = hb.y - rr * 4.3 - 18; foot = hb.y + rr * 0.9; half = rr * 2.1; }
+      if (hb.x - half < b0) b0 = hb.x - half;
+      if (hb.x + half > b1) b1 = hb.x + half;
+      if (top < b2) b2 = top;
+      if (foot + rr * 2.15 > b3) b3 = foot + rr * 2.15;
+    }
+    if (!(b1 > b0 && b3 > b2)) return false;
+    var destCx = (safe.left + safe.right) / 2, destCy = (safe.top + safe.bottom) / 2;
+    var bw = b1 - b0, bh = b3 - b2, sw = safe.right - safe.left, sh = safe.bottom - safe.top;
+    if (bw > sw) destCx = safe.left + sw / 2;
+    if (bh > sh) destCy = safe.top + sh / 2;
+    G.cam.x = (b0 + b1) / 2 - (destCx - safe.vw / 2);
+    G.cam.y = (b2 + b3) / 2 - (destCy - safe.vh / 2);
+    XY.R4 = XY.R4 || {};
+    XY.R4.partySafe = safe;
+    return true;
+  }
+  XY.partySafe = partySafe;
   XY.partyRing = partyRing;
   XY.partySlots = partySlots;
+  XY.frameParty = frameParty;
   var SLOT_R = 88;
   var STAND = { tang: 190, wukong: 50, bajie: 55, wujing: 40, horse: 175 };   // 自动出击/守护时离敌人站多远
 
@@ -9463,8 +9482,12 @@ XY.BGS1={"src": "data:image/webp;base64,UklGRtT1GgBXRUJQVlA4IMj1GgCQwWGdASoAEAAK
         if (heroBodies[bj].h === n.h) ownB = heroBodies[bj];
         else if (n.h) nearD = Math.min(nearD, Math.abs(heroBodies[bj].h.x - n.h.x));
       }
-      var cap = Math.max(46, Math.min(box.w, nearD - 10));
+      var zN = (XY.app && XY.app.zoom) || 1, cssMin = XY.app ? Math.min(XY.app.lw * zN, XY.app.lh * zN) : 0;
+      var minIh = (cssMin >= 700 && box.ih) ? (14 / zN) : 0;
+      var minW = (box.ih && minIh && box.ih > minIh) ? box.w * (minIh / box.ih) : 0;
+      var cap = Math.max(minW || 46, Math.min(box.w, nearD - 10));
       if (cap < box.w && box.w > 0) { var kk = cap / box.w; box.w *= kk; box.h *= kk; if (box.iw) box.iw *= kk; if (box.ih) box.ih *= kk; box.fs *= kk; }
+      if (minIh && box.ih && box.ih < minIh) { var up = minIh / box.ih; box.w *= up; box.h *= up; if (box.iw) box.iw *= up; box.ih *= up; box.fs *= up; }
       var tw = box.w, th = box.h, best = null;
       var head = (n.h && n.h._drawBox) ? n.h._drawBox.y : (ownB ? ownB.y0 : n.y), nudge = Math.min(th * 0.4, 14);
       var cy0 = head - th / 2 - Math.min(4, th * 0.2);
@@ -10292,7 +10315,8 @@ XY.BGS1={"src": "data:image/webp;base64,UklGRtT1GgBXRUJQVlA4IMj1GgCQwWGdASoAEAAK
     if (s === 'start' && window.XY_SPLIT_ENTRY && (!XY.lazy || XY.lazy.state !== 'done')) { XY.screens.draw(ctx, G, app); return; }
     if (snap) XY.ov.drawSnap(ctx, app, G.cardOffer ? 0.26 : null);
     else {
-    // 世界（带镜头抖动）
+    // 世界（带镜头抖动）。满员时把整队放进顶栏和底栏之间，暂停模拟也要摆正镜头。
+    if (G && G.heroes && G.heroes.length >= 9 && XY.frameParty) XY.frameParty(G);
     ctx.save();
     var v = G.view, camx = G.cam.x, camy = G.cam.y;
     var sh = G.shake > 0 ? G.shake : 0, shx = (Math.random() - 0.5) * sh, shy = (Math.random() - 0.5) * sh;
