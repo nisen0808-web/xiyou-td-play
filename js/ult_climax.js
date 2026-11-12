@@ -53,16 +53,70 @@
     var old = XY.render;
     function render(ctx, G, app) {
       old(ctx, G, app);
-      if (!U.hold) return;
-      if (app && app.rt > U.until) { U.skip(); return; }
+      if (U.hold) {
+        if (app && app.rt > U.until) U.skip();
+        else {
+          ctx.save();
+          ctx.setTransform(app.zoom * app.dpr, 0, 0, app.zoom * app.dpr, 0, 0);
+          U.paint(ctx, app, U.hold);
+          ctx.restore();
+        }
+      }
+      var q = XY.introQ;
+      if (!q || !q.length || !app) { if (XY.gacha10) XY.gacha10.forceHold = false; return; }
+      var id = q[0], sp = XY.SP_BY && XY.SP_BY[id];
+      if (!sp) { q.shift(); return; }
       ctx.save();
       ctx.setTransform(app.zoom * app.dpr, 0, 0, app.zoom * app.dpr, 0, 0);
-      U.paint(ctx, app, U.hold);
+      if (app.screen !== 'levels') { q.length = 0; XY._introBox = null; if (XY.gacha10) XY.gacha10.forceHold = false; ctx.restore(); return; }
+      if (XY.gacha10) XY.gacha10.forceHold = true;
+      var W = app.lw, H = app.lh, pw = Math.min(560, W - 24), ph = Math.min(280, H * 0.46);
+      var x = (W - pw) / 2, y = (H - ph) / 2;
+      ctx.fillStyle = '#f6efe2';
+      ctx.beginPath();
+      ctx.moveTo(x + 16, y + 6);
+      ctx.quadraticCurveTo(x + pw * 0.5, y - 8, x + pw - 12, y + 8);
+      ctx.quadraticCurveTo(x + pw + 6, y + ph * 0.5, x + pw - 10, y + ph - 8);
+      ctx.quadraticCurveTo(x + pw * 0.4, y + ph + 6, x + 14, y + ph - 6);
+      ctx.quadraticCurveTo(x - 6, y + ph * 0.4, x + 16, y + 6);
+      ctx.fill();
+      var av = Math.min(ph - 36, pw * 0.34);
+      if (XY.xAvIcon && XY.xAvIcon.draw) XY.xAvIcon.draw(ctx, id, x + 16, y + 18, av, av);
+      var tx = x + pw * 0.46;
+      ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#24180f';
+      ctx.font = '18px "Ma Shan Zheng","KaiTi",serif';
+      ctx.fillText('身份  ' + (sp.role || sp.name), tx, y + 92);
+      ctx.fillText('擅长  ' + (sp.weapon || sp.trait && sp.trait.name || ''), tx, y + 124);
+      ctx.fillText('必杀  ' + (sp.ult || ''), tx, y + 156);
+      ctx.fillStyle = '#a42d19';
+      ctx.font = '32px "Ma Shan Zheng","KaiTi",serif';
+      ctx.fillText(sp.name, tx, y + ph - 64);
+      ctx.fillStyle = '#5c4a38';
+      ctx.font = '15px "Ma Shan Zheng","KaiTi",serif';
+      ctx.fillText('点一下收下', tx, y + ph - 28);
+      XY._introBox = { x: x, y: y, w: pw, h: ph };
       ctx.restore();
     }
     render._ult = 1;
     XY.render = render;
   }
   hook();
-  window.addEventListener('pointerdown', function () { if (U.hold) U.skip(); }, true);
+  function showingIntro() {
+    return !!(XY.introQ && XY.introQ.length && XY._introBox);
+  }
+  function eatIntro(ev) {
+    if (U.hold && ev.type === 'pointerdown') U.skip();
+    if (!showingIntro()) return;
+    if (ev.type === 'pointerdown') {
+      var q = XY.introQ, id = q[0];
+      var data = XY.save && XY.save.data;
+      if (data) { data.intros = data.intros || {}; data.intros[id] = 1; if (XY.save.touch) XY.save.touch(); }
+      q.shift();
+      if (!q.length) XY._introBox = null;
+    }
+    if (ev.stopPropagation) ev.stopPropagation();
+    if (ev.preventDefault && ev.cancelable) ev.preventDefault();
+  }
+  window.addEventListener('pointerdown', eatIntro, true);
 })();

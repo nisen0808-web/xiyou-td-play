@@ -1,5 +1,5 @@
 {
-  "version": "0.8.7",
+  "version": "0.8.8",
   "default": "index.html (single-file compatible)",
   "optional": "index-split.html (requires sibling assets/, chunks/, bossfight/, villain/)",
   "chunks": [

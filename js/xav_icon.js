@@ -19,49 +19,48 @@
     if (!e) {
       e = loaded[id] = { im: new Image(), ok: false };
       e.im.onload = function () { e.ok = e.im.naturalWidth > 0; feather = {}; };
-      var inl = window.XY_X_AVATARS;
-      e.im.src = (inl && inl[id]) || (BASE + id + '.webp');
+      e.im.src = BASE + id + '.webp';
     }
     return e.ok ? e.im : null;
   }
   function bake(im, w, h) {
-    var cw = Math.max(2, Math.round(w)), ch = Math.max(2, Math.round(h));
+    var cap = 280;
+    var cw = Math.max(2, Math.min(cap, Math.round(w))), ch = Math.max(2, Math.min(cap, Math.round(h)));
     var cv = document.createElement('canvas'); cv.width = cw; cv.height = ch;
     var g = cv.getContext('2d');
     var iw = im.naturalWidth || im.width, ih = im.naturalHeight || im.height;
-    var sc = Math.min(cw / iw, ch / ih) * 0.98;
+    var sc = Math.min(cw / iw, ch / ih);
     var dw = iw * sc, dh = ih * sc, ox = (cw - dw) / 2, oy = (ch - dh) / 2;
     g.imageSmoothingEnabled = true;
     g.imageSmoothingQuality = 'high';
     g.drawImage(im, ox, oy, dw, dh);
     var mask = document.createElement('canvas'); mask.width = cw; mask.height = ch;
     var q = mask.getContext('2d');
-    var seed = (iw * 13 + ih * 7) % 97, n = 18, i, m = Math.min(dw, dh) * 0.12;
-    function jig(k) { return Math.sin(seed * 0.37 + k * 1.7); }
-    var x0 = ox + m, y0 = oy + m * 0.85, x1 = ox + dw - m, y1 = oy + dh - m * 0.7;
+    var seed = (iw * 13 + ih * 7) % 97, i, cx = cw / 2, cy = ch / 2, rad = Math.min(cw, ch) * 0.46;
     q.beginPath();
-    q.moveTo(x0, y0 + jig(0) * m * 0.45);
-    for (i = 1; i <= n; i++) q.lineTo(x0 + (x1 - x0) * i / n + jig(i) * m * 0.35, y0 + jig(i + 3) * m * 0.7);
-    for (i = 1; i <= n; i++) q.lineTo(x1 + jig(i + 8) * m * 0.55, y0 + (y1 - y0) * i / n + jig(i + 11) * m * 0.35);
-    for (i = n; i >= 0; i--) q.lineTo(x0 + (x1 - x0) * i / n + jig(i + 16) * m * 0.4, y1 + jig(i + 19) * m * 0.55);
-    for (i = n; i >= 1; i--) q.lineTo(x0 + jig(i + 24) * m * 0.5, y0 + (y1 - y0) * i / n + jig(i + 27) * m * 0.3);
+    for (i = 0; i <= 72; i++) {
+      var a = i / 72 * Math.PI * 2;
+      var rr = rad * (1 + 0.012 * Math.sin(seed * 0.2 + a * 3));
+      var px = cx + Math.cos(a) * rr, py = cy + Math.sin(a) * rr * 0.98;
+      if (!i) q.moveTo(px, py); else q.lineTo(px, py);
+    }
     q.closePath();
     q.fillStyle = '#000';
     q.fill();
-    q.globalCompositeOperation = 'destination-out';
-    q.lineCap = 'round';
-    q.strokeStyle = 'rgba(0,0,0,0.9)';
-    for (i = 0; i < 8; i++) {
-      q.lineWidth = 1.1 + (i % 3) * 0.7;
-      q.beginPath();
-      var sx = x0 + ((i * 37) % 90) / 90 * (x1 - x0);
-      var sy = (i % 2) ? y0 + m * 0.15 : y1 - m * 0.1;
-      q.moveTo(sx, sy);
-      q.quadraticCurveTo(sx + m * 0.8, sy + (i % 2 ? m * 0.7 : -m * 0.7), sx + m * 1.5, sy + jig(i) * 2);
-      q.stroke();
-    }
     g.globalCompositeOperation = 'destination-in';
     g.drawImage(mask, 0, 0);
+    g.globalCompositeOperation = 'source-over';
+    g.strokeStyle = 'rgba(42,32,22,0.28)';
+    g.lineWidth = 1.1;
+    g.beginPath();
+    for (i = 0; i <= 72; i++) {
+      var b = i / 72 * Math.PI * 2;
+      var rb = rad * (1 + 0.012 * Math.sin(seed * 0.2 + b * 3));
+      var qx = cx + Math.cos(b) * rb, qy = cy + Math.sin(b) * rb * 0.98;
+      if (!i) g.moveTo(qx, qy); else g.lineTo(qx, qy);
+    }
+    g.closePath();
+    g.stroke();
     return cv;
   }
   function underBrush(c, x, y, w, h) {
@@ -107,13 +106,16 @@
   }
   function featherImage(c, im, x, y, w, h) {
     if (!im || !(im.naturalWidth || im.width) || w < 2 || h < 2) return false;
-    var key = (im.src || '') + '|' + Math.round(w / 2) * 2 + 'x' + Math.round(h / 2) * 2;
+    var dw = Math.min(w, 280), dh = Math.min(h, 280);
+    var dx = x + (w - dw) / 2, dy = y + (h - dh) / 2;
+    var key = (im.src || '') + '|' + Math.round(dw) + 'x' + Math.round(dh);
     var cv = feather[key];
-    if (!cv) cv = feather[key] = bake(im, Math.round(w / 2) * 2, Math.round(h / 2) * 2);
-    underBrush(c, x, y, w, h);
+    if (!cv) cv = feather[key] = bake(im, dw, dh);
+    underBrush(c, dx, dy, dw, dh);
     c.save();
     c.imageSmoothingEnabled = true;
-    c.drawImage(cv, x, y, w, h);
+    c.imageSmoothingQuality = 'high';
+    c.drawImage(cv, dx, dy, dw, dh);
     c.restore();
     return true;
   }
@@ -164,7 +166,7 @@
     var orig = H.face;
     function face(c, h, x, y, r, rt) {
       var id = h && h.id;
-      if (isSpecial(id) && r <= 64) {
+      if (isSpecial(id)) {
         if (hiddenLocked(id)) return 'x';
         var side = r * 2.2;
         if (!draw(c, id, x - side / 2, y - side / 2, side, side)) {

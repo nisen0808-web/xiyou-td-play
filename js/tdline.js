@@ -1560,7 +1560,7 @@
       ctx.restore();
       if (f.state === 'draft' && i != null) {
         var s = w2s(G, w.x, w.y);
-        var hitR = Math.max(22, 22 / z);
+        var hitR = Math.max(36, 48 / z);
         hit(s.x - hitR, s.y - hitR, hitR * 2, hitR * 2, 'tdLineSeat', { i: i });
       }
     }
@@ -1580,6 +1580,17 @@
       ctx.fillText('攻+' + Math.round(bns.atk * 100) + '%', xb, yb);
       ctx.fillText('防+' + Math.round(bns.dr * 100) + '%', xb, yb + line + 2);
     }
+  }
+  function reseatHits(G) {
+    var f = G.td && G.td.form && G.td.form.line;
+    if (!f || f.state !== 'draft') return;
+    var def = R.formById(f.id);
+    if (!def || !def.slots) return;
+    var z = (app() && app().zoom) || 1;
+    def.slots.forEach(function (slot, i) {
+      var w = slotWorld(f, slot), s = w2s(G, w.x, w.y), hitR = Math.max(36, 48 / z);
+      hit(s.x - hitR, s.y - hitR, hitR * 2, hitR * 2, 'tdLineSeat', { i: i });
+    });
   }
   function previewSlots(ctx, G) {
     ['tower', 'hero'].forEach(function (k) {
@@ -1634,7 +1645,7 @@
   }
   function inkStrip(ctx, x, y, w, h) {
     ctx.save();
-    ctx.fillStyle = 'rgba(43,28,8,0.92)';
+    ctx.fillStyle = 'rgba(246,239,226,0.94)';
     ctx.beginPath();
     ctx.moveTo(x + 10, y + 4);
     ctx.quadraticCurveTo(x + w * 0.45, y - 1, x + w - 8, y + 5);
@@ -1642,6 +1653,9 @@
     ctx.quadraticCurveTo(x + w * 0.5, y + h + 2, x + 8, y + h - 4);
     ctx.closePath();
     ctx.fill();
+    ctx.strokeStyle = 'rgba(90,64,36,0.4)';
+    ctx.lineWidth = 1.3;
+    ctx.stroke();
     ctx.restore();
   }
   function drawFx(ctx, G) {
@@ -1851,9 +1865,9 @@
     ctx.fillText('布阵', x + 16, y + 10);
     ctx.fillStyle = '#2a241c'; ctx.font = brushFont(bodyPx);
     ctx.fillText('最少 4 人', x + 16 + namePx * 2.4, y + 14);
-    seal(ctx, x + w - (narrow ? 78 : 64), y + 24, narrow ? 18 : 16, '谱');
+    seal(ctx, x + w - (narrow ? 86 : 72), y + 24, narrow ? 22 : 20, '阵谱');
     hit(x + w - (narrow ? 100 : 86), y + 4, 44, 40, 'tdOpenShop');
-    seal(ctx, x + w - 28, y + 24, narrow ? 16 : 14, '收');
+    seal(ctx, x + w - 28, y + 24, narrow ? 20 : 18, '收起');
     hit(x + w - 48, y + 4, 44, 40, 'tdDrawer');
     var listH = Math.max(rowH, viewH - head - footH);
     var maxScroll = Math.max(0, list.length * rowH - listH);
@@ -1880,8 +1894,8 @@
     });
     ctx.restore();
     if (maxScroll > 0) {
-      seal(ctx, x + w - 22, y + head + 16, 12, '上');
-      seal(ctx, x + w - 22, y + head + listH - 16, 12, '下');
+      seal(ctx, x + w - 26, y + head + 16, 16, '上翻');
+      seal(ctx, x + w - 26, y + head + listH - 16, 16, '下翻');
       hit(x + w - 40, y + head, 36, 32, 'tdPanelUp');
       hit(x + w - 40, y + head + listH - 32, 36, 32, 'tdPanelDown');
     }
@@ -1907,7 +1921,7 @@
       var footTop2 = y + head + listH;
       seal(ctx, x + w - 130, footTop2 + footH / 2, sealR, '确认');
       hit(x + w - 160, footTop2, 60, footH, 'tdConfirm', { who: 'line' });
-      seal(ctx, x + w - 52, footTop2 + footH / 2, sealR, '散');
+      seal(ctx, x + w - 52, footTop2 + footH / 2, sealR, '解散');
       hit(x + w - 82, footTop2, 60, footH, 'tdDisband', { who: 'line' });
     }
     bindHits(G, cur);
@@ -1947,9 +1961,9 @@
     if (x < target.x + target.w && x + cw > target.x && y < target.y + target.h && y + ch > target.y) y = Math.min(H - ch - 150, target.y + target.h + 24);
     inkStrip(ctx, x, y, cw, ch);
     var list = G.td.guide.kind === 'td3' ? R.GUIDE3 : R.GUIDE2;
-    ctx.fillStyle = '#f6efe2'; ctx.font = brushFont(phone() ? 18 : 22); ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+    ctx.fillStyle = '#a42d19'; ctx.font = brushFont(phone() ? 18 : 22); ctx.textAlign = 'left'; ctx.textBaseline = 'top';
     ctx.fillText((G.td.guide.kind === 'td3' ? '阵型' : '布阵') + ' ' + (G.td.guide.i + 1) + '/' + list.length, x + 16, y + 10);
-    ctx.fillStyle = '#f3e6c8'; ctx.font = brushFont(phone() ? 15 : 17);
+    ctx.fillStyle = '#24180f'; ctx.font = brushFont(phone() ? 15 : 17);
     var words = st.text, line = '', lines = [], i;
     for (i = 0; i < words.length; i++) {
       if (ctx.measureText(line + words.charAt(i)).width > cw - 24) { lines.push(line); line = words.charAt(i); }
@@ -2324,6 +2338,7 @@
       drawFx(ctx, G);
       ctx.restore();
       drawHud(ctx, G, a);
+      reseatHits(G);
       if (G.td.guide && G.td.deploy) drawGuide(ctx, G);
       if (a.tdFormShop) drawFormShop(ctx, G, a);
     } catch (err) { if (window.console) console.warn('tdline', err); }

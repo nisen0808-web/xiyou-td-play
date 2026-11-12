@@ -517,6 +517,7 @@
 
   function hold(G, dt) {
     var run = ensureRun(G);
+    if (G.mode === 'cards') { G.dkSkip = false; return; }
     if (G.dkSkip && run.introLeft > 0) {
       API.skipIntro(run, G.levelId || 1);
       G.dkSkip = false;
@@ -610,6 +611,54 @@
     if (now - fpsT >= 500) { fpsV = fpsN * 1000 / (now - fpsT); fpsN = 0; fpsT = now; }
   }
 
+  function boxHit(a, b) {
+    return !!(a && b && a.w && b.w && a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y);
+  }
+  /* 出发页的框记在屏幕像素上，这层字是按战场坐标画的，先换算再比。 */
+  function worldBox(box, u) {
+    if (!box || !box.w) return null;
+    return { x: box.x * u, y: box.y * u, w: box.w * u, h: box.h * u };
+  }
+  function departBlocked(box, u) {
+    var geo = XY.depart && XY.depart.geo, lists = [], i, j, list;
+    if (box.y < 56 * u) return true;
+    if (geo) {
+      if (geo.cards) lists.push(geo.cards);
+      if (geo.btns) lists.push(geo.btns);
+      if (geo.go) lists.push([geo.go]);
+      if (geo.more) lists.push([geo.more]);
+    }
+    if (XY.departCards) lists.push(XY.departCards);
+    for (i = 0; i < lists.length; i++) {
+      list = lists[i];
+      for (j = 0; j < list.length; j++) if (boxHit(box, worldBox(list[j], u))) return true;
+    }
+    return false;
+  }
+  function departPair(app) {
+    var W = app.lw, H = app.lh, z = app.zoom || 1, u = 1 / z, geo = XY.depart && XY.depart.geo;
+    var bw = 72, bh = 40, gap = 8, i;
+    var go = geo && geo.go ? worldBox(geo.go, u) : null;
+    var strip = geo && geo.strip ? worldBox({ x: 0, y: geo.strip.y, w: 1, h: geo.strip.h }, u) : null;
+    var cands = [];
+    if (go) {
+      cands.push({ x: go.x - bw * 2 - gap - 12, y: go.y + (go.h - bh) / 2 });
+      cands.push({ x: go.x, y: go.y - bh - 10 });
+    }
+    if (strip) cands.push({ x: 16, y: strip.y - bh - 10 });
+    if (strip && go) cands.push({ x: Math.max(16, go.x - bw * 2 - gap - 12), y: strip.y - bh - 10 });
+    cands.push({ x: W - bw * 2 - gap - 16, y: 72 * u });
+    cands.push({ x: 16, y: 72 * u });
+    for (i = 0; i < cands.length; i++) {
+      var x = Math.max(8, Math.min(W - bw * 2 - gap - 8, cands[i].x));
+      var y = Math.max(8, Math.min(H - bh - 8, cands[i].y));
+      var a = { x: x, y: y, w: bw, h: bh };
+      var b = { x: x + bw + gap, y: y, w: bw, h: bh };
+      if (!departBlocked(a, u) && !departBlocked(b, u)) return [a, b];
+    }
+    var y2 = strip ? Math.max(8, strip.y - bh - 10) : 72 * u;
+    return [{ x: 16, y: y2, w: bw, h: bh }, { x: 16 + bw + gap, y: y2, w: bw, h: bh }];
+  }
   function buttonBox(app) {
     var W = app.lw, H = app.lh, port = H > W * 1.05;
     if (app.screen === 'start') {
@@ -617,27 +666,38 @@
       return { x: W - 156, y: 14, w: 136, h: 56 };
     }
     if (port) return { x: 12, y: H - 64, w: 112, h: 52 };
-    return { x: 22, y: Math.max(250, H - 250), w: 132, h: 56 };
+    if (app.screen === 'levels') return departPair(app)[0];
+    return { x: 16, y: Math.max(8, H - 210), w: 72, h: 40 };
   }
   function gearBox(app, btn) {
     var port = app.lh > app.lw * 1.05;
     if (app.screen !== 'levels') return null;
     if (port) return { x: 132, y: app.lh - 64, w: 112, h: 52 };
-    return { x: btn.x + btn.w + 10, y: btn.y, w: 120, h: btn.h };
+    return departPair(app)[1];
   }
 
+  function textBox(c, s, x, y, size) {
+    c.save();
+    c.font = size + 'px "Ma Shan Zheng","KaiTi",serif';
+    var w = c.measureText(s).width;
+    c.restore();
+    return { x: x, y: y - size * 0.55, w: w, h: size * 1.15, text: s };
+  }
   function paintButton(c, app) {
     var b = buttonBox(app);
     boxes.event = b;
-    redSeal(c, b.x, b.y, b.w, b.h, '活动', API.NAME);
+    brush(c, '活动', b.x + 8, b.y + b.h * 0.55, 22, '#24180f', 'left');
     if (!API.gachaClaimed(XY.save.data)) dot(c, b.x + b.w - 8, b.y + 8);
     hit(b.x, b.y, b.w, b.h, 'dkOpen');
+    var marks = [{ act: 'dkOpen', box: b, text: textBox(c, '活动', b.x + 8, b.y + b.h * 0.55, 22) }];
     if (app.screen === 'levels') {
       var g = gearBox(app, b);
       boxes.gear = g;
-      redSeal(c, g.x, g.y, g.w, g.h, '专属');
+      brush(c, '专属', g.x + 8, g.y + g.h * 0.55, 22, '#24180f', 'left');
       hit(g.x, g.y, g.w, g.h, 'dkGear');
+      marks.push({ act: 'dkGear', box: g, text: textBox(c, '专属', g.x + 8, g.y + g.h * 0.55, 22) });
     }
+    XY.departTags = marks;
   }
   function spArt(id) {
     if (!revealed(id)) return null;
@@ -665,26 +725,8 @@
   }
   function inkWash(c, im, x, y, w, h, fallback) {
     c.save();
-    c.beginPath();
-    c.rect(x, y, w, h);
-    c.clip();
-    c.fillStyle = '#f3ead6';
-    c.fillRect(x, y, w, h);
     if (im) drawContain(c, im, x, y, w, h);
     else if (fallback) cursive(c, fallback, x + w / 2, y + h * 0.46, Math.min(42, w * 0.34), '#3a2a1c', 'center');
-    c.globalCompositeOperation = 'destination-in';
-    var rg = c.createRadialGradient(x + w * 0.5, y + h * 0.4, Math.min(w, h) * 0.06, x + w * 0.5, y + h * 0.46, Math.max(w, h) * 0.68);
-    rg.addColorStop(0, 'rgba(0,0,0,1)');
-    rg.addColorStop(0.62, 'rgba(0,0,0,1)');
-    rg.addColorStop(0.86, 'rgba(0,0,0,0.4)');
-    rg.addColorStop(1, 'rgba(0,0,0,0)');
-    c.fillStyle = rg;
-    c.fillRect(x, y, w, h);
-    var lg = c.createLinearGradient(x, y + h * 0.72, x, y + h);
-    lg.addColorStop(0, 'rgba(0,0,0,1)');
-    lg.addColorStop(1, 'rgba(0,0,0,0)');
-    c.fillStyle = lg;
-    c.fillRect(x, y, w, h);
     c.restore();
   }
   function namePlate(c, s, x, y, maxW) {
@@ -935,11 +977,11 @@
   function storyLines() {
     return [
       '休息约 20 秒后，猫叔在主线登场。',
-      '登场后狂暴 45 秒。小怪移速和伤害 ×1.5，洞主仍是狂暴 ×2。',
+      '登场后狂暴四十五秒。小怪跑得更快、打得更疼，大约加半；洞主仍是狂暴加倍。',
       '第一次倒下不掉东西，化成九尾，成为猫叔 · 魔化。',
-      '魔化后生命 ×1.6，伤害 ×1.4，攻速 ×1.2。',
-      '只有打败魔化之身才掉落：必得一张角色卡，另有 55% 再得一件专属。',
-      '没打败也不算输。副本和 Boss 战不会遇见他。'
+      '魔化后生命加六成，伤害加四成，出招更快。',
+      '只有打败魔化之身才掉落：必得一张角色卡，另有过半机会再得一件专属。',
+      '没打败也不算输。副本和洞主战不会遇见他。'
     ];
   }
   function paintLines(c, lines, x, y, maxW, maxH) {
@@ -1054,7 +1096,7 @@
       foot = y + h - 6;
       sharedGround(c, left, foot, cardW * 2 + gap);
       blitCut(c, 'stage1cut', art.stage1Cut || 'stage1-cut.webp', left + cardW * 0.5, foot, h - 18, cardW - 8);
-      captionOn(c, left, y, cardW, h, API.HERO, API.HANDLE);
+      captionOn(c, left, y, cardW, h, API.HERO, '');
       blitCut(c, 'formcut', art.formCut || 'form-cut.webp', left + cardW + gap + cardW * 0.5, foot, h - 10, cardW - 8);
       captionOn(c, left + cardW + gap, y, cardW, h, API.HERO2, '');
       return;
@@ -1067,7 +1109,7 @@
     foot = top + cardH - 2;
     sharedGround(c, x, foot, w);
     blitCut(c, 'stage1cut', art.stage1Cut || 'stage1-cut.webp', x + cardW * 0.5, foot, cardH, cardW - 6);
-    captionOn(c, x, top, cardW, cardH, API.HERO, API.HANDLE);
+    captionOn(c, x, top, cardW, cardH, API.HERO, '');
     blitCut(c, 'formcut', art.formCut || 'form-cut.webp', x + cardW + gap + cardW * 0.5, foot, cardH, cardW - 6);
     captionOn(c, x + cardW + gap, top, cardW, cardH, API.HERO2, '');
   }
@@ -1076,19 +1118,18 @@
     c.save();
     c.fillStyle = 'rgba(246,239,224,0.55)';
     c.fillRect(0, 0, W, H);
-    var m = port ? 8 : 22;
-    var x = m, y = port ? 10 : 16, w = W - m * 2, h = H - y - (port ? 10 : 14);
+    var m = port ? 28 : 22;
+    var x = m, y = port ? 28 : 16, w = W - m * 2, h = H - y - (port ? 28 : 14);
     paper(c, x, y, w, h);
     c.save();
     c.beginPath();
     c.rect(x + 6, y + 6, w - 12, h - 12);
     c.clip();
     brush(c, '特别活动', x + (port ? 16 : 24), y + (port ? 28 : 36), port ? 26 : 32, '#3a2a1c', 'left');
-    latin(c, API.NAME, x + (port ? 150 : 180), y + (port ? 28 : 36), port ? 28 : 36, '#7d1c14', 'left');
+    brush(c, '猫叔', x + (port ? 150 : 180), y + (port ? 28 : 36), port ? 28 : 36, '#7d1c14', 'left');
     var closeX = x + w - (port ? 72 : 84), closeY = y + 12, closeW = port ? 56 : 66, closeH = 44;
     redSeal(c, closeX, closeY, closeW, closeH, '关');
     hit(0, 0, W, H, 'dkClose');
-    hit(x, y, w, h, 'dkNoop');
     var pack = gachaPack();
     pack.ids.forEach(function (id) { spArt(id); });
     var on = eventOn();
@@ -1109,9 +1150,18 @@
     c.restore();
     boxes.popup = { x: x, y: y, w: w, h: h };
   }
-  function paintIntro(c, app, run) {
-    var scene = art.introScene ? img('introScene', art.introScene) : null;
-    if (scene) {
+  function paintIntro(c, app) {
+    var W = app.lw, H = app.lh;
+    var w = Math.min(260, W * 0.34), h = Math.min(108, H * 0.2);
+    var x = 18, y = Math.max(72, H - h - 24);
+    c.save();
+    paper(c, x, y, w, h);
+    brush(c, '猫叔登场', x + 18, y + h * 0.42, 26, '#24180f', 'left');
+    brush(c, '点一下就过去', x + 18, y + h * 0.74, 14, '#5c4a38', 'left');
+    c.restore();
+    hit(0, 0, W, H, 'dkSkip');
+    return;
+    if (false) {
       var W0 = app.lw, H0 = app.lh, port = H0 > W0 * 1.05;
       var ir = scene.naturalWidth / scene.naturalHeight;
       var dw, dh, dx, dy, u = 0;
@@ -1178,13 +1228,13 @@
     if (port) {
       var each = Math.floor((availH - gap) / 2);
       inkWash(c, stage, x + 8, top, w - 16, each, '猫');
-      captionOn(c, x + 8, top, w - 16, each, API.HERO, API.HANDLE);
+      captionOn(c, x + 8, top, w - 16, each, API.HERO, '');
       inkWash(c, form, x + 8, top + each + gap, w - 16, each, '化');
       captionOn(c, x + 8, top + each + gap, w - 16, each, API.HERO2, '');
     } else {
       var cw = Math.floor((w - 24 - gap) / 2);
       inkWash(c, stage, x + 10, top, cw, availH, '猫');
-      captionOn(c, x + 10, top, cw, availH, API.HERO, API.HANDLE);
+      captionOn(c, x + 10, top, cw, availH, API.HERO, '');
       inkWash(c, form, x + 10 + cw + gap, top, cw, availH, '化');
       captionOn(c, x + 10 + cw + gap, top, cw, availH, API.HERO2, '');
     }
@@ -1323,8 +1373,26 @@
   function paintForm(c, app, run) {
     var W = app.lw, H = app.lh, port = H > W;
     if (videoFrame()) {
+      var bw = Math.min(420, W - 40), bh = Math.min(200, H - 80), x = (W - bw) / 2, y = (H - bh) / 2;
       c.save();
-      paintFormVideo(c, W, H);
+      c.fillStyle = 'rgba(246,239,226,0.42)';
+      c.fillRect(0, 0, W, H);
+      c.fillStyle = '#f6efe2';
+      c.beginPath();
+      c.moveTo(x + 12, y + 4);
+      c.quadraticCurveTo(x + bw * 0.5, y - 6, x + bw - 10, y + 8);
+      c.lineTo(x + bw - 4, y + bh - 10);
+      c.quadraticCurveTo(x + bw * 0.4, y + bh + 6, x + 8, y + bh - 6);
+      c.closePath();
+      c.fill();
+      c.fillStyle = '#a42d19';
+      c.font = '32px "Ma Shan Zheng","KaiTi",serif';
+      c.textAlign = 'center';
+      c.textBaseline = 'middle';
+      c.fillText('猫叔魔化', W / 2, y + bh * 0.38);
+      c.fillStyle = '#24180f';
+      c.font = '18px "Ma Shan Zheng","KaiTi",serif';
+      c.fillText('点一下继续', W / 2, y + bh * 0.68);
       c.restore();
       hit(0, 0, W, H, 'dkSkip');
       return;
@@ -1529,6 +1597,16 @@
     if (floatCache[key]) return floatCache[key];
     var iw = im.naturalWidth || im.width, ih = im.naturalHeight || im.height;
     if (!iw || !ih) return null;
+    try {
+      var probe = document.createElement('canvas');
+      var pw = Math.min(48, iw), ph = Math.min(48, ih);
+      probe.width = pw; probe.height = ph;
+      var pg = probe.getContext('2d');
+      pg.drawImage(im, 0, 0, pw, ph);
+      var pd = pg.getImageData(0, 0, pw, ph).data, clear = 0, pi;
+      for (pi = 3; pi < pd.length; pi += 16) if (pd[pi] < 16) clear++;
+      if (clear > pd.length / 64) { floatCache[key] = im; return im; }
+    } catch (e) {}
     var sc0 = Math.min(1, 560 / Math.max(iw, ih));
     var w = Math.max(1, Math.round(iw * sc0)), h = Math.max(1, Math.round(ih * sc0));
     var cnv = document.createElement('canvas');
@@ -1558,8 +1636,12 @@
     var tol = (pr + pg + pb) / 3 < 215 ? 40 : 32;
     function isPaper(r, g0, b, a) {
       if (a < 12) return true;
-      if (Math.max(r, g0, b) - Math.min(r, g0, b) > 58) return false;
-      return Math.abs(r - pr) <= tol && Math.abs(g0 - pg) <= tol && Math.abs(b - pb) <= tol;
+      var lum = (r + g0 + b) / 3;
+      var chroma = Math.max(r, g0, b) - Math.min(r, g0, b);
+      var dr = r - pr, dg = g0 - pg, db = b - pb;
+      var dist = Math.sqrt(dr * dr + dg * dg + db * db);
+      if (lum > 204 && chroma < 46) return false;
+      return lum > 132 && chroma < 92 && dist < 88 && r + 10 > g0 && g0 + 20 > b;
     }
     var seen = new Uint8Array(n), qx = new Int16Array(n), qy = new Int16Array(n), qh = 0, qt = 0;
     function push(x0, y0) {
@@ -1587,7 +1669,9 @@
           if (d[p + 3] < 12) continue;
           lum = (d[p] + d[p + 1] + d[p + 2]) / 3;
           chroma = Math.max(d[p], d[p + 1], d[p + 2]) - Math.min(d[p], d[p + 1], d[p + 2]);
-          if (lum < 168 || chroma > 46) continue;
+          if (lum < 128 || chroma > 96 || (lum > 204 && chroma < 46)) continue;
+          var fdr = d[p] - pr, fdg = d[p + 1] - pg, fdb = d[p + 2] - pb;
+          if (Math.sqrt(fdr * fdr + fdg * fdg + fdb * fdb) > 96) continue;
           t = 0;
           for (yy = y - 1; yy <= y + 1; yy++) for (xx = x - 1; xx <= x + 1; xx++) {
             if (d[(yy * w + xx) * 4 + 3] < 12) t++;
@@ -1596,6 +1680,92 @@
         }
       }
       for (i = 0; i < kill.length; i++) d[kill[i] + 3] = 0;
+    }
+    /* 整张还是方纸时，只留下暖色的那一件（晨帖），山竹和方底都去掉。 */
+    function liftObject() {
+      g.drawImage(im, 0, 0, w, h);
+      imgd = g.getImageData(0, 0, w, h);
+      d = imgd.data;
+      seen = new Uint8Array(n);
+      qh = 0; qt = 0;
+      for (x = 0; x < w; x++) { push(x, 0); push(x, h - 1); }
+      for (y = 0; y < h; y++) { push(0, y); push(w - 1, y); }
+      while (qh < qt) {
+        x = qx[qh]; y = qy[qh]; qh++;
+        p = (y * w + x) * 4;
+        var lr = d[p], lg = d[p + 1], lb = d[p + 2], la = d[p + 3];
+        var llum = (lr + lg + lb) / 3;
+        var lch = Math.max(lr, lg, lb) - Math.min(lr, lg, lb);
+        var ldx = lr - pr, ldy = lg - pg, ldz = lb - pb;
+        var ldist = Math.sqrt(ldx * ldx + ldy * ldy + ldz * ldz);
+        if (!(la < 12 || (llum > 150 && lch < 40 && ldist < 34))) continue;
+        d[p + 3] = 0;
+        push(x + 1, y); push(x - 1, y); push(x, y + 1); push(x, y - 1);
+      }
+      var warm = new Uint8Array(n), wq = [], wi, k, xx, yy, idx, ch2;
+      for (y = 0; y < h; y++) for (x = 0; x < w; x++) {
+        p = (y * w + x) * 4;
+        if (d[p + 3] < 16) continue;
+        if (Math.max(d[p], d[p + 1], d[p + 2]) - Math.min(d[p], d[p + 1], d[p + 2]) < 48) continue;
+        warm[y * w + x] = 1;
+        wq.push(x, y);
+      }
+      wi = 0;
+      while (wi < wq.length) {
+        x = wq[wi]; y = wq[wi + 1]; wi += 2;
+        var near = [x + 1, y, x - 1, y, x, y + 1, x, y - 1];
+        for (k = 0; k < 8; k += 2) {
+          xx = near[k]; yy = near[k + 1];
+          if (xx < 0 || yy < 0 || xx >= w || yy >= h) continue;
+          idx = yy * w + xx;
+          if (warm[idx]) continue;
+          p = idx * 4;
+          if (d[p + 3] < 16) continue;
+          ch2 = Math.max(d[p], d[p + 1], d[p + 2]) - Math.min(d[p], d[p + 1], d[p + 2]);
+          if (ch2 < 34) continue;
+          warm[idx] = 1;
+          wq.push(xx, yy);
+        }
+      }
+      var vis = new Uint8Array(n), best = null, bestN = 0, comp, ci, id, cx, cy;
+      for (i = 0; i < n; i++) {
+        if (!warm[i] || vis[i]) continue;
+        comp = [i]; vis[i] = 1; ci = 0;
+        while (ci < comp.length) {
+          id = comp[ci++]; cx = id % w; cy = (id / w) | 0;
+          if (cx + 1 < w && warm[id + 1] && !vis[id + 1]) { vis[id + 1] = 1; comp.push(id + 1); }
+          if (cx > 0 && warm[id - 1] && !vis[id - 1]) { vis[id - 1] = 1; comp.push(id - 1); }
+          if (cy + 1 < h && warm[id + w] && !vis[id + w]) { vis[id + w] = 1; comp.push(id + w); }
+          if (cy > 0 && warm[id - w] && !vis[id - w]) { vis[id - w] = 1; comp.push(id - w); }
+        }
+        if (comp.length > bestN) { best = comp; bestN = comp.length; }
+      }
+      if (!best || bestN < 800 || bestN > n * 0.45) return false;
+      var keep = new Uint8Array(n);
+      var bx0 = w, by0 = h, bx1 = 0, by1 = 0;
+      for (i = 0; i < best.length; i++) {
+        id = best[i]; keep[id] = 1;
+        cx = id % w; cy = (id / w) | 0;
+        if (cx < bx0) bx0 = cx; if (cy < by0) by0 = cy;
+        if (cx > bx1) bx1 = cx; if (cy > by1) by1 = cy;
+      }
+      var pad = 28;
+      bx0 = Math.max(0, bx0 - pad); by0 = Math.max(0, by0 - pad);
+      bx1 = Math.min(w - 1, bx1 + pad); by1 = Math.min(h - 1, by1 + pad);
+      for (y = by0; y <= by1; y++) for (x = bx0; x <= bx1; x++) {
+        p = (y * w + x) * 4;
+        if (d[p + 3] < 16) continue;
+        if ((d[p] + d[p + 1] + d[p + 2]) / 3 < 105) keep[y * w + x] = 1;
+      }
+      for (i = 0; i < n; i++) if (!keep[i]) d[i * 4 + 3] = 0;
+      g.putImageData(imgd, 0, 0);
+      return true;
+    }
+    var opaque = 0;
+    for (i = 3; i < d.length; i += 4) if (d[i] >= 16) opaque++;
+    if (opaque > n * 0.9) {
+      var snap = g.getImageData(0, 0, w, h);
+      if (!liftObject()) { g.putImageData(snap, 0, 0); imgd = g.getImageData(0, 0, w, h); d = imgd.data; }
     }
     var minX = w, minY = h, maxX = 0, maxY = 0, found = false;
     for (y = 0; y < h; y++) for (x = 0; x < w; x++) {
@@ -1762,7 +1932,12 @@
     var W = app.lw, H = app.lh, port = H > W * 1.05;
     c.save();
     deskWash(c, W, H);
-    brush(c, '专属器物', port ? 22 : 28, port ? 40 : 46, port ? 32 : 40, '#120c0a', 'left');
+    c.save();
+    c.fillStyle = 'rgba(246,239,224,0.92)';
+    c.fillRect(8, 8, Math.min(W - 150, 760), port ? 78 : 84);
+    c.restore();
+    brush(c, '专属器物', port ? 22 : 28, port ? 36 : 40, port ? 32 : 40, '#120c0a', 'left');
+    brush(c, '只给当前这位用。点已有的就装上。怎么获得：活动抽卡和战斗掉落。', port ? 22 : 28, port ? 68 : 74, port ? 15 : 17, '#5c4a36', 'left');
     var backW = 128, backH = 50;
     redSeal(c, W - backW - 12, 12, backW, backH, '返回');
     hit(W - backW - 12, 12, backW, backH, 'dkGearClose');
@@ -1802,25 +1977,30 @@
       heroW = W * 0.34;
       heroH = Math.min(heroW / 0.72, feet - selH - 18);
       heroX = (W - heroW) / 2;
-      heroY = 8;
+      heroY = 96;
       sideW = Math.max(96, heroX - 18);
       sideH = Math.min(240, heroH * 0.56);
       sideY = heroY + heroH * 0.16;
       rosterTop = feet - figH;
     }
-    var heroPlate = XY.clearPortraits && XY.clearPortraits.img && XY.clearPortraits.img(sel);
-    var heroIm = heroPlate || spArt(sel);
-    var heroCut = heroPlate || (heroIm && cutout('hero-' + sel, heroIm));
-    if (heroCut) paintCut(c, heroCut, heroX, heroY, heroW, heroH, true);
+    var avS = Math.min(heroW, heroH, port ? 300 : 360);
+    if (XY.xAvIcon && XY.xAvIcon.isSpecial && XY.xAvIcon.isSpecial(sel)) {
+      XY.xAvIcon.draw(c, sel, heroX + (heroW - avS) / 2, heroY + (heroH - avS) * 0.2, avS, avS);
+    }
     var hd = heroDef(sel);
     var heroName = (hd && hd.name) || sel;
-    inkName(c, heroName, heroX + heroW / 2, heroY + heroH * 0.62, heroW * 0.96, Math.round(heroW / 3), '#120c0a');
+    inkName(c, heroName, heroX + heroW * 0.82, heroY + heroH * 0.16, heroW * 0.4, Math.round(heroW / 6), '#120c0a');
     function sidePiece(piece, x, y, w, h) {
       if (!piece) return;
-      var art = gearArt(piece.id);
-      var cut = art && cutout('gear-' + piece.id, art);
-      if (cut) paintCut(c, cut, x, y, w, h, false);
-      inkName(c, piece.name, x + w / 2, y + h + (port ? 22 : 18), w + 36, port ? 36 : 30, '#120c0a');
+      var artH = Math.max(48, h * 0.62);
+      inkGear(c, piece.id, x, y, w, artH);
+      var ty = y + artH;
+      inkName(c, piece.name, x + w / 2, ty + 18, w + 20, port ? 22 : 20, '#120c0a');
+      var brief = String(piece.desc || '');
+      var colon = brief.indexOf('：');
+      if (colon >= 0) brief = brief.slice(colon + 1);
+      brush(c, brief, x + w / 2, ty + 44, port ? 14 : 16, '#5c4a36', 'center');
+      brush(c, '获得：活动十连，或战斗里掉落', x + w / 2, ty + 70, port ? 13 : 14, '#8d1f18', 'center');
       var bagN = (gdoc.bag && gdoc.bag[piece.id]) || 0;
       var equipped = (piece.slot === 'weapon' ? eq.weapon : eq.item) === piece.id;
       if (bagN > 0 && !equipped) hit(x, y, Math.max(88, w), Math.max(88, h), 'dkEquip', { id: piece.id, hero: sel });
@@ -1850,10 +2030,10 @@
       var base = port ? rosterTop + row * (selH + nameH + 6) + selH : deskFeet;
       var tall = id === sel ? selH : figH;
       var y = base - tall;
-      var artPlate = XY.clearPortraits && XY.clearPortraits.img && XY.clearPortraits.img(id);
-      var artIm = artPlate || spArt(id);
-      var cut = artPlate || (artIm && cutout('hero-' + id, artIm));
-      if (cut) paintCut(c, cut, x, y, slot, tall, true);
+      var side = Math.min(slot, tall) * 0.86;
+      if (XY.xAvIcon && XY.xAvIcon.isSpecial && XY.xAvIcon.isSpecial(id)) {
+        XY.xAvIcon.draw(c, id, x + (slot - side) / 2, y + tall - side, side, side);
+      }
       var nm = heroDef(id);
       inkName(c, (nm && nm.name) || id, x + slot / 2, base + nameH * 0.48, slot + 20, port ? 26 : 24, id === sel ? '#8d1f18' : '#120c0a');
       if (id === sel) {
@@ -1877,20 +2057,13 @@
     if (!run) return;
     if (run.rageOn) {
       var list = G.enemies || [], n = 0, i;
-      for (i = 0; i < list.length && n < 28; i++) {
+      for (i = 0; i < list.length && n < 5; i++) {
         var e = list[i];
         if (!e || e.dead || e.dk) continue;
         if (!e._dkRage && !e.enraged) continue;
         var p = w2s(G, app, e.x, e.y - (e.r || 16) - 18);
         if (p.x < -20 || p.y < -20 || p.x > app.lw + 20 || p.y > app.lh + 20) continue;
         if (e.def && (e.def.denBoss || e.def.boss)) continue;
-        c.beginPath();
-        c.arc(p.x, p.y, 11, 0, Math.PI * 2);
-        c.fillStyle = 'rgba(247,241,228,0.94)';
-        c.fill();
-        c.lineWidth = 1.4;
-        c.strokeStyle = '#2a2118';
-        c.stroke();
         cursive(c, '狂', p.x, p.y, 13, '#8d1f18', 'center');
         n++;
       }
@@ -1981,8 +2154,8 @@
       var usedN = brushVert(c, label, spot.x, spot.y, sizeN, '#24180f');
       cinnabar(c, spot.x, spot.y + usedN + 6, run.unit.phase >= 2 ? '魔' : '猫');
     }
-    if (run.introLeft > 0) paintIntro(c, app, run);
-    if (run.formLeft > 0) paintForm(c, app, run);
+    if (run.introLeft > 0 && G.mode !== 'cards') paintIntro(c, app, run);
+    if (run.formLeft > 0 && G.mode !== 'cards') paintForm(c, app, run);
     if (G.dkDrops && G.dkDrops.t < 6) paintDrop(c, app, G.dkDrops);
   }
   function obtainPaper(c, W, H, port) {
@@ -2187,13 +2360,33 @@
     }
   }
 
-  function act(h) {
+  function act(h, p) {
     if (!h || !h.act || h.act.indexOf('dk') !== 0) return false;
     var app = appOf();
     if (!app) return false;
     if (h.act === 'dkNoop') return true;
     if (h.act === 'dkOpen') { app.dkOpen = true; app.dkGear = false; return true; }
-    if (h.act === 'dkClose') { app.dkOpen = false; app.dkClosed = true; rememberClosed(); return true; }
+    if (h.act === 'dkClose') {
+      app.dkOpen = false;
+      app.dkClosed = true;
+      rememberClosed();
+      if (XY.audio && XY.audio.init) XY.audio.init();
+      if (p && XY.ui && XY.ui.hits) {
+        var hits = XY.ui.hits, i, u, under = null;
+        for (i = hits.length - 1; i >= 0; i--) {
+          u = hits[i];
+          if (!u || u.act === 'dkClose' || u.act === 'dkOpen' || u.act === 'dkNoop') continue;
+          if (p.x < u.x || p.x > u.x + u.w || p.y < u.y || p.y > u.y + u.h) continue;
+          if (u.act === 'menuLevels' || u.act === 'start') { under = u; break; }
+        }
+        if (under) {
+          var go = function () { app.screen = 'levels'; };
+          if (XY.lazy && XY.lazy.on && XY.lazy.enter) XY.lazy.enter(go);
+          else go();
+        }
+      }
+      return true;
+    }
     if (h.act === 'dkGear') { app.dkGear = true; app.dkOpen = false; return true; }
     if (h.act === 'dkGearClose') { app.dkGear = false; return true; }
     if (h.act === 'dkHero') { app.dkHero = h.id; return true; }
@@ -2204,6 +2397,7 @@
     }
     if (h.act === 'dkSkip') {
       var G = window.__xy && window.__xy.G;
+      if (G && G.mode === 'cards') return true;
       if (G) G.dkSkip = true;
       return true;
     }
@@ -2212,6 +2406,9 @@
       if (API.gachaClaimed(XY.save.data)) return true;
       XY.gacha10._showFlip = true;
       app.dkOpen = false;
+      app.dkGear = false;
+      app.screen = 'levels';
+      if (!app.levelId) app.levelId = 1;
       XY.gacha10.ensure();
       return true;
     }
@@ -2225,10 +2422,16 @@
     return false;
   }
 
+  function yieldToOffer(G) {
+    if (!G || G.mode !== 'cards') return;
+    G.dkSkip = false;
+  }
   var oldStep = XY.step;
   XY.step = function (G, dt) {
-    if (G && G.dkHold) { hold(G, dt); lockCam(G); return; }
+    yieldToOffer(G);
+    if (G && G.dkHold) { hold(G, dt); lockCam(G); yieldToOffer(G); return; }
     oldStep(G, dt);
+    yieldToOffer(G);
     if (G && G.mode === 'play') afterStep(G, dt);
     lockCam(G);
   };
@@ -2263,7 +2466,7 @@
   if (XY.hubUI && XY.hubUI.act) {
     var oldAct = XY.hubUI.act;
     XY.hubUI.act = function (h, p, a) {
-      if (act(h)) return true;
+      if (act(h, p)) return true;
       return oldAct(h, p, a);
     };
   }
