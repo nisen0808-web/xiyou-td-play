@@ -9456,9 +9456,29 @@ XY.TRAITS = {
     c.font = fs + 'px "Ma Shan Zheng","KaiTi","STKaiti",serif';
     return { w: c.measureText(XY.fmtStr(n.s)).width + 6, h: fs + 3, art: null, fs: fs };
   }
+  function paperMist(c, x, y, w, h) {
+    var rx = Math.max(14, w * 0.82), ry = Math.max(11, h * 1.35);
+    var g = c.createRadialGradient(x, y, Math.min(rx, ry) * 0.2, x, y, Math.max(rx, ry));
+    g.addColorStop(0, 'rgba(246,239,226,0.97)');
+    g.addColorStop(0.72, 'rgba(246,239,226,0.93)');
+    g.addColorStop(1, 'rgba(243,234,214,0)');
+    c.save();
+    c.fillStyle = g;
+    c.beginPath();
+    c.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2);
+    c.fill();
+    c.restore();
+  }
   function paintName(c, n, x, y, box, col) {
     if (box.art) {
+      paperMist(c, x, y, box.iw, box.ih);
+      c.save();
+      c.shadowColor = 'rgba(250,243,226,0.96)';
+      c.shadowBlur = Math.max(5, box.ih * 0.42);
       c.drawImage(box.art.im, x - box.w / 2, y - box.ih / 2, box.iw, box.ih);
+      c.shadowBlur = 0;
+      c.drawImage(box.art.im, x - box.w / 2, y - box.ih / 2, box.iw, box.ih);
+      c.restore();
       if (box.lv) {
         c.font = box.fs + 'px "Ma Shan Zheng","KaiTi","STKaiti",serif';
         c.textAlign = 'left'; c.textBaseline = 'middle'; c.fillStyle = col || '#24180f';
@@ -9466,6 +9486,7 @@ XY.TRAITS = {
       }
       return;
     }
+    paperMist(c, x, y, box.w, box.h);
     inkTag(c, n.s, x, y, box.fs, col);
   }
   function flushHeroNames(c) {                                  // 名牌防叠：挤在一起超过三人时只留主控的名字；其余左右、上下错开
@@ -11766,6 +11787,15 @@ XY.TRAITS = {
     mapMarks.forEach(function (m) {
       var ink = m.alert && Math.sin(rt * 10) > 0 ? '#a83224' : '#24180f';
       c.save();
+      var ag = c.createRadialGradient(m.ax, m.ay, 3, m.ax, m.ay, 28);
+      ag.addColorStop(0, 'rgba(246,239,226,0.92)');
+      ag.addColorStop(1, 'rgba(243,234,214,0)');
+      c.fillStyle = ag;
+      c.beginPath();
+      c.ellipse(m.ax, m.ay, 30, 16, m.ang, 0, Math.PI * 2);
+      c.fill();
+      c.restore();
+      c.save();
       c.translate(m.ax, m.ay);
       c.rotate(m.ang);
       c.lineCap = 'round'; c.lineJoin = 'round';
@@ -11776,9 +11806,22 @@ XY.TRAITS = {
       c.beginPath(); c.moveTo(13, 0); c.quadraticCurveTo(4, -6, -1, -8); c.moveTo(13, 0); c.quadraticCurveTo(4, 6, -1, 8); c.stroke();
       c.restore();
       c.save();
-      c.font = m.sz + 'px "Ma Shan Zheng","KaiTi","STKaiti",serif';
-      c.textAlign = 'center'; c.textBaseline = 'middle';
+      var tw = 0; c.font = m.sz + 'px "Ma Shan Zheng","KaiTi","STKaiti",serif';
+      tw = c.measureText(m.label).width;
+      var gx = c.createRadialGradient(m.lx, m.ly, m.sz * 0.2, m.lx, m.ly, Math.max(tw, m.sz) * 0.72);
+      gx.addColorStop(0, 'rgba(246,239,226,0.97)');
+      gx.addColorStop(0.72, 'rgba(246,239,226,0.93)');
+      gx.addColorStop(1, 'rgba(243,234,214,0)');
+      c.fillStyle = gx;
+      c.beginPath();
+      c.ellipse(m.lx, m.ly, tw * 0.62 + 14, m.sz * 1.15, 0, 0, Math.PI * 2);
+      c.fill();
       c.fillStyle = m.alert ? '#a83224' : '#24180f';
+      c.textAlign = 'center'; c.textBaseline = 'middle';
+      c.shadowColor = 'rgba(250,243,226,0.96)';
+      c.shadowBlur = Math.max(4, m.sz * 0.35);
+      c.fillText(m.label, m.lx, m.ly);
+      c.shadowBlur = 0;
       c.fillText(m.label, m.lx, m.ly);
       c.restore();
     });

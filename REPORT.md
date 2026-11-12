@@ -1,3 +1,7 @@
+# 西游X 0.8.7 第十二轮
+
+说明和截图在 `/cursor/stores/self/shots-final12/REPORT.md`。没有合并，也没有部署。
+
 # 西游X 0.8.7 第十一轮
 
 说明和截图在 `/cursor/stores/self/shots-final11/REPORT.md`。没有合并，也没有部署。
