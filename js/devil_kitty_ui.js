@@ -1766,8 +1766,12 @@
     var W = app.lw, H = app.lh, port = H > W * 1.05;
     c.save();
     deskWash(c, W, H);
-    brush(c, '专属器物', port ? 22 : 28, port ? 40 : 46, port ? 32 : 40, '#120c0a', 'left');
-    brush(c, '只给当前这位用。点已有的就装上。怎么获得：活动抽卡和战斗掉落。', port ? 22 : 28, port ? 72 : 78, port ? 15 : 17, '#5c4a36', 'left');
+    c.save();
+    c.fillStyle = 'rgba(246,239,224,0.92)';
+    c.fillRect(8, 8, Math.min(W - 150, 760), port ? 78 : 84);
+    c.restore();
+    brush(c, '专属器物', port ? 22 : 28, port ? 36 : 40, port ? 32 : 40, '#120c0a', 'left');
+    brush(c, '只给当前这位用。点已有的就装上。怎么获得：活动抽卡和战斗掉落。', port ? 22 : 28, port ? 68 : 74, port ? 15 : 17, '#5c4a36', 'left');
     var backW = 128, backH = 50;
     redSeal(c, W - backW - 12, 12, backW, backH, '返回');
     hit(W - backW - 12, 12, backW, backH, 'dkGearClose');
@@ -1807,7 +1811,7 @@
       heroW = W * 0.34;
       heroH = Math.min(heroW / 0.72, feet - selH - 18);
       heroX = (W - heroW) / 2;
-      heroY = 8;
+      heroY = 96;
       sideW = Math.max(96, heroX - 18);
       sideH = Math.min(240, heroH * 0.56);
       sideY = heroY + heroH * 0.16;
@@ -1826,16 +1830,15 @@
     inkName(c, heroName, heroX + heroW * 0.82, heroY + heroH * 0.16, heroW * 0.4, Math.round(heroW / 6), '#120c0a');
     function sidePiece(piece, x, y, w, h) {
       if (!piece) return;
-      c.save();
-      c.translate(x, y);
-      inkShape(c, gearKind(piece.id), w, h);
-      c.restore();
-      inkName(c, piece.name, x + w / 2, y + h + (port ? 18 : 16), w + 20, port ? 26 : 22, '#120c0a');
+      var artH = Math.max(48, h * 0.62);
+      inkGear(c, piece.id, x, y, w, artH);
+      var ty = y + artH;
+      inkName(c, piece.name, x + w / 2, ty + 18, w + 20, port ? 22 : 20, '#120c0a');
       var brief = String(piece.desc || '');
       var colon = brief.indexOf('：');
       if (colon >= 0) brief = brief.slice(colon + 1);
-      brush(c, brief, x + w / 2, y + h + (port ? 40 : 38), port ? 14 : 16, '#5c4a36', 'center');
-      brush(c, '获得：活动十连，或战斗里掉落', x + w / 2, y + h + (port ? 58 : 56), port ? 13 : 14, '#8d1f18', 'center');
+      brush(c, brief, x + w / 2, ty + 44, port ? 14 : 16, '#5c4a36', 'center');
+      brush(c, '获得：活动十连，或战斗里掉落', x + w / 2, ty + 70, port ? 13 : 14, '#8d1f18', 'center');
       var bagN = (gdoc.bag && gdoc.bag[piece.id]) || 0;
       var equipped = (piece.slot === 'weapon' ? eq.weapon : eq.item) === piece.id;
       if (bagN > 0 && !equipped) hit(x, y, Math.max(88, w), Math.max(88, h), 'dkEquip', { id: piece.id, hero: sel });
