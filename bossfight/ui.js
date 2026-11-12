@@ -958,52 +958,88 @@
     return WUCLOSE._p;
   }
   function ensureWuClose() { if (!WUCLOSE._p) preloadWu(); }
-  /* 窄屏：整幅居中，底下是游戏同款宣纸和淡墨，四边用抖动的笔触淡出。脸、棒、尾巴、书法留住。 */
-  function wuBrushMask(im, pw, ph) {
-    var key = (im.src || '') + ':' + pw + 'x' + ph;
+  /* 窄屏：整幅居中铺在宣纸上。淡出在原图像素上生成，四边都透，书法和角色用平滑保护。 */
+  function wuGauss(src, w, h, sigma) {
+    var rad = Math.max(1, Math.ceil(sigma * 3));
+    var kern = new Float32Array(rad * 2 + 1), s2 = 2 * sigma * sigma, sum = 0, i, v;
+    for (i = -rad; i <= rad; i++) { v = Math.exp(-(i * i) / s2); kern[i + rad] = v; sum += v; }
+    for (i = 0; i < kern.length; i++) kern[i] /= sum;
+    var tmp = new Float32Array(w * h), out = new Float32Array(w * h), x, y, k, xx, yy, a;
+    for (y = 0; y < h; y++) {
+      for (x = 0; x < w; x++) {
+        a = 0;
+        for (k = -rad; k <= rad; k++) {
+          xx = x + k; if (xx < 0) xx = 0; else if (xx >= w) xx = w - 1;
+          a += src[y * w + xx] * kern[k + rad];
+        }
+        tmp[y * w + x] = a;
+      }
+    }
+    for (y = 0; y < h; y++) {
+      for (x = 0; x < w; x++) {
+        a = 0;
+        for (k = -rad; k <= rad; k++) {
+          yy = y + k; if (yy < 0) yy = 0; else if (yy >= h) yy = h - 1;
+          a += tmp[yy * w + x] * kern[k + rad];
+        }
+        out[y * w + x] = a;
+      }
+    }
+    return out;
+  }
+  function wuBrushMask(im) {
+    var pw = im.naturalWidth, ph = im.naturalHeight;
+    var key = im.src || (pw + 'x' + ph);
     if (wuBrushMask.cache && wuBrushMask.cache.key === key) return wuBrushMask.cache.cv;
     var cv = document.createElement('canvas');
     cv.width = pw; cv.height = ph;
     var g = cv.getContext('2d', { willReadFrequently: true });
     g.imageSmoothingEnabled = true;
     g.imageSmoothingQuality = 'high';
-    g.drawImage(im, 0, 0, pw, ph);
+    g.drawImage(im, 0, 0);
     var id = g.getImageData(0, 0, pw, ph), d = id.data, n = pw * ph, i, r, gc, b, lum, sat;
-    var keep = new Uint8Array(n);
-    for (i = 0; i < n; i++) {
-      r = d[i * 4]; gc = d[i * 4 + 1]; b = d[i * 4 + 2];
-      lum = (r + gc + b) / 3;
-      sat = Math.max(r, gc, b) - Math.min(r, gc, b);
-      if (sat > 28 || lum < 52) keep[i] = 1;
-    }
-    var dil = new Uint8Array(keep), rad = 7, x, y, dx, dy, xx, yy;
-    for (y = 0; y < ph; y++) {
-      for (x = 0; x < pw; x++) {
-        if (!keep[y * pw + x]) continue;
-        for (dy = -rad; dy <= rad; dy++) {
-          yy = y + dy; if (yy < 0 || yy >= ph) continue;
-          for (dx = -rad; dx <= rad; dx++) {
-            xx = x + dx; if (xx < 0 || xx >= pw) continue;
-            dil[yy * pw + xx] = 1;
-          }
-        }
-      }
-    }
+    var keep = new Float32Array(n), x, y;
     for (y = 0; y < ph; y++) {
       for (x = 0; x < pw; x++) {
         i = y * pw + x;
-        if (dil[i]) { d[i * 4 + 3] = 255; continue; }
-        var dist = Math.min(x + 1, pw - x, y + 1, ph - y);
-        var wob = Math.sin(x * 0.023 + y * 0.017) * 0.52
-          + Math.sin(x * 0.008 + 1.4) * Math.sin(y * 0.013 + 0.6) * 0.36
-          + Math.sin(x * 0.041 - y * 0.029 + 2.2) * 0.3
-          + Math.sin(x * 0.09 + y * 0.07) * 0.2;
-        var brk = Math.sin(x * 0.15 - y * 0.11 + 0.8);
-        var margin = 4 + (wob + 1.15) * 14 + (brk > 0.62 ? 18 : 0);
-        var fade = 26 + (brk > 0.2 ? 12 : 0);
-        var t = (dist - margin) / fade;
-        var a = t <= 0 ? 0 : (t >= 1 ? 1 : t * t * (3 - 2 * t));
-        d[i * 4 + 3] = a < 0 ? 0 : (a > 1 ? 255 : (a * 255) | 0);
+        r = d[i * 4]; gc = d[i * 4 + 1]; b = d[i * 4 + 2];
+        lum = (r + gc + b) / 3;
+        sat = Math.max(r, gc, b) - Math.min(r, gc, b);
+        /* 左边墨迹和上色的身体。灰纸、淡墨底不保护，交给四边淡出。 */
+        if ((lum < 72 && sat < 24 && x < pw * 0.38) || (sat > 34 && r > b + 8 && r > 45) || (b > r + 16 && b > 80)) keep[i] = 1;
+      }
+    }
+    var near = wuGauss(keep, pw, ph, 8);
+    for (i = 0; i < n; i++) {
+      if (keep[i]) continue;
+      r = d[i * 4]; gc = d[i * 4 + 1]; b = d[i * 4 + 2];
+      lum = (r + gc + b) / 3;
+      if (near[i] > 0.12 && lum < 115) keep[i] = 1;
+    }
+    /* 保护罩在全分辨率上高斯羽化，sigma 22px。笔画和身体像素保持不透明。 */
+    var soft = wuGauss(keep, pw, ph, 22), protect = new Float32Array(n);
+    for (i = 0; i < n; i++) protect[i] = keep[i] > 0 ? 1 : Math.min(1, soft[i] / 0.05);
+    protect = wuGauss(protect, pw, ph, 6);
+    for (i = 0; i < n; i++) if (keep[i] > 0) protect[i] = 1;
+    var fadeW = Math.min(pw, ph) * 0.12, dist, nse, reach, t, a, hold;
+    for (y = 0; y < ph; y++) {
+      for (x = 0; x < pw; x++) {
+        i = y * pw + x;
+        dist = Math.min(x, y, pw - 1 - x, ph - 1 - y);
+        nse = Math.sin(x * 0.011 + y * 0.007) * 0.62
+          + Math.sin(x * 0.0042 + 1.3) * Math.sin(y * 0.0055 + 0.6) * 0.5
+          + Math.sin(x * 0.017 - y * 0.013 + 2.0) * 0.38;
+        nse = Math.max(-1, Math.min(1, nse));
+        reach = fadeW * (1 + 0.7 * (nse * 0.5 + 0.5));
+        t = dist / reach;
+        a = t <= 0 ? 0 : (t >= 1 ? 1 : t * t * (3 - 2 * t));
+        if (keep[i] > 0) {
+          var ink = x < pw * 0.38;
+          var m = ink ? reach * 0.45 : reach;
+          var tt = dist / m;
+          a = tt <= 0 ? 0 : (tt >= 1 ? 1 : tt * tt * (3 - 2 * tt));
+        } else if (dist > reach && protect[i] > a) a = protect[i];
+        d[i * 4 + 3] = a <= 0 ? 0 : (a >= 1 ? 255 : (a * 255 + 0.5) | 0);
       }
     }
     g.putImageData(id, 0, 0);
@@ -1043,7 +1079,7 @@
       return;
     }
     paintWuPaper(c, W, H);
-    c.drawImage(wuBrushMask(im, Math.max(1, Math.round(dw)), Math.max(1, Math.round(dh))), x, y);
+    c.drawImage(wuBrushMask(im), x, y, dw, dh);
   }
   function drawWuClose(c) {
     if (!(G.wuCut > 0) || G.wuCutOff) return;
