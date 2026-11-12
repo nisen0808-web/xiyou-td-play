@@ -4,6 +4,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
 <title>西游X · Boss 对战（原型）</title>
 <style>
+@font-face{font-family:"Ma Shan Zheng";src:url("../assets/fonts/MaShanZheng-Regular.ttf") format("truetype");font-display:swap}
 :root{--paper:#f8f1df;--paper2:#fcf7ea;--paper3:#f1e7cd;--ink:#2f2a1f;--ink2:#6d6455;--gold:#b8863b;--gold2:#e6c474;--red:#c8341f;--kai:"Ma Shan Zheng","STKaiti","KaiTi","Noto Serif CJK SC",serif;--sans:"PingFang SC","Noto Sans CJK SC","Microsoft YaHei",sans-serif}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none}
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#efe6cf;font-family:var(--sans);color:var(--ink)}
@@ -109,6 +110,14 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
 #pgrid .ava .ring::before,#pgrid .ava .tag,#pgrid .ava i{display:none!important}
 @media(orientation:portrait){#pgrid{grid-template-columns:repeat(3,minmax(0,1fr))!important}#pgrid .ava b{font-size:16px!important}}
 @media(max-height:340px){#pgrid{grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:6px!important}#pgrid .ava{aspect-ratio:3/4}#pgrid .ava b{font-size:14px!important}}
+#pick h2,#pinfo,#pgrid .ava b,#go{font-family:"Ma Shan Zheng","KaiTi",serif!important}
+#pick .panel{overflow:hidden}
+#pgrid{flex:1 1 auto;min-height:0;overflow:hidden;gap:6px!important;grid-template-rows:repeat(3,minmax(0,1fr))}
+#pgrid .ava{aspect-ratio:auto!important;height:100%!important}
+#pgrid .ava .ring{height:100%!important}
+#pgrid .ava b{bottom:2px!important;font-size:16px!important}
+#go{flex:0 0 auto;margin-top:6px;position:relative;z-index:2}
+@media(max-height:340px){#pgrid{grid-template-columns:repeat(5,minmax(0,1fr))!important;grid-template-rows:repeat(2,minmax(0,1fr))!important}}
 </style></head>
 <body><div id="app">
 <canvas id="cv"></canvas>

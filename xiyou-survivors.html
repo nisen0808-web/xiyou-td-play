@@ -4188,7 +4188,7 @@ XY.TRAITS = {
   /* ================= 主循环：推进一步 ================= */
   XY.step = function (G, dt) {
     if (G.mode !== 'play') return;
-    if (G._quietShot) return;
+    if (G._quietShot || G._freeze) return;
     if (G.cut) dt = XY.cutin.tick(G, dt);                 // 召唤特殊人物的“定妆图施法”过场：世界慢放（过场时钟走真实时间）
     // v0.5 顿帧：暂停战斗模拟（画面 / 输入照常），恢复时不补跑；预算每秒回复 HITSTOP_BUDGET
     G.hsBud = Math.min(C.HITSTOP_BUDGET, (G.hsBud === undefined ? C.HITSTOP_BUDGET : G.hsBud) + C.HITSTOP_BUDGET * dt);
@@ -9313,6 +9313,9 @@ XY.BGS1={"src": "data:image/webp;base64,UklGRtT1GgBXRUJQVlA4IMj1GgCQwWGdASoAEAAK
   var heroBodies = [], heroNames = [];
   function flushHeroNames(c) {                                  // 名牌防叠：挤在一起超过三人时只留主控的名字；其余左右、上下错开
     var R4 = XY.R4, L = R4.lblList(), m = c.getTransform(), sc = m.a || 1, i, j, k, B = [], pile = [], ctrl = window.__xy && window.__xy.G ? window.__xy.G.ctrl : -1;
+    var GV = window.__xy && window.__xy.G;
+    var narrowNames = !!(GV && GV.view && (GV.view.w < 900 || heroNames.length > 8));
+    if (narrowNames) heroNames = heroNames.filter(function (n) { return n.h && (n.h.i === ctrl || n.h.id === 'tang'); });
     for (i = 0; i < heroNames.length; i++) {
       var n0 = heroNames[i], near = 0;
       for (j = 0; j < heroNames.length; j++) if (Math.abs(heroNames[j].x - n0.x) < 80 && Math.abs(heroNames[j].y - n0.y) < 64) near++;
@@ -9329,6 +9332,11 @@ XY.BGS1={"src": "data:image/webp;base64,UklGRtT1GgBXRUJQVlA4IMj1GgCQwWGdASoAEAAK
         var cy = n.y + cand[k][1], cx = n.x + cand[k][0], r = { x0: m.e + (cx - tw / 2) * sc, x1: m.e + (cx + tw / 2) * sc, y0: m.f + (cy - fs / 2 - 1.5) * sc, y1: m.f + (cy - fs / 2 - 1.5 + th) * sc };
         var sc0 = ov(r, L, null) * 4 + ov(r, B, n.h) * 0.12 + (Math.abs(cand[k][0]) * 0.6 + Math.abs(cand[k][1])) * 0.05 * sc;   // 名牌 / 标签重叠重罚；身体只轻罚；离头顶越远略扣分
         if (!best || sc0 < best.s) best = { s: sc0, x: cx, y: cy, r: r };
+      }
+      if (GV && GV.view) {
+        var half = tw / 2 + 6;
+        if (best.x < half) best.x = half;
+        if (best.x > GV.view.w - half) best.x = GV.view.w - half;
       }
       L.push(best.r);
       c.save(); c.globalAlpha = n.a; inkTag(c, n.s, best.x, best.y, n.sz, n.col);
@@ -9718,8 +9726,8 @@ XY.BGS1={"src": "data:image/webp;base64,UklGRtT1GgBXRUJQVlA4IMj1GgCQwWGdASoAEAAK
     if (hasPts) txt(c, '有 ' + G.points + ' 点技能点没用！', rx, 94, 12, '#b8300f', 'right', true);
     var dy0 = hasPts ? 112 : 96;
     if (app.debugOn) { txt(c, '调试键：已开（Shift+F9 关）', rx, dy0, 12, '#c0392b', 'right', true); dy0 += 18; }
-    if (G.speed !== 1 && !(G.speed === 2 && XY.sweep09 && XY.sweep09.spdOk(G))) { txt(c, '调试：速度 ×' + G.speed, rx, dy0, 13, '#c0392b', 'right', true); dy0 += 18; }
-    if (G.godMode) { txt(c, '调试：无敌', rx, dy0, 13, '#c0392b', 'right', true); dy0 += 18; }
+    if (app.debugOn && G.speed !== 1 && !(G.speed === 2 && XY.sweep09 && XY.sweep09.spdOk(G))) { txt(c, '调试：速度 ×' + G.speed, rx, dy0, 13, '#c0392b', 'right', true); dy0 += 18; }
+    if (app.debugOn && G.godMode) { txt(c, '调试：无敌', rx, dy0, 13, '#c0392b', 'right', true); dy0 += 18; }
     if (app.showFps) txt(c, Math.round(app.fps) + ' FPS · 敌人 ' + G.enemies.length, rx, dy0, 12, T.inkSoft, 'right', false);
 
     ui.banner = null;
@@ -11424,8 +11432,8 @@ XY.BGS1={"src": "data:image/webp;base64,UklGRtT1GgBXRUJQVlA4IMj1GgCQwWGdASoAEAAK
     var mmB = drawMini(c, G, app, sb.y + sb.h + 8);                              // v0.8.0：小地图在菜单按钮下面
     var dy0 = mmB + 8;
     if (app.debugOn) { T.txt(c, '调试键：已开（Shift+F9 关）', rx, dy0, 12, '#c0392b', 'right', true); dy0 += 18; }
-    if (G.speed !== 1 && !(G.speed === 2 && XY.sweep09 && XY.sweep09.spdOk(G))) { T.txt(c, '调试：速度 ×' + G.speed, rx, dy0, 13, '#c0392b', 'right', true); dy0 += 18; }
-    if (G.godMode && !G.tut) { T.txt(c, '调试：无敌', rx, dy0, 13, '#c0392b', 'right', true); dy0 += 18; }
+    if (app.debugOn && G.speed !== 1 && !(G.speed === 2 && XY.sweep09 && XY.sweep09.spdOk(G))) { T.txt(c, '调试：速度 ×' + G.speed, rx, dy0, 13, '#c0392b', 'right', true); dy0 += 18; }
+    if (app.debugOn && G.godMode && !G.tut) { T.txt(c, '调试：无敌', rx, dy0, 13, '#c0392b', 'right', true); dy0 += 18; }
     if (app.showFps) T.txt(c, Math.round(app.fps) + ' FPS · 敌人 ' + G.enemies.length, rx, dy0, 12, T.T.inkSoft, 'right', false);
     XY.ui.banner = null;
     T.drawCardsHUD(c, G, app, dy0 + 14);
@@ -24112,7 +24120,7 @@ I.vendorKey=function(G,a,k){var n=X.vendor.stock(G).length;if(k==='ArrowLeft'||k
     paper(c,qb.x-4,qb.y,qb.w+4,qb.h,.86,37);X.INKP.stroke(c,qb.x+2,qb.y+7,qb.x+5,qb.y+qb.h-6,2.8,'167,52,35',.9,91,.02);
     var qt=K.fit('当前目标 · '+goal,qb.w-16,L.small?11.5:16,true,L.small?11.5:16);kai(K,qt.s,qb.x+10,qb.y+qb.h/2,qt.size,INK);
     hit(K,{x:qb.x,y:qb.y+(L.port?2:0),w:qb.w,h:44},'battleGoal',{label:'查看任务、营地、路程与战况'});rec(a,'quest',qb);
-    if(a.debugOn||a.showFps||G.godMode){
+    if(a.debugOn){
       var dbg=(G.godMode?'无敌 · ':'')+((a.debugOn||a.showFps)?Math.round(a.fps)+' FPS · 敌'+G.enemies.length+' · ':'')+'×'+G.speed;
       K.tf('调试 '+dbg,qb.x+10,qb.y+qb.h+12,qb.w-10,10.5,RED,'left',false,10.5);
     }
@@ -24253,7 +24261,7 @@ X.step=function(g,dt){if(!g._simRandom)return step.apply(this,arguments);var sel
     return v * s / z;
   };
   function resize() {
-    var w = window.innerWidth, h = window.innerHeight, dpr = Math.min(window.devicePixelRatio || 1, 2);
+    var w = window.innerWidth, h = window.innerHeight, dpr = Math.min(window.devicePixelRatio || 1, 4);
     app.dpr = dpr;
     var fit = Math.min(w / 1280, h / 720);
     app.zoom = Math.max(0.5, Math.min(fit, 3.5));      // 下限 0.5 保住手机横屏；大屏按 1280×720 设计放大，不再卡在 1.4 让字缩在角落

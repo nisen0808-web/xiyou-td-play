@@ -807,15 +807,9 @@
   function stillNode(id) {
     if (STILL[id]) return STILL[id].ok ? STILL[id].im : null;
     var rec = STILL[id] = { ok: false, im: null };
-    if (id === 'niumo') {
-      var src = new Image();
-      src.onload = function () { if (src.naturalWidth) { rec.im = src; rec.ok = true; } };
-      src.src = '../assets/art/battle-hd/niumo.webp';
-      return null;
-    }
     var im = new Image();
     im.onload = function () { if (im.naturalWidth) { rec.im = im; rec.ok = true; } };
-    im.src = id === 'wukong' ? '../assets/art/menu-v5/fig_wukong.webp' : '../assets/art/bg/' + id + '.webp';
+    im.src = '../assets/art/battle-hd/' + id + '.webp';
     return null;
   }
   function drawStill(c, id, cx, foot, h) {
@@ -828,11 +822,15 @@
     c.drawImage(im, cx - dw / 2, foot - dh, dw, dh);
     c.restore();
   }
-  function brushName(c, text, x, y, size, col) {
+  function brushName(c, text, x, y, size, col, align) {
     c.save();
     c.font = size + 'px "Ma Shan Zheng","KaiTi",serif';
-    c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.textAlign = align || 'center'; c.textBaseline = 'middle';
     c.fillStyle = col || '#24180f';
+    var w = c.measureText(text).width;
+    var left = c.textAlign === 'left' ? x : c.textAlign === 'right' ? x - w : x - w / 2;
+    if (left < 8) x += 8 - left;
+    if (left + w > c.canvas.width / (G.dpr || 1) - 8) x -= left + w - (c.canvas.width / (G.dpr || 1) - 8);
     c.fillText(text, x, y);
     c.restore();
   }
@@ -840,25 +838,25 @@
     var st = pcv.parentNode.getBoundingClientRect(), W = st.width, H = st.height, dpr = G.dpr, c = pctx; if (W < 4) return;
     c.setTransform(dpr, 0, 0, dpr, 0, 0); c.clearRect(0, 0, W, H);
     c.fillStyle = '#f4ead4'; c.fillRect(0, 0, W, H);
-    var tall = H >= 340;
-    var foot = H * (tall ? 0.94 : 0.98);
-    var fh = H * (tall ? 0.74 : 0.88);
-    var top = foot - fh;
-    if (top < H * 0.08) { fh = foot - H * 0.08; top = foot - fh; }
-    drawStill(c, G.partner, W * (tall ? 0.22 : 0.2), foot, fh * 0.9);
+    c.fillStyle = '#f6efe2'; c.fillRect(0, 0, W, H);
+    var wash = c.createLinearGradient(0, H * 0.45, 0, H);
+    wash.addColorStop(0, 'rgba(90,78,58,0)');
+    wash.addColorStop(1, 'rgba(90,78,58,0.16)');
+    c.fillStyle = wash; c.fillRect(0, H * 0.42, W, H * 0.58);
+    c.fillStyle = 'rgba(42,32,22,0.14)';
+    c.beginPath(); c.ellipse(W * 0.5, H * 0.9, W * 0.46, Math.max(10, H * 0.045), 0, 0, Math.PI * 2); c.fill();
+    c.strokeStyle = 'rgba(42,32,22,0.28)'; c.lineWidth = 1.4;
+    c.beginPath(); c.moveTo(W * 0.04, H * 0.9); c.quadraticCurveTo(W * 0.5, H * 0.84, W * 0.96, H * 0.9); c.stroke();
+    var foot = H * 0.9, fh = H * 0.78;
+    if (foot - fh < H * 0.04) fh = foot - H * 0.04;
+    drawStill(c, G.partner, W * 0.2, foot, fh * 0.92);
     drawStill(c, 'wukong', W * 0.48, foot, fh);
-    drawStill(c, 'niumo', W * (tall ? 0.76 : 0.8), foot, fh * 0.96);
-    if (tall) {
-      brushName(c, NAMES[G.partner] || '', W * 0.08, top + fh * 0.28, Math.min(32, W * 0.06), '#24180f');
-      brushName(c, '孙悟空', W * 0.36, top + fh * 0.16, Math.min(36, W * 0.07), '#24180f');
-      brushName(c, '牛魔王', W * 0.94, top + fh * 0.22, Math.min(36, W * 0.07), '#24180f');
-      brushName(c, '战', W * 0.58, top + fh * 0.22, Math.min(44, W * 0.07), '#a83224');
-    } else {
-      brushName(c, NAMES[G.partner] || '', W * 0.08, H * 0.2, Math.min(34, W * 0.07), '#24180f');
-      brushName(c, '孙悟空', W * 0.38, H * 0.12, Math.min(38, W * 0.08), '#24180f');
-      brushName(c, '牛魔王', W * 0.9, H * 0.16, Math.min(38, W * 0.08), '#24180f');
-      brushName(c, '战', W * 0.63, H * 0.36, Math.min(52, W * 0.1), '#a83224');
-    }
+    drawStill(c, 'niumo', W * 0.76, foot, fh * 0.96);
+    var ns = Math.min(34, Math.max(18, W * 0.055));
+    brushName(c, NAMES[G.partner] || '', W * 0.05, H * 0.34, ns, '#24180f', 'left');
+    brushName(c, '孙悟空', W * 0.34, H * 0.16, ns + 2, '#24180f', 'left');
+    brushName(c, '牛魔王', W - 10, H * 0.22, ns + 2, '#24180f', 'right');
+    brushName(c, '战', W * 0.6, H * 0.4, Math.min(42, W * 0.07), '#a83224', 'center');
   }
 
   /* ---------- 结算 ---------- */
