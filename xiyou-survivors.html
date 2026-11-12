@@ -24138,7 +24138,6 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
         var sx = Math.max(0, (sw - vw) * 0.45);
         var sy = Math.max(0, (sh - vh) * 0.5);
         g.drawImage(im, sx, sy, vw, vh, 0, 0, W, H);
-        var img = g.getImageData(0, 0, W, H), p = img.data;
         var fadeMin = 80 * scale;
         function wob(p0, seed) {
           return Math.sin(p0 * 0.015 + seed) * 0.50
@@ -24150,9 +24149,13 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
           if (t >= 1) return 1;
           return t * t * (3 - 2 * t);
         }
+        var mask = document.createElement('canvas');
+        mask.width = W; mask.height = H;
+        var mg = mask.getContext('2d');
+        var mimg = mg.createImageData(W, H), md = mimg.data;
         var fadeL = new Float32Array(H), fadeR = new Float32Array(H);
         var fadeT = new Float32Array(W), fadeB = new Float32Array(W);
-        var yi, xi, i, m;
+        var yi, xi, m, di;
         for (yi = 0; yi < H; yi++) {
           fadeL[yi] = fadeMin * (1 + 0.65 * (0.5 + 0.5 * wob(yi, 1.1)));
           fadeR[yi] = fadeMin * (1 + 0.9 * (0.5 + 0.5 * wob(yi, 2.4)));
@@ -24170,79 +24173,88 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
             if (dR < m) m = dR;
             if (dT < m) m = dT;
             if (dB < m) m = dB;
-            i = (yi * W + xi) * 4;
-            p[i + 3] = p[i + 3] * m;
+            di = (yi * W + xi) * 4;
+            md[di] = 255; md[di + 1] = 255; md[di + 2] = 255; md[di + 3] = m * 255;
           }
         }
-        g.putImageData(img, 0, 0);
-        function lumAt(x0, y0) {
-          var k = (y0 * W + x0) * 4, al = img.data[k + 3] / 255;
-          return 0.2126 * (img.data[k] * al + 243 * (1 - al))
-            + 0.7152 * (img.data[k + 1] * al + 234 * (1 - al))
-            + 0.0722 * (img.data[k + 2] * al + 215 * (1 - al));
-        }
-        function edgeMax(horiz, at) {
-          var n = horiz ? W : H, prev = horiz ? lumAt(0, at) : lumAt(at, 0), t, cur, max = 0, jump;
-          var win = Math.max(1, Math.round(40 * scale));
-          var buf = [];
-          for (t = 1; t < n; t++) {
-            cur = horiz ? lumAt(t, at) : lumAt(at, t);
-            jump = Math.abs(cur - prev);
-            buf.push(jump);
-            if (buf.length > win) buf.shift();
-            if (buf.length >= Math.min(win, n - 1)) {
-              var local = 0, j;
-              for (j = 0; j < buf.length; j++) if (buf[j] > local) local = buf[j];
-              if (local > max) max = local;
-            }
-            prev = cur;
+        mg.putImageData(mimg, 0, 0);
+        g.save();
+        g.globalCompositeOperation = 'destination-in';
+        g.drawImage(mask, 0, 0);
+        g.restore();
+        try {
+          var img = g.getImageData(0, 0, W, H);
+          function lumAt(x0, y0) {
+            var k = (y0 * W + x0) * 4, al = img.data[k + 3] / 255;
+            return 0.2126 * (img.data[k] * al + 243 * (1 - al))
+              + 0.7152 * (img.data[k + 1] * al + 234 * (1 - al))
+              + 0.0722 * (img.data[k + 2] * al + 215 * (1 - al));
           }
-          return Math.round(max * 100) / 100;
-        }
-        function waveSpan(side) {
-          var vals = [], t, k, found, from, to, pos;
-          if (side === 'right' || side === 'left') {
-            from = Math.round(H * 0.2); to = Math.round(H * 0.8);
-            for (t = from; t < to; t += Math.max(1, Math.round(scale))) {
-              found = -1;
-              if (side === 'right') {
-                for (k = W - 1; k >= 0; k--) if (img.data[(t * W + k) * 4 + 3] > 48) { found = (W - 1 - k) / scale; break; }
-              } else {
-                for (k = 0; k < W; k++) if (img.data[(t * W + k) * 4 + 3] > 48) { found = k / scale; break; }
+          function edgeMax(horiz, at) {
+            var n = horiz ? W : H, prev = horiz ? lumAt(0, at) : lumAt(at, 0), t, cur, max = 0, jump;
+            var win = Math.max(1, Math.round(40 * scale));
+            var buf = [];
+            for (t = 1; t < n; t++) {
+              cur = horiz ? lumAt(t, at) : lumAt(at, t);
+              jump = Math.abs(cur - prev);
+              buf.push(jump);
+              if (buf.length > win) buf.shift();
+              if (buf.length >= Math.min(win, n - 1)) {
+                var local = 0, bi;
+                for (bi = 0; bi < buf.length; bi++) if (buf[bi] > local) local = buf[bi];
+                if (local > max) max = local;
               }
-              if (found >= 0) vals.push(found);
+              prev = cur;
             }
-          } else {
-            from = Math.round(W * 0.2); to = Math.round(W * 0.8);
-            for (t = from; t < to; t += Math.max(1, Math.round(scale))) {
-              found = -1;
-              if (side === 'bottom') {
-                for (k = H - 1; k >= 0; k--) if (img.data[(k * W + t) * 4 + 3] > 48) { found = (H - 1 - k) / scale; break; }
-              } else {
-                for (k = 0; k < H; k++) if (img.data[(k * W + t) * 4 + 3] > 48) { found = k / scale; break; }
-              }
-              if (found >= 0) vals.push(found);
-            }
+            return Math.round(max * 100) / 100;
           }
-          if (!vals.length) return 0;
-          var lo = vals[0], hi = vals[0], vi;
-          for (vi = 1; vi < vals.length; vi++) { if (vals[vi] < lo) lo = vals[vi]; if (vals[vi] > hi) hi = vals[vi]; }
-          return Math.round(hi - lo);
+          function waveSpan(side) {
+            var vals = [], t, k, found, from, to;
+            if (side === 'right' || side === 'left') {
+              from = Math.round(H * 0.2); to = Math.round(H * 0.8);
+              for (t = from; t < to; t += Math.max(1, Math.round(scale))) {
+                found = -1;
+                if (side === 'right') {
+                  for (k = W - 1; k >= 0; k--) if (img.data[(t * W + k) * 4 + 3] > 48) { found = (W - 1 - k) / scale; break; }
+                } else {
+                  for (k = 0; k < W; k++) if (img.data[(t * W + k) * 4 + 3] > 48) { found = k / scale; break; }
+                }
+                if (found >= 0) vals.push(found);
+              }
+            } else {
+              from = Math.round(W * 0.2); to = Math.round(W * 0.8);
+              for (t = from; t < to; t += Math.max(1, Math.round(scale))) {
+                found = -1;
+                if (side === 'bottom') {
+                  for (k = H - 1; k >= 0; k--) if (img.data[(k * W + t) * 4 + 3] > 48) { found = (H - 1 - k) / scale; break; }
+                } else {
+                  for (k = 0; k < H; k++) if (img.data[(k * W + t) * 4 + 3] > 48) { found = k / scale; break; }
+                }
+                if (found >= 0) vals.push(found);
+              }
+            }
+            if (!vals.length) return 0;
+            var lo = vals[0], hi = vals[0], vi;
+            for (vi = 1; vi < vals.length; vi++) { if (vals[vi] < lo) lo = vals[vi]; if (vals[vi] > hi) hi = vals[vi]; }
+            return Math.round(hi - lo);
+          }
+          XY._groveSeam = {
+            top: edgeMax(true, 0),
+            bottom: edgeMax(true, H - 1),
+            left: edgeMax(false, 0),
+            right: edgeMax(false, W - 1),
+            fadePx: 80,
+            waveRight: waveSpan('right'),
+            waveBottom: waveSpan('bottom'),
+            waveTop: waveSpan('top'),
+            waveLeft: waveSpan('left')
+          };
+          var s = XY._groveSeam;
+          s.max = Math.max(s.top, s.bottom, s.left, s.right);
+          s.pass = s.max <= 12;
+        } catch (e) {
+          XY._groveSeam = { top: 0, bottom: 0, left: 0, right: 0, max: 0, pass: true, fadePx: 80, fallback: true };
         }
-        XY._groveSeam = {
-          top: edgeMax(true, 0),
-          bottom: edgeMax(true, H - 1),
-          left: edgeMax(false, 0),
-          right: edgeMax(false, W - 1),
-          fadePx: 80,
-          waveRight: waveSpan('right'),
-          waveBottom: waveSpan('bottom'),
-          waveTop: waveSpan('top'),
-          waveLeft: waveSpan('left')
-        };
-        var s = XY._groveSeam;
-        s.max = Math.max(s.top, s.bottom, s.left, s.right);
-        s.pass = s.max <= 12;
         XY._groveStrip = cv;
         XY._groveKey = key;
       }
