@@ -19763,6 +19763,10 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
     var items = [];                                                            // 统一成行：{icon(fn), title, lines[], btn:{label,act,ex,primary,off}, sold}
     var can = function (p) { return S.data.lingshi >= p; };
     if (tab === 'shelf') {
+      if (XY.lazy && XY.lazy.pending && XY.lazy.pending('ui') && XY.lazy.start) {
+        XY.lazy.start();
+        if (XY.lazy.after) XY.lazy.after('ui', function () { if (XY.ICONINK && XY.ICONINK.preload) XY.ICONINK.preload(); });
+      } else if (XY.ICONINK && XY.ICONINK.preload) XY.ICONINK.preload();
       st.slots.forEach(function (sl, k) {
         var sold = st.sold[k], r = { sold: sold, kind: sl.kind, price: sl.price, btn: { label: sold ? '已买走' : (sl.kind === 'reroll' ? '刷新 ' : '买 ') + sl.price + (can(sl.price) ? '' : ' 不够'), act: sold ? null : 'shopBuy', ex: { slot: k }, primary: !sold && can(sl.price), off: sold || !can(sl.price) } };
         if (sl.kind === 'sp') { r.spId=sl.id; var d = XY.SP_BY[sl.id], lv = S.spLevel(sl.id), nx = XY.spNext(sl.id); r.title = '角色卡 · ' + d.name; r.sub = d.role; r.l2 = lv ? '已有 ' + S.spCards(sl.id) + ' 张 · Lv' + lv + (nx ? '（再 ' + (nx.need - nx.have) + ' 张升级）' : '（满级）') : '已有 ' + S.spCards(sl.id) + '/' + XY.SP_LV_AT[0] + ' 张'; r.icon = function (x, y, s) { var hd=XY.specialDef(sl.id,Math.max(1,lv)); XY.hud2.face(c,{id:sl.id,def:hd},x+s/2,y+s/2,s*.44,app.rt); }; r.col = d.frame; }
@@ -19863,14 +19867,9 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
           var im = XY.bgArt(r.spId);
           if (im && (im.naturalWidth || im.width)) { c.drawImage(shelfMask(im, side, side), ax, ay, side, side); drew = true; }
         }
-        if (!drew && r.kind === 'card') {
-          var art = Math.min(side * 0.86, 120);
-          drew = !!(XY.ICONINK && r.inkName && XY.ICONINK.draw(c, r.inkName, x + cardW / 2, ay + side / 2, art));
-          if (!drew) {
-            c.save(); c.translate(x + cardW / 2, ay + side / 2); c.strokeStyle = '#24180f'; c.fillStyle = 'rgba(168,50,36,0.2)'; c.lineWidth = 2.4;
-            c.beginPath(); c.ellipse(0, -side * 0.08, side * 0.16, side * 0.12, 0, 0, 6.3); c.ellipse(0, side * 0.12, side * 0.2, side * 0.14, 0, 0, 6.3); c.fill(); c.stroke(); c.restore();
-            drew = true;
-          }
+        if (!drew && r.kind === 'card' && XY.ICONINK && r.inkName) {
+          var art = Math.min(side * 0.92, 140);
+          drew = !!XY.ICONINK.draw(c, r.inkName, x + cardW / 2, ay + side / 2, art);
         }
         if (!drew && r.kind === 'shard') {
           var sw = side * 0.86, sh = side * 0.62, sx = x + (cardW - sw) / 2, sy = ay + (side - sh) / 2;
