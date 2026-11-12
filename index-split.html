@@ -24049,64 +24049,76 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
       c.fill();
       c.restore();
     }
-    /* 竹后的墨用首页远山图里现成的泼墨块，抠掉宣纸后贴上。不画圆、不画椭圆。 */
+    /* 十连入口左侧：第一关 4096 画里竹竿、竹节、竹叶最清楚的几块，按原像素贴上，不放大。 */
     function groveArt() {
       if (XY._groveArt) return XY._groveArt;
-      var files = ['assets/art/bg-stage1/grove-a.webp', 'assets/art/bg-stage1/grove-b.webp'];
-      if (!XY._groveImgs) {
-        XY._groveImgs = files.map(function (src) { var im = new Image(); im.src = src; return im; });
+      if (!XY._groveImg) {
+        XY._groveImg = new Image();
+        XY._groveImg.src = 'assets/art/bg-stage1/grove-ink.webp';
         return null;
       }
-      if (!XY._groveImgs.every(function (im) { return im.naturalWidth; })) return null;
-      var out = [];
-      XY._groveImgs.forEach(function (im) {
-        var w = im.naturalWidth, h = im.naturalHeight;
-        var cv = document.createElement('canvas');
-        cv.width = w; cv.height = h;
-        var g = cv.getContext('2d', { willReadFrequently: true });
-        g.drawImage(im, 0, 0);
-        var d = g.getImageData(0, 0, w, h), p = d.data, i, x, y, lum, edge, fade, a;
-        for (i = 0; i < p.length; i += 4) {
-          x = (i / 4) % w; y = ((i / 4) / w) | 0;
-          edge = Math.min(x, y, w - 1 - x, h - 1 - y);
-          fade = Math.min(1, edge / 72);
-          lum = p[i] * 0.3 + p[i + 1] * 0.59 + p[i + 2] * 0.11;
-          if (lum > 175) a = 0;
-          else if (lum > 110) a = ((175 - lum) / 65) * 210 * fade;
-          else a = 255 * fade;
-          p[i + 3] = a < 0 ? 0 : (a > 255 ? 255 : a);
+      if (!XY._groveImg.naturalWidth) return null;
+      XY._groveArt = XY._groveImg;
+      return XY._groveArt;
+    }
+    function groveWave(px, py) {
+      return Math.sin(px * 0.017 + py * 0.013 + 0.4) * 0.45
+        + Math.sin(px * 0.008 + 1.7) * Math.sin(py * 0.010 + 0.6) * 0.33
+        + Math.sin(px * 0.029 - py * 0.021 + 2.2) * 0.22
+        + Math.sin(px * 0.053 + py * 0.041) * 0.12;
+    }
+    function groveFade(img, w, h) {
+      var fade = 88, d = img.data, x, y, dist, wob, margin, t, s, a, i;
+      for (y = 0; y < h; y++) {
+        for (x = 0; x < w; x++) {
+          dist = Math.min(x + 1, w - x, y + 1, h - y);
+          wob = groveWave(x, y);
+          margin = 12 + (wob + 1.12) * 16;
+          if (margin < 6) margin = 6;
+          else if (margin > 42) margin = 42;
+          t = (dist - margin) / fade;
+          if (t <= 0) s = 0;
+          else if (t >= 1) s = 1;
+          else s = t * t * (3 - 2 * t);
+          i = (y * w + x) * 4;
+          a = d[i + 3] * s;
+          if (x < 8 || y < 8 || x >= w - 8 || y >= h - 8) a = 0;
+          d[i + 3] = a < 0 ? 0 : (a > 255 ? 255 : a);
         }
-        g.putImageData(d, 0, 0);
-        out.push(cv);
-      });
-      XY._groveArt = out;
-      return out;
+      }
     }
     function grove(c, x, y, bw, bh) {
-      var art = groveArt();
-      if (!art) return;
+      var im = groveArt();
+      if (!im) return;
       var tr = c.getTransform ? c.getTransform() : null;
-      var scale = Math.max(1, Math.abs(tr && tr.a ? tr.a : 1), Math.abs(tr && tr.d ? tr.d : 1));
-      var y0 = y, i, im, dw, dh, natW, natH;
-      c.save();
-      c.imageSmoothingEnabled = true;
-      c.imageSmoothingQuality = 'high';
-      for (i = 0; i < art.length && y0 < y + bh - 12; i++) {
-        im = art[i];
-        natW = im.width / scale; natH = im.height / scale;
-        dw = Math.min(bw * 0.96, natW);
-        dh = dw * im.height / im.width;
-        if (dh > natH) { dh = natH; dw = dh * im.width / im.height; }
-        if (y0 + dh > y + bh) {
-          var room = (y + bh - y0) / dh;
-          if (room < 0.4) break;
-          dw *= room; dh *= room;
-        }
-        c.drawImage(im, x + (bw - dw) * 0.08, y0, dw, dh);
-        y0 += dh * 0.9;
+      var dpr = Math.max(1, Math.abs(tr && tr.a ? tr.a : 1), Math.abs(tr && tr.d ? tr.d : 1));
+      var slim = bh > bw * 2.2;
+      // 竖屏停在枪尖左边，横屏外框避开卷轴毛边。
+      if (slim) { bw = Math.min(bw, 78); x = Math.max(2, x - 4); }
+      else { x = Math.max(x + 4, 42); bw = Math.max(40, bw - 16); }
+      y += 6; bh = Math.max(40, bh - 48);
+      var iw = im.naturalWidth || im.width, ih = im.naturalHeight || im.height;
+      var sw = Math.min(iw, Math.max(1, Math.floor(bw * dpr)));
+      var sh = Math.min(ih, Math.max(1, Math.floor(bh * dpr)));
+      var sx = (sw < iw) ? Math.floor((iw - sw) * 0.38) : 0;
+      var key = sx + ':' + sw + 'x' + sh;
+      if (!XY._groveMasked || XY._groveMasked.key !== key) {
+        var cv = document.createElement('canvas');
+        cv.width = sw; cv.height = sh;
+        var g = cv.getContext('2d', { willReadFrequently: true });
+        g.imageSmoothingEnabled = false;
+        g.drawImage(im, sx, 0, sw, sh, 0, 0, sw, sh);
+        var id = g.getImageData(0, 0, sw, sh);
+        groveFade(id, sw, sh);
+        g.putImageData(id, 0, 0);
+        XY._groveMasked = { key: key, cv: cv };
       }
+      var dw = sw / dpr, dh = sh / dpr;
+      c.save();
+      c.imageSmoothingEnabled = false;
+      c.drawImage(XY._groveMasked.cv, x, y, dw, dh);
       c.restore();
-      XY._groveBox = { x: x, y: y, w: bw, h: Math.max(12, y0 - y) };
+      XY._groveBox = { x: x, y: y, w: dw, h: dh };
     }
     function crowdInk(cx, cy, rad) {
       var IP = XY.INKP;
