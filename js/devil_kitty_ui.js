@@ -1989,8 +1989,8 @@
       var usedN = brushVert(c, label, spot.x, spot.y, sizeN, '#24180f');
       cinnabar(c, spot.x, spot.y + usedN + 6, run.unit.phase >= 2 ? '魔' : '猫');
     }
-    if (run.introLeft > 0) paintIntro(c, app, run);
-    if (run.formLeft > 0) paintForm(c, app, run);
+    if (run.introLeft > 0 && G.mode !== 'cards') paintIntro(c, app, run);
+    if (run.formLeft > 0 && G.mode !== 'cards') paintForm(c, app, run);
     if (G.dkDrops && G.dkDrops.t < 6) paintDrop(c, app, G.dkDrops);
   }
   function obtainPaper(c, W, H, port) {
@@ -2236,10 +2236,24 @@
     return false;
   }
 
+  function yieldToOffer(G) {
+    var run = G && G.dkRun;
+    if (!G || G.mode !== 'cards' || !run) return;
+    if (run.formLeft > 0) {
+      if (run.unit && run.base && API.skipForm) API.skipForm(run);
+      else { run.formLeft = 0; run.hold = false; }
+    }
+    if (run.introLeft > 0 && API.skipIntro) API.skipIntro(run, G.levelId || 1);
+    G.dkSkip = false;
+    G.dkHold = false;
+    stopVideo();
+  }
   var oldStep = XY.step;
   XY.step = function (G, dt) {
-    if (G && G.dkHold) { hold(G, dt); lockCam(G); return; }
+    yieldToOffer(G);
+    if (G && G.dkHold) { hold(G, dt); lockCam(G); yieldToOffer(G); return; }
     oldStep(G, dt);
+    yieldToOffer(G);
     if (G && G.mode === 'play') afterStep(G, dt);
     lockCam(G);
   };
