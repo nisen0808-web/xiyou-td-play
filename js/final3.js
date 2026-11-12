@@ -244,7 +244,7 @@
       var r = q.done ? [(rw.lingshi ? '灵石 +' + rw.lingshi : ''), (rw.card ? '法宝' : ''), (rw.shard ? '碎片 +' + rw.shard : '')].filter(Boolean).join(' ') : '未完成';
       lines.push({ t: (i ? '支线' : '主线') + ' · ' + q.def.short + '  ' + (q.done ? ('成' + (r ? ' · ' + r : '')) : '未完成'), c: q.done ? '#a42d19' : '#2b1c08' });
     });
-    if (!short) lines.push({ t: '一星 通关本关    二星 至少一条支线    三星 无人阵亡', c: '#5c4034' });
+    if (!short) lines.push({ t: G.dungeon ? '一星 通关 · 二星 阵亡不超过三次 · 三星 无人阵亡' : '一星 通关本关    二星 至少一条支线    三星 无人阵亡', c: '#5c4034' });
     var y = contentTop, size = short ? 15 : (port ? 16 : 18), lh = size + (short ? 8 : 12);
     var maxLines = short ? 4 : 12;
     lines.slice(0, maxLines).forEach(function (ln) {

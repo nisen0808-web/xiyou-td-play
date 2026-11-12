@@ -25534,7 +25534,7 @@ I.vendorKey=function(G,a,k){var n=X.vendor.stock(G).length;if(k==='ArrowLeft'||k
     var spOk=X.sweep09&&X.sweep09.spdOk(G),speedY=L.port?48:yy;
     K.t(G.speed===2?'二倍速':'一倍速',L.speed.x+22,speedY,L.small?12:15,G.speed===2?RED:SOFT,'center',spOk);
     hit(K,L.speed,spOk?'spd2':'ui',{label:spOk?'切换二倍速':'未解锁二倍速'});
-    tooltip(a,K,L.speed,[spOk?'本关三星已解锁 2×，点击切换':'本关三星后解锁二倍速','取经阵亡不超过 1 人；现有三星规则不变']);
+    tooltip(a,K,L.speed,[spOk?'本关三星已解锁 2×，点击切换':'本关三星后解锁二倍速','本关三星（无人阵亡）后解锁']);
     rec(a,'speed',{x:L.speed.x,y:speedY-10,w:44,h:20});
     var cancel=!!(a.build||a.selTower||a.summon);
     rec(a,'pause',{x:L.pause.x,y:yy-11,w:48,h:22});
