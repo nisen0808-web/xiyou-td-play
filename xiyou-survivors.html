@@ -23102,7 +23102,7 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
   function taper(c, x1, y, x2, th, al, col) {
     var mid = (x1 + x2) / 2; c.save(); c.globalAlpha = al; c.fillStyle = col || INK; c.beginPath(); c.moveTo(x1, y); c.quadraticCurveTo(mid, y - th, x2, y); c.quadraticCurveTo(mid, y + th * 0.45, x1, y); c.fill(); c.restore();
   }
-  function stageName(id) { if (id === 'kuanggong') return null; var D = window.XY_MENU_STAGE, n = D && D.name && D.name[id] && D.name[id].h; if (!n) return null; var i = pic('nm_' + id, n.src, n.src); return i ? { img: i, w: n.w, h: n.h } : null; }
+  function stageName(id) { var D = window.XY_MENU_STAGE, n = D && D.name && D.name[id] && D.name[id].h; if (!n) return null; var i = pic('nm_' + id, n.src, n.src); return i ? { img: i, w: n.w, h: n.h } : null; }
   function itemSeal(it) { return it.k === 'level' ? (NUM[it.id] || String(it.id)) : it.seal; }
 
   /* —— 印帖竖卡：顶上一枚小朱印（关序 / 洞 / 战），中间竖排楷体名，底下一行状态；选中 = 朱砂印边 + 抬起 + 红晕 —— */
