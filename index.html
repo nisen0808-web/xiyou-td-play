@@ -23293,6 +23293,7 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
   /* —— 携带常驻：狂野水墨立绘卡，书法名写在画上。未获得的隐藏人物不显示。 —— */
   function tile(c, st, a, tl, x, y, w, h, d, cur, out) {
     var pad = 3, bx = x + pad, by = y + pad, bw = Math.max(8, w - pad * 2), bh = Math.max(8, h - pad * 2);
+    (XY.departCards = XY.departCards || []).push({ id: tl.id, x: x, y: y, w: w, h: h });
     var hv = st.over(x, y, w, h), id = tl.id, on = id === null ? !cur : cur === id;
     var hit = function (act, ex) { st.hit(x, y, w, h, act, ex); };
     function paper(lock) {
@@ -23798,7 +23799,7 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
 
 
   DP.draw = function (c, G, a) {
-    XY.departPlates = []; XY.departSeals = []; XY.departTexts = [];
+    XY.departPlates = []; XY.departSeals = []; XY.departTexts = []; XY.departCards = [];
     var st = VU.begin(c, a), cw = st.cw, ch = st.ch, land = (cw >= 600 && cw > ch * 1.1) || (cw >= 480 && cw > ch * 1.5), tiny = land && ch <= 360, cmp = tiny || (!land && ch < 720);
     var geo = DP.geo = { land: land, tiny: tiny, cmp: cmp, cards: [], tiles: 0, btns: [], bottom: 0 };
     bgPoster(c, cw, ch, land);
@@ -23817,16 +23818,49 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
       if (cellH > ch * 0.3) { cellH = Math.round(ch * 0.3); cellW = Math.min(cellW, cellH * 0.72); }
       cellW = Math.min(cellW, Math.max(64, (cw - 28) / nt));
       d = cellH; nameH = 0; cols = nt;
-      var labH = 18, stripY = ch - 4 - cellH - labH;
+      var zLay = a.zoom || 1, dkBot = 0;
+      if (tiny) {
+        var Hlog = a.lh || (ch / zLay), portLay = Hlog > (a.lw || cw / zLay) * 1.05;
+        if (!portLay) dkBot = Math.max(250, Hlog - 250) * zLay + 56 * zLay;
+      }
+      var labH = tiny ? 40 : 18;
+      if (tiny && dkBot) {
+        cellH = Math.max(44, Math.min(cellH, ch - 6 - labH - (dkBot + 8)));
+        cellW = Math.min(cellW, Math.max(56, cellH / 0.62));
+      }
+      var stripY = ch - 4 - cellH - labH;
+      if (tiny && dkBot && stripY < dkBot + 8) { cellH = Math.max(40, ch - 4 - labH - (dkBot + 8)); stripY = dkBot + 8; }
+      d = cellH;
       VU.washE(c, cw / 2, stripY + (labH + cellH) / 2 + 4, cw * 0.62, (labH + cellH) * 0.75, '250,244,228', 0.8);
       taper(c, 24, stripY - 2, cw - 24, 2.2, 0.32);
-      kt(c, '携带常驻', 14, stripY + 9, 13, RED, 'left', 80);
+      function noteBox(label, x, y, sz, al, maxW) {
+        c.font = 'bold ' + sz + 'px ' + KAI;
+        var tw = c.measureText(label).width, drawn = label;
+        if (maxW && tw > maxW) { c.font = sz + 'px ' + KAI; tw = Math.min(maxW, c.measureText(label).width); }
+        var left = al === 'right' ? x - Math.min(tw, maxW || tw) : x;
+        var box = { label: label, x: left, y: y - sz * 0.72, w: Math.min(tw, maxW || tw), h: sz * 1.2 };
+        (XY.departTexts = XY.departTexts || []).push(box);
+        return box;
+      }
+      var info0 = carryInfo(a, { hover: null });
+      var note = XY.TEST_BUILD ? XY.SPECIALS.length + ' 位全可选 · 不写存档' : '没抽到的要集齐 ' + XY.SP_LV_AT[0] + ' 张角色卡';
+      if (tiny) {
+        kt(c, '携带常驻', 14, stripY + 11, 13, RED, 'left', cw * 0.4);
+        noteBox('携带常驻', 14, stripY + 11, 13, 'left', cw * 0.4);
+        kt(c, info0, 14, stripY + 30, 12, INK, 'left', cw - 28, false);
+        noteBox(info0, 14, stripY + 30, 12, 'left', cw - 28);
+      } else {
+        kt(c, '携带常驻', 14, stripY + 9, 13, RED, 'left', 80);
+        noteBox('携带常驻', 14, stripY + 9, 13, 'left', 80);
+        c.font = '12px ' + KAI; var nw0 = Math.min(cw * 0.3, c.measureText(note).width);
+        kt(c, info0, 84, stripY + 9, 12, INK, 'left', cw - 84 - nw0 - 30, false);
+        noteBox(info0, 84, stripY + 9, 12, 'left', cw - 84 - nw0 - 30);
+        kt(c, note, cw - 14, stripY + 9, 11.5, SOFT, 'right', cw * 0.3, false);
+        noteBox(note, cw - 14, stripY + 9, 11.5, 'right', cw * 0.3);
+      }
       out = carryStrip(c, st, a, tl, 12, stripY + labH, cw - 24, cols, cellW, cellH, d, 0);
       geo.tiles = nt; geo.strip = { y: stripY, h: labH + cellH };
-      var note = XY.TEST_BUILD ? XY.SPECIALS.length + ' 位全可选 · 不写存档' : '没抽到的要集齐 ' + XY.SP_LV_AT[0] + ' 张角色卡';
-      c.font = '12px ' + KAI; var nw0 = Math.min(cw * 0.3, c.measureText(note).width);
-      kt(c, carryInfo(a, out), 84, stripY + 9, 12, INK, 'left', cw - 84 - nw0 - 30, false);
-      kt(c, note, cw - 14, stripY + 9, 11.5, SOFT, 'right', cw * 0.3, false);
+      if (tiny && dkBot) XY.departDk = { bottom: dkBot, top: dkBot - 56 * zLay, right: (22 + 132 + 10 + 120) * zLay };
       // —— 中：左 竖卡 + 说明；右 立绘 + 按钮
       var y1 = stripY - 10, LW = Math.round(cw * (cw >= 1000 ? 0.58 : 0.6)), detMin = Math.round(Math.min(150, 84 * s));
       // 说明行数（sweep09 已通关会多一行星级）：按最小 13px 行距给够，竖卡相应矮一点，免得「终点 / 最快用时」被挤掉
