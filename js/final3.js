@@ -296,15 +296,16 @@
       var px = Math.round((W - pw) / 2), py = Math.round((H - ph) / 2);
       inkSheet(c, px, py, pw, ph);
       var who = offerWho(G);
-      var av = Math.max(72, Math.min(96, ph * 0.28));
+      var av = Math.max(64, Math.min(88, Math.min(pw * 0.2, ph * 0.22)));
       var hero = G.heroes && G.heroes[G.ctrl || 1];
-      if (who && XY.xAvIcon) XY.xAvIcon.draw(c, who, px + 14, py + 10, av, av);
-      else if (hero && XY.hud2 && XY.hud2.face) XY.hud2.face(c, hero, px + 14 + av / 2, py + 10 + av / 2, av * 0.42, a.rt || 0);
-      kai(c, op.title || '选一件', px + 14 + av + 10, py + (short ? 22 : 28), short ? 18 : 26, '#a42d19', 'left', pw * 0.46);
+      var head = 8 + av + 14;
+      if (who && XY.xAvIcon) XY.xAvIcon.draw(c, who, px + 14, py + 8, av, av);
+      else if (hero && XY.hud2 && XY.hud2.face) XY.hud2.face(c, hero, px + 14 + av / 2, py + 8 + av / 2, av * 0.42, a.rt || 0);
+      kai(c, op.title || '选一件', px + 22 + av, py + 8 + av / 2, short ? 20 : 26, '#a42d19', 'left', pw - av - 40);
       var n = Math.min(3, items.length), gap = port ? 8 : 12;
       var btnH = short ? 34 : 42;
       var btnY = py + ph - btnH - 12;
-      var top = py + (short ? 48 : 64);
+      var top = py + head;
       var areaH = btnY - 8 - top;
       var cards = [];
       var cw = (pw - 24 - gap * (n - 1)) / n;
@@ -327,10 +328,26 @@
         kai(c, it.name || '', x + w / 2, y + Math.max(16, h * 0.1), Math.max(15, Math.min(26, w * 0.16)), '#2b1c08', 'center', w - 12);
         var rank = cnRank(it.lv || it.r || '');
         kai(c, rank, x + w / 2, y + Math.max(34, h * 0.2), 14, '#a42d19', 'center', w - 12);
-        var art = Math.min(w * 0.72, h * 0.38);
-        if (XY.ICONINK && it.name) XY.ICONINK.draw(c, it.name, x + w / 2, y + h * 0.48, art);
+        var art = Math.min(w * 0.62, h * 0.32);
+        if (XY.ICONINK && it.name) XY.ICONINK.draw(c, it.name, x + w / 2, y + h * 0.42, art);
         var eff = cnRank(it.eff || '');
-        kai(c, eff, x + w / 2, y + h - Math.max(16, h * 0.1), Math.max(13, Math.min(16, h * 0.08)), '#24180f', 'center', w - 16);
+        c.save();
+        c.beginPath(); c.rect(x + 4, y + h * 0.62, w - 8, h * 0.36); c.clip();
+        var face = '"Ma Shan Zheng","KaiTi",serif';
+        var es = Math.max(12, Math.min(15, w * 0.13));
+        c.font = es + 'px ' + face;
+        var lines = [], cur = '', ci, ch;
+        for (ci = 0; ci < eff.length; ci++) {
+          ch = eff.charAt(ci);
+          if (cur && c.measureText(cur + ch).width > w - 14) { lines.push(cur); cur = ch; }
+          else cur += ch;
+        }
+        if (cur) lines.push(cur);
+        if (lines.length > 3) lines.length = 3;
+        var lh = es + 3, y0 = y + h - 8 - lines.length * lh;
+        c.fillStyle = '#24180f'; c.textAlign = 'center'; c.textBaseline = 'top';
+        for (ci = 0; ci < lines.length; ci++) c.fillText(lines[ci], x + w / 2, y0 + ci * lh);
+        c.restore();
         K.hit(x, y, w, h - 4, 'offerPick', { k: i });
       });
       var bw = (pw - 36) / 2;
