@@ -1,3 +1,7 @@
+# 西游X 0.8.7 第十轮
+
+这一轮的说明和截图都在 Agent Store：`/cursor/stores/self/shots-final10/REPORT.md`。没有合并，也没有部署。
+
 # 西游X 0.8.7 本轮验收说明
 
 截图在 Agent Store：`/cursor/stores/self/shots-final9/`。没有合并，也没有部署。版本号仍是 0.8.7。首页没改。
