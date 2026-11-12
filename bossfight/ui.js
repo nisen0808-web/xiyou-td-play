@@ -841,14 +841,21 @@
     if (W < 4 || H < 4) return;
     c.setTransform(dpr, 0, 0, dpr, 0, 0);
     c.clearRect(0, 0, W, H);
-    c.fillStyle = '#f3ead6';
-    c.fillRect(0, 0, W, H);
-    var mist = c.createRadialGradient(W * 0.42, H * 0.78, 8, W * 0.48, H * 0.62, Math.max(W, H) * 0.72);
-    mist.addColorStop(0, 'rgba(78,58,38,0.14)');
-    mist.addColorStop(0.55, 'rgba(78,58,38,0.05)');
+    var mx = W * 0.42, my = H * 0.64;
+    var rx = Math.min(W * 0.34, Math.max(24, mx - 22), Math.max(24, W - mx - 36));
+    var ry = Math.min(H * 0.32, Math.max(16, my - 16), Math.max(16, H - my - 28));
+    c.save();
+    c.translate(mx, my);
+    c.scale(rx, ry);
+    var mist = c.createRadialGradient(0, 0, 0.08, 0, 0, 1);
+    mist.addColorStop(0, 'rgba(78,58,38,0.12)');
+    mist.addColorStop(0.58, 'rgba(78,58,38,0.035)');
     mist.addColorStop(1, 'rgba(78,58,38,0)');
     c.fillStyle = mist;
-    c.fillRect(0, 0, W, H);
+    c.beginPath();
+    c.arc(0, 0, 1, 0, Math.PI * 2);
+    c.fill();
+    c.restore();
     var leftId = G.partner || 'heyuxi';
     var ids = [leftId, 'wukong', 'niumo'];
     var labels = [NAMES[leftId] || '', '孙悟空', '牛魔王'];
@@ -858,9 +865,11 @@
     }
     var aL = asp(leftId), aW = asp('wukong'), aN = asp('niumo');
     var nameH = Math.max(15, Math.min(30, H * 0.085, W * 0.045));
-    var margin = 8, foot = H - Math.max(2, H * 0.012);
+    var marginL = Math.max(48, Math.round(W * 0.07));
+    var marginR = Math.max(20, Math.round(W * 0.03));
+    var foot = H - Math.max(2, H * 0.012);
     var maxH = Math.max(48, foot - nameH - 4);
-    var avail = W - margin * 2;
+    var avail = W - marginL - marginR;
     var pairOverlap = 0.14, duelGap = Math.max(nameH * 1.7, 28);
     function pairWidth(h) { return h * (aL + aW * (1 - pairOverlap)); }
     function totalWidth(h) { return pairWidth(h) + duelGap + h * aN; }
@@ -874,7 +883,7 @@
     if (extra > 10) foot -= extra * 0.5;
     var wL = h * aL, wW = h * aW, wN = h * aN;
     var block = pairWidth(h) + duelGap + wN;
-    var xL = margin + Math.max(0, (avail - block) / 2) + wL / 2;
+    var xL = marginL + Math.max(0, (avail - block) / 2) + wL / 2;
     var xW = xL + wL / 2 + wW * (0.5 - pairOverlap);
     var xN = xW + wW * (0.5 - pairOverlap * 0.15) + duelGap + wN / 2;
     var top = foot - h;
@@ -917,9 +926,8 @@
       var y = r.y - 2 - nameH * 0.15;
       if (r.y - (y + nameH / 2) > nameH) y = r.y - nameH * 0.85;
       var x = xs[i];
-      if (i === 0) x = Math.min(xs[i], r.x + tw * 0.2);
-      if (i === 2) x = Math.max(xs[i], r.x + r.w - tw * 0.2);
-      x = Math.max(margin + tw / 2, Math.min(W - margin - tw / 2, x));
+      if (i === 2) x = Math.max(xs[i], r.x + r.w - tw * 0.15);
+      x = Math.max(marginL + tw / 2, Math.min(W - marginR - tw / 2, x));
       y = Math.max(ih * 0.55, y);
       if (outside(x, y, tw, ih)) y = Math.max(ih * 0.55, r.y - ih * 0.55);
       if (im) c.drawImage(im, x - iw / 2, y - ih / 2, iw, ih);
