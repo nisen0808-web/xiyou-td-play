@@ -268,21 +268,25 @@
     var oldScroll = U.scrolls;
     U.scrolls = function (c, G, a, items, op) {
       if (!XY.ui2 || !XY.ui2.on) return oldScroll(c, G, a, items, op);
-      var K = open(c, a), W = K.W, H = K.H, port = K.port, VU = XY.villainUI;
+      var K = openVeil(c, a), W = K.W, H = K.H, port = K.port, VU = XY.villainUI;
       var short = !port && H < 420;
-      kai(c, op.title || '获得', 18, short ? 16 : (port ? 28 : 26), short ? 20 : (port ? 26 : 32), '#a42d19', 'left', W * 0.4);
-      var n = Math.min(3, items.length), gap = port ? 10 : 14;
-      var btnH = port ? 42 : (H < 360 ? 34 : 44);
-      var btnY = H - 8 - btnH;
-      var top = port ? 58 : (short ? 40 : 56);
-      var areaH = btnY - 10 - top;
+      var pw = Math.min(port ? W - 16 : W * 0.58, W - 16);
+      var ph = Math.min(short ? H - 12 : H * 0.6, H - 16);
+      var px = Math.round((W - pw) / 2), py = Math.round((H - ph) / 2);
+      inkSheet(c, px, py, pw, ph);
+      kai(c, op.title || '选一件', px + 18, py + (short ? 22 : 28), short ? 18 : 26, '#a42d19', 'left', pw * 0.5);
+      var n = Math.min(3, items.length), gap = port ? 8 : 12;
+      var btnH = short ? 34 : 42;
+      var btnY = py + ph - btnH - 12;
+      var top = py + (short ? 40 : 52);
+      var areaH = btnY - 8 - top;
       var cards = [];
       if (port) {
         var ch = (areaH - gap * (n - 1)) / n;
-        for (var i = 0; i < n; i++) cards.push({ x: 12, y: top + i * (ch + gap), w: W - 24, h: ch });
+        for (var i = 0; i < n; i++) cards.push({ x: px + 12, y: top + i * (ch + gap), w: pw - 24, h: ch });
       } else {
-        var cw = (W - 24 - gap * (n - 1)) / n;
-        for (var j = 0; j < n; j++) cards.push({ x: 12 + j * (cw + gap), y: top, w: cw, h: areaH });
+        var cw = (pw - 24 - gap * (n - 1)) / n;
+        for (var j = 0; j < n; j++) cards.push({ x: px + 12 + j * (cw + gap), y: top, w: cw, h: areaH });
       }
       items.slice(0, n).forEach(function (it, i) {
         var b = cards[i], x = b.x, y = b.y, w = b.w, h = b.h;
@@ -314,11 +318,11 @@
         kai(c, eff, x + w / 2, y + h - Math.max(16, h * 0.1), Math.max(14, Math.min(18, h * 0.09)), '#24180f', 'center', w - 20);
         K.hit(x, y, w, h - 4, 'offerPick', { k: i });
       });
-      var bw = (W - 36) / 2;
-      inkBar(c, 12, btnY, bw, btnH, op.skipLabel || '都不要', false);
-      K.hit(12, btnY, bw, btnH, 'offerPick', { k: -1 });
-      inkBar(c, 20 + bw, btnY, bw, btnH, op.rrLabel || '重抽', !op.rrDis);
-      if (!op.rrDis) K.hit(20 + bw, btnY, bw, btnH, 'offerReroll');
+      var bw = (pw - 36) / 2;
+      inkBar(c, px + 12, btnY, bw, btnH, op.skipLabel || '都不要，换金币', false);
+      K.hit(px + 12, btnY, bw, btnH, 'offerPick', { k: -1 });
+      inkBar(c, px + 24 + bw, btnY, bw, btnH, op.rrLabel || '重抽', !op.rrDis);
+      if (!op.rrDis) K.hit(px + 24 + bw, btnY, bw, btnH, 'offerReroll');
       close(c);
     };
   }
