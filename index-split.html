@@ -20160,8 +20160,6 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
     var b = skillBody(c, G, hi, n, w), st = b.st, lv = st.lv, locked = st.st === 'locked', maxed = st.st === 'max', can = st.st === 'ok', ov = K.over(x, y, w, h);
     XY.skillRead = { name: b.sz.name, effect: b.sz.eff, cost: b.sz.cost, level: b.sz.cost };
     if(ov){var wash=c.createLinearGradient(x,y,x+w,y+h);wash.addColorStop(0,'rgba(184,48,15,0.10)');wash.addColorStop(1,'rgba(184,48,15,0)');c.fillStyle=wash;c.fillRect(x,y,w,h);}
-    var cnN = ['零','一','二','三','四','五','六','七','八','九'];
-    c.save(); c.font = '15px "Ma Shan Zheng","KaiTi",serif'; c.fillStyle = '#5c4a38'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText((cnN[lv] || lv) + '重', x + w / 2, y + h - 6); c.restore();
     skillDraw(c, b.names, x + 14, y + b.yName, b.sz.name, true, locked && lv === 0 ? '#9a9486' : T.ink, b.nameLh);
     skillDraw(c, b.effs, x + 14, y + b.yEff, b.sz.eff, false, locked && lv === 0 ? '#aaa598' : T.inkSoft, b.effLh);
     skillDraw(c, b.costs, x + 14, y + b.yCost, b.sz.cost, true, maxed ? '#b8860b' : can ? '#2e7d32' : st.st === 'nopts' ? '#9a6a1a' : '#a0705a', b.costLh);
@@ -20208,16 +20206,18 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
     var h = tab !== PT ? G.heroes[tab] : null, subs = subList(G, tab, h), key = tab, sub = (app._pvSub && app._pvSub[key]) || 0; if (sub >= subs.length) sub = 0;
     var sw = (w0 - (subs.length - 1) * 5) / subs.length;
     subs.forEach(function (s, k) {
-      var on = sub === k; K.btn(x0 + k * (sw + 5), y, sw, 52, s.n, 'pvSub', { i: k }, { on: on, off: false, size: sw < 90 ? 14 : 16, wrap: true });
+      var on = sub === k, bx = x0 + k * (sw + 5);
+      K.t(s.n, bx + sw / 2, y + 18, sw < 90 ? 14 : 16, on ? '#a42d19' : '#24180f', 'center', true);
+      if (XY.INKP) XY.INKP.stroke(c, bx + 8, y + 32, bx + sw - 8, y + 32, on ? 2.2 : 0.7, on ? '164,45,25' : '83,61,34', on ? 0.85 : 0.28, k + 7, 0.012);
+      K.hit(bx, y, sw, 40, 'pvSub', { i: k });
     });
-    y += 58;
+    y += 44;
     // —— 修行谱：前置关系按层分岔，全队独立加成按错落墨点展开
-    var S0 = subs[sub], detH = port ? 100 : (H < 480 ? 56 : 84), gy = y, cardHi = tab === PT ? -1 : S0.hi, gap = 12, minW = port ? 168 : 230;
+    var S0 = subs[sub], detH = port ? 72 : (H < 480 ? 48 : 64), gy = y, cardHi = tab === PT ? -1 : S0.hi, gap = 10, minW = port ? 118 : 148;
     function tallest(nodes, ww) { var m = 72, i; for (i = 0; i < nodes.length; i++) m = Math.max(m, skillBody(c, G, cardHi, nodes[i], ww).h); return m; }
     var probe = S0.nodes.length ? tallest(S0.nodes, Math.max(minW, w0)) : 72;
     if (probe + 8 > bottom - detH - 6 - gy) detH = Math.max(48, bottom - gy - 8 - probe);
     var gh = bottom - detH - 6 - gy, col = h ? h.def.color : '#d9a21a', rects = [];
-    if(XY.inkHud&&sub>0&&!S0.locked&&S0.nodes.length){XY.inkHud.skillLeaf(c,G,app,h,S0,tab,sub,{x:x0,y:gy,w:w0,h:bottom-gy-45});P.end(c);return;}
     var nn = S0.nodes.length, layout=[], byId={}, depth={}, layered=false;
     S0.nodes.forEach(function(nd){byId[nd.id]=nd;depth[nd.id]=0;});
     for(var pass=0;pass<nn;pass++)S0.nodes.forEach(function(nd){Object.keys((nd.req&&nd.req[0])||{}).forEach(function(id){if(byId[id]){layered=true;depth[nd.id]=Math.max(depth[nd.id],depth[id]+1);}});});
@@ -20251,14 +20251,39 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
       layout.forEach(function (p) { var d = depth[p.nd.id] || 0; (groups[d] = groups[d] || []).push(p); if (d > maxD) maxD = d; });
       var rowsN = maxD + 1, band = gh / rowsN;
       for (d0 = 0; d0 < rowsN; d0++) {
-        var g0 = groups[d0] || [], nw0 = Math.min(w0 * (g0.length < 2 ? 0.46 : 0.4), (w0 - 20) / Math.max(1, g0.length) - 12), nh0 = Math.min(150, band - 12);
-        var total0 = g0.length * nw0 + Math.max(0, g0.length - 1) * 12, xs0 = x0 + (w0 - total0) / 2;
-        g0.forEach(function (p, k) { p.x = xs0 + k * (nw0 + 12); p.y = gy + d0 * band + 4; p.w = nw0; p.h = nh0; });
+        var g0 = groups[d0] || [], nat = 72, gi;
+        for (gi = 0; gi < g0.length; gi++) nat = Math.max(nat, g0[gi].h);
+        var nw0 = Math.min(w0 * (g0.length < 2 ? 0.42 : 0.34), (w0 - 16) / Math.max(1, g0.length) - 10);
+        var nh0 = Math.max(nat, Math.min(148, Math.max(nat, band - 8)));
+        var total0 = g0.length * nw0 + Math.max(0, g0.length - 1) * 14, xs0 = x0 + (w0 - total0) / 2;
+        g0.forEach(function (p, k) { p.x = xs0 + k * (nw0 + 14); p.y = gy + d0 * band + Math.max(2, (band - nh0) / 2); p.w = nw0; p.h = nh0; });
       }
-      c.save(); c.strokeStyle = 'rgba(42,32,22,0.55)'; c.lineWidth = 2;
-      layout.forEach(function (p) { Object.keys((p.nd.req && p.nd.req[0]) || {}).forEach(function (id) { var prev = layout.filter(function (t) { return t.nd.id === id; })[0]; if (!prev) return; c.beginPath(); c.moveTo(prev.x + prev.w / 2, prev.y + prev.h); c.lineTo(p.x + p.w / 2, p.y); c.stroke(); }); });
-      c.restore();
+    } else if (layout.length === 1) {
+      layout[0].w = Math.min(layout[0].w, w0 * 0.72);
+      layout[0].x = x0 + (w0 - layout[0].w) / 2;
+      layout[0].h = Math.min(Math.max(layout[0].h, 88), gh - 8);
+      layout[0].y = gy + (gh - layout[0].h) / 2;
+    } else if (layout.length) {
+      var rows = Math.ceil(layout.length / cols), band2 = gh / rows;
+      layout.forEach(function (p, i) {
+        var r = Math.floor(i / cols), k = i % cols, nIn = Math.min(cols, layout.length - r * cols);
+        var ww2 = Math.min(p.w, (w0 - (nIn - 1) * 14) / nIn), total = nIn * ww2 + (nIn - 1) * 14;
+        p.w = ww2; p.x = x0 + (w0 - total) / 2 + k * (ww2 + 14);
+        p.h = Math.max(p.h, 64);
+        p.y = gy + r * band2 + Math.max(2, (band2 - p.h) / 2);
+      });
     }
+    c.save();
+    layout.forEach(function (p) {
+      Object.keys((p.nd.req && p.nd.req[0]) || {}).forEach(function (id) {
+        var prev = layout.filter(function (t) { return t.nd.id === id; })[0];
+        if (!prev) return;
+        var x1 = prev.x + prev.w / 2, y1 = prev.y + prev.h, x2 = p.x + p.w / 2, y2 = p.y;
+        if (XY.INKP) XY.INKP.stroke(c, x1, y1, x2, y2, 2.1, '42,32,22', 0.72, (id.length * 3 + p.nd.id.length) % 19, 0.09);
+        else { c.strokeStyle = 'rgba(42,32,22,0.7)'; c.lineWidth = 2; c.beginPath(); c.moveTo(x1, y1); c.lineTo(x2, y2); c.stroke(); }
+      });
+    });
+    c.restore();
     if(pageN>1){K.btn(x0+w0-196,bottom-detH+8,92,36,'上一页','folio',{key:pageKey,i:(pageI+pageN-1)%pageN},{size:14,minS:12});K.btn(x0+w0-98,bottom-detH+8,92,36,(pageI+1)+' / '+pageN,'folio',{key:pageKey,i:(pageI+1)%pageN},{size:14,minS:12});}
     if(S0.locked)K.tf('🔒 角色升到 Lv4 开放（'+XY.SP_LV_AT[3]+' 张角色卡）',x0+w0/2,gy+gh/2,w0-20,15,'#8a5a10','center',true,12);
     else if(!nn)K.t('这一页没有技能',x0+w0/2,gy+gh/2,15,T.inkSoft,'center',false);
