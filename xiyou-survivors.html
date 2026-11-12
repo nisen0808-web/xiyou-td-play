@@ -10203,6 +10203,7 @@ XY.BGS1={"src": "data:image/webp;base64,UklGRtT1GgBXRUJQVlA4IMj1GgCQwWGdASoAEAAK
 
     if (s === 'start' || s === 'deck' || s === 'dex' || s === 'unlock' || s === 'levels' || s === 'shop' || s === 'dungeon' || s === 'villain' || s === 'board' || s === 'hub') { XY.screens.draw(ctx, G, app); return; }
     if (XY.ultscene && s === 'play') XY.ultscene.drawScreen(ctx, G, app);
+    if (XY.portraitHint) XY.portraitHint();
     if (!XY.noHudShot) drawHUD(ctx, G, app);                                 // XY.noHudShot：只给截图 / 设计稿用（拿干净的战场）
     if (G.cut && s === 'play' && XY.cutin) XY.cutin.draw(ctx, G, app);
     if (XY.R4.fxHud && (s === 'play' || s === 'pause')) XY.R4.fxHud(ctx, G, app);
@@ -24347,25 +24348,25 @@ X.step=function(g,dt){if(!g._simRandom)return step.apply(this,arguments);var sel
   function resizeLater() { resize(); setTimeout(resize, 150); setTimeout(resize, 600); }
   window.addEventListener('orientationchange', resizeLater);
   if (window.visualViewport && window.visualViewport.addEventListener) window.visualViewport.addEventListener('resize', resize);
-  // 竖屏提示：左上两列毛笔小字，不挡居中的标题，也不挡右上角「活动」。几秒后自己淡掉，没有白框和按钮。
+  // 竖屏提示：只在战斗中出现，贴在顶栏下面，不压灵石、等级和当前目标。点「知道了」或八秒后消失。
   var portraitDismissed = false;
   function portraitHint() {
     var touch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
     var portrait = window.innerHeight > window.innerWidth * 1.1;
+    var playing = XY.app && XY.app.screen === 'play';
     var el = document.getElementById('xyPortrait');
-    if (touch && portrait && !portraitDismissed) {
+    if (touch && portrait && playing && !portraitDismissed) {
       if (!el) {
         el = document.createElement('div');
         el.id = 'xyPortrait';
-        el.setAttribute('aria-hidden', 'true');
-        el.textContent = '请横过来\n竖着也能';
-        el.style.cssText = 'position:fixed;left:8px;top:14px;z-index:40;width:42px;pointer-events:none;color:#2b1c08;font:15px/1.2 "Ma Shan Zheng","KaiTi","STKaiti","楷体",serif;writing-mode:vertical-rl;letter-spacing:3px;text-shadow:0 0 2px rgba(246,238,220,.96),0 0 8px rgba(246,238,220,.9);background:transparent;border:0;white-space:pre;opacity:.92;animation:xyPortraitFade 8s ease forwards';
-        if (!document.getElementById('xyPortraitStyle')) {
-          var st = document.createElement('style');
-          st.id = 'xyPortraitStyle';
-          st.textContent = '@keyframes xyPortraitFade{0%,70%{opacity:.92}100%{opacity:0}}';
-          document.head.appendChild(st);
-        }
+        el.style.cssText = 'position:fixed;left:50%;top:148px;transform:translateX(-50%);z-index:35;max-width:78vw;padding:4px 8px 6px;pointer-events:auto;color:#2b1c08;font:16px/1.2 "Ma Shan Zheng","KaiTi","STKaiti","楷体",serif;letter-spacing:1px;text-shadow:0 0 2px rgba(246,238,220,.96);background:linear-gradient(90deg,rgba(243,234,214,0),rgba(243,234,214,.92) 12%,rgba(243,234,214,.92) 88%,rgba(243,234,214,0));border:0;white-space:nowrap;opacity:.96';
+        el.appendChild(document.createTextNode('竖着也能，请横过来'));
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.textContent = '知道了';
+        btn.style.cssText = 'margin-left:8px;padding:0 4px;border:0;background:transparent;color:#a83224;font:inherit;cursor:pointer';
+        btn.onclick = function () { portraitDismissed = true; if (el.parentNode) el.parentNode.removeChild(el); };
+        el.appendChild(btn);
         (document.body || document.documentElement).appendChild(el);
         setTimeout(function () { portraitDismissed = true; if (el.parentNode) el.parentNode.removeChild(el); }, 8200);
       }
