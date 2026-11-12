@@ -958,61 +958,92 @@
     return WUCLOSE._p;
   }
   function ensureWuClose() { if (!WUCLOSE._p) preloadWu(); }
-  /* 悟空大招特写：五帧铺满屏幕。脸和书法留在画面里，边上用画面自身的纸色接出去，不留米色硬边。点击关掉。 */
+  /* 窄屏：整幅居中，底下是游戏同款宣纸和淡墨，四边用抖动的笔触淡出。脸、棒、尾巴、书法留住。 */
+  function wuBrushMask(im, pw, ph) {
+    var key = (im.src || '') + ':' + pw + 'x' + ph;
+    if (wuBrushMask.cache && wuBrushMask.cache.key === key) return wuBrushMask.cache.cv;
+    var cv = document.createElement('canvas');
+    cv.width = pw; cv.height = ph;
+    var g = cv.getContext('2d', { willReadFrequently: true });
+    g.imageSmoothingEnabled = true;
+    g.imageSmoothingQuality = 'high';
+    g.drawImage(im, 0, 0, pw, ph);
+    var id = g.getImageData(0, 0, pw, ph), d = id.data, n = pw * ph, i, r, gc, b, lum, sat;
+    var keep = new Uint8Array(n);
+    for (i = 0; i < n; i++) {
+      r = d[i * 4]; gc = d[i * 4 + 1]; b = d[i * 4 + 2];
+      lum = (r + gc + b) / 3;
+      sat = Math.max(r, gc, b) - Math.min(r, gc, b);
+      if (sat > 28 || lum < 52) keep[i] = 1;
+    }
+    var dil = new Uint8Array(keep), rad = 7, x, y, dx, dy, xx, yy;
+    for (y = 0; y < ph; y++) {
+      for (x = 0; x < pw; x++) {
+        if (!keep[y * pw + x]) continue;
+        for (dy = -rad; dy <= rad; dy++) {
+          yy = y + dy; if (yy < 0 || yy >= ph) continue;
+          for (dx = -rad; dx <= rad; dx++) {
+            xx = x + dx; if (xx < 0 || xx >= pw) continue;
+            dil[yy * pw + xx] = 1;
+          }
+        }
+      }
+    }
+    for (y = 0; y < ph; y++) {
+      for (x = 0; x < pw; x++) {
+        i = y * pw + x;
+        if (dil[i]) { d[i * 4 + 3] = 255; continue; }
+        var dist = Math.min(x + 1, pw - x, y + 1, ph - y);
+        var wob = Math.sin(x * 0.023 + y * 0.017) * 0.52
+          + Math.sin(x * 0.008 + 1.4) * Math.sin(y * 0.013 + 0.6) * 0.36
+          + Math.sin(x * 0.041 - y * 0.029 + 2.2) * 0.3
+          + Math.sin(x * 0.09 + y * 0.07) * 0.2;
+        var brk = Math.sin(x * 0.15 - y * 0.11 + 0.8);
+        var margin = 4 + (wob + 1.15) * 14 + (brk > 0.62 ? 18 : 0);
+        var fade = 26 + (brk > 0.2 ? 12 : 0);
+        var t = (dist - margin) / fade;
+        var a = t <= 0 ? 0 : (t >= 1 ? 1 : t * t * (3 - 2 * t));
+        d[i * 4 + 3] = a < 0 ? 0 : (a > 1 ? 255 : (a * 255) | 0);
+      }
+    }
+    g.putImageData(id, 0, 0);
+    wuBrushMask.cache = { key: key, cv: cv };
+    return cv;
+  }
+  function paintWuPaper(c, W, H) {
+    c.fillStyle = '#f8f1df';
+    c.fillRect(0, 0, W, H);
+    var wash = BG.wash || BG.far;
+    if (wash && wash.naturalWidth) {
+      c.save();
+      c.globalAlpha = 0.14;
+      var sc = Math.max(W / wash.naturalWidth, H / wash.naturalHeight);
+      var ww = wash.naturalWidth * sc, hh = wash.naturalHeight * sc;
+      c.drawImage(wash, (W - ww) / 2, (H - hh) / 2, ww, hh);
+      c.restore();
+    }
+  }
   function paintWuPlate(c, im, W, H) {
     var iw = im.naturalWidth, ih = im.naturalHeight;
     var fit = Math.min(W / iw, H / ih), cover = Math.max(W / iw, H / ih);
-    var s = fit;
+    var s = fit, tight = false;
     if (cover > fit + 0.001) {
       var overflow = (W / iw >= H / ih) ? (ih - H / cover) : (iw - W / cover);
-      if (overflow < 36) s = cover;
+      if (overflow < 36) { s = cover; tight = true; }
     }
+    if (!tight && H > W * 1.35) s = W / iw;
     var dw = iw * s, dh = ih * s;
     var x = (W - dw) / 2, y = (H - dh) / 2;
-    if (dh > H + 1) y = 0;
-    if (dw > W + 1) x = 0;
-    var cv = paintWuPlate.cv || (paintWuPlate.cv = document.createElement('canvas'));
-    var pw = Math.max(1, Math.ceil(W)), ph = Math.max(1, Math.ceil(H));
-    if (cv.width !== pw || cv.height !== ph) { cv.width = pw; cv.height = ph; }
-    var g = cv.getContext('2d');
-    g.setTransform(1, 0, 0, 1, 0, 0);
-    g.imageSmoothingEnabled = true;
-    g.imageSmoothingQuality = 'high';
-    g.drawImage(im, 0, 0, 1, 1, 0, 0, pw, ph);
-    if (x > 0.5) g.drawImage(im, 0, 0, 1, ih, 0, Math.max(0, y), x + 2, dh);
-    if (x + dw < W - 0.5) g.drawImage(im, iw - 1, 0, 1, ih, x + dw - 2, Math.max(0, y), W - (x + dw) + 2, dh);
-    if (y > 0.5) g.drawImage(im, 0, 0, iw, 1, Math.max(0, x), 0, dw, y + 2);
-    if (y + dh < H - 0.5) g.drawImage(im, 0, ih - 1, iw, 1, Math.max(0, x), y + dh - 2, dw, H - (y + dh) + 2);
-    var wide = x > 24 || y > 24;
-    if (wide) { g.filter = 'blur(18px)'; g.drawImage(cv, 0, 0); g.filter = 'none'; }
-    var top = paintWuPlate.top || (paintWuPlate.top = document.createElement('canvas'));
-    if (top.width !== pw || top.height !== ph) { top.width = pw; top.height = ph; }
-    var t = top.getContext('2d');
-    t.setTransform(1, 0, 0, 1, 0, 0);
-    t.clearRect(0, 0, pw, ph);
-    t.imageSmoothingEnabled = true;
-    t.imageSmoothingQuality = 'high';
-    t.drawImage(im, x, y, dw, dh);
-    if (wide) {
-      var fade = 18;
-      t.globalCompositeOperation = 'destination-out';
-      function fadeRect(x0, y0, x1, y1, rx, ry, rw, rh) {
-        var lg = t.createLinearGradient(x0, y0, x1, y1);
-        lg.addColorStop(0, 'rgba(0,0,0,1)');
-        lg.addColorStop(1, 'rgba(0,0,0,0)');
-        t.fillStyle = lg;
-        t.fillRect(rx, ry, rw, rh);
-      }
-      if (x > 0.5) fadeRect(x, 0, x + fade, 0, x, y, fade, dh);
-      if (x + dw < W - 0.5) fadeRect(x + dw, 0, x + dw - fade, 0, x + dw - fade, y, fade, dh);
-      if (y > 0.5) fadeRect(0, y, 0, y + fade, x, y, dw, fade);
-      if (y + dh < H - 0.5) fadeRect(0, y + dh, 0, y + dh - fade, x, y + dh - fade, dw, fade);
-      t.globalCompositeOperation = 'source-over';
-    }
-    g.drawImage(top, 0, 0);
+    if (tight && dh > H + 1) y = 0;
+    if (tight && dw > W + 1) x = 0;
     c.imageSmoothingEnabled = true;
     c.imageSmoothingQuality = 'high';
-    c.drawImage(cv, 0, 0, W, H);
+    if (tight || (x < 2 && y < 2 && dw >= W - 2 && dh >= H - 2)) {
+      c.drawImage(im, x, y, dw, dh);
+      return;
+    }
+    paintWuPaper(c, W, H);
+    c.drawImage(wuBrushMask(im, Math.max(1, Math.round(dw)), Math.max(1, Math.round(dh))), x, y);
   }
   function drawWuClose(c) {
     if (!(G.wuCut > 0) || G.wuCutOff) return;
