@@ -5647,7 +5647,7 @@ XY.TRAITS = {
     if (e.affix !== 'blast') return;
     var K = XY.core, i, h, R = C.AFFIX_BLAST_R;
     K.ring(G, e.x, e.y, R, '#e08a1e', 0.55, true); K.spark(G, e.x, e.y, '#e08a1e', 12); G.shake = Math.max(G.shake, 6);
-    K.text(G, e.x, e.y - e.r - 28, '爆！', 'counter', '#e08a1e');
+    K.text(G, e.x, e.y - e.r - 28, '爆！', 'counter', '#a42d19');
     for (i = 1; i < G.heroes.length; i++) {
       h = G.heroes[i]; if (h.down || h.ridden) continue;
       if (XY.dist(h.x, h.y, e.x, e.y) < R + h.def.r) { K.hurtHero(G, h, e.dmg * C.AFFIX_BLAST_DMG, false, '精英自爆'); G.stats.affixBlastHits = (G.stats.affixBlastHits || 0) + 1; }
@@ -5720,7 +5720,7 @@ XY.TRAITS = {
   A.levelUp = function (G) {
     var h = G.heroes[G.ctrl] && !G.heroes[G.ctrl].down ? G.heroes[G.ctrl] : G.heroes[0];
     add(G, 'levelup', h.x, h.y, { max: 1.1, h: h });
-    add(G, 'flash', 0, 0, { max: 0.35, scr: true, color: '255,240,170', a: 0.30 });
+    add(G, 'flash', 0, 0, { max: 0.35, scr: true, color: '42,32,22', a: 0.16 });
   };
   A.maxLevel = function (G, h) {
     h = h || G.heroes[G.ctrl] || G.heroes[0];
@@ -5786,11 +5786,11 @@ XY.TRAITS = {
       case 'levelup': {
         if (G && G.td && G.td.quiet > G.td.clock) { c.strokeStyle = 'rgba(90,70,40,0.45)'; c.lineWidth = 1.3; c.beginPath(); c.arc(x, y - 60, 22 + 10 * k, 0.8, 5.2); c.stroke(); break; }
         var up = Math.min(1, k * 2.2), fade = k < 0.6 ? 1 : (1 - (k - 0.6) / 0.4), H = 230 * up, w = 34 * (1 - 0.4 * k);
-        if (f.lod < 2) { var g = c.createLinearGradient(0, y - H, 0, y + 16); g.addColorStop(0, 'rgba(255,230,120,0)'); g.addColorStop(1, 'rgba(255,214,80,' + 0.75 * fade + ')'); c.fillStyle = g; c.fillRect(x - w / 2, y - H, w, H + 16); }
-        else { c.globalAlpha = 0.5 * fade; c.fillStyle = '#ffd650'; c.fillRect(x - w / 3, y - H, w * 0.66, H + 16); c.globalAlpha = 1; }
-        c.globalAlpha = fade * 0.9; c.strokeStyle = '#ffb21e'; c.lineWidth = 4; c.beginPath(); c.ellipse(x, y + 14, 30 + 36 * k, 11 + 13 * k, 0, 0, PI2); c.stroke();
-        c.fillStyle = '#fff3a0'; for (var i = 0; i < (f.lod < 2 ? 6 : 3); i++) { var yy = y + 10 - ((t * 120 + i * 47) % 150), xx = x + sin(i * 2.1 + t * 3) * 22; starFill(c, xx, yy, 5 - 2 * k, i + t * 4); }
-        c.globalAlpha = fade; otxt(c, '升级！', x, y - 66 - 40 * up, 20, '#d98a00', 'center', true); c.globalAlpha = 1; break; }
+        if (f.lod < 2) { var g = c.createLinearGradient(0, y - H, 0, y + 16); g.addColorStop(0, 'rgba(168,50,36,0)'); g.addColorStop(1, 'rgba(90,28,22,' + 0.55 * fade + ')'); c.fillStyle = g; c.fillRect(x - w / 2, y - H, w, H + 16); }
+        else { c.globalAlpha = 0.5 * fade; c.fillStyle = '#6e211b'; c.fillRect(x - w / 3, y - H, w * 0.66, H + 16); c.globalAlpha = 1; }
+        c.globalAlpha = fade * 0.85; c.strokeStyle = '#6e211b'; c.lineWidth = 3; c.beginPath(); c.ellipse(x, y + 14, 30 + 36 * k, 11 + 13 * k, 0, 0, PI2); c.stroke();
+        c.fillStyle = '#a42d19'; for (var i = 0; i < (f.lod < 2 ? 6 : 3); i++) { var yy = y + 10 - ((t * 120 + i * 47) % 150), xx = x + sin(i * 2.1 + t * 3) * 22; starFill(c, xx, yy, 5 - 2 * k, i + t * 4); }
+        c.globalAlpha = fade; otxt(c, '升级！', x, y - 66 - 40 * up, 20, '#a42d19', 'center', true); c.globalAlpha = 1; break; }
       case 'maxlv': {
         if (G && G.td && G.td.quiet > G.td.clock) { c.strokeStyle = 'rgba(42,32,22,0.55)'; c.lineWidth = 1.5; c.beginPath(); c.arc(x, y - 78, 28 + 16 * k, 0.5, 5.4); c.stroke(); break; }
         var fa = k < 0.7 ? 1 : (1 - (k - 0.7) / 0.3); c.globalAlpha = fa;
@@ -8708,8 +8708,8 @@ XY.TRAITS = {
 
   function buildTile(G, ix, iy) {
     if (XY.inkBg()) return buildInkTile(G, ix, iy);
-    var th = themeOf(G), R = G.rtN || G.rt, cv = document.createElement('canvas'); cv.width = TS; cv.height = TS;
-    var c = cv.getContext('2d'), ox = ix * TS, oy = iy * TS, rnd = XY.seeded(9173 + ix * 131 + iy * 977 + G.levelId * 31), i;
+    var th = themeOf(G), R = G.rtN || G.rt, cv = document.createElement('canvas'); cv.width = TS * 2; cv.height = TS * 2;
+    var c = cv.getContext('2d'); c.setTransform(2, 0, 0, 2, 0, 0); var ox = ix * TS, oy = iy * TS, rnd = XY.seeded(9173 + ix * 131 + iy * 977 + G.levelId * 31), i;
     c.fillStyle = th.base; c.fillRect(0, 0, TS, TS);
     for (i = 0; i < 9; i++) { c.fillStyle = (i & 1) ? th.alt : th.patch; c.globalAlpha = 0.55; c.beginPath(); c.ellipse(rnd() * TS, rnd() * TS, 60 + rnd() * 120, 40 + rnd() * 80, rnd() * 3, 0, PI2); c.fill(); }
     c.globalAlpha = 1;
@@ -8821,8 +8821,8 @@ XY.TRAITS = {
   }
 
   function buildInkTile(G, ix, iy) {
-    var th = INK[(G.lv && G.lv.theme)] || INK.bamboo, R = G.rtN || G.rt, cv = document.createElement('canvas'); cv.width = TS; cv.height = TS;
-    var c = cv.getContext('2d'), ox = ix * TS, oy = iy * TS, rnd = XY.seeded(7311 + ix * 131 + iy * 977 + G.levelId * 31), i;
+    var th = INK[(G.lv && G.lv.theme)] || INK.bamboo, R = G.rtN || G.rt, cv = document.createElement('canvas'); cv.width = TS * 2; cv.height = TS * 2;
+    var c = cv.getContext('2d'); c.setTransform(2, 0, 0, 2, 0, 0); var ox = ix * TS, oy = iy * TS, rnd = XY.seeded(7311 + ix * 131 + iy * 977 + G.levelId * 31), i;
     c.fillStyle = th.paper; c.fillRect(0, 0, TS, TS);
     for (i = 0; i < 7; i++) { var bx = 40 + rnd() * (TS - 80), by = 40 + rnd() * (TS - 80), rx = Math.min(30 + rnd() * 80, bx - 4, TS - bx - 4), ry = Math.min(20 + rnd() * 50, by - 4, TS - by - 4); c.fillStyle = th.blot; c.globalAlpha = 0.5; c.beginPath(); c.ellipse(bx, by, rx, ry, rnd() * 3, 0, PI2); c.fill(); }
     c.globalAlpha = 1; c.strokeStyle = 'rgba(150,140,110,0.07)'; c.lineWidth = 1; for (i = 0; i < 34; i++) { var fx = rnd() * TS, fy = rnd() * TS; c.beginPath(); c.moveTo(fx, fy); c.lineTo(fx + 6 + rnd() * 10, fy + rnd() * 4 - 2); c.stroke(); }   // 宣纸纤维
@@ -8896,7 +8896,7 @@ XY.TRAITS = {
     for (var iy = iy0; iy <= iy1; iy++) for (var ix = ix0; ix <= ix1; ix++) {
       var k = tileKey(G, ix, iy), t = cache[k];
       if (!t) { if (built >= 2) { c.fillStyle = ink ? '#f3efe0' : th.base; c.fillRect(ix * TS, iy * TS, TS, TS); continue; } t = cache[k] = buildTile(G, ix, iy); built++; }   // 每帧最多现画 2 块，避免卡一下
-      c.drawImage(t, ix * TS, iy * TS); n++;
+      c.imageSmoothingEnabled = true; c.imageSmoothingQuality = 'high'; c.drawImage(t, ix * TS - 1, iy * TS - 1, TS + 2, TS + 2); n++;
     }
     // 唐僧走过的路段：淡金色（动态）
     var R = G.rt, s = Math.min(G.tang.s, R.total);
@@ -9499,10 +9499,10 @@ XY.TRAITS = {
   function nameBox(c, n) {
     var id = n.h && n.h.id, art = id && nameArt(id);
     var lv = (n.h && n.h.sp && n.h.def) ? ('Lv' + n.h.def.lv) : '';
-    var fs = Math.max(n.sz || 16, 18);
+    var wz = XY._worldZoom || 1, fs = Math.max(n.sz || 14, 15) / wz;
     if (art) {
       XY.R4.nameArtN = (XY.R4.nameArtN || 0) + 1;
-      var ih = Math.max(24, fs + 6), iw = ih * art.w / art.h;
+      var ih = Math.max(18 / wz, fs + 4 / wz), iw = ih * art.w / art.h;
       if (iw > 156) { iw = 156; ih = iw * art.h / art.w; }
       c.font = Math.max(13, ih * 0.62) + 'px "Ma Shan Zheng","KaiTi","STKaiti",serif';
       var lw = lv ? c.measureText(lv).width + 4 : 0;
@@ -9939,8 +9939,13 @@ XY.TRAITS = {
     if (tdg) {
       var va = (G.breach ? 0.42 : 0.26) * (0.6 + 0.4 * Math.sin(rt * 10));
       var vg = c.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.35, W / 2, H / 2, Math.max(W, H) * 0.7);
-      vg.addColorStop(0, 'rgba(224,60,40,0)'); vg.addColorStop(1, 'rgba(224,60,40,' + va + ')');
-      c.fillStyle = vg; c.fillRect(0, 0, W, H);
+      c.save();
+      [[0, 0], [W, 0], [0, H], [W, H]].forEach(function (p) {
+        var ig = c.createRadialGradient(p[0], p[1], 6, p[0], p[1], Math.min(W, H) * 0.28);
+        ig.addColorStop(0, 'rgba(42,32,22,' + (va * 0.55) + ')'); ig.addColorStop(1, 'rgba(42,32,22,0)');
+        c.fillStyle = ig; c.fillRect(0, 0, W, H);
+      });
+      c.restore();
     }
     // 顶部经验条
     var need = XY.xpNeed(G.level);
@@ -10424,7 +10429,9 @@ XY.TRAITS = {
     ctx.save();
     var v = G.view, camx = G.cam.x, camy = G.cam.y;
     var sh = G.shake > 0 ? G.shake : 0, shx = (Math.random() - 0.5) * sh, shy = (Math.random() - 0.5) * sh;
-    var worldZoom = (app.lh > app.lw * 1.05 && (s === 'play' || s === 'pause')) ? 3.2 : 1;
+    var worldZoom = (app.lh > app.lw * 1.05 && (s === 'play' || s === 'pause')) ? 2 : 1;
+    XY._worldZoom = worldZoom;
+    ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
     if (worldZoom > 1) { ctx.translate(v.w / 2, v.h / 2); ctx.scale(worldZoom, worldZoom); ctx.translate(-v.w / 2, -v.h / 2); }
     ctx.translate(v.w / 2 - camx + shx, v.h / 2 - camy + shy);
     if (XY.ui2) XY.ui2.world = true;
@@ -11150,7 +11157,7 @@ XY.TRAITS = {
   // v0.7 妖潮预告条：休息点显示“夜潮 n/3 · 备战 / 来潮 / 收尾 + 倒计时”；下一波 ≤ WAVE_LEAD 秒时再加一行“几秒后 · 哪个方向 · 什么怪 × 多少”；刚刷出来的 4 秒显示“妖潮来袭”
   var SEGN = { prep: '备战', tide: '来潮', wrap: '收尾' };
   function waveTri(c, x, y, a, s, fill) {
-    c.save(); c.translate(x, y); c.rotate(a); c.fillStyle = '#5c4a38'; c.strokeStyle = 'rgba(246,239,226,0.4)'; c.lineWidth = 1;
+    c.save(); c.translate(x, y); c.rotate(a); c.fillStyle = fill || '#5c4a38'; c.strokeStyle = 'rgba(246,239,226,0.4)'; c.lineWidth = 1;
     c.beginPath(); c.moveTo(s, 0); c.lineTo(-s * 0.7, -s * 0.8); c.lineTo(-s * 0.35, 0); c.lineTo(-s * 0.7, s * 0.8); c.closePath(); c.fill(); c.stroke(); c.restore();
   }
   function waveCompTxt(w, G) {
@@ -11174,7 +11181,7 @@ XY.TRAITS = {
     if (F.now) {
       T.txt(c, '妖潮来袭！' + F.now.w.dir, x + w - 36, y + 13, 14, '#c0281a', 'right', true); waveTri(c, x + w - 18, y + 13, F.now.w.a, 8, '#d62828');
     } else if (F.next) {
-      T.txt(c, '下一波 ' + XY.fmtTime(Math.ceil(F.next.left)) + ' · ' + F.next.w.dir, x + w - 36, y + 13, 14, near ? '#b8680a' : T.T.ink, 'right', true); waveTri(c, x + w - 18, y + 13, F.next.w.a, 8, near ? '#e08a0b' : '#c9a24a');
+      T.txt(c, '下一波 ' + XY.fmtTime(Math.ceil(F.next.left)) + ' · ' + F.next.w.dir, x + w - 36, y + 13, 14, near ? '#a42d19' : T.T.ink, 'right', true); waveTri(c, x + w - 18, y + 13, F.next.w.a, 8, near ? '#a42d19' : '#3a2a1c');
     }
     if (W0) T.txt(c, W0.name + (W0.big ? '！' : '') + ' · ' + waveCompTxt(W0, G), x + 12, y + 33, 12.5, W0.big ? '#b8300f' : T.T.ink, 'left', W0.big);
     return y + h + 6;
@@ -11189,10 +11196,10 @@ XY.TRAITS = {
     if (dx > 1e-3) tt = Math.min(tt, (xr - x0) / dx); else if (dx < -1e-3) tt = Math.min(tt, (xl - x0) / dx);
     if (dy > 1e-3) tt = Math.min(tt, (yb - y0) / dy); else if (dy < -1e-3) tt = Math.min(tt, (yt - y0) / dy);
     var px = x0 + dx * tt, py = y0 + dy * tt; XY.ui.waveArrow = { x: px, y: py, a: w0.a, x0: x0, y0: y0 }; var _u = 0, p = 0.5 + 0.5 * Math.sin(rt * 8), hot = !!F.now || (F.next && F.next.left <= 8);
-    var col = hot ? '#d62828' : '#e08a0b', s = 15 + 3 * p;
+    var col = hot ? '#a42d19' : '#3a2a1c', s = 15 + 3 * p;
     c.save(); c.globalAlpha = 0.28 + 0.2 * p; var gr = c.createRadialGradient(px, py, 4, px, py, 90); gr.addColorStop(0, col); gr.addColorStop(1, 'rgba(255,255,255,0)'); c.fillStyle = gr; c.fillRect(px - 90, py - 90, 180, 180); c.restore();
     waveTri(c, px - dx * 6, py - dy * 6, w0.a, s, col);
-    var lx = px - dx * 44, ly = py - dy * 44; T.txt(c, F.now ? '妖潮来了' : '妖潮 ' + XY.fmtTime(Math.ceil(F.next.left)), lx, ly, 12, hot ? '#b8201a' : '#a8660a', 'center', true);
+    var lx = px - dx * 44, ly = py - dy * 44; T.txt(c, F.now ? '妖潮来了' : '妖潮 ' + XY.fmtTime(Math.ceil(F.next.left)), lx, ly, 12, hot ? '#a42d19' : '#3a2a1c', 'center', true);
   }
   // ===== v0.7.0l 顶部重排（docs/ui-relayout/merged.md）=====
   // 顶部只有：Z0 经验细线(5) + Z1 一条细条(关卡 · 时间 · 等级 · 出怪量 + 至多 4 个 chip) + Z2 一条通知 toast(同一时刻最多 1 条) + Z2 右侧连杀小标签。
@@ -11749,7 +11756,11 @@ XY.TRAITS = {
     if (tdg) {
       var va = (G.breach ? 0.42 : 0.26) * (0.6 + 0.4 * Math.sin(rt * 10));
       var vg = c.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.35, W / 2, H / 2, Math.max(W, H) * 0.7);
-      vg.addColorStop(0, 'rgba(224,60,40,0)'); vg.addColorStop(1, 'rgba(224,60,40,' + va + ')'); c.fillStyle = vg; c.fillRect(0, 0, W, H);
+      [[0, 0], [W, 0], [0, H], [W, H]].forEach(function (p) {
+        var ig = c.createRadialGradient(p[0], p[1], 6, p[0], p[1], Math.min(W, H) * 0.28);
+        ig.addColorStop(0, 'rgba(42,32,22,' + (va * 0.55) + ')'); ig.addColorStop(1, 'rgba(42,32,22,0)');
+        c.fillStyle = ig; c.fillRect(0, 0, W, H);
+      });
     }
     var compact = XY.compactHud && XY.compactHud.on(G,app);
     if (compact) {
@@ -25251,10 +25262,10 @@ K.lines('已坚持 '+XY.fmtTime(G.t)+'  ·  Lv '+G.level+'  ·  击杀 '+XY.fmtN
 K.tf(XY.lvPre(G)+G.lv.name+'」',24,108,port?W*.5:W*.4,14,'#5c4a38','left',false,11);
 if(XY.inkBg)XY.inkBg();P.end(c);};
 var oldEnd=XY.R4.end;
-XY.R4.end=function(c,G,a,win){if(G.villain||G.lair)return oldEnd(c,G,a,win);var K=begin(c,a),W=K.W,H=K.H,port=K.port,rep=G.runReport||{},cause=G.ending&&G.ending.cause,title=win?'过 关':cause==='tang'?'师傅阵亡':'基地被入侵',x=port?20:W*.43,w=port?W-40:W-x-22,top=port?390:30,leaf=P.folio.endLeaf||0;
+XY.R4.end=function(c,G,a,win){if(G.villain||G.lair)return oldEnd(c,G,a,win);var K=begin(c,a),W=K.W,H=K.H,port=K.port,rep=G.runReport||{},cause=G.ending&&G.ending.cause,title=win?'过 关':cause==='tang'?'师傅阵亡':'基地被入侵',x=port?20:28,w=port?W-40:Math.round(W*0.5),top=port?390:30,leaf=P.folio.endLeaf||0;
 K.t(title,22,47,port?37:44,win?'#a8680a':'#a42d19','left',true);K.tf(XY.lvPre(G)+G.lv.name+'」'+(win?' · 关口「'+G.gate.name+'」':''),24,85,port?W-48:W*.38,13,T.inkSoft,'left',false,11);
 var si=XY.sweep09&&XY.sweep09.resultStars(G,win);if(si)K.tf(si.show?si.text+(si.isNew?' · 新纪录':''):si.faint||'',24,119,port?W-48:W*.38,20,'#a8680a','left',true,12);
-inkCutout(c,G,port?W*.27:W*.21,port?365:H-72,Math.min(port?216:H-220,440));
+inkCutout(c,G,port?W*.72:W*.78,port?H-80:H-36,Math.min(port?H*0.42:H-70,560));
 ['战报','任务','收获','足迹'].forEach(function(s,i){K.btn(x+i*w/4,top,w/4-4,44,s,'folio',{key:'endLeaf',i:i},{on:leaf===i,size:16});});var y=top+65,dead=G.heroes.filter(function(h){return h.down;}).map(function(h){return h.def.name;});
 function para(s,col){y=K.lines(s,x+5,y,w-10,13,18,col||T.ink,16,false)+12;}
 if(leaf===0){K.t(XY.fmtTime(G.t),x+4,y+9,32,T.ink,'left',true);y+=47;para('等级 '+G.level+' 级 · 击杀 '+G.kills+' 只 · 镇灭洞府 '+G.dens.filter(function(d){return !d.alive;}).length+'/'+G.dens.length);para('阵亡英雄：'+(dead.join('、')||'无'));para('本局战绩','#8a5a12');[G.quests.main].concat(G.quests.sides||[]).forEach(function(q,i){var rw=q.def.reward||{},r=q.done?[(rw.lingshi?'灵石 +'+rw.lingshi:''),(rw.card?'法宝':''),(rw.shard?'碎片 +'+rw.shard:'')].filter(Boolean).join(' · '):'未完成';para((i?'支线':'主线')+' · '+q.def.short+'　'+(q.done?'已完成'+(r?' · '+r:''):'还没完成'),q.done?'#2f663a':T.ink);});para('奖励 · 灵石 +'+XY.fmtNum((G.run&&G.run.clearGain)||0)+' · 法宝 '+((G.cardLog||[]).length)+' 张','#8a5a12');if(!win&&G.ending&&(G.ending.why||G.ending.reason))para('死因：'+(G.ending.why||G.ending.reason),'#a42d19');if(si&&si.tip)para(si.tip,'#8a5a12');var rest=H-96-y;if(!port){[{t:'一星',s:'通关本关'},{t:'二星',s:'至少完成 1 条支线'},{t:'三星',s:'无人阵亡'}].forEach(function(row,i){var yy=y+22+i*34;K.t(row.t,x+6,yy,22,'#8a5a12','left',true);K.t(row.s,x+78,yy,18,'#24180f','left',true);});}}
