@@ -958,18 +958,69 @@
     return WUCLOSE._p;
   }
   function ensureWuClose() { if (!WUCLOSE._p) preloadWu(); }
-  /* 悟空大招特写：浅色宣纸上的五帧。只盖画面，不改出手和伤害。点击关掉。 */
+  /* 悟空大招特写：五帧铺满屏幕。脸和书法留在画面里，边上用画面自身的纸色接出去，不留米色硬边。点击关掉。 */
+  function paintWuPlate(c, im, W, H) {
+    var iw = im.naturalWidth, ih = im.naturalHeight;
+    var fit = Math.min(W / iw, H / ih), cover = Math.max(W / iw, H / ih);
+    var s = fit;
+    if (cover > fit + 0.001) {
+      var overflow = (W / iw >= H / ih) ? (ih - H / cover) : (iw - W / cover);
+      if (overflow < 36) s = cover;
+    }
+    var dw = iw * s, dh = ih * s;
+    var x = (W - dw) / 2, y = (H - dh) / 2;
+    if (dh > H + 1) y = 0;
+    if (dw > W + 1) x = 0;
+    var cv = paintWuPlate.cv || (paintWuPlate.cv = document.createElement('canvas'));
+    var pw = Math.max(1, Math.ceil(W)), ph = Math.max(1, Math.ceil(H));
+    if (cv.width !== pw || cv.height !== ph) { cv.width = pw; cv.height = ph; }
+    var g = cv.getContext('2d');
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.imageSmoothingEnabled = true;
+    g.imageSmoothingQuality = 'high';
+    g.drawImage(im, 0, 0, 1, 1, 0, 0, pw, ph);
+    if (x > 0.5) g.drawImage(im, 0, 0, 1, ih, 0, Math.max(0, y), x + 2, dh);
+    if (x + dw < W - 0.5) g.drawImage(im, iw - 1, 0, 1, ih, x + dw - 2, Math.max(0, y), W - (x + dw) + 2, dh);
+    if (y > 0.5) g.drawImage(im, 0, 0, iw, 1, Math.max(0, x), 0, dw, y + 2);
+    if (y + dh < H - 0.5) g.drawImage(im, 0, ih - 1, iw, 1, Math.max(0, x), y + dh - 2, dw, H - (y + dh) + 2);
+    var wide = x > 24 || y > 24;
+    if (wide) { g.filter = 'blur(18px)'; g.drawImage(cv, 0, 0); g.filter = 'none'; }
+    var top = paintWuPlate.top || (paintWuPlate.top = document.createElement('canvas'));
+    if (top.width !== pw || top.height !== ph) { top.width = pw; top.height = ph; }
+    var t = top.getContext('2d');
+    t.setTransform(1, 0, 0, 1, 0, 0);
+    t.clearRect(0, 0, pw, ph);
+    t.imageSmoothingEnabled = true;
+    t.imageSmoothingQuality = 'high';
+    t.drawImage(im, x, y, dw, dh);
+    if (wide) {
+      var fade = 18;
+      t.globalCompositeOperation = 'destination-out';
+      function fadeRect(x0, y0, x1, y1, rx, ry, rw, rh) {
+        var lg = t.createLinearGradient(x0, y0, x1, y1);
+        lg.addColorStop(0, 'rgba(0,0,0,1)');
+        lg.addColorStop(1, 'rgba(0,0,0,0)');
+        t.fillStyle = lg;
+        t.fillRect(rx, ry, rw, rh);
+      }
+      if (x > 0.5) fadeRect(x, 0, x + fade, 0, x, y, fade, dh);
+      if (x + dw < W - 0.5) fadeRect(x + dw, 0, x + dw - fade, 0, x + dw - fade, y, fade, dh);
+      if (y > 0.5) fadeRect(0, y, 0, y + fade, x, y, dw, fade);
+      if (y + dh < H - 0.5) fadeRect(0, y + dh, 0, y + dh - fade, x, y + dh - fade, dw, fade);
+      t.globalCompositeOperation = 'source-over';
+    }
+    g.drawImage(top, 0, 0);
+    c.imageSmoothingEnabled = true;
+    c.imageSmoothingQuality = 'high';
+    c.drawImage(cv, 0, 0, W, H);
+  }
   function drawWuClose(c) {
     if (!(G.wuCut > 0) || G.wuCutOff) return;
     ensureWuClose();
     var total = 2.4, t = total - G.wuCut, idx = Math.max(0, Math.min(4, Math.floor(t / total * 5))), im = WUCLOSE[idx];
     c.save();
-    c.fillStyle = '#f3ecdc';
-    c.fillRect(0, 0, G.W, G.H);
-    if (im && im.naturalWidth) {
-      var s = Math.min(G.W / im.naturalWidth, G.H / im.naturalHeight), dw = im.naturalWidth * s, dh = im.naturalHeight * s;
-      c.drawImage(im, (G.W - dw) / 2, (G.H - dh) / 2, dw, dh);
-    }
+    if (im && im.naturalWidth) paintWuPlate(c, im, G.W, G.H);
+    else { c.fillStyle = '#f3ecdc'; c.fillRect(0, 0, G.W, G.H); }
     var skip = Math.max(18, Math.round(16 * Math.min(G.S, 1.6)));
     c.fillStyle = '#2a2218'; c.font = skip + 'px "Ma Shan Zheng","KaiTi",serif'; c.textAlign = 'right'; c.textBaseline = 'alphabetic';
     c.fillText('点按跳过', G.W - 24, G.H - 28);
