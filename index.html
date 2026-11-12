@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>西游X v0.8.7</title>
+<title>西游X v0.8.8</title>
 <style>
   html, body { margin: 0; height: 100%; overflow: hidden; background: #f4ead4; }
   #boot { position: fixed; left: 0; top: 0; right: 0; bottom: 0; z-index: 5; display: flex; align-items: center; justify-content: center; text-align: center; padding: 24px; font: 18px/1.7 sans-serif; color: #4a3a1a; background: #dfeccb; }
@@ -63,7 +63,7 @@ window.XY_MENU_V5 = {"bg_v2":"data:image/webp;base64,UklGRrpaAgBXRUJQVlA4IK5aAgD
  * ============================================================ */
 var XY = window.XY = window.XY || {};
 
-XY.VERSION = '0.8.7';
+XY.VERSION = '0.8.8';
 // 全开开关：公开入口默认关闭。网址加 ?test=1 才进入全开（全角色可选、单独存档）；?test=0 / ?normal=1 回到标准版
 // 版本开关（全开 / 标准版）现在存在存档里：见 meta.js 的 XY.TEST_BUILD / XY.version
 XY.TEST_LV = 5;     // 全开里特殊角色的角色卡等级（5 = 卡牌等级上限 XY.CARD_MAXLV，也是 SP_MAX_LV；隐藏角色不受影响）
@@ -2030,7 +2030,7 @@ XY.TRAITS = {
     var e = bgImgs[id];
     if (!e) {
       e = bgImgs[id] = { img: null, ok: false };
-      var src = (id === 'yuanzhang') ? 'assets/art/battle-hd/yuanzhang.webp' : ((window.XY_BG_DATA && window.XY_BG_DATA[id]) || (window.XY_BG_DATA ? null : 'assets/art/bg/' + id + '.webp'));
+      var src = 'assets/art/battle-hd/' + id + '.webp';
       if (!src) return null;
       var im = new Image(); im.onload = function () { e.ok = true; }; im.src = src; e.img = im;
     }
@@ -9717,9 +9717,13 @@ XY.BGS1={"src": "data:image/webp;base64,UklGRtT1GgBXRUJQVlA4IMj1GgCQwWGdASoAEAAK
         IPs.stroke(c, sx, f.y, sx - 6, f.y + f.h, 9, IPs.INK, (1 - k) * 0.85, ((f.y * 3) | 0) & 1023, 0.04);          // 横扫前沿：一笔竖着的浓墨
       } else if (f.type === 'arc') {
         var ox = f.owner ? f.owner.x : f.x, oy = f.owner ? f.owner.y : f.y;
-        c.globalAlpha = (1 - k) * 0.45; c.strokeStyle = 'rgba(42,32,22,0.55)'; c.lineWidth = 1.6; c.lineCap = 'round'; c.beginPath();
-        if (f.arc >= PI2 - 0.01) c.arc(ox, oy, f.range, 0.4, 2.2); else c.arc(ox, oy, f.range, f.ang - f.arc / 2, f.ang + f.arc / 2);
-        c.stroke(); c.globalAlpha = 1; c.lineCap = 'butt';
+        c.save(); c.lineCap = 'round'; c.translate(ox, oy); c.rotate(f.ang || 0);
+        var span = f.arc >= PI2 - 0.01 ? 1.8 : f.arc, a0 = -span / 2, a1 = span / 2;
+        c.globalAlpha = (1 - k) * 0.9; c.strokeStyle = 'rgba(36,28,18,0.82)'; c.lineWidth = Math.max(8, f.range * 0.045);
+        c.beginPath(); c.arc(0, 0, f.range, a0, a1); c.stroke();
+        c.globalAlpha = (1 - k) * 0.45; c.lineWidth = Math.max(3, f.range * 0.02);
+        c.beginPath(); c.arc(0, 0, f.range * 0.72, a0, a1); c.stroke();
+        c.restore(); c.globalAlpha = 1; c.lineCap = 'butt';
       }
     }
     for (i = 0; i < G.parts.length; i++) {
@@ -9883,10 +9887,10 @@ XY.BGS1={"src": "data:image/webp;base64,UklGRtT1GgBXRUJQVlA4IMj1GgCQwWGdASoAEAAK
   function btn(c, app, x, y, w, h, label, act, opt) {
     opt = opt || {}; if (XY.ov) return XY.ov.btn(c, app, x, y, w, h, label, act, opt);
     var hov = app.mouse && app.mouse.x >= x && app.mouse.x <= x + w && app.mouse.y >= y && app.mouse.y <= y + h;
-    rrect(c, x, y, w, h, 12);
-    c.fillStyle = opt.primary ? (hov ? '#ffb347' : '#ffc46b') : (hov ? '#fff3d6' : '#ffffff'); c.fill();
-    c.lineWidth = 2.5; c.strokeStyle = opt.primary ? '#c78a1e' : '#b9a77a'; c.stroke();
-    txt(c, label, x + w / 2, y + h / 2 + 1, opt.size || 20, T.ink, 'center', true);
+    c.save(); c.translate(x + w / 2, y + h / 2); c.rotate(opt.primary ? -0.02 : 0.01);
+    c.fillStyle = opt.primary ? (hov ? '#c4472e' : '#a83224') : (hov ? 'rgba(90,74,52,0.22)' : 'rgba(90,74,52,0.14)');
+    c.beginPath(); c.moveTo(-w / 2 + 3, -h * 0.38); c.lineTo(w / 2, -h * 0.42); c.lineTo(w / 2 - 3, h * 0.38); c.lineTo(-w / 2 + 2, h * 0.34); c.closePath(); c.fill(); c.restore();
+    txt(c, label, x + w / 2, y + h / 2 + 1, opt.size || 20, opt.primary ? '#fff6e8' : T.ink, 'center', true);
     ui.hits.push({ x: x, y: y, w: w, h: h, act: act });
   }
 
@@ -13133,7 +13137,7 @@ XY.chibi.portrait = function (c, id, x, foot, h, alpha) {
       streak(x, y, a + 1.57, 120 + rnd() * 80, 0.22 + rnd() * 0.12, 8 + rnd() * 4, 2.2, '#3a3228', '#6a5a48');
       if (i % 3 === 0) ember(x, y, '#3a3228', 2 + rnd() * 2);
     }
-    for (i = n(6); i > 0; i--) { var a3 = ang + (rnd() - 0.5) * arc; dot(h.x + cos(a3) * range * 0.9, h.y + sin(a3) * range * 0.9, 0, -20, 0.5, 5 + rnd() * 3, '#f5b820', { kind: 'star', a: rnd() * 6 }); }
+    for (i = n(6); i > 0; i--) { var a3 = ang + (rnd() - 0.5) * arc; dot(h.x + cos(a3) * range * 0.9, h.y + sin(a3) * range * 0.9, 0, -20, 0.5, 5 + rnd() * 3, '#3a3228', { kind: 'drop', a: rnd() * 6 }); }
   };
   V.evoBurst = function (G, h) {                                                 // 进化瞬间：金柱 + 星屑 + 火舌
     G.fx.push({ type: 'vglyph', x: h.x, y: h.y, r: 150, t: 0, max: 0.9, main: '#f0b429', lite: '#fff0a8', dk: '#8a600a', st: 'gold' });
@@ -14648,13 +14652,21 @@ XY.ICONINK_DATA={"金箍棒":{"src":"data:image/webp;base64,UklGRjINAABXRUJQVlA4
     var en = ent(S.id); if (!en) return false;
     var h = S.h, fa = U.frameAt(t, S.def.hit), i = fa.i;
     var pulse = (i === 3 || i === 4) ? (1 + 0.04 * sin(cl(fa.since / 0.3, 0, 1) * PI)) : 1;
-    var k = 1.05 * pulse;
+    var k = ((i === 3 || i === 4) ? 1.28 : 1.12) * pulse;
     var x = h && !h.dead ? h.x : S.x, foot = (h && !h.dead ? h.y : S.y) + 14;
     var a = 1 - seg(t, U.T - 0.25, U.T);
     c.save(); c.imageSmoothingEnabled = true; c.imageSmoothingQuality = 'high';
     if (i > 0 && fa.since < U.XF) { one(c, en, i - 1, a, x, foot, k); one(c, en, i, a * fa.since / U.XF, x, foot, k); }
     else one(c, en, i, a, x, foot, k);
     c.restore(); c.globalAlpha = 1;
+    var nm = (S.def && (S.def.ult || S.def.name)) || '';
+    if (nm && t > 0.12 && t < U.T - 0.35) {
+      c.save(); c.globalAlpha = Math.max(0, Math.min(1, a));
+      c.font = '32px "Ma Shan Zheng","KaiTi",serif';
+      c.textAlign = 'center'; c.textBaseline = 'middle';
+      c.lineWidth = 4; c.strokeStyle = 'rgba(246,239,226,0.9)';
+      c.strokeText(nm, x, foot - 128); c.fillStyle = '#1a120c'; c.fillText(nm, x, foot - 128); c.restore();
+    }
     U.drawn++; U.last = { id: S.id, frame: i, t: t }; U.frames[S.id + ':' + i] = 1;
     return true;
   };
@@ -18724,9 +18736,9 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
     // ---- 开始取经 ----
     var by = areaY + areaH + 4, bw = Math.min(380, cwid * 0.6), bx = cx - bw / 2, ph = over(app, bx, by, bw, stbh), pulse = 0.5 + 0.5 * Math.sin(rt * 2.4);
     c.save(); c.shadowColor = 'rgba(200,52,31,' + (0.26 + 0.12 * pulse + (ph ? 0.2 : 0)).toFixed(2) + ')'; c.shadowBlur = 14 + 6 * pulse; c.shadowOffsetY = 4;
-    var bg = c.createLinearGradient(0, by, 0, by + stbh); bg.addColorStop(0, ph ? '#e2553a' : '#d7432a'); bg.addColorStop(1, ph ? '#c13620' : '#b3301c');
-    R.rrect(c, bx, by + (ph ? -2 : 0), bw, stbh, 15); c.fillStyle = bg; c.fill(); c.restore();
-    c.lineWidth = 1.6; c.strokeStyle = 'rgba(255,214,150,0.8)'; R.rrect(c, bx + 3, by + 3 + (ph ? -2 : 0), bw - 6, stbh - 6, 12); c.stroke();
+    c.translate(bx + bw / 2, by + stbh / 2 + (ph ? -2 : 0)); c.rotate(-0.015);
+    c.fillStyle = ph ? '#c4472e' : '#a83224';
+    c.beginPath(); c.moveTo(-bw / 2 + 4, -stbh * 0.36); c.lineTo(bw / 2, -stbh * 0.42); c.lineTo(bw / 2 - 6, stbh * 0.38); c.lineTo(-bw / 2 + 2, stbh * 0.34); c.closePath(); c.fill(); c.restore();
     text(c, '开始取经', cx, by + stbh * 0.39 + (ph ? -2 : 0), 24, '#fff8e8', 'center', true, KAI, 8);
     text(c, '护送唐僧走到关口', cx, by + stbh * 0.80 + (ph ? -2 : 0), 11.5, 'rgba(255,240,215,0.92)', 'center', false);
     hit(bx, by, bw, stbh, 'menuLevels'); geom.btn = { x: bx, y: by, w: bw, h: stbh };
@@ -19480,19 +19492,11 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
   ov.btn = function (c, app, x, y, w, h, label, act, o) {
     o = o || {}; if (XY.ui2 && XY.ui2.on) { var gg = XY.ui2.grow(app, x, y, w, h); x = gg[0]; y = gg[1]; w = gg[2]; h = gg[3]; }
     c.save(); if (o.dis) c.globalAlpha = 0.55; var hov = over(app, x, y, w, h), kind = o.primary ? 'primary' : (o.kind || 'secondary'), dy = hov && kind !== 'text' ? -1.5 : 0, extra = o.hit;
-    if (kind === 'primary') {
-      c.save(); c.shadowColor = 'rgba(200,52,31,' + (hov ? 0.42 : 0.28) + ')'; c.shadowBlur = hov ? 20 : 14; c.shadowOffsetY = 5;
-      var g = c.createLinearGradient(0, y, 0, y + h); g.addColorStop(0, hov ? '#e2553a' : '#d7432a'); g.addColorStop(1, hov ? '#c13620' : '#b3301c');
-      R.rrect(c, x, y + dy, w, h, Math.min(16, h / 2.4)); c.fillStyle = g; c.fill(); c.restore();
-      c.lineWidth = 1.6; c.strokeStyle = 'rgba(255,214,150,0.8)'; R.rrect(c, x + 3.5, y + 3.5 + dy, w - 7, h - 7, Math.min(13, h / 2.8)); c.stroke();
-      text(c, label, x + w / 2, y + h / 2 + 1 + dy, o.size || 24, '#fff8e8', 'center', true, KAI, o.sp != null ? o.sp : 6);
-      if (o.key) keycap(c, o.key, x + w - 14, y + h / 2 + dy, true);
-    } else if (kind === 'secondary') {
-      c.save(); if (hov) { c.shadowColor = 'rgba(120,90,40,0.25)'; c.shadowBlur = 10; c.shadowOffsetY = 3; }
-      R.rrect(c, x, y + dy, w, h, Math.min(14, h / 2.4)); c.fillStyle = hov ? '#fff4d9' : '#fffdf6'; c.fill(); c.restore();
-      c.lineWidth = 1.8; c.strokeStyle = hov ? '#c78a1e' : LINE; R.rrect(c, x, y + dy, w, h, Math.min(14, h / 2.4)); c.stroke();
-      text(c, label, x + w / 2, y + h / 2 + 1 + dy, o.size || 19, INK, 'center', true, o.kai ? KAI : null, o.kai ? 3 : 0);
-      if (o.key) keycap(c, o.key, x + w - 12, y + h / 2 + dy, false);
+    if (kind === 'primary' || kind === 'secondary') {
+      c.save(); c.translate(x + w / 2, y + h / 2 + dy); c.rotate(kind === 'primary' ? -0.02 : 0.012);
+      c.fillStyle = kind === 'primary' ? (hov ? '#c4472e' : '#a83224') : (hov ? 'rgba(90,74,52,0.22)' : 'rgba(90,74,52,0.14)');
+      c.beginPath(); c.moveTo(-w / 2 + 3, -h * 0.38); c.lineTo(w / 2 - 1, -h * 0.42); c.lineTo(w / 2 - 4, h * 0.38); c.lineTo(-w / 2 + 2, h * 0.34); c.closePath(); c.fill(); c.restore();
+      text(c, label, x + w / 2, y + h / 2 + 1 + dy, o.size || (kind === 'primary' ? 22 : 18), kind === 'primary' ? '#fff6e8' : INK, 'center', true, KAI, 2);
     } else {
       text(c, label, x + w / 2, y + h / 2, o.size || 15, hov ? RED : INK2, 'center', false);
       if (hov) { c.font = (o.size || 15) + 'px ' + C.FONT; var tw = c.measureText(label).width; c.strokeStyle = RED; c.lineWidth = 1; c.beginPath(); c.moveTo(x + w / 2 - tw / 2, y + h / 2 + 10); c.lineTo(x + w / 2 + tw / 2, y + h / 2 + 10); c.stroke(); }
@@ -19660,8 +19664,10 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
     K.rr = function (x, y, w, h, r) { R.rrect(c, x, y, w, h, r); };
     K.ink = function(x,y,w,alpha,seed) { if(XY.INKP) XY.INKP.stroke(c,x,y,x+w,y+0.8,1.8,'58,43,27',alpha==null?.35:alpha,seed||9,.008); };
     K.btn = function(x,y,w,h,label,act,ex,o) {
-      o=o||{};var hover=K.over(x,y,w,h),red=o.primary&&!o.off,col=o.off?'#948875':red?'#fff0d3':o.on?'#a92e1c':T.ink;
-      if(red){c.save();c.translate(x+w/2,y+h/2);c.rotate(-.022);c.fillStyle=hover?'#c64b2d':'#ad321c';c.beginPath();c.moveTo(-w/2+2,-h*.36);c.lineTo(w/2,-h*.42);c.lineTo(w/2-2,h*.39);c.lineTo(-w/2,h*.35);c.closePath();c.fill();c.restore();}
+      o=o||{};var hover=K.over(x,y,w,h),red=o.primary&&!o.off,col=o.off?'#948875':red?'#fff6e8':o.on?'#a92e1c':'#24180f';
+      c.save();c.translate(x+w/2,y+h/2);c.rotate(red?-0.02:0.012);
+      c.fillStyle=red?(hover?'#c4472e':'#a83224'):(o.on?'rgba(168,50,36,0.18)':'rgba(90,74,52,0.16)');
+      c.beginPath();c.moveTo(-w/2+3,-h*.38);c.lineTo(w/2-1,-h*.42);c.lineTo(w/2-4,h*.38);c.lineTo(-w/2+2,h*.34);c.closePath();c.fill();c.restore();
       
       if(o.on) K.ink(x+w*.18,y+h-5,w*.64,.65,label.length+7);
       if(o.wrap){c.save();c.beginPath();c.rect(x+4,y+2,w-8,h-4);c.clip();K.lines(label,x+8,y+h/2-((o.size||15)+3)/2,w-16,o.size||15,(o.size||15)+3,col,0,true);c.restore();}else K.tf(label,x+w/2,y+h/2,w-6,o.size||15,col,'center',true,o.minS||11);
@@ -20311,6 +20317,13 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
     if (pin) { pages.forEach(function (p, i) { if (p.some(function (it) { return it.nd.id === pin; })) pageI = i; }); P.folio[pageKey] = pageI; }
     else if (savedPage == null) P.folio[pageKey] = pageI;
     layout = pages[pageI] || [];
+    if (layout.length) {
+      var spanY = 0, iFill; for (iFill = 0; iFill < layout.length; iFill++) spanY = Math.max(spanY, layout[iFill].y + layout[iFill].h - gy);
+      if (spanY > 20 && spanY < gh * 0.86) {
+        var grow = (gh * 0.9) / spanY;
+        layout.forEach(function (p) { var rel = p.y - gy; p.y = gy + rel * grow; p.h *= grow; });
+      }
+    }
     if (layered) { c.save(); c.strokeStyle = 'rgba(42,32,22,0.72)'; c.lineWidth = 2.2; layout.forEach(function (p) { Object.keys((p.nd.req && p.nd.req[0]) || {}).forEach(function (id) { var prev = layout.filter(function (t) { return t.nd.id === id; })[0]; if (!prev) return; c.beginPath(); c.moveTo(prev.x + prev.w - 8, prev.y + 18); c.bezierCurveTo(prev.x + prev.w + 10, prev.y + 18, p.x - 10, p.y + 18, p.x + 6, p.y + 18); c.stroke(); }); }); c.restore(); }
     if(pageN>1){K.btn(x0+w0-196,bottom-detH+8,92,36,'上一页','folio',{key:pageKey,i:(pageI+pageN-1)%pageN},{size:14,minS:12});K.btn(x0+w0-98,bottom-detH+8,92,36,(pageI+1)+' / '+pageN,'folio',{key:pageKey,i:(pageI+1)%pageN},{size:14,minS:12});}
     if(S0.locked)K.tf('🔒 角色升到 Lv4 开放（'+XY.SP_LV_AT[3]+' 张角色卡）',x0+w0/2,gy+gh/2,w0-20,15,'#8a5a10','center',true,12);
@@ -23681,7 +23694,7 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
   function cardRow(c, st, items, cur0, x, y, w, hMax, s, geo) {
     var groups = [], i; items.forEach(function (it) { if (!groups.length || groups[groups.length - 1].k !== it.k) groups.push({ k: it.k, n: 0 }); groups[groups.length - 1].n++; });
     var n = items.length, gg = Math.round(12 * s), cg = Math.round(6 * s), labH = Math.round(18 * Math.min(s, 1.2));
-    var cwd = Math.max(44, Math.min(Math.round(96 * s), (w - gg * (groups.length - 1) - cg * (n - groups.length)) / n)), chh = Math.max(84, Math.min(cwd * 1.85, hMax - labH));
+    var cwd = Math.max(44, Math.min(Math.round(96 * s), (w - gg * (groups.length - 1) - cg * (n - groups.length)) / n)), chh = Math.max(84, hMax - labH);
     var xx = x, gi = 0, k = 0;
     groups.forEach(function (g) {
       var gw = g.n * cwd + (g.n - 1) * cg, lbl = GROUP[g.k];
@@ -24788,8 +24801,7 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
       cellW = Math.min(cellW, Math.max(64, (cw - 28) / nt));
       d = cellH; nameH = 0; cols = nt;
       var labH = 18, stripY = ch - 4 - cellH - labH;
-      var overflow = stripY + labH + cellH - (ch - 3);
-      if (overflow > 0) stripY -= overflow;
+      if (stripY < top + 120) stripY = top + 120;
       d = cellH;
       VU.washE(c, cw / 2, stripY + (labH + cellH) / 2 + 4, cw * 0.62, (labH + cellH) * 0.75, '250,244,228', 0.8);
       taper(c, 24, stripY - 2, cw - 24, 2.2, 0.32);
@@ -24819,7 +24831,7 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
       var y1 = stripY - 10, LW = Math.round(cw * (cw >= 1000 ? 0.58 : 0.6)), detMin = Math.round(Math.min(150, 84 * s));
       // 说明行数（sweep09 已通关会多一行星级）：按最小 13px 行距给够，竖卡相应矮一点，免得「终点 / 最快用时」被挤掉
       var nDet = (cur0.k === 'boss' ? 3 : 4) + (cur0.k !== 'boss' && cur0.cleared && XY.sweep09 ? 1 : 0);
-      detMin = Math.max(detMin, Math.round(Math.min(20 * s, 26) * 1.25 + 8 + nDet * Math.max(14, Math.min(12.5 * s, 16) * 1.3)));
+      detMin = Math.min(132, Math.max(96, Math.round(18 + nDet * 18)));
       cr = cardRow(c, st, items, cur0, 14, top + 2, LW - 14, y1 - top - 2 - detMin - 10, s, geo);
       var dy = cr.bottom + 12;
       go = detail(c, cur0, 14, dy, LW - 14, y1 - dy, s);
@@ -26360,7 +26372,7 @@ X.step=function(g,dt){if(!g._simRandom)return step.apply(this,arguments);var sel
       if (table === 'saves') {
         note('selectSave');
         if (stub.spec && stub.spec.failSelect) return Promise.resolve({ data: null, error: { message: 'offline' } });
-        var row = stub.remote ? { data: stub.remote.data, version: stub.remote.version, game_version: stub.remote.game_version || '0.8.7', updated_at: stub.remote.updated_at } : null;
+        var row = stub.remote ? { data: stub.remote.data, version: stub.remote.version, game_version: stub.remote.game_version || '0.8.8', updated_at: stub.remote.updated_at } : null;
         return Promise.resolve({ data: row, error: null });
       }
       note('selectProfile');
@@ -26922,7 +26934,7 @@ X.step=function(g,dt){if(!g._simRandom)return step.apply(this,arguments);var sel
           version: remote.version || 0,
           data: remote.data ? JSON.parse(JSON.stringify(remote.data)) : null,
           updated_at: new Date().toISOString(),
-          game_version: '0.8.7'
+          game_version: '0.8.8'
         };
       },
       wait: function () { return whenIdle(); },
@@ -26946,7 +26958,7 @@ X.step=function(g,dt){if(!g._simRandom)return step.apply(this,arguments);var sel
       version: spec.remote.version || 0,
       data: spec.remote.data,
       updated_at: spec.remote.updated_at || new Date().toISOString(),
-      game_version: '0.8.7'
+      game_version: '0.8.8'
     } : null;
     stub.drew = false;
     stub.results = spec && spec.draw && spec.draw.results ? spec.draw.results.slice() : null;

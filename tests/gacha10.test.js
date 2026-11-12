@@ -74,7 +74,7 @@ async function frames(page, n) {
   var report = await page.evaluate(function () {
     var out = { ok: true, notes: [] };
     function check(cond, msg) { if (!cond) { out.ok = false; out.notes.push(msg); } }
-    check(XY.VERSION === '0.8.7', 'version ' + XY.VERSION);
+    check(XY.VERSION === '0.8.8', 'version ' + XY.VERSION);
     check(XY.TEST_BUILD === false, 'TEST_BUILD should be off');
     check(XY.C.TEST_DEFAULT === false, 'TEST_DEFAULT');
     ['points', 'treat', 'guest', 'pick'].forEach(function (k) {

@@ -617,6 +617,7 @@
       return { x: W - 156, y: 14, w: 136, h: 56 };
     }
     if (port) return { x: 12, y: H - 64, w: 112, h: 52 };
+    if (app.screen === 'levels') return { x: W - 300, y: 8, w: 120, h: 44 };
     return { x: 22, y: Math.max(250, H - 250), w: 132, h: 56 };
   }
   function gearBox(app, btn) {

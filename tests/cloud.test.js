@@ -59,7 +59,7 @@ function staticChecks() {
     if (t.indexOf('sb_publishable_oUR3b8V6A69bU1JrmfEAzA_vgXQXMKB') < 0) fail(name + ' missing publishable key');
     if (t.indexOf("rpc('draw_first_ten')") < 0 && t.indexOf('draw_first_ten') < 0) fail(name + ' missing draw_first_ten');
     if (t.indexOf('用 Google 登录') < 0) fail(name + ' missing login label');
-    if (t.indexOf("XY.VERSION = '0.8.7'") < 0) fail(name + ' version moved');
+    if (t.indexOf("XY.VERSION = '0.8.8'") < 0) fail(name + ' version moved');
   });
   var a = fs.readFileSync(path.join(ROOT, 'index.html'));
   var b = fs.readFileSync(path.join(ROOT, 'xiyou-survivors.html'));
@@ -94,7 +94,7 @@ function serverPulls() {
   var boot = await page.evaluate(function () {
     var out = { ok: true, notes: [] };
     function check(cond, msg) { if (!cond) { out.ok = false; out.notes.push(msg); } }
-    check(XY.VERSION === '0.8.7', 'version ' + XY.VERSION);
+    check(XY.VERSION === '0.8.8', 'version ' + XY.VERSION);
     check(XY.account && !XY.account.signedIn(), 'starts logged out');
     check(XY.TUT_STEPS && XY.TUT_STEPS.length === 20 && XY.TUT_STEPS[0].title === '欢迎取经！', 'tutorial');
     ['points', 'treat', 'guest', 'pick'].forEach(function (k) { check(XY.auto && XY.auto.DEF[k] === false, 'auto ' + k); });
