@@ -9455,9 +9455,19 @@ XY.BGS1={"src": "data:image/webp;base64,UklGRtT1GgBXRUJQVlA4IMj1GgCQwWGdASoAEAAK
       for (j = 0; j < mapNow.length; j++) { L.push(mapNow[j].lr); if (mapNow[j].ar) L.push(mapNow[j].ar); }
     }
     for (i = 0; i < heroNames.length; i++) {
-      var n = heroNames[i], box = nameBox(c, n), tw = box.w, th = box.h, best = null, sg = n.dir < 0 ? -1 : 1, dx = 72, cand = [[0, 0], [-dx, 0], [dx, 0], [0, sg * th], [-dx, sg * th], [dx, sg * th], [0, sg * th * 2.2], [-dx * 1.8, 0], [dx * 1.8, 0], [-dx * 2.6, sg * th], [dx * 2.6, sg * th], [0, sg * th * 3.4], [-dx, sg * th * 3.4], [dx, sg * th * 3.4]];
+      var n = heroNames[i], box = nameBox(c, n), ownB = null, bj, nearD = 1e9;
+      for (bj = 0; bj < heroBodies.length; bj++) {
+        if (heroBodies[bj].h === n.h) ownB = heroBodies[bj];
+        else if (n.h) nearD = Math.min(nearD, Math.abs(heroBodies[bj].h.x - n.h.x));
+      }
+      var cap = Math.max(46, Math.min(box.w, nearD - 10));
+      if (cap < box.w && box.w > 0) { var kk = cap / box.w; box.w *= kk; box.h *= kk; if (box.iw) box.iw *= kk; if (box.ih) box.ih *= kk; box.fs *= kk; }
+      var tw = box.w, th = box.h, best = null;
+      var head = ownB ? ownB.y0 : n.y, nudge = Math.min(th * 0.4, 14);
+      var cy0 = head - th / 2 - Math.min(4, th * 0.2);
+      var cand = [[0, 0], [-nudge, 0], [nudge, 0]];
       for (k = 0; k < cand.length; k++) {
-        var cy = n.y + cand[k][1], cx = n.x + cand[k][0], r = { x0: m.e + (cx - tw / 2) * sc, x1: m.e + (cx + tw / 2) * sc, y0: m.f + (cy - th / 2) * sc, y1: m.f + (cy + th / 2) * sc };
+        var cy = cy0 + cand[k][1], cx = n.x + cand[k][0], r = { x0: m.e + (cx - tw / 2) * sc, x1: m.e + (cx + tw / 2) * sc, y0: m.f + (cy - th / 2) * sc, y1: m.f + (cy + th / 2) * sc };
         var onBody = ov(r, B, n.h), onText = ov(r, L, null);
         var sc0 = onText * 8 + onBody * 24 + (Math.abs(cand[k][0]) * 0.6 + Math.abs(cand[k][1])) * 0.05 * sc;
         if (!best || sc0 < best.s) best = { s: sc0, x: cx, y: cy, r: r, body: onBody, text: onText };
@@ -9465,7 +9475,7 @@ XY.BGS1={"src": "data:image/webp;base64,UklGRtT1GgBXRUJQVlA4IMj1GgCQwWGdASoAEAAK
       if (ov(best.r, placed, null) > 0) continue;
       if ((best.body > 0 || best.text > 0) && !(n.h && (n.h.i === ctrl || n.h.id === 'tang'))) continue;
       placed.push(best.r);
-      var plate = { id: n.h && n.h.id, box: best.r, glyph: best.r, seal: null };
+      var plate = { id: n.h && n.h.id, box: best.r, glyph: best.r, seal: null, headGap: ownB ? (ownB.y0 - best.r.y1) / sc : null, half: th * 0.5 };
       if (box.art && box.art.im && box.w) {
         var sp = plateSplit(box.art.im), span = best.r.x1 - best.r.x0, imgW = box.iw / box.w * span;
         function seg(x0, x1) { return { x0: best.r.x0 + x0 / sp.w * imgW, y0: best.r.y0, x1: best.r.x0 + x1 / sp.w * imgW, y1: best.r.y1 }; }
