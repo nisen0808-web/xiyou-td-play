@@ -16,6 +16,16 @@
     P.paper(c, K.W, K.H);
     return K;
   }
+  function openVeil(c, a) {
+    XY.ui.hits.length = 0;
+    c.save();
+    c.setTransform((a.zoom || 1) * (a.dpr || 1), 0, 0, (a.zoom || 1) * (a.dpr || 1), 0, 0);
+    c.globalAlpha = 1;
+    c.globalCompositeOperation = 'source-over';
+    var K = P.begin(c, a);
+    c.globalAlpha = 1;
+    return K;
+  }
   function close(c) { P.end(c); c.restore(); }
   function kai(c, s, x, y, size, col, align, maxW) {
     c.save();
@@ -52,6 +62,25 @@
     c.fillText(label, 0, 1);
     c.restore();
   }
+  function paleBar(c, x, y, w, h, label) {
+    c.save();
+    c.translate(x + w / 2, y + h / 2);
+    c.rotate(0.01);
+    c.fillStyle = 'rgba(90,74,52,0.16)';
+    c.beginPath();
+    c.moveTo(-w / 2 + 3, -h * 0.4);
+    c.quadraticCurveTo(0, -h * 0.55, w / 2 - 2, -h * 0.38);
+    c.lineTo(w / 2 - 4, h * 0.4);
+    c.quadraticCurveTo(0, h * 0.52, -w / 2 + 2, h * 0.38);
+    c.closePath();
+    c.fill();
+    c.fillStyle = '#5c4a38';
+    var size = Math.max(12, Math.min(20, h * 0.42));
+    c.font = size + 'px "Ma Shan Zheng","KaiTi",serif';
+    c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.fillText(label, 0, 1);
+    c.restore();
+  }
   function cutout(c, id, x, foot, h) {
     cutout.bag = cutout.bag || {};
     var im = cutout.bag[id];
@@ -74,39 +103,112 @@
   }
 
   var prevEnd = XY.R4 && XY.R4.end;
+  var AUTO_META = {
+    points: { name: '自动加点', desc: '升级后自动分配技能点。', hint: '' },
+    treat: { name: '自动犒赏', desc: '花 30 金币给天兵补寿命、减伤。', hint: '手动 F' },
+    guest: { name: '自动召唤', desc: '特殊人物能召唤时自动召出。', hint: '手动 G' },
+    pick: { name: '自动选宝', desc: '三选一时自动选推荐。', hint: '手动 1 2 3' }
+  };
+  function inkSheet(c, x, y, w, h) {
+    c.save();
+    c.beginPath();
+    c.moveTo(x + 18, y + 6);
+    c.quadraticCurveTo(x + w * 0.35, y - 8, x + w * 0.72, y + 8);
+    c.quadraticCurveTo(x + w + 6, y + 18, x + w - 4, y + h * 0.42);
+    c.quadraticCurveTo(x + w + 10, y + h * 0.7, x + w - 12, y + h - 10);
+    c.quadraticCurveTo(x + w * 0.55, y + h + 8, x + 22, y + h - 6);
+    c.quadraticCurveTo(x - 8, y + h * 0.55, x + 8, y + h * 0.22);
+    c.quadraticCurveTo(x - 4, y + 24, x + 18, y + 6);
+    c.closePath();
+    c.fillStyle = 'rgba(246,239,226,0.94)';
+    c.fill();
+    c.clip();
+    if (XY.villainUI && XY.villainUI.washE) {
+      XY.villainUI.washE(c, x + w * 0.18, y + h * 0.22, w * 0.55, h * 0.28, '70,54,36', 0.16);
+      XY.villainUI.washE(c, x + w * 0.82, y + h * 0.78, w * 0.4, h * 0.22, '120,48,36', 0.1);
+    }
+    c.restore();
+    c.save();
+    c.strokeStyle = 'rgba(42,32,22,0.55)';
+    c.lineWidth = 1.6;
+    c.beginPath();
+    c.moveTo(x + 22, y + 14);
+    c.quadraticCurveTo(x + w * 0.4, y + 4, x + w - 28, y + 16);
+    c.stroke();
+    c.restore();
+  }
+  function inkMark(c, kind, x, y, s) {
+    c.save();
+    c.translate(x, y);
+    c.strokeStyle = 'rgba(42,32,22,0.85)';
+    c.fillStyle = 'rgba(42,32,22,0.85)';
+    c.lineWidth = Math.max(1.2, s * 0.08);
+    c.lineCap = 'round';
+    if (kind === 'points') {
+      c.beginPath(); c.moveTo(-s * 0.3, s * 0.2); c.quadraticCurveTo(0, -s * 0.45, s * 0.35, -s * 0.05); c.stroke();
+      c.beginPath(); c.arc(s * 0.05, s * 0.12, s * 0.1, 0, 6.3); c.fill();
+    } else if (kind === 'treat') {
+      c.beginPath(); c.arc(0, 0, s * 0.28, 0, 6.3); c.stroke();
+      c.font = (s * 0.32) + 'px "Ma Shan Zheng","KaiTi",serif';
+      c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('赏', 0, 1);
+    } else if (kind === 'guest') {
+      c.beginPath(); c.arc(0, -s * 0.16, s * 0.12, 0, 6.3); c.stroke();
+      c.beginPath(); c.moveTo(-s * 0.22, s * 0.28); c.quadraticCurveTo(0, -s * 0.02, s * 0.22, s * 0.28); c.stroke();
+    } else {
+      var i;
+      for (i = 0; i < 3; i++) {
+        c.strokeRect(-s * 0.34 + i * s * 0.24, -s * 0.16, s * 0.16, s * 0.32);
+      }
+    }
+    c.restore();
+  }
   if (XY.ov) XY.ov.pause = function (c, G, a) {
-    var K = open(c, a), W = K.W, H = K.H, port = K.port, short = !port && H < 420;
-    var x = port ? 16 : Math.round(W * 0.5), w = port ? W - 32 : W - x - 16;
-    var n = 3 + (XY.auto ? 1 : 0);
-    var bh = short ? 34 : (port ? 48 : 52);
-    var gap = short ? 6 : 10;
-    var block = n * bh + (n - 1) * gap;
-    var top = H - 10 - block;
-    if (!short && !port) top = Math.max(86, Math.min(top, 120));
-    if (port) top = Math.max(Math.round(H * 0.42), Math.min(top, H - 10 - block));
-    if (top < 8) { bh = Math.max(28, Math.floor((H - 16 - (n - 1) * 4) / n)); gap = 4; block = n * bh + (n - 1) * gap; top = Math.max(4, H - 8 - block); }
-    kai(c, '暂驻', port ? 20 : 24, short ? 22 : 36, short ? 28 : 40, '#a42d19', 'left', port ? W * 0.7 : W * 0.36);
-    if (!short) kai(c, XY.lvPre(G) + G.lv.name + '」', port ? 20 : 24, short ? 46 : 68, 16, '#5c4a38', 'left', port ? W * 0.7 : W * 0.4);
-    kai(c, '已坚持 ' + XY.fmtTime(G.t) + '  ·  Lv ' + G.level + '  ·  击杀 ' + XY.fmtNum(G.kills), port ? 20 : 24, short ? 48 : (port ? 96 : 96), short ? 14 : 16, '#2b1c08', 'left', port ? W - 40 : W * 0.42);
-    var figH = port ? Math.min(280, H * 0.32) : (short ? H * 0.78 : Math.min(H - 40, 560));
-    cutout(c, whoId(G), port ? W * 0.72 : W * 0.24, port ? figH + 24 : H - 8, figH);
-    function go(xx, yy, ww, hh, label, act, ex, hot) { inkBar(c, xx, yy, ww, hh, label, hot); K.hit(xx, yy, ww, hh, act, ex); }
-    var yy = top;
-    go(x, yy, w, bh, '继续', 'resume', null, true); yy += bh + gap;
-    var hw = (w - gap) / 2;
-    go(x, yy, hw, bh, '重来', 'restart', null, false);
-    go(x + hw + gap, yy, hw, bh, '回首页', 'home', null, false); yy += bh + gap;
+    var K = openVeil(c, a), W = K.W, H = K.H, port = K.port || H > W;
+    var touch = !!(a.touchUI || port);
+    var short = H < 420;
+    var pw = Math.max(280, Math.min(W - 16, short ? W - 12 : (port ? W - 20 : 560)));
+    var head = short ? 36 : 52;
+    var btnH = short ? 36 : 46;
+    var rowH = short ? 40 : (port ? 58 : 52);
+    var autoH = 22 + 4 * rowH;
+    var ph = Math.min(H - 12, head + btnH + 8 + (short ? 36 : 44) + autoH + (short ? 8 : 16));
+    var px = Math.round((W - pw) / 2), py = Math.round((H - ph) / 2);
+    inkSheet(c, px, py, pw, ph);
+    var x = px + 16, w = pw - 32, y = py + (short ? 18 : 26);
+    kai(c, '暂驻', x, y, short ? 22 : 28, '#a42d19', 'left', w * 0.45);
+    kai(c, '已坚持 ' + XY.fmtTime(G.t) + ' · Lv' + G.level + ' · 击杀 ' + XY.fmtNum(G.kills), x + (short ? 78 : 96), y, short ? 13 : 15, '#5c4a38', 'left', w - (short ? 84 : 110));
+    y += short ? 22 : 30;
+    var seal = short ? 64 : 78;
+    inkBar(c, x, y, seal, btnH, '继续', true);
+    K.hit(x, y, seal, btnH, 'resume', null);
+    var gap = 8, rest = w - seal - gap * 2;
+    var bw = (rest - gap) / 2;
+    inkBar(c, x + seal + gap, y, bw, btnH, '重来', false);
+    K.hit(x + seal + gap, y, bw, btnH, 'restart', null);
+    inkBar(c, x + seal + gap * 2 + bw, y, bw, btnH, '回首页', false);
+    K.hit(x + seal + gap * 2 + bw, y, bw, btnH, 'home', null);
+    y += btnH + (short ? 6 : 8);
     var muted = !!(XY.audio && XY.audio.mute);
-    go(x, yy, hw, bh, muted ? '声关' : '声开', 'muteSet', { mute: false }, !muted);
-    go(x + hw + gap, yy, hw, bh, muted ? '已静' : '声静', 'muteSet', { mute: true }, muted);
+    inkBar(c, x, y, Math.min(168, w), short ? 32 : 36, muted ? '声音 · 关' : '声音 · 开', !muted);
+    K.hit(x, y, Math.min(168, w), short ? 32 : 36, 'muteTog', null);
+    y += (short ? 32 : 36) + (short ? 6 : 10);
+    kai(c, '自动', x, y, short ? 16 : 20, '#a42d19', 'left', 80);
+    if (!touch) kai(c, '开是红印，关是淡墨', x + 56, y, 12, 'rgba(90,70,48,0.7)', 'left', w - 60);
+    y += short ? 16 : 20;
     if (XY.auto) {
-      yy += bh + gap;
-      ['points', 'treat', 'guest', 'pick'].forEach(function (key, i) {
-        var ww = (w - 3 * gap) / 4, on = !!XY.auto.get(key);
-        go(x + i * (ww + gap), yy, ww, bh, XY.auto.LABEL[key], 'autoTog', { key: key }, on);
+      ['points', 'treat', 'guest', 'pick'].forEach(function (key) {
+        var on = !!XY.auto.get(key), meta = AUTO_META[key], rh = rowH - 4;
+        inkMark(c, key, x + 14, y + rh * 0.38, short ? 22 : 28);
+        if (on) inkBar(c, x + 32, y + 2, short ? 36 : 42, rh - 8, '开', true);
+        else paleBar(c, x + 32, y + 2, short ? 36 : 42, rh - 8, '关');
+        var tx = x + (short ? 76 : 86);
+        kai(c, meta.name, tx, y + (short ? 12 : 16), short ? 14 : 16, '#24180f', 'left', w * 0.42);
+        kai(c, meta.desc, tx, y + (short ? 28 : 36), short ? 12 : 14, '#5c4a38', 'left', touch ? w - (tx - x) - 4 : w * 0.48);
+        if (!touch && meta.hint) kai(c, meta.hint, x + w - 4, y + rh * 0.45, 12, 'rgba(90,70,48,0.65)', 'right', 92);
+        K.hit(x, y, w, rh, 'autoTog', { key: key });
+        y += rowH;
       });
     }
-    if (XY.inkBg) XY.inkBg();
     close(c);
   };
 
