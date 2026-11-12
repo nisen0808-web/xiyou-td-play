@@ -23918,26 +23918,35 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
   };
   XY.gacha10.rosterSlots = function (n, land) {
     n = n < 1 ? 1 : (n > 10 ? 10 : n | 0);
-    var out = [], i, t, rows, per, row, col, cnt;
+    var out = [], i, t, rows, base, extra, idx, r, cnt, col, frontN, backN;
     if (!land) {
       rows = n <= 3 ? 1 : (n <= 6 ? 2 : 3);
-      per = Math.ceil(n / rows);
-      for (i = 0; i < n; i++) {
-        row = Math.min(rows - 1, (i / per) | 0);
-        col = i - row * per;
-        cnt = Math.min(per, n - row * per);
-        t = cnt <= 1 ? 0.5 : col / (cnt - 1);
-        out.push({ x: 0.08 + t * 0.84, y: (row + 0.62) / rows, s: 1, z: (rows - 1) - row, ns: t < 0.5 ? -1 : 1 });
+      base = Math.floor(n / rows);
+      extra = n % rows;
+      idx = 0;
+      for (r = 0; r < rows; r++) {
+        cnt = base + (r < extra ? 1 : 0);
+        for (col = 0; col < cnt; col++, idx++) {
+          t = cnt <= 1 ? 0.5 : col / (cnt - 1);
+          out.push({ x: 0.16 + t * 0.68, y: (r + 0.58) / rows, s: 1, z: r, ns: t < 0.5 ? -1 : 1 });
+        }
       }
       return out;
     }
-    for (i = 0; i < n; i++) {
-      t = n === 1 ? 0.48 : i / (n - 1);
-      var z = i % 3 === 0 ? 0 : (i % 3 === 1 ? 2 : 1);
-      out.push({ x: 0.03 + t * 0.94, y: 0.58 + (z === 2 ? 0.08 : z === 0 ? -0.06 : 0), s: z === 0 ? 0.9 : 1, z: z, ns: t < 0.45 ? -1 : 1 });
+    if (n === 1) return [{ x: 0.56, y: 0.68, s: 1, z: 2, ns: 1 }];
+    frontN = Math.ceil(n / 2);
+    backN = n - frontN;
+    for (i = 0; i < backN; i++) {
+      t = backN <= 1 ? 0.5 : i / (backN - 1);
+      out.push({ x: 0.14 + t * 0.72, y: 0.36, s: 0.76, z: 0, ns: t < 0.5 ? -1 : 1 });
+    }
+    for (i = 0; i < frontN; i++) {
+      t = frontN <= 1 ? 0.5 : i / (frontN - 1);
+      out.push({ x: 0.06 + t * 0.88, y: 0.74, s: 1, z: 2, ns: t < 0.5 ? -1 : 1 });
     }
     return out;
   };
+
 
   XY.gacha10.paint = function (c, st, a) {
     var v = XY.gacha10.view(a); if (!v || !v.rec) return;
@@ -24001,23 +24010,32 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
       if (hd) { alphaBox(hd); return { im: hd, cut: hd, iw: iw, ih: ih }; }
       return { im: im, cut: gachaCutout(im), iw: iw, ih: ih };
     }
-    function inkName(c, text, x, y, size, maxW, col) {
+    function inkName(c, text, x, y, size, maxW, col, bare) {
       if (!text) return;
       c.save();
       c.textAlign = 'center'; c.textBaseline = 'middle';
       c.font = size + 'px GachaBrush, KaiTi, STKaiti, serif';
-      while (size > 14 && c.measureText(text).width > maxW) { size -= 1; c.font = size + 'px GachaBrush, KaiTi, STKaiti, serif'; }
-      c.lineWidth = Math.max(3, size * 0.12);
-      c.strokeStyle = 'rgba(252,246,232,0.88)';
-      c.strokeText(text, x, y);
+      var tw = c.measureText(text).width;
+      if (!bare) {
+        while (size > 14 && tw > maxW) { size -= 1; c.font = size + 'px GachaBrush, KaiTi, STKaiti, serif'; tw = c.measureText(text).width; }
+        c.lineWidth = Math.max(2, size * 0.08);
+        c.strokeStyle = 'rgba(252,246,232,0.75)';
+        c.strokeText(text, x, y);
+      } else if (VU.washE) {
+        VU.washE(c, x, y, Math.max(tw * 0.48, size), size * 0.55, '252,246,232', 0.5);
+        c.lineWidth = Math.max(1.2, size * 0.07);
+        c.strokeStyle = 'rgba(252,246,232,0.95)';
+        c.strokeText(text, x, y);
+      }
       c.fillStyle = col || '#1a120c';
       c.fillText(text, x, y);
       c.restore();
     }
     function drawCut(c, art, x, y, w, h) {
       var s = Math.min(w / art.iw, h / art.ih);
-      var dw = art.iw * s, dh = art.ih * s;
-      c.drawImage(art.cut, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
+      var dw = art.iw * s, dh = art.ih * s, ox = x + (w - dw) / 2, oy = y + (h - dh) / 2;
+      c.drawImage(art.cut, ox, oy, dw, dh);
+      return { im: art.cut, x: ox, y: oy, w: dw, h: dh };
     }
     function leaf(c, x, y, len, rot, rgb, a) {
       c.save();
@@ -24091,7 +24109,7 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
       c.restore();
     }
     function placeFigures(list, box) {
-      var unit = !land ? box.h * 0.46 : (short ? box.h * 0.98 : box.h * 0.84);
+      var unit = !land ? Math.min(box.h / 3.25, box.w * 0.42) : (short ? box.h * 0.62 : box.h * 0.52);
       var slots = XY.gacha10.rosterSlots(list.length, land);
       var placed = [];
       list.forEach(function (g, idx) {
@@ -24099,7 +24117,7 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
         var fh = unit * sl.s, fw = fh * 0.75;
         var cx = box.x + sl.x * box.w, cy = box.y + sl.y * box.h;
         var x = cx - fw / 2, y = cy - fh / 2;
-        var padX = land ? 48 : 4, padTop = land ? 28 : 8, bottom = box.y + box.h - 2;
+        var padX = 6, padTop = 4, bottom = box.y + box.h - 2;
         if (fw > cw - padX * 2) { var ks = (cw - padX * 2) / fw; fw *= ks; fh *= ks; x = cx - fw / 2; y = cy - fh / 2; }
         if (fh > bottom - padTop) { var ks2 = (bottom - padTop) / fh; fw *= ks2; fh *= ks2; x = cx - fw / 2; y = cy - fh / 2; }
         if (x < padX) x = padX;
@@ -24202,65 +24220,6 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
       return names;
     }
 
-    function drawScroll(c, x, y, w, h, vertical) {
-      c.save();
-      c.fillStyle = '#f3ead8';
-      c.beginPath();
-      c.rect(x, y, w, h);
-      c.fill();
-      if (VU.washE) VU.washE(c, x + w * 0.5, y + h * 0.48, w * 0.92, h * 0.86, '196,176,142', 0.16);
-      c.strokeStyle = 'rgba(92,70,44,0.28)';
-      c.lineWidth = 1.6;
-      c.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
-      if (!vertical) {
-        var rw = Math.max(16, Math.min(42, h * 0.18));
-        var rx = x + w - rw * 0.2;
-        var grd = c.createLinearGradient(rx - rw, y, rx + rw, y);
-        grd.addColorStop(0, 'rgba(243,234,216,0)');
-        grd.addColorStop(0.35, '#efe2c8');
-        grd.addColorStop(0.7, '#f8f2e6');
-        grd.addColorStop(1, '#c9b48e');
-        c.fillStyle = grd;
-        c.beginPath();
-        c.ellipse(rx, y + h / 2, rw * 0.62, h * 0.5, 0, 0, Math.PI * 2);
-        c.fill();
-        c.strokeStyle = 'rgba(88,62,34,0.4)';
-        c.lineWidth = 1.2;
-        var si;
-        for (si = 1; si <= 3; si++) {
-          c.beginPath();
-          c.ellipse(rx, y + h / 2, rw * (0.18 + si * 0.1), h * (0.16 + si * 0.08), 0, 0, Math.PI * 2);
-          c.stroke();
-        }
-      } else {
-        var rh = Math.max(14, Math.min(36, w * 0.1));
-        var ry = y + h - rh * 0.15;
-        var grd2 = c.createLinearGradient(x, ry - rh, x, ry + rh);
-        grd2.addColorStop(0, 'rgba(243,234,216,0)');
-        grd2.addColorStop(0.4, '#efe2c8');
-        grd2.addColorStop(1, '#c9b48e');
-        c.fillStyle = grd2;
-        c.beginPath();
-        c.ellipse(x + w / 2, ry, w * 0.5, rh * 0.55, 0, 0, Math.PI * 2);
-        c.fill();
-        c.strokeStyle = 'rgba(88,62,34,0.4)';
-        c.stroke();
-      }
-      c.restore();
-    }
-    function inkBurst(c, cx, cy, rad) {
-      var IP = XY.INKP;
-      if (!IP) {
-        if (VU.washE) VU.washE(c, cx, cy, rad * 1.6, rad, '36,28,20', 0.4);
-        return;
-      }
-      IP.blot(c, cx, cy, rad, '24,18,14', 0.62, 4, 18, 0.7);
-      IP.blot(c, cx - rad * 0.08, cy + rad * 0.04, rad * 0.55, '16,12,10', 0.45, 9, 12, 0.48);
-      IP.splash(c, cx, cy, rad * 0.2, rad * 1.45, 16, Math.max(5, rad * 0.07), null, 0.62, 12, 0.85);
-      IP.dots(c, cx, cy, rad * 0.25, rad * 1.7, 26, 1.3, 5, '22,16,12', 0.55, 21, 0.75);
-      IP.stroke(c, cx - rad * 1.05, cy - rad * 0.05, cx + rad, cy + rad * 0.1, Math.max(10, rad * 0.09), '20,14,10', 0.42, 6, 0.16);
-      IP.stroke(c, cx - rad * 0.4, cy + rad * 0.35, cx + rad * 0.7, cy - rad * 0.25, Math.max(6, rad * 0.05), '32,24,18', 0.3, 14, -0.08);
-    }
     function cinSeal(c, x, y, s, text) {
       if (!text) return;
       c.save();
@@ -24274,143 +24233,253 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
       c.fillText(text, 0, 1);
       c.restore();
     }
-    function fadeGrove(c, x, y, w, h) {
+    function roughSheet(c, x, y, w, h, seed) {
+      var n = 26, i, p, ax = Math.max(8, Math.min(22, w * 0.012)), ay = Math.max(7, Math.min(18, h * 0.02));
+      function j(k) { return (gachaHash(seed + k) - 0.5) * 2; }
+      c.beginPath();
+      for (i = 0; i <= n; i++) {
+        p = i / n;
+        if (!i) c.moveTo(x, y + j(i) * ay * 0.35);
+        else c.lineTo(x + w * p, y + (i === n ? 0 : j(i) * ay));
+      }
+      for (i = 1; i <= n; i++) c.lineTo(x + w + j(80 + i) * ax, y + h * (i / n));
+      for (i = n - 1; i >= 0; i--) c.lineTo(x + w * (i / n), y + h + (i ? j(160 + i) * ay : 0));
+      for (i = n - 1; i >= 1; i--) c.lineTo(x + j(240 + i) * ax, y + h * (i / n));
+      c.closePath();
+    }
+    function drawScroll(c, x, y, w, h, vertical) {
+      var IP = XY.INKP;
       c.save();
-      grove(c, x, y, w * 0.42, h);
-      var fade = c.createLinearGradient(x + w * 0.05, 0, x + w * 0.38, 0);
-      fade.addColorStop(0, 'rgba(243,234,216,0)');
-      fade.addColorStop(0.35, 'rgba(243,234,216,0.35)');
-      fade.addColorStop(0.7, 'rgba(243,234,216,0.82)');
-      fade.addColorStop(1, 'rgba(243,234,216,1)');
-      c.fillStyle = fade;
-      c.fillRect(x, y, w * 0.5, h);
+      if (VU.washE) {
+        VU.washE(c, x + w * 0.12, y + h * 0.18, w * 0.22, h * 0.16, '48,36,24', 0.16);
+        VU.washE(c, x + w * 0.5, y + h * 0.04, w * 0.36, h * 0.08, '60,46,30', 0.1);
+        VU.washE(c, x + w * 0.08, y + h * 0.72, w * 0.16, h * 0.22, '40,30,20', 0.12);
+      }
+      if (IP) IP.dots(c, x + w * 0.5, y + h * 0.5, Math.max(20, w * 0.46), Math.max(16, h * 0.42), 16, 1.1, 3.2, '36,28,20', 0.22, 6, 0.85);
+      c.fillStyle = '#f3ead7';
+      roughSheet(c, x, y, w, h, vertical ? 44 : 21);
+      c.fill();
+      if (!vertical) {
+        var rw = Math.max(12, Math.min(34, h * 0.13)), rx = x + w - rw * 0.05;
+        c.fillStyle = '#e4d2b0';
+        c.beginPath(); c.ellipse(rx, y + h * 0.5, rw * 0.55, h * 0.47, 0, 0, Math.PI * 2); c.fill();
+        c.fillStyle = '#f8f2e6';
+        c.beginPath(); c.ellipse(rx - rw * 0.12, y + h * 0.5, rw * 0.26, h * 0.34, 0, 0, Math.PI * 2); c.fill();
+        c.fillStyle = '#c9b48c';
+        c.beginPath(); c.ellipse(rx + rw * 0.16, y + h * 0.5, rw * 0.14, h * 0.4, 0, 0, Math.PI * 2); c.fill();
+      } else {
+        var rh = Math.max(12, Math.min(28, w * 0.08)), ry = y + h - rh * 0.1;
+        c.fillStyle = '#e4d2b0';
+        c.beginPath(); c.ellipse(x + w * 0.5, ry, w * 0.48, rh * 0.55, 0, 0, Math.PI * 2); c.fill();
+        c.fillStyle = '#f8f2e6';
+        c.beginPath(); c.ellipse(x + w * 0.5, ry - rh * 0.12, w * 0.36, rh * 0.28, 0, 0, Math.PI * 2); c.fill();
+      }
       c.restore();
+    }
+    function inkBurst(c, cx, cy, rad) {
+      var IP = XY.INKP;
+      if (VU.washE) {
+        VU.washE(c, cx, cy, rad * 1.05, rad * 0.72, '22,16,12', 0.62);
+        VU.washE(c, cx - rad * 0.18, cy + rad * 0.04, rad * 0.62, rad * 0.4, '12,10,8', 0.45);
+        VU.washE(c, cx + rad * 0.22, cy - rad * 0.08, rad * 0.4, rad * 0.28, '40,30,22', 0.28);
+      }
+      if (!IP) return;
+      IP.blot(c, cx, cy, rad * 0.85, '20,14,10', 0.7, 4, 20, 0.62);
+      IP.blot(c, cx - rad * 0.1, cy, rad * 0.45, '14,10,8', 0.5, 9, 14, 0.4);
+      IP.splash(c, cx, cy, rad * 0.15, rad * 1.55, 22, Math.max(6, rad * 0.08), null, 0.72, 12, 0.9);
+      IP.dots(c, cx, cy, rad * 0.2, rad * 1.8, 30, 1.4, 5.5, '18,12,8', 0.6, 21, 0.8);
+      IP.stroke(c, cx - rad * 1.1, cy, cx + rad * 0.95, cy + rad * 0.08, Math.max(12, rad * 0.1), '16,12,8', 0.5, 6, 0.18);
+      IP.stroke(c, cx - rad * 0.35, cy + rad * 0.4, cx + rad * 0.7, cy - rad * 0.3, Math.max(7, rad * 0.05), '28,20,14', 0.35, 14, -0.1);
+    }
+    function maskOf(im) {
+      if (!im) return null;
+      if (im._gachaA) return im._gachaA;
+      var w = im.naturalWidth || im.width, h = im.naturalHeight || im.height;
+      if (!w || !h) return null;
+      var cv = document.createElement('canvas');
+      cv.width = w; cv.height = h;
+      var g = cv.getContext('2d', { willReadFrequently: true });
+      g.drawImage(im, 0, 0);
+      var src = g.getImageData(0, 0, w, h).data, a = new Uint8Array(w * h), i;
+      for (i = 0; i < w * h; i++) a[i] = src[i * 4 + 3];
+      im._gachaA = { a: a, w: w, h: h };
+      return im._gachaA;
+    }
+    function cover(draw, box, step) {
+      if (!draw || !draw.im || box.w < 2 || box.h < 2) return { hits: 0, total: 1 };
+      var m = maskOf(draw.im);
+      if (!m) return { hits: 0, total: 1 };
+      var hits = 0, total = 0, x, y, ix, iy;
+      for (y = box.y; y < box.y + box.h; y += step) {
+        for (x = box.x; x < box.x + box.w; x += step) {
+          total++;
+          if (x < draw.x || y < draw.y || x >= draw.x + draw.w || y >= draw.y + draw.h) continue;
+          ix = ((x - draw.x) / draw.w * m.w) | 0;
+          iy = ((y - draw.y) / draw.h * m.h) | 0;
+          if (ix >= 0 && iy >= 0 && ix < m.w && iy < m.h && m.a[iy * m.w + ix] > 40) hits++;
+        }
+      }
+      return { hits: hits, total: total || 1 };
+    }
+    function othersHit(list, box, step) {
+      var n = 0, i;
+      for (i = 0; i < list.length; i++) n += cover(list[i], box, step).hits;
+      return n;
+    }
+    function fitOnBody(draw, body, others, text) {
+      var anchor = body && body.w ? body : draw;
+      var maxSize = land ? (short ? 20 : 40) : 16, minSize = short ? 11 : (land ? 13 : 11);
+      var size, tw, th, yf, sh, cx, cy, box, own, oth, frac, fine, fo, best = null;
+      var shifts = [0, -0.16, 0.16, -0.28, 0.28];
+      for (size = maxSize; size >= minSize; size--) {
+        c.font = size + 'px GachaBrush, KaiTi, STKaiti, serif';
+        tw = Math.ceil(c.measureText(text).width);
+        th = Math.ceil(size * 1.05);
+        for (yf = 0.58; yf <= 0.86; yf += 0.07) {
+          for (sh = 0; sh < shifts.length; sh++) {
+            cx = anchor.x + anchor.w * (0.5 + shifts[sh]);
+            cy = anchor.y + anchor.h * yf;
+            box = { x: cx - tw / 2, y: cy - th / 2, w: tw, h: th };
+            if (box.x < 2 || box.y < 2 || box.x + box.w > cw - 2 || box.y + box.h > ch - 48) continue;
+            own = cover(draw, box, 3);
+            oth = othersHit(others, box, 3);
+            frac = own.hits / own.total;
+            if (frac >= 0.7 && oth === 0) {
+              fine = cover(draw, box, 2);
+              fo = othersHit(others, box, 2);
+              if (fine.hits / fine.total >= 0.7 && fo === 0) {
+                return { x: cx, y: cy, size: size, w: tw, h: th, own: Math.round(fine.hits / fine.total * 1000) / 1000, other: 0 };
+              }
+            }
+            if (!best || (oth === 0 && frac > best.own) || (best.other > 0 && oth === 0)) best = { x: cx, y: cy, size: size, w: tw, h: th, own: Math.round(frac * 1000) / 1000, other: oth };
+          }
+        }
+      }
+      return best || { x: anchor.x + anchor.w * 0.5, y: anchor.y + anchor.h * 0.7, size: minSize, w: 10, h: minSize, own: 0, other: 1 };
+    }
+    function softBamboo(c, x, y, w, h) {
+      var IP = XY.INKP;
+      if (!IP) return;
+      [0.06, 0.14, 0.22, 0.3].forEach(function (p, i) {
+        var x0 = x + w * p;
+        IP.stroke(c, x0, y + h * 0.9, x0 + (i % 2 ? 10 : -8), y + h * 0.12, 6 - i * 0.6, '36,62,36', 0.42 - i * 0.07, 40 + i, 0.05);
+      });
     }
 
     /* 整页先挡住出发页。名字和「收下」后登记，点名字不会穿透到后面。 */
     st.hit(0, 0, cw, ch, stage ? 'gachaSkip' : 'gachaHold');
-    var scroll = land
-      ? { x: cw * 0.03, y: ch * 0.05, w: cw * 0.94, h: ch * 0.9 }
-      : { x: cw * 0.05, y: ch * 0.04, w: cw * 0.9, h: ch * 0.86 };
+    var scroll = { x: cw * 0.02, y: ch * 0.03, w: cw * 0.96, h: ch * 0.94 };
     if (stage && elapsed < XY.gacha10.timing.intro) {
       drawScroll(c, scroll.x, scroll.y, scroll.w, scroll.h, !land);
-      c.save(); c.globalAlpha = 0.55;
-      grove(c, scroll.x - scroll.w * 0.04, scroll.y, scroll.w * 0.22, scroll.h);
-      c.restore();
-      var wash = c.createLinearGradient(scroll.x, 0, scroll.x + scroll.w * 0.34, 0);
-      wash.addColorStop(0, 'rgba(243,234,216,0)');
-      wash.addColorStop(0.45, 'rgba(243,234,216,0.2)');
-      wash.addColorStop(1, 'rgba(243,234,216,1)');
-      c.fillStyle = wash;
-      c.fillRect(scroll.x, scroll.y, scroll.w * 0.36, scroll.h);
-      var titleX = scroll.x + scroll.w * (land ? 0.2 : 0.62);
-      var titleY = scroll.y + scroll.h * (land ? 0.32 : 0.1);
-      var titleS = land ? Math.min(84, scroll.h * 0.16) : Math.min(40, scroll.w * 0.11);
-      inkName(c, '画十张', titleX, titleY, titleS, scroll.w * 0.36);
-      cinSeal(c, titleX + titleS * 2.15, titleY, titleS * 0.55, '印');
-      inkName(c, '画一张', titleX + scroll.w * 0.02, titleY + titleS * 1.35, titleS * 0.82, scroll.w * 0.32);
+      softBamboo(c, scroll.x + scroll.w * 0.02, scroll.y + scroll.h * 0.06, scroll.w * 0.34, scroll.h * 0.86);
+      var titleX = scroll.x + scroll.w * (land ? 0.22 : 0.62);
+      var titleY = scroll.y + scroll.h * (land ? 0.28 : 0.12);
+      var titleS = land ? Math.min(72, scroll.h * 0.14) : Math.min(36, scroll.w * 0.1);
+      inkName(c, '画十张', titleX, titleY, titleS, scroll.w * 0.34);
+      cinSeal(c, titleX + titleS * 2.2, titleY + titleS * 0.15, Math.max(18, titleS * 0.48), '印');
+      inkName(c, '画一张', titleX, titleY + titleS * 1.25, titleS * 0.78, scroll.w * 0.3);
       var host = shown('yuanzhang') ? 'yuanzhang' : (rows[0] && rows[0].id);
-      var hx = scroll.x + scroll.w * (land ? 0.4 : 0.08);
-      var hy = scroll.y + scroll.h * 0.06;
-      var hw = scroll.w * (land ? 0.5 : 0.84);
-      var hh = scroll.h * 0.86;
-      inkBurst(c, hx + hw * 0.5, hy + hh * 0.5, Math.min(hw, hh) * 0.42);
+      var hx = scroll.x + scroll.w * (land ? 0.42 : 0.1);
+      var hy = scroll.y + scroll.h * 0.08;
+      var hw = scroll.w * (land ? 0.46 : 0.8);
+      var hh = scroll.h * 0.78;
+      inkBurst(c, hx + hw * 0.48, hy + hh * 0.5, Math.min(hw, hh) * 0.46);
       var art = host && packArt(host, hx, hy, hw, hh);
-      if (art) drawCut(c, art, hx, hy, hw, hh);
-      if (host) inkName(c, gachaName(host), hx + hw * 0.52, hy + hh * 0.46, Math.min(land ? 78 : 40, hh * 0.16), hw * 0.55);
+      var drawn = art && drawCut(c, art, hx, hy, hw, hh);
+      if (host && drawn) {
+        var hostBody = null;
+        if (art.im && art.im._gachaBox) {
+          var hb = art.im._gachaBox, hs = Math.min(hw / art.iw, hh / art.ih);
+          var hdw = art.iw * hs, hdh = art.ih * hs;
+          hostBody = { x: drawn.x + hb.x * (hdw / art.iw), y: drawn.y + hb.y * (hdh / art.ih), w: hb.w * (hdw / art.iw), h: hb.h * (hdh / art.ih) };
+        }
+        var hnSize = land ? Math.min(64, hh * 0.13) : Math.min(34, hw * 0.1);
+        inkName(c, gachaName(host), hx + hw * 0.28, hy + hh * 0.74, hnSize, hw * 0.4, '#1a120c', true);
+      }
     } else if (stage) {
       drawScroll(c, scroll.x, scroll.y, scroll.w, scroll.h, !land);
       var row = rows[focus] || rows[0];
-      var p = v.hold ? 1 : XY.gacha10.cardAt(elapsed, focus);
-      var fh = scroll.h * (short ? 0.9 : (land ? 0.82 : 0.62));
-      var fw = Math.min(scroll.w * (land ? 0.42 : 0.78), fh * 0.78);
-      var fx = scroll.x + (scroll.w - fw) / 2, fy = scroll.y + scroll.h * 0.06;
-      inkBurst(c, fx + fw / 2, fy + fh * 0.5, Math.min(fw, fh) * 0.55);
+      var pp = v.hold ? 1 : XY.gacha10.cardAt(elapsed, focus);
+      var fh = scroll.h * (short ? 0.86 : (land ? 0.78 : 0.62));
+      var fw = Math.min(scroll.w * (land ? 0.38 : 0.72), fh * 0.72);
+      var fx = scroll.x + (scroll.w - fw) / 2, fy = scroll.y + scroll.h * 0.05;
+      inkBurst(c, fx + fw * 0.5, fy + fh * 0.52, Math.min(fw, fh) * 0.58);
       if (row && shown(row.id)) {
         var art2 = packArt(row.id, fx, fy, fw, fh);
         c.save();
-        c.globalAlpha = 0.25 + 0.75 * Math.max(0, Math.min(1, p));
-        if (art2) drawCut(c, art2, fx, fy, fw, fh);
+        c.globalAlpha = 0.25 + 0.75 * Math.max(0, Math.min(1, pp));
+        var drawn2 = art2 && drawCut(c, art2, fx, fy, fw, fh);
         c.restore();
-        var ns = Math.min(land ? 72 : 40, fh * 0.16);
-        inkName(c, gachaName(row.id), fx + fw * 0.5, fy + fh * 0.46, ns, fw * 0.7);
-        if (row.kind === 'unlock') cinSeal(c, fx + fw * 0.5 - ns * 2.2, fy + fh * 0.46, ns * 0.55, '新');
+        if (drawn2) {
+          var body2 = null;
+          if (art2.im && art2.im._gachaBox) {
+            var b2 = art2.im._gachaBox, s2 = Math.min(fw / art2.iw, fh / art2.ih);
+            body2 = { x: drawn2.x + b2.x * s2, y: drawn2.y + b2.y * s2, w: b2.w * s2, h: b2.h * s2 };
+          }
+          var nmSize = Math.min(land ? 56 : 32, fh * 0.11);
+          c.font = nmSize + 'px GachaBrush, KaiTi, STKaiti, serif';
+          var nmW = c.measureText(gachaName(row.id)).width;
+          var nmX = fx + fw * 0.5, nmY = fy + fh * 0.9;
+          inkName(c, gachaName(row.id), nmX, nmY, nmSize, fw, '#1a120c', true);
+          if (row.kind === 'unlock') cinSeal(c, nmX + nmW / 2 + nmSize * 0.7, nmY + nmSize * 0.45, Math.max(18, nmSize * 0.42), '新');
+        }
       }
-      inkName(c, '点按跳过', cw * 0.5, scroll.y + scroll.h - 18, land ? 34 : 26, cw * 0.5);
+      inkName(c, '点按跳过', cw * 0.5, Math.min(ch - 22, scroll.y + scroll.h - 16), land ? 28 : 22, cw * 0.4);
     } else {
-      var foot = 56;
-      scroll = land
-        ? { x: cw * 0.02, y: 6, w: cw * 0.96, h: ch - foot - 8 }
-        : { x: cw * 0.04, y: 8, w: cw * 0.92, h: ch - foot - 10 };
+      var foot = 58;
+      scroll = { x: cw * 0.015, y: 4, w: cw * 0.97, h: ch - foot - 6 };
       drawScroll(c, scroll.x, scroll.y, scroll.w, scroll.h, !land);
-      inkBurst(c, scroll.x + scroll.w * 0.5, scroll.y + scroll.h * 0.5, Math.min(scroll.w, scroll.h) * (land ? 0.28 : 0.2));
-      var grouped = [], seen = {}, gi;
+      inkBurst(c, scroll.x + scroll.w * 0.5, scroll.y + scroll.h * 0.48, Math.min(scroll.w, scroll.h) * (land ? 0.42 : 0.28));
+      var grouped = [], seenG = {}, gi;
       rows.forEach(function (r) {
         if (!shown(r.id)) return;
-        gi = seen[r.id];
+        gi = seenG[r.id];
         if (!gi) {
           gi = { id: r.id, n: 0, unlock: false, label: gachaName(r.id) };
-          seen[r.id] = gi;
+          seenG[r.id] = gi;
           grouped.push(gi);
         }
         gi.n++;
         if (r.kind === 'unlock') gi.unlock = true;
       });
-      var box = { x: scroll.x + scroll.w * 0.04, y: scroll.y + scroll.h * 0.04, w: scroll.w * 0.9, h: scroll.h * 0.9 };
+      var box = { x: scroll.x + scroll.w * 0.03, y: scroll.y + scroll.h * 0.04, w: scroll.w * 0.92, h: scroll.h * 0.9 };
       if (grouped.length) {
         var placed = placeFigures(grouped, box);
         XY.gacha10.lastCrowd = placed;
         var order = placed.slice().sort(function (a, b) { return a.z - b.z || a.y - b.y || a.x - b.x; });
+        var draws = [];
         order.forEach(function (it) {
           var art3 = packArt(it.id, it.x, it.y, it.w, it.h);
-          if (art3 && art3.im && art3.im._gachaBox) {
-            var b = art3.im._gachaBox, sc = Math.min(it.w / art3.iw, it.h / art3.ih);
-            var dw = art3.iw * sc, dh = art3.ih * sc, ox = it.x + (it.w - dw) / 2, oy = it.y + (it.h - dh) / 2;
-            it.body = { x: ox + b.x * sc, y: oy + b.y * sc, w: b.w * sc, h: b.h * sc };
+          var d3 = art3 && drawCut(c, art3, it.x, it.y, it.w, it.h);
+          if (art3 && art3.im && art3.im._gachaBox && d3) {
+            var b3 = art3.im._gachaBox, sc3 = Math.min(it.w / art3.iw, it.h / art3.ih);
+            it.body = { x: d3.x + b3.x * sc3, y: d3.y + b3.y * sc3, w: b3.w * sc3, h: b3.h * sc3 };
           }
-          if (art3) drawCut(c, art3, it.x, it.y, it.w, it.h);
+          it.draw = d3;
+          if (d3) draws.push(it);
         });
-        var names = [];
-        placed.forEach(function (it) {
-          var bd = it.body || it;
-          var size = Math.max(land ? (short ? 16 : 20) : 14, Math.min(land ? (short ? 24 : 40) : 20, bd.h * (land ? (short ? 0.13 : 0.16) : 0.13)));
-          var text = it.label;
-          c.font = size + 'px GachaBrush, KaiTi, STKaiti, serif';
-          while (size > 13 && c.measureText(text).width > bd.w * 0.72) { size -= 1; c.font = size + 'px GachaBrush, KaiTi, STKaiti, serif'; }
-          var tw = Math.ceil(c.measureText(text).width), th = Math.ceil(size * 1.15);
-          var nx = bd.x + bd.w * 0.5, ny = bd.y + bd.h * (it.z === 2 ? 0.62 : it.z === 0 ? 0.3 : 0.46);
-          names.push({ id: it.id, text: text, size: size, x: nx, y: ny, w: tw, h: th, unlock: it.unlock, n: it.n, bx: bd.x, bw: bd.w });
+        var names = [], audit = [];
+        draws.forEach(function (it) {
+          var others = [];
+          draws.forEach(function (o) { if (o !== it && o.draw) others.push(o.draw); });
+          var nm = fitOnBody(it.draw, it.body, others, it.label);
+          nm.id = it.id; nm.text = it.label; nm.unlock = it.unlock; nm.n = it.n;
+          names.push(nm);
+          audit.push({ id: it.id, text: it.label, own: nm.own, other: nm.other, pass: nm.own >= 0.7 && nm.other === 0 });
         });
-        var pi, pj, pa, pb, ox, oy, guard;
-        for (guard = 0; guard < 8; guard++) {
-          for (pi = 0; pi < names.length; pi++) for (pj = pi + 1; pj < names.length; pj++) {
-            pa = names[pi]; pb = names[pj];
-            ox = Math.min(pa.x + pa.w / 2, pb.x + pb.w / 2) - Math.max(pa.x - pa.w / 2, pb.x - pb.w / 2);
-            oy = Math.min(pa.y + pa.h / 2, pb.y + pb.h / 2) - Math.max(pa.y - pa.h / 2, pb.y - pb.h / 2);
-            if (ox > 2 && oy > 2) {
-              var push = (ox + 6) / 2;
-              if (pa.x <= pb.x) { pa.x -= push; pb.x += push; }
-              else { pa.x += push; pb.x -= push; }
-              pa.x = Math.max(pa.bx + pa.w / 2, Math.min(pa.bx + pa.bw - pa.w / 2, pa.x));
-              pb.x = Math.max(pb.bx + pb.w / 2, Math.min(pb.bx + pb.bw - pb.w / 2, pb.x));
-            }
-          }
-        }
         XY.gacha10.lastNames = names;
+        XY.gacha10.lastNameAudit = audit;
         names.forEach(function (nm) {
-          var hx = nm.x - nm.w / 2 - 8, hy = nm.y - nm.h / 2 - 6, hw = nm.w + 16, hh = Math.max(32, nm.h + 12);
-          var hot = v.lit === nm.id || st.over(hx, hy, hw, hh);
-          inkName(c, nm.text, nm.x, nm.y, nm.size, nm.w + 8, hot ? '#7a261c' : '#1a120c');
-          if (nm.unlock) cinSeal(c, nm.x - nm.w * 0.5 - nm.size * 0.45, nm.y, nm.size * 0.62, '新');
-          if (nm.n > 1) cinSeal(c, nm.x + nm.w * 0.5 + nm.size * 0.45, nm.y, nm.size * 0.62, String(nm.n));
+          var hx = nm.x - nm.w / 2 - 6, hy = nm.y - nm.h / 2 - 4, hw = nm.w + 12, hh = Math.max(28, nm.h + 8);
+          inkName(c, nm.text, nm.x, nm.y, nm.size, nm.w + 4, '#1a120c', true);
+          if (nm.unlock) cinSeal(c, nm.x + nm.w / 2 + nm.size * 0.95, nm.y + nm.h * 0.15, Math.max(14, nm.size * 0.42), '新');
+          if (nm.n > 1) cinSeal(c, nm.x - nm.w / 2 - nm.size * 0.7, nm.y + nm.h * 0.15, Math.max(14, nm.size * 0.42), String(nm.n));
           st.hit(hx, hy, hw, hh, 'gachaPick', { id: nm.id });
         });
       }
       st.btn(cw * 0.5 - 70, ch - 52, 140, 44, '收下', 'gachaAck', { pri: true, col: '#9d2b22', sz: 20 });
     }
   };
-
-
 
   DP.draw = function (c, G, a) {
     XY.departPlates = []; XY.departSeals = []; XY.departTexts = []; XY.departCards = [];

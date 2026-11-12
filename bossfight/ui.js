@@ -34,11 +34,12 @@
   var MIDP = {};
   function loadMids(id) { if (MIDP[id] || !SMETA[id]) return MIDP[id]; var ps = Object.keys(SMETA[id]).filter(function (p) { return SMETA[id][p].m; }); return (MIDP[id] = Promise.all(ps.map(function (p) { return loadPose(id, p); }))); }
   function loadBG(k) { if (BGP[k]) return BGP[k]; return (BGP[k] = loadImg('assets/bg-' + k + '.webp').then(function (i) { if (i.naturalWidth) BG[k] = i; })); }
+  function loadInk(k, url) { return loadImg(url).then(function (i) { if (i.naturalWidth) BG[k] = i; }); }
   function ensureLoaded() {
     if (ready) return ready;
     var portrait = (Q.get('w') ? +Q.get('w') < +Q.get('h') : innerWidth < innerHeight);
     ready = Promise.resolve(window.BF_SPR_META).then(function (m) {
-      SMETA = m; if (window.BFUI) window.BFUI.SMETA = m; var jobs = [loadChar('wukong'), loadChar('niumo'), loadBG('land')];
+      SMETA = m; if (window.BFUI) window.BFUI.SMETA = m; var jobs = [loadChar('wukong'), loadChar('niumo'), loadInk('far', '../assets/art/menu-v5/bg_v4.webp'), loadInk('wash', '../assets/art/menu-v5/bg_v2.webp')];
       if (portrait) jobs.push(loadBG('port'));
       FIGS.forEach(function (k) { jobs.push(loadColorAv(k)); });
       jobs.push(loadImg('assets/mink-elite.webp').then(function (i) { MINK = i; }),
@@ -76,7 +77,7 @@
     G.W = W; G.H = H; G.land = W > H; G.dpr = dpr; G.S = G.land ? H / 390 : W / 390;
     cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
     if (ready && !G.land) loadBG('port');
-    G.gy = G.land ? H * 0.845 : H * 0.78; G.fh = G.land ? H * 0.58 : Math.min(H * 0.26, W * 0.38);
+    G.gy = G.land ? H * 0.845 : H * 0.82; G.fh = G.land ? H * 0.58 : H * 0.4;
     var p = $('pick').getBoundingClientRect(); pcv.width = Math.max(2, Math.round(p.width * dpr * 0.5)); pcv.height = Math.max(2, Math.round(p.height * dpr));
     var st = pcv.parentNode.getBoundingClientRect(); pcv.width = Math.round(st.width * dpr); pcv.height = Math.round(st.height * dpr);
     var bsb = $('sumbtn'); bsb.style.display = 'none';
@@ -125,8 +126,8 @@
       if (dd < ms) { var def = ms - dd, u = clamp((Math.abs(hs[1].r) - Math.abs(hs[0].r)) / ms, -1, 1);
         hs[1].s += (hs[1].r < 0 ? -1 : 1) * def * (.5 + .5 * u); hs[0].s += (hs[0].r < 0 ? -1 : 1) * def * (.5 - .5 * u); } }
     if (!G.land) {
-      hs.forEach(function (e) { pos.h[e.h.id] = e.h.w ? W * 0.36 : W * 0.14; });
-      pos.boss = W * 0.8;
+      hs.forEach(function (e) { pos.h[e.h.id] = e.h.w ? W * 0.4 : W * 0.14; });
+      pos.boss = W * 0.86;
     } else if (hs.length >= 2) {
       hs.forEach(function (e) { pos.h[e.h.id] = e.h.w ? W * 0.28 : W * 0.1; });
       pos.boss = W * 0.74;
@@ -565,56 +566,48 @@
   }
 
   /* ---------- 画：场景 ---------- */
-  function drawBG(c, W, H, camx) {
-    /* 仓库里的 bg-land / bg-port 是 1280 的 yuv420，放大后山缘锯齿、地面碎点。
-       这里按当前画布分辨率现画淡色水墨山，不再放大那张有损图。 */
+  function coverPlate(c, im, W, H, ox, oy, alpha) {
+    if (!im || !im.naturalWidth) return;
+    var sc = Math.max(W / im.naturalWidth, H / im.naturalHeight);
+    var w = im.naturalWidth * sc, h = im.naturalHeight * sc;
     c.save();
-    c.fillStyle = '#f6f0e4';
+    c.globalAlpha = alpha;
+    c.drawImage(im, (W - w) / 2 + ox, oy, w, h);
+    c.restore();
+  }
+  function drawBG(c, W, H, camx) {
+    /* 首页已上屏的淡墨远山 bg_v4，叠一层首页 bg_v2 的下半地面泼墨。不画矢量细线。 */
+    c.save();
+    c.fillStyle = '#f6f1e6';
     c.fillRect(0, 0, W, H);
-    c.translate(camx * 0.35, 0);
-    function ridge(y0, amp, col, alpha, seed) {
-      c.beginPath();
-      c.moveTo(-W * 0.2, H);
-      var i, n = 18, x, y;
-      for (i = 0; i <= n; i++) {
-        x = -W * 0.2 + (W * 1.4) * i / n;
-        y = y0 + Math.sin(i * 1.7 + seed) * amp + Math.sin(i * 0.63 + seed * 2) * amp * 0.45;
-        if (i === 0) c.lineTo(x, y);
-        else c.quadraticCurveTo(x - (W * 1.4) / n * 0.5, y + Math.sin(i + seed) * amp * 0.2, x, y);
-      }
-      c.lineTo(W * 1.3, H);
-      c.closePath();
-      c.globalAlpha = alpha;
-      c.fillStyle = col;
-      c.fill();
-      c.globalAlpha = Math.min(1, alpha + 0.15);
-      c.strokeStyle = 'rgba(42,34,26,0.35)';
-      c.lineWidth = 1.4;
-      c.stroke();
+    var far = BG.far, wash = BG.wash;
+    if (far) {
+      var sc = Math.max(W / far.naturalWidth, H / far.naturalHeight) * (G.land ? 1.05 : 1.15);
+      var w = far.naturalWidth * sc, h = far.naturalHeight * sc;
+      var oy = G.land ? Math.min(0, H * 0.08 - h * 0.12) : -h * 0.02;
+      c.save();
+      c.globalAlpha = 0.78;
+      c.drawImage(far, (W - w) / 2 + camx * 0.25, oy, w, h);
+      c.restore();
     }
-    ridge(H * 0.34, H * 0.035, '#e4d5c4', 0.9, 1.2);
-    ridge(H * 0.42, H * 0.05, '#d7c4b0', 0.85, 2.4);
-    ridge(H * 0.52, H * 0.045, '#cbb6a2', 0.8, 0.4);
-    c.globalAlpha = 0.55;
-    c.fillStyle = '#efe4d4';
-    c.beginPath();
-    c.moveTo(0, G.gy - H * 0.02);
-    c.quadraticCurveTo(W * 0.5, G.gy - H * 0.06, W, G.gy - H * 0.01);
-    c.lineTo(W, H);
-    c.lineTo(0, H);
-    c.closePath();
-    c.fill();
-    c.globalAlpha = 0.22;
-    c.strokeStyle = '#8a7560';
-    c.lineWidth = 1.2;
-    var k;
-    for (k = 0; k < 7; k++) {
-      var bx = W * (0.08 + k * 0.13);
-      c.beginPath();
-      c.moveTo(bx, G.gy - H * 0.02);
-      c.quadraticCurveTo(bx + 6, G.gy - H * 0.16, bx - 2, G.gy - H * 0.28);
-      c.stroke();
+    if (wash) {
+      var sy = Math.round(wash.naturalHeight * 0.62), sh = wash.naturalHeight - sy;
+      c.save();
+      c.globalAlpha = 0.34;
+      c.drawImage(wash, 0, sy, wash.naturalWidth, sh, -W * 0.04, H * 0.58, W * 1.08, H * 0.44);
+      c.restore();
+      var seam = c.createLinearGradient(0, H * 0.5, 0, H * 0.7);
+      seam.addColorStop(0, 'rgba(246,241,230,0)');
+      seam.addColorStop(0.35, 'rgba(246,241,230,0.55)');
+      seam.addColorStop(1, 'rgba(246,241,230,0)');
+      c.fillStyle = seam;
+      c.fillRect(0, H * 0.5, W, H * 0.22);
     }
+    var veil = c.createLinearGradient(0, H * 0.42, 0, H);
+    veil.addColorStop(0, 'rgba(246,241,230,0)');
+    veil.addColorStop(1, 'rgba(246,241,230,0.28)');
+    c.fillStyle = veil;
+    c.fillRect(0, H * 0.42, W, H * 0.58);
     c.restore();
   }
   function drawTele(c) {
@@ -730,8 +723,9 @@
     head(c, 'wukong', 34 * S + (land ? 6 * S : 0), top + 24 * S, (land ? 27 : 24) * S, '#5c4030');
     head(c, 'niumo', W - 34 * S - (land ? 6 * S : 0), top + 24 * S, (land ? 27 : 24) * S, '#3a342c');
     var ny = top + bh / 2 + 1 * S;
-    label(c, '孙悟空', lx + 14 * S, ny, 15 * S, '#2f2a1f'); label(c, 'Lv' + wu.lv, lx + 14 * S + 56 * S, ny + 1 * S, 11 * S, '#6d6455');
-    label(c, '牛魔王', rx + rw + sk - 18 * S, ny, 15 * S, '#2f2a1f', 'right'); label(c, b.phase === 2 ? '狂暴' : '一阶段', rx + rw + sk - 18 * S - 58 * S, ny + 1 * S, 11 * S, b.phase === 2 ? '#c8341f' : '#6d6455', 'right');
+    var namePx = Math.max(G.H < 420 ? 16 : 14, 15 * S);
+    label(c, '孙悟空', lx + 14 * S, ny, namePx, '#2f2a1f'); label(c, 'Lv' + wu.lv, lx + 14 * S + namePx * 3.6, ny + 1 * S, Math.max(11, 11 * S), '#6d6455');
+    label(c, '牛魔王', rx + rw + sk - 18 * S, ny, namePx, '#2f2a1f', 'right'); label(c, b.phase === 2 ? '狂暴' : '一阶段', rx + rw + sk - 18 * S - namePx * 3.8, ny + 1 * S, Math.max(11, 11 * S), b.phase === 2 ? '#c8341f' : '#6d6455', 'right');
     if (pa) {
       var py2 = top + bh + 5 * S + 5 * S;
       head(c, pa.id, lx + 12 * S, py2, 11 * S, pa.alive ? '#5c4030' : '#a39a86');
@@ -846,8 +840,9 @@
       var s = Math.min(G.W / im.naturalWidth, G.H / im.naturalHeight), dw = im.naturalWidth * s, dh = im.naturalHeight * s;
       c.drawImage(im, (G.W - dw) / 2, (G.H - dh) / 2, dw, dh);
     }
-    c.fillStyle = '#2a2218'; c.font = Math.round(15 * G.S) + 'px "Ma Shan Zheng","KaiTi",serif'; c.textAlign = 'right'; c.textBaseline = 'bottom';
-    c.fillText('点击跳过', G.W - 16, G.H - 12);
+    var skip = Math.max(18, Math.round(16 * Math.min(G.S, 1.6)));
+    c.fillStyle = '#2a2218'; c.font = skip + 'px "Ma Shan Zheng","KaiTi",serif'; c.textAlign = 'right'; c.textBaseline = 'alphabetic';
+    c.fillText('点按跳过', G.W - 24, G.H - 28);
     c.restore();
   }
   function draw() {
@@ -867,6 +862,15 @@
     drawMinions(c); drawFx(c, false);
     c.restore();
     if (G.flash > 0) { c.save(); c.globalAlpha = Math.min(.55, G.flash); c.fillStyle = G.flashC; c.fillRect(0, 0, W, H); c.restore(); }
+    var spd = $('spd');
+    if (spd && G.F) {
+      var tr0 = (G.land ? 29 : 22) * S, ty0 = 8 * S + (G.land ? 26 : 22) * S, seal = 30;
+      spd.style.top = Math.round(ty0 + tr0 + 4) + 'px';
+      spd.style.width = '36px';
+      spd.style.height = seal + 'px';
+      spd.style.fontSize = '17px';
+      spd.style.lineHeight = seal + 'px';
+    }
     var showingClose = G.wuCut > 0 && !G.wuCutOff;
     drawWuClose(c);
     var cutin = F.sm && F.sm.t < BF.SM.CUT;
