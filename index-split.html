@@ -9413,14 +9413,20 @@ XY.TRAITS = {
     var placed = [];
     for (j = 0; j < heroBodies.length; j++) { var o = heroBodies[j]; B.push({ h: o.h, x0: m.e + o.x0 * sc, x1: m.e + o.x1 * sc, y0: m.f + o.y0 * sc, y1: m.f + o.y1 * sc }); }
     function ov(r, list, skipH) { var a = 0; for (var q = 0; q < list.length; q++) { var t = list[q]; if (skipH && t.h === skipH) continue; var w = Math.min(r.x1, t.x1) - Math.max(r.x0, t.x0), h = Math.min(r.y1, t.y1) - Math.max(r.y0, t.y0); if (w > 0 && h > 0) a += w * h; } return a; }
+    XY.R4.bodyRects = B;
+    if (XY.R4.planMapLabels && window.__xy && window.__xy.G && XY.app) {
+      var mapNow = XY.R4.planMapLabels(c, window.__xy.G, XY.app);
+      for (j = 0; j < mapNow.length; j++) { L.push(mapNow[j].lr); if (mapNow[j].ar) L.push(mapNow[j].ar); }
+    }
     for (i = 0; i < heroNames.length; i++) {
-      var n = heroNames[i], box = nameBox(c, n), tw = box.w, th = box.h, best = null, sg = n.dir < 0 ? -1 : 1, dx = 64, cand = [[0, 0], [-dx, 0], [dx, 0], [0, sg * th], [-dx, sg * th], [dx, sg * th], [0, sg * th * 2.2], [-dx * 1.8, 0], [dx * 1.8, 0], [-dx, sg * th * 2.2], [dx, sg * th * 2.2]];
+      var n = heroNames[i], box = nameBox(c, n), tw = box.w, th = box.h, best = null, sg = n.dir < 0 ? -1 : 1, dx = 72, cand = [[0, 0], [-dx, 0], [dx, 0], [0, sg * th], [-dx, sg * th], [dx, sg * th], [0, sg * th * 2.2], [-dx * 1.8, 0], [dx * 1.8, 0], [-dx * 2.6, sg * th], [dx * 2.6, sg * th], [0, sg * th * 3.4], [-dx, sg * th * 3.4], [dx, sg * th * 3.4]];
       for (k = 0; k < cand.length; k++) {
         var cy = n.y + cand[k][1], cx = n.x + cand[k][0], r = { x0: m.e + (cx - tw / 2) * sc, x1: m.e + (cx + tw / 2) * sc, y0: m.f + (cy - th / 2) * sc, y1: m.f + (cy + th / 2) * sc };
-        var sc0 = ov(r, L, null) * 4 + ov(r, B, n.h) * 0.12 + (Math.abs(cand[k][0]) * 0.6 + Math.abs(cand[k][1])) * 0.05 * sc;
-        if (!best || sc0 < best.s) best = { s: sc0, x: cx, y: cy, r: r };
+        var onBody = ov(r, B, n.h), onText = ov(r, L, null);
+        var sc0 = onText * 8 + onBody * 24 + (Math.abs(cand[k][0]) * 0.6 + Math.abs(cand[k][1])) * 0.05 * sc;
+        if (!best || sc0 < best.s) best = { s: sc0, x: cx, y: cy, r: r, body: onBody, text: onText };
       }
-      if (ov(best.r, placed, null) > 0 && !(n.h && (n.h.i === ctrl || n.h.id === 'tang'))) continue;
+      if ((best.body > 0 || best.text > 0 || ov(best.r, placed, null) > 0) && !(n.h && (n.h.i === ctrl || n.h.id === 'tang'))) continue;
       placed.push(best.r);
       L.push(best.r);
       c.save(); c.globalAlpha = n.a; paintName(c, n, best.x, best.y, box, n.col);
