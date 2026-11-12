@@ -19650,9 +19650,13 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
     var pg = Math.max(0, Math.min(P.page[key] || 0, Math.ceil(n / per) - 1)); P.page[key] = pg;
     if (n > per) {
       var tot = Math.ceil(n / per);
-      K.btn(x, y, 72, 44, '‹ 上页', 'pvPage', { key: key, d: -1 }, { off: pg === 0, size: 14 });
+      K.t('上页', x + 28, y + 22, 16, pg === 0 ? '#b5aa96' : '#24180f', 'center', true);
+      if (XY.INKP && pg > 0) XY.INKP.stroke(K.c, x + 8, y + 36, x + 52, y + 36, 1.2, '83,61,34', 0.45, 2, 0.01);
+      if (pg > 0) K.hit(x, y, 72, 44, 'pvPage', { key: key, d: -1 });
       if(!quiet)K.t((pg + 1) + ' / ' + tot, x + w / 2, y + 22, 15, T.inkSoft, 'center', true);
-      K.btn(x + w - 72, y, 72, 44, '下页 ›', 'pvPage', { key: key, d: 1 }, { off: pg >= tot - 1, size: 14 });
+      K.t('下页', x + w - 28, y + 22, 16, pg >= tot - 1 ? '#b5aa96' : '#24180f', 'center', true);
+      if (XY.INKP && pg < tot - 1) XY.INKP.stroke(K.c, x + w - 52, y + 36, x + w - 8, y + 36, 1.2, '83,61,34', 0.45, 3, 0.01);
+      if (pg < tot - 1) K.hit(x + w - 72, y, 72, 44, 'pvPage', { key: key, d: 1 });
     }
     return pg * per;
   };
@@ -20077,25 +20081,25 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
   /* ================= 图鉴 ================= */
   function dex(c,G,app) {
     var f=P.frame(c,app,'众生藏卷'),port=K.port,tab=app.dexTab||'enemy',hp=XY.dexH,tx=port?f.x:224,ty=port?f.y:f.y-52,nTabs=tab==='card'?4:3,tw=port?(f.w-18)/nTabs:Math.min(90,(f.chipX-tx-24)/nTabs);
-    [['enemy','妖怪'],['card','法宝'],['syn','协同']].forEach(function(t,i){K.btn(tx+i*(tw+6),ty,tw,44,t[1],'dexTab',{tab:t[0]},{on:tab===t[0],size:15});});
-    if(tab==='card')K.btn(tx+3*(tw+6),ty,tw,44,app.dexStarter?'仅起手':'全部','dexStarter',{}, {on:!!app.dexStarter,size:13});
+    [['enemy','妖怪'],['card','法宝'],['syn','协同']].forEach(function(t,i){var on=tab===t[0],bx=tx+i*(tw+6);K.t(t[1],bx+tw/2,ty+20,16,on?'#a42d19':'#24180f','center',true);if(XY.INKP)XY.INKP.stroke(c,bx+6,ty+38,bx+tw-6,ty+38,on?2.2:0.7,on?'164,45,25':'83,61,34',on?0.85:0.28,i+4,0.01);K.hit(bx,ty,tw,44,'dexTab',{tab:t[0]});});
+    if(tab==='card'){var bx4=tx+3*(tw+6),on4=!!app.dexStarter;K.t(on4?'仅起手':'全部',bx4+tw/2,ty+20,14,on4?'#a42d19':'#24180f','center',true);if(XY.INKP)XY.INKP.stroke(c,bx4+6,ty+38,bx4+tw-6,ty+38,on4?2:0.7,on4?'164,45,25':'83,61,34',on4?0.8:0.25,9,0.01);K.hit(bx4,ty,tw,44,'dexStarter',{});}
     var top=port?f.y+54:f.y+8,bot=f.y+f.h,bh=bot-top,lw=port?f.w*.39:f.w*.43,rx=f.x+lw+20,rw=f.w-lw-20,ribbonY=port?bot-188:bot-153;
     var list=tab==='enemy'?XY.ENEMY_ORDER.map(function(t){return{id:t};}):tab==='card'?XY.CARDS.filter(function(z){return !app.dexStarter||S.fbTag(z.id).kind==='starter';}):XY.SYNS;
     var per=6,key='inkdex-'+tab,from=P.pager(list.length,per,key,f.x,bot-44,port?f.w:lw),sel=app.dexSel&&list.some(function(z){return z.id===app.dexSel;})?app.dexSel:list.length?list[0].id:null,view=P.folio.dexDetail||0;
-    var nav=tab==='enemy'?['志','战法','收集']:tab==='card'?['故事','数值','来处']:['搭档','招式','修习'];nav.forEach(function(t,i){K.btn(rx+i*rw/3,top,rw/3-4,44,t,'folio',{key:'dexDetail',i:i},{on:i===view,size:14});});
+    var nav=tab==='enemy'?['志','战法','收集']:tab==='card'?['故事','数值','来处']:['搭档','招式','修习'];nav.forEach(function(t,i){var on=i===view,bx=rx+i*rw/3,bw=rw/3-4;K.t(t,bx+bw/2,top+20,16,on?'#a42d19':'#24180f','center',true);if(XY.INKP)XY.INKP.stroke(c,bx+8,top+38,bx+bw-8,top+38,on?2.2:0.7,on?'164,45,25':'83,61,34',on?0.85:0.28,i+11,0.01);K.hit(bx,top,bw,44,'folio',{key:'dexDetail',i:i});});
     if(!sel){K.lines('没有符合筛选的藏品。',rx,top+70,rw,15,20,T.inkSoft,6,false);P.end(c);return;}
     var title='',sub='',text='',colour=T.ink,seen=false,artH=Math.min(port?230:350,ribbonY-top-30,lw*1.18),foot=port?Math.min(ribbonY-24,top+340):ribbonY-18,cx=f.x+lw*.52;
     function hero(id,x,y,r){var d=XY.SP_BY[id]?XY.specialDef(id,Math.max(1,S.spLevel(id))):XY.HEROES.filter(function(z){return z.id===id;})[0];if(d)XY.hud2.face(c,{id:id,def:d},x,y,r,app.rt);}
     if(tab==='enemy'){
       var ee=S.dexOf(sel),sn=ee&&ee.seen>0,dd=XY.ENEMIES[sel],bz=XY.BESTIARY[sel];title=sn?dd.name:'未曾相逢';sub=sn?'遇见 '+ee.seen+' · 击杀 '+ee.kills:'在战场相逢，才会记进此卷';
-      c.save();if(!sn){c.globalAlpha=.22;}var drawn=XY.MINK&&(XY.MINK.portrait(c,sel,cx,foot,artH)||(XY.MINK.dexPose&&XY.MINK.dexPose(c,sel,cx,foot,artH)));c.restore();if(!drawn)hp.enemyIcon(c,sel,cx,foot-artH/2,Math.min(62,artH*.38),!sn,app.rt);
+      c.save();if(!sn){c.globalAlpha=.22;}var drawn=XY.MINK&&(XY.MINK.portrait(c,sel,cx,foot,artH)||(XY.MINK.dexPose&&XY.MINK.dexPose(c,sel,cx,foot,artH)));c.restore();if(!drawn)hp.enemyIcon(c,sel,cx,foot-artH*0.42,Math.min(artH*0.42,lw*0.38),!sn,app.rt);
       if(!sn)text='在战斗里遇到它，就会记进图鉴。还看不到详细信息。';
-      else if(view===0)text=bz.desc;
+      else if(view===0)text=bz.desc+'\n\n对付它：'+bz.tip+'\n掉落：'+bz.drop;
       else if(view===1)text='生命 '+dd.hp+' · 速度 '+dd.speed+' · '+(dd.dive?'俯冲伤害 '+Math.round(dd.dmg*dd.dive.mul*10)/10:'碰撞伤害 '+dd.dmg)+(dd.range?' · 远程':'')+(dd.fly?' · 飞行':'')+'\n对付它：'+bz.tip+'\n掉落：'+bz.drop;
       else{var names=Object.keys(S.data.cosFrames||{}).map(function(k){return S.data.cosFrames[k];});text=(ee.card?'已得「'+ee.card+'」':'这种小妖进化到Ⅲ阶，可得西游线图鉴卡。')+'\n'+(names.length?'头像框：'+names.join('、'):'小妖进化到Ⅴ阶，可得头像框。');}
     }else if(tab==='card'){
       var cd=XY.CARD_BY[sel],own=S.has(sel),rar=XY.RARITY[cd.r],set=XY.CARD_SETS[cd.set],rec=S.data.cards[sel];title=own?cd.name:'未收得';sub=rar.name+' · '+set.name+'套（'+set.theme+'）';colour=rar.color;
-      c.save();c.translate(cx,foot-artH*.48);c.rotate(-.065);R.drawCardMini(c,own?cd:{name:'？',set:cd.set,r:cd.r},0,0,artH*.62,artH*.88,own?1:.45);c.restore();
+      c.save();c.translate(cx,foot-artH*.48);c.rotate(-.065);R.drawCardMini(c,own?cd:{name:'未',set:cd.set,r:cd.r},0,0,artH*.62,artH*.88,own?1:.45);c.restore();
       if(view===0)text=own?cd.lore:'还没有获得。局内精英、宝箱、牛魔王都有机会掉落。';
       else if(view===1)text=own?'效果（Lv'+rec.lv+'）：'+XY.cardFxText(cd,rec.lv)+'\n累计获得 '+rec.got+' 次 · 等级 Lv'+rec.lv+'/'+XY.CARD_MAXLV:'未获得，还没有法宝等级。';
       else text=S.fbTag(sel).text+'\n'+(S.data.dex['hid:phcollect']?'图鉴线索已解开：Phyrex在场且由你亲自操控满30秒，可一次吸来全图灵石与金币。':'图鉴线索：听说有位大佬，被亲自带着走一阵子，战场上会发生一件好事。');
@@ -20103,17 +20107,17 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
       var sy=XY.SYN_BY[sel],got=S.data.dex['syn:'+sel],kind=XY.SYN_KIND[sy.kind0];title=got?sy.fullName:'未曾修习';sub=hp.synName(sy.a)+' + '+hp.synName(sy.b);
       hero(sy.a,cx-lw*.12,foot-artH*.56,Math.min(64,artH*.30));hero(sy.b,cx+lw*.16,foot-artH*.31,Math.min(52,artH*.24));
       if(view===0)text='五行：'+ELN(synElemId(sy.a))+' 与 '+ELN(synElemId(sy.b))+'\n搭配：'+sy.note+'\n玩法：'+kind.name;
-      else if(view===1)text=got?'Lv1：'+kind.desc(sy,1)+'\nLv2：'+kind.desc(sy,2):'还没有修习，学会后招式效果会记进此卷。';
+      else if(view===1)text=got?'一级：'+kind.desc(sy,1)+'\n二级：'+kind.desc(sy,2):'还没有修习，学会后招式效果会记进此卷。';
       else text=got?'已学到Lv'+got.lv+' · 技能点 '+XY.SYN_COST[0]+' + '+XY.SYN_COST[1]:'局内打开菜单 → 全队 → 协同技，选好搭档后学习。带「常驻」的协同技需带上相应人物。';
     }
-    K.tf(title,rx,top+65,rw,port?22:28,colour,'left',true,16);var yy=K.lines(sub,rx,top+97,rw,13,18,T.inkSoft,3,false);
-    text.split('\n').forEach(function(t){yy=K.lines(t,rx,yy+12,rw,13,18,T.ink,12,false);});
+    K.tf(title,rx,top+72,rw,port?26:34,colour,'left',true,18);var yy=K.lines(sub,rx,top+112,rw,18,26,T.inkSoft,4,false);
+    text.split('\n').forEach(function(t){yy=K.lines(t,rx,yy+18,rw,20,30,T.ink,6,false);});
     K.t(tab==='enemy'?'众生':tab==='card'?'珍藏':'同修',f.x+2,top+20,24,'#a42d19','left',true);
     P.objects(c,app,list.slice(from,from+per),{x:f.x,y:ribbonY,w:port?f.w:lw,h:91},sel,'dexSel',function(z,x,y,w,h){
       if(tab==='enemy'){var e=S.dexOf(z.id);if(e&&e.seen>0)hp.enemyIcon(c,z.id,x,y,Math.min(24,w*.34),false,app.rt);else{c.save();c.font='22px "Ma Shan Zheng","KaiTi",serif';c.fillStyle='#6d5b45';c.textAlign='center';c.textBaseline='middle';c.fillText('未',x,y);c.restore();}}
-      else if(tab==='card')R.drawCardMini(c,S.has(z.id)?z:{name:'？',set:z.set,r:z.r},x,y,Math.min(50,w*.68),Math.min(76,h),S.has(z.id)?1:.45);
+      else if(tab==='card')R.drawCardMini(c,S.has(z.id)?z:{name:'未',set:z.set,r:z.r},x,y,Math.min(50,w*.68),Math.min(76,h),S.has(z.id)?1:.45);
       else{hero(z.a,x-w*.12,y-7,Math.min(18,w*.25));hero(z.b,x+w*.14,y+12,Math.min(17,w*.24));}
-    },function(z){if(tab==='enemy'){var e=S.dexOf(z.id);return e&&e.seen>0?XY.ENEMIES[z.id].name:'？？？';}if(tab==='card')return S.has(z.id)?z.name:'？？？';return S.data.dex['syn:'+z.id]?z.fullName:'同修 '+(XY.SYNS.indexOf(z)+1);});
+    },function(z){if(tab==='enemy'){var e=S.dexOf(z.id);return e&&e.seen>0?XY.ENEMIES[z.id].name:'未得';}if(tab==='card')return S.has(z.id)?z.name:'未得';return S.data.dex['syn:'+z.id]?z.fullName:'同修 '+(XY.SYNS.indexOf(z)+1);});
     P.end(c);
     function synElemId(id){var d=XY.SP_BY[id]||XY.HEROES.filter(function(z){return z.id===id;})[0];return d&&d.elem;}
   }
@@ -22748,10 +22752,10 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
   var XY = window.XY, S = XY.save, XC = XY.xchar, VD = XY.VD, B = XY.board = {};
 
   B.BOARDS = [
-    { id: 'lair', name: '洞府守关', tab: '洞府守关', dir: 'desc', unit: '分', rule: '别人闯你的洞府：守住得 100，被闯过扣分，漏过去的英雄越少越好', hint: '去反派模式「设计洞府」验一次关', col: '#7a5bb5' },
+    { id: 'lair', name: '洞府守关', tab: '洞府守关', dir: 'desc', unit: '分', rule: '别人闯你的洞府：守住得 100，被闯过扣分，漏过去的英雄越少越好', hint: '去反派模式「设计洞府」验一次关', col: '#a42d19' },
     { id: 'progress', name: '通关进度', tab: '通关进度', dir: 'desc', unit: '星', rule: '西游线星数：每关通关 1 星 + 支线 1 个 1 星（每关最多 3 星）；星数相同比总用时', hint: '通关一关就有星', col: '#2f8a62' },
-    { id: 'boss', name: 'Boss 战', sealCh: '战', tab: 'Boss 战', dir: 'asc', unit: '秒', rule: '牛魔王 Boss 战最短通关用时（越短越靠前）', hint: '打赢一次牛魔王 Boss 战', col: '#a8321f' },
-    { id: 'villain', name: '反派养成', tab: '反派养成', dir: 'desc', unit: '战力', rule: '小妖总战力 + 洞府评分（进化、三阶、验关、发布都会加分）', hint: '进反派模式打一关或进化小妖', col: '#5a3a7a' },
+    { id: 'boss', name: '头目战', sealCh: '战', tab: '头目战', dir: 'asc', unit: '秒', rule: '牛魔王头目战最短通关用时（越短越靠前）', hint: '打赢一次牛魔王头目战', col: '#a42d19' },
+    { id: 'villain', name: '反派养成', tab: '反派养成', dir: 'desc', unit: '战力', rule: '小妖总战力 + 洞府评分（进化、三阶、验关、发布都会加分）', hint: '进反派模式打一关或进化小妖', col: '#6e211b' },
     { id: 'ref', name: '引路', tab: '引路', dir: 'desc', unit: '人', rule: '分享带引路码的 Bot，新人从 Bot 启动进游戏才算有效拉新', hint: '引路系统还没接通，先占位', col: '#c8341f' }
   ];
   B.BY = {}; B.BOARDS.forEach(function (b) { B.BY[b.id] = b; });
@@ -23096,8 +23100,9 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
       var lw = Math.max(168, Math.min(232, Math.round(cw * 0.24))), th = ch < 430 ? 44 : 50, tg = ch < 430 ? 5 : 9, jx = [0, 8, 2, 12, 5], jw = [0, 18, 6, 26, 12];
       for (i = 0; i < tabs.length; i++) {
         var ty = top + 8 + i * (th + tg), on = tabs[i].id === def.id, tx0 = 16 + jx[i], tww = lw - jw[i];
-        if (on) st.btn(tx0, ty, tww, th, tabs[i].tab, 'bdTab', { pri: true, id: tabs[i].id, col: tabs[i].col, sz: 18, stack: false, rot: -0.02 + i * 0.012 });
-        else st.btn(tx0, ty, tww, th, tabs[i].tab, 'bdTab', { id: tabs[i].id, sz: 16 });
+        VU.txt(c, tabs[i].tab, tx0 + 12, ty + th * 0.55, on ? 20 : 16, on ? RED : INK, 'left', true, tww - 16);
+        if (on) VU.brush(c, tx0 + 12, ty + th - 8, Math.min(128, tww - 24), 3.2, 0.55, i + 4);
+        st.hit(tx0, ty, tww, th, 'bdTab', { id: tabs[i].id });
         G2.tabs.push({ id: tabs[i].id, x: tx0, y: ty, w: tww, h: th });
       }
       var ly = top + 8 + tabs.length * (th + tg) + 6;
@@ -23125,11 +23130,14 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
     VU.brush(c, px + 40, hy + 28, Math.min(tmax, 92), 3.5, 0.28, 17, IP.rgb(def.col));
     var rh = VU.wrap(c, def.rule, px, hy + 52, land ? pwid - ctrlW - 6 : pwid, 16, 12.5, SOFT, false, land ? 2 : 3);
     if (land) {
-      st.btn(cardX + cardW - 18 - 104 - 4, hy - 6, 104, 44, '用哪个 X', 'bdPick', { seal: true, col: '#7a6a47', sz: 14 });
-      st.btn(cardX + cardW - 18 - 100 - 118, hy - 6, 100, 44, '样例：' + (B.samplesOn() ? '开' : '关'), 'bdSamples', { sz: 14 });
+      VU.txt(c, '用哪个', cardX + cardW - 70, hy + 16, 16, INK, 'center', true, 90);
+      if (VU.brush) VU.brush(c, cardX + cardW - 108, hy + 30, 72, 2.4, 0.4, 8);
+      st.hit(cardX + cardW - 118, hy - 6, 104, 44, 'bdPick');
+      VU.txt(c, '样例' + (B.samplesOn() ? '开' : '关'), cardX + cardW - 196, hy + 16, 16, INK, 'center', true, 90);
+      st.hit(cardX + cardW - 240, hy - 6, 100, 44, 'bdSamples');
       VU.txt(c, me.bound ? '榜上的我：@' + me.handle : '榜上的我：未绑定（本机昵称 ' + me.name + '）', cardX + cardW - 18, hy + 52, 12, SOFT, 'right', false, ctrlW + 40);
     }
-    var ry = hy + 52 + rh + 6, rowH = ch >= 560 ? 62 : ch >= 420 ? 56 : 50, avail = cardY + cardH - 12 - ry, list = rows(), n = Math.floor(avail / rowH);
+    var ry = hy + 52 + rh + 6, avail = cardY + cardH - 12 - ry, list = rows(), rowH = ch >= 560 ? 62 : ch >= 420 ? 56 : 50, n = Math.floor(avail / rowH);
     var myI = 0; for (i = 0; i < list.length; i++) if (list[i].me) { myI = i; break; }
     if (n < 2) n = 2;
     if (list.length <= n || myI < n) list.slice(0, n).forEach(function (e, j) { drawRow(c, cardX + 10, ry + j * rowH, cardW - 20, rowH, e, def, j); });
@@ -23138,6 +23146,10 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
       list.slice(0, n2 - 1).forEach(function (e, j) { drawRow(c, cardX + 10, ry + j * rowH, cardW - 20, rowH, e, def, j); });
       var yd = ry + (n2 - 1) * rowH; R.txt(c, '· · ·', cardX + cardW / 2, yd + 9, 14, 'rgba(58,50,38,0.4)', 'center', true);
       drawRow(c, cardX + 10, yd + 18, cardW - 20, rowH, list[myI], def, 1);
+    }
+    if (list.length <= 3) {
+      var fillY = ry + Math.min(list.length, n) * rowH + 16;
+      if (cardY + cardH - fillY > 80) VU.wrap(c, def.rule + '。' + (def.hint || ''), cardX + 28, fillY, cardW - 56, 34, 22, INK, false, 5);
     }
     G2.card = { x: cardX, y: cardY, w: cardW, h: cardH, rowH: rowH, shown: n };
     if (BU.pick) drawPick(c, st, a, me);
