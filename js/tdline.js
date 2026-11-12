@@ -1632,6 +1632,18 @@
     ctx.stroke();
     ctx.restore();
   }
+  function inkStrip(ctx, x, y, w, h) {
+    ctx.save();
+    ctx.fillStyle = 'rgba(43,28,8,0.92)';
+    ctx.beginPath();
+    ctx.moveTo(x + 10, y + 4);
+    ctx.quadraticCurveTo(x + w * 0.45, y - 1, x + w - 8, y + 5);
+    ctx.lineTo(x + w - 3, y + h - 7);
+    ctx.quadraticCurveTo(x + w * 0.5, y + h + 2, x + 8, y + h - 4);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
   function drawFx(ctx, G) {
     var i, fx, k, p;
     for (i = 0; i < G.td.fx.length; i++) {
@@ -1674,21 +1686,21 @@
       var sr = narrow ? 30 : 38;
       seal(ctx, W - sr - 18, 78 + sr, sr, '出发');
       hit(W - sr * 2 - 26, 78, sr * 2 + 16, sr * 2 + 16, 'tdStart');
-      ctx.fillStyle = '#2a241c'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#f6efe2'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       if (narrow) {
         var bw = Math.min(W - 24, 340);
-        torn(ctx, 12, 210, bw, 30);
+        inkStrip(ctx, 12, 210, bw, 30);
         ctx.font = brushFont(15);
         ctx.fillText('布置天兵，再点出发', 12 + bw / 2, 225);
         var hw = Math.min(W - 24, 460);
-        torn(ctx, 12, 246, hw, 34);
+        inkStrip(ctx, 12, 246, hw, 34);
         ctx.font = brushFont(14);
         ctx.fillText(R.FLY_HINT, 12 + hw / 2, 263);
       } else {
-        torn(ctx, W / 2 - 168, 40, 336, 34);
+        inkStrip(ctx, W / 2 - 168, 40, 336, 34);
         ctx.font = brushFont(20);
         ctx.fillText('布置天兵，再点出发', W / 2, 57);
-        torn(ctx, W / 2 - 240, 78, 480, 32);
+        inkStrip(ctx, W / 2 - 240, 78, 480, 32);
         ctx.font = brushFont(16);
         ctx.fillText(R.FLY_HINT, W / 2, 94);
       }
@@ -1933,11 +1945,11 @@
     var cw = phone() ? Math.min(340, W * 0.62) : 420, ch = phone() ? 176 : 148;
     var x = 18, y = phone() ? 300 : 132;
     if (x < target.x + target.w && x + cw > target.x && y < target.y + target.h && y + ch > target.y) y = Math.min(H - ch - 150, target.y + target.h + 24);
-    torn(ctx, x, y, cw, ch);
+    inkStrip(ctx, x, y, cw, ch);
     var list = G.td.guide.kind === 'td3' ? R.GUIDE3 : R.GUIDE2;
-    ctx.fillStyle = '#6e211b'; ctx.font = brushFont(phone() ? 18 : 22); ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+    ctx.fillStyle = '#f6efe2'; ctx.font = brushFont(phone() ? 18 : 22); ctx.textAlign = 'left'; ctx.textBaseline = 'top';
     ctx.fillText((G.td.guide.kind === 'td3' ? '阵型' : '布阵') + ' ' + (G.td.guide.i + 1) + '/' + list.length, x + 16, y + 10);
-    ctx.fillStyle = '#2a241c'; ctx.font = brushFont(phone() ? 15 : 17);
+    ctx.fillStyle = '#f3e6c8'; ctx.font = brushFont(phone() ? 15 : 17);
     var words = st.text, line = '', lines = [], i;
     for (i = 0; i < words.length; i++) {
       if (ctx.measureText(line + words.charAt(i)).width > cw - 24) { lines.push(line); line = words.charAt(i); }

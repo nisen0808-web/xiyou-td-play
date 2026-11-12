@@ -19494,9 +19494,17 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
     }
     if (!items.length) K.lines('能买的法宝和灵物都已解锁。其余的要靠击败洞主得到。', f.x + 16, gridTop + 36, f.w - 32, 16, 22, T.inkSoft, 4, true);
     function torn(x, y, w, h, seed) {
-      c.save(); c.fillStyle = '#f4ead6';
-      c.beginPath(); c.moveTo(x + 2, y + 1); c.lineTo(x + w - 3, y); c.lineTo(x + w - 1, y + h - 2); c.lineTo(x + 1, y + h); c.closePath();
-      c.fill(); c.lineWidth = 2.1; c.strokeStyle = '#2a2118'; c.stroke(); c.restore();
+      c.save(); c.fillStyle = '#f6efe2';
+      c.beginPath();
+      c.moveTo(x + 8, y + 2);
+      c.quadraticCurveTo(x + w * 0.35, y - 3, x + w * 0.72, y + 3);
+      c.quadraticCurveTo(x + w - 2, y + 1, x + w - 1, y + 14);
+      c.quadraticCurveTo(x + w + 3, y + h * 0.48, x + w - 3, y + h - 8);
+      c.quadraticCurveTo(x + w * 0.55, y + h + 3, x + 10, y + h - 2);
+      c.quadraticCurveTo(x - 2, y + h * 0.4, x + 8, y + 2);
+      c.closePath(); c.fill(); c.restore();
+      var VU = XY.villainUI;
+      if (VU && VU.washE) VU.washE(c, x + w * 0.5, y + h * 0.55, w * 0.9, h * 0.8, '70,54,36', 0.1);
     }
     function fitArt(im, x, y, w, h) {
       if (!im) return false;
@@ -19533,7 +19541,7 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
       if (dim) c.globalAlpha = 0.55;
       c.beginPath(); c.rect(x + 2, y + 2, w - 4, h - 4); c.clip();
       var drew = false;
-      if (r.kind === 'sol' && XY.soldierInk) drew = XY.soldierInk.draw(c, r.sol, x + w / 2, y + h * 0.68, h * 0.62, w * 0.86);
+      if (r.kind === 'sol' && XY.soldierInk) drew = XY.soldierInk.draw(c, r.sol, x + w / 2, y + h * 0.76, h * 0.7, w * 0.96);
       if (!drew && r.inkName && XY.ICONINK) drew = XY.ICONINK.draw(c, r.inkName, x + w / 2, y + h * 0.46, Math.max(w, h) * 1.35);
       if (!drew && r.spId && XY.bgArt) { try { XY.bgArt(r.spId); } catch (e) {} var sealRoom = Math.max(44, Math.min(56, w * 0.22)); drew = fitArt(XY.bgArt(r.spId), x + 8, y + 8, Math.max(48, w - 20 - sealRoom), h - 18); }
       if (!drew && r.card) { inkWord(x, y, w, h, String(r.title || '宝').replace(/^.*· /, '').charAt(0) || '宝'); drew = true; }
@@ -19544,8 +19552,8 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
       g.addColorStop(0, 'rgba(243,231,207,0)'); g.addColorStop(1, 'rgba(243,231,207,0.7)');
       c.fillStyle = g; c.fillRect(x + 2, y + h * 0.84, w - 4, h * 0.16);
       c.restore();
-      inkName(String(r.title || '').replace(/^天兵卡 · |^角色卡 · |^法宝 · |^灵物 · /, ''), x + w / 2, y + h * 0.78, Math.min(28, Math.max(16, w * 0.13)), '#24180f', w - 24);
-      if (r.kind === 'sol') inkName((r.cards || 0) + ' 张' + (r.lv ? '  Lv' + r.lv : ''), x + w / 2, y + h * 0.9, 15, '#5c4034', w - 28);
+      inkName(String(r.title || '').replace(/^天兵卡 · |^角色卡 · |^法宝 · |^灵物 · /, ''), x + w / 2, y + h * 0.84, Math.min(28, Math.max(16, w * 0.13)), '#24180f', w - 24);
+      if (r.kind === 'sol') inkName((r.cards || 0) + ' 张' + (r.lv ? '  Lv' + r.lv : ''), x + w / 2, y + h * 0.93, Math.max(18, Math.min(26, w * 0.11)), '#2b1c08', w - 16);
       var seal = r.full ? '满' : (r.sold ? '售' : String(r.price == null ? '' : r.price));
       var ss = Math.max(44, Math.min(56, w * 0.22));
       cinnabar(x + w - ss - 6, y + 8, ss, seal);
@@ -23157,12 +23165,7 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
       VU.washE(c, x + w * 0.78, y + h * 0.78, w * 0.36, h * 0.18, '150,48,36', 0.05);
     }
     c.restore();
-    c.strokeStyle = 'rgba(36,28,22,0.9)';
-    c.lineWidth = Math.max(1.8, Math.min(w, h) * 0.011);
-    c.lineJoin = 'round';
-    tornPath(c, x, y, w, h, seed); c.stroke();
-    c.globalAlpha = 0.32; c.lineWidth = Math.max(0.9, Math.min(w, h) * 0.005);
-    tornPath(c, x + 3.5, y + 3.5, w - 7, h - 7, seed + 6); c.stroke();
+    if (VU.washE) VU.washE(c, x + w * 0.5, y + h * 0.48, w * 0.72, h * 0.62, '42,32,22', 0.22);
     c.restore();
   }
   XY.gacha10.CARD_RATIO = 0.66;
@@ -23229,8 +23232,12 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
   function drawBack(c, x, y, w, h, seed) {
     var ss, i, cx, cy, rx;
     gachaPaper(c, x, y, w, h, seed);
+    if (VU.washE) {
+      VU.washE(c, x + w * 0.5, y + h * 0.46, w * 0.8, h * 0.7, '36,28,20', 0.34);
+      VU.washE(c, x + w * 0.32, y + h * 0.28, w * 0.4, h * 0.24, '90,70,48', 0.16);
+    }
     c.save();
-    c.strokeStyle = 'rgba(36,28,22,0.28)'; c.lineWidth = 1.3;
+    c.strokeStyle = 'rgba(246,239,226,0.35)'; c.lineWidth = 1.3;
     for (i = 0; i < 4; i++) {
       cx = x + w * (0.28 + 0.44 * gachaHash(seed + i));
       cy = y + h * (0.18 + 0.5 * gachaHash(seed + 15 + i));
@@ -23240,7 +23247,7 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
     c.restore();
     ss = Math.min(w, h) * 0.28;
     VU.drawSeal(c, x + (w - ss) / 2, y + h * 0.34, ss, ss, '封', { style: 'solid', col: RED, sz: Math.round(ss * 0.5), rot: -0.05, stack: false, seed: 40 + seed });
-    kt(c, '天机', x + w / 2, y + h * 0.74, Math.max(18, Math.min(32, w * 0.13)), '#2b1c08', 'center', w - 24);
+    kt(c, '天机', x + w / 2, y + h * 0.74, Math.max(18, Math.min(32, w * 0.13)), '#f6efe2', 'center', w - 24);
   }
   function drawFront(c, r, x, y, w, h, seed, sealP) {
     var subY = y + h - Math.max(48, Math.min(60, h * 0.15));
@@ -23336,20 +23343,33 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
       return;
     }
     if (!land && !stage && cw > ch * 1.35 && ch < 520) {
-      var gapS = 8, padS = 10, footS = ch - 8 - 40, headS = 52;
-      var colsS = 5, rowsS = 2;
-      var availWS = cw - padS * 2, availHS = Math.max(80, footS - 28 - headS);
-      var cardWS = Math.floor((availWS - gapS * (colsS - 1)) / colsS);
-      var cardHS = Math.floor((availHS - gapS) / rowsS);
-      var gridWS = colsS * cardWS + gapS * (colsS - 1);
-      var x0s = Math.round((cw - gridWS) / 2), y0s = headS;
-      rows.forEach(function (r, idx) {
-        var col = idx % colsS, rr = Math.floor(idx / colsS);
-        var x = x0s + col * (cardWS + gapS), y = y0s + rr * (cardHS + gapS);
-        var laid = layCard(x, y, cardWS, cardHS);
-        flipCard(c, r, laid.x, laid.y, laid.w, laid.h, 40 + idx * 11, 1);
+      var perS = 2, pagesS = Math.max(1, Math.ceil(rows.length / perS));
+      v.pages = pagesS;
+      var pageS = Math.max(0, Math.min(pagesS - 1, v.page || 0));
+      v.page = pageS;
+      var sliceS = rows.slice(pageS * perS, pageS * perS + perS);
+      var footS = ch - 6 - 44, headS = 8, gapS = 14;
+      var availW = cw - 140, cardW = Math.floor((availW - gapS) / 2);
+      var cardH = Math.max(120, footS - headS - 6);
+      var gridW = sliceS.length * cardW + gapS * Math.max(0, sliceS.length - 1);
+      var x0s = Math.round((cw - gridW) / 2);
+      sliceS.forEach(function (r, k) {
+        var x = x0s + k * (cardW + gapS);
+        var laid = layCard(x, headS, cardW, cardH);
+        flipCard(c, r, laid.x, laid.y, laid.w, laid.h, 40 + (pageS * perS + k) * 11, 1);
       });
-      ackBtn((cw - Math.min(160, cw - 40)) / 2, footS, Math.min(160, cw - 40));
+      function inkArrow(x, y, label, dir, off) {
+        c.save(); c.globalAlpha = off ? 0.35 : 1; c.fillStyle = '#2b1c08';
+        c.beginPath(); c.moveTo(x + 4, y + 8); c.lineTo(x + 46, y + 6); c.lineTo(x + 42, y + 40); c.lineTo(x + 2, y + 38); c.closePath(); c.fill();
+        c.fillStyle = '#f6efe2'; c.font = '26px "Ma Shan Zheng","KaiTi",serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
+        c.fillText(label, x + 24, y + 24); c.restore();
+        if (!off) st.hit(x, y, 52, 48, dir < 0 ? 'gachaPrev' : 'gachaNext');
+      }
+      var ay = headS + Math.max(0, cardH / 2 - 24);
+      inkArrow(16, ay, '‹', -1, pageS <= 0);
+      inkArrow(cw - 68, ay, '›', 1, pageS >= pagesS - 1);
+      kt(c, (pageS + 1) + '/' + pagesS, cw - 78, 22, 16, '#2b1c08', 'right', 70, false);
+      ackBtn((cw - Math.min(150, cw - 180)) / 2, footS, Math.min(150, cw - 180));
       return;
     }
     if (!land && !stage) {
@@ -23509,7 +23529,8 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
     geo.more = { x: moreX, y: 6, w: moreW, h: 44 };
     var cloudW = (XY.account && XY.account.barWidth) ? XY.account.barWidth(cw) : 0;
     var hx = moreX - 6;
-    if (cloudW >= 132 && XY.account && XY.account.paintBar) { hx -= cloudW; XY.account.paintBar(c, st, hx, 6, cloudW, 44); hx -= 4; }
+    var cloudSlot = null;
+    if (cloudW >= 132 && XY.account && XY.account.paintBar) { hx -= cloudW; cloudSlot = hx; hx -= 4; }
     if (land) {
       VU.washE(c, cw - 170, 28, 220, 30, '250,244,228', 0.85);
       var hb = [['灵石商店', 'menuShop', cw < 700 ? 82 : 92], ['排行榜', 'menuBoard', cw < 700 ? 70 : 80]]; if (XY.version && XY.version.showToggle && XY.version.showToggle()) hb.push([XY.version.name() + ' ⇄', 'toggleVer', cw < 700 ? 92 : 100]);
@@ -23519,6 +23540,7 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
     kt(c, '出发', x0, 25, narrow ? 26 : 30, '#2b1c08', 'left', Math.max(40, tw0));
     taper(c, x0 - 2, 41, x0 + Math.min(Math.max(40, tw0), 74), 2.4, 0.5);
     if (tw0 > 120) kt(c, '灵石 ' + S.data.lingshi + (''), x0 + 74, 31, 12, '#8a5a12', 'left', tw0 - 78, false);
+    if (cloudSlot != null) XY.account.paintBar(c, st, cloudSlot, 6, cloudW, 44);
 
     if (XY.gacha10 && XY.gacha10.ensure && !(XY.save.data && XY.save.data.gacha10 && XY.save.data.gacha10.acked)) { try { XY.gacha10.ensure(); } catch (e) {} }
     if (!(XY.account && XY.account.holdGacha && XY.account.holdGacha()) && XY.gacha10 && XY.gacha10.paint) XY.gacha10.paint(c, st, a);
@@ -25253,7 +25275,23 @@ window.XY_LAZY_CHUNKS = [{"id": "ui", "src": "chunks/ui-008ff700a700.js", "bytes
     if (!VU || w < 132) return;
     h = Math.max(44, h || 44);
     if (!session) {
-      st.btn(x, y, w, h, '用 Google 登录', 'cloudLogin', { sz: w < 156 ? 15 : 17, rgb: '42,32,24', strong: true, vh: Math.max(36, h - 6) });
+      c.save();
+      c.translate(x + w / 2, y + h / 2);
+      c.fillStyle = '#2b1c08';
+      c.beginPath();
+      c.moveTo(-w / 2 + 4, -h * 0.34);
+      c.quadraticCurveTo(0, -h * 0.5, w / 2 - 3, -h * 0.32);
+      c.lineTo(w / 2 - 6, h * 0.34);
+      c.quadraticCurveTo(0, h * 0.48, -w / 2 + 3, h * 0.32);
+      c.closePath(); c.fill();
+      c.fillStyle = '#f6efe2';
+      var sz = w < 170 ? 15 : 18;
+      c.font = sz + 'px "Ma Shan Zheng","KaiTi",serif';
+      c.textAlign = 'center'; c.textBaseline = 'middle';
+      while (sz > 12 && c.measureText('用 Google 登录').width > w - 16) { sz -= 1; c.font = sz + 'px "Ma Shan Zheng","KaiTi",serif'; }
+      c.fillText('用 Google 登录', 0, 1);
+      c.restore();
+      st.hit(x, y, w, h, 'cloudLogin');
       return;
     }
     if (VU.washE) VU.washE(c, x + w * 0.42, y + h / 2, w * 0.55, h * 0.42, '58,42,28', 0.22);
@@ -25526,5 +25564,6 @@ window.XY_LAZY_CHUNKS = [{"id": "ui", "src": "chunks/ui-008ff700a700.js", "bytes
 <script src="js/devil_kitty_ui.js"></script>
 <script src="js/tdline-rules.js"></script>
 <script src="js/tdline.js"></script>
+<script src="js/final3.js"></script>
 </body>
 </html>

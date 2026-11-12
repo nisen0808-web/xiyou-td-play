@@ -840,14 +840,14 @@
     var st = pcv.parentNode.getBoundingClientRect(), W = st.width, H = st.height, dpr = G.dpr, c = pctx; if (W < 4) return;
     c.setTransform(dpr, 0, 0, dpr, 0, 0); c.clearRect(0, 0, W, H);
     c.fillStyle = '#f4ead4'; c.fillRect(0, 0, W, H);
-    var gyy = H * .96, fh = Math.min(H * .92, W * .55);
-    drawStill(c, G.partner, W * .18, gyy, fh * .9);
+    var gyy = H * .98, fh = H * .94;
+    drawStill(c, G.partner, W * .2, gyy, fh * .92);
     drawStill(c, 'wukong', W * .48, gyy, fh);
-    drawStill(c, 'niumo', W * .8, gyy, fh * .96);
-    brushName(c, '战', W * .64, H * .22, Math.min(72, W * .12), '#a83224');
-    brushName(c, NAMES[G.partner] || '', W * .18, H * .08, 22, '#24180f');
-    brushName(c, '孙悟空', W * .48, H * .08, 26, '#24180f');
-    brushName(c, '牛魔王', W * .8, H * .08, 26, '#24180f');
+    drawStill(c, 'niumo', W * .78, gyy, fh * .96);
+    brushName(c, NAMES[G.partner] || '', W * .08, H * .2, Math.min(34, W * .07), '#24180f');
+    brushName(c, '孙悟空', W * .38, H * .12, Math.min(38, W * .08), '#24180f');
+    brushName(c, '牛魔王', W * .9, H * .16, Math.min(38, W * .08), '#24180f');
+    brushName(c, '战', W * .63, H * .36, Math.min(52, W * .1), '#a83224');
   }
 
   /* ---------- 结算 ---------- */
