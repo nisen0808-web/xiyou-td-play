@@ -24118,38 +24118,70 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
       c.fill();
       c.restore();
     }
-    /* 左侧竹林：秆、节、叶都画出纸边，旁边用墨团洇开，不铺方板。 */
+    /* 竹后的墨用首页远山图里现成的泼墨块，抠掉宣纸后贴上。不画圆、不画椭圆。 */
+    function groveStamps() {
+      if (XY._groveStamps) return XY._groveStamps;
+      var im = XY._groveSrc;
+      if (!im) { im = XY._groveSrc = new Image(); im.src = 'assets/art/menu-v5/bg_v2.webp'; return null; }
+      if (!im.naturalWidth) return null;
+      var boxes = [[50, 90, 170, 150], [160, 120, 140, 140], [20, 180, 180, 140]];
+      var out = [];
+      boxes.forEach(function (b) {
+        var cv = document.createElement('canvas');
+        cv.width = b[2]; cv.height = b[3];
+        var g = cv.getContext('2d', { willReadFrequently: true });
+        g.drawImage(im, b[0], b[1], b[2], b[3], 0, 0, b[2], b[3]);
+        var d = g.getImageData(0, 0, b[2], b[3]), p = d.data, i, lum, a, ink;
+        for (i = 0; i < p.length; i += 4) {
+          lum = p[i] * 0.3 + p[i + 1] * 0.59 + p[i + 2] * 0.11;
+          var px = (i / 4) % b[2], py = ((i / 4) / b[2]) | 0;
+          var edge = Math.min(px, py, b[2] - 1 - px, b[3] - 1 - py), fade = Math.min(1, edge / 22);
+          if (lum > 145 || fade <= 0) { p[i + 3] = 0; continue; }
+          a = Math.max(0, Math.min(255, (145 - lum) * 3.1 * fade));
+          ink = Math.min(p[i], p[i + 1], p[i + 2]);
+          p[i] = p[i + 1] = p[i + 2] = ink;
+          p[i + 3] = a;
+        }
+        g.putImageData(d, 0, 0);
+        out.push(cv);
+      });
+      XY._groveStamps = out;
+      return out;
+    }
     function grove(c, x, y, bw, bh) {
-      var IP = XY.INKP, scale = Math.max(0.7, Math.min(1.3, bw / 180));
-      if (IP) {
-        IP.blot(c, x + bw * 0.16, y + bh * 0.8, bw * 0.58, '28,24,18', 0.5, 2, 14, 0.5);
-        IP.blot(c, x + bw * 0.02, y + bh * 0.46, bw * 0.36, '34,28,22', 0.38, 8, 8, 0.66);
-        IP.blot(c, x + bw * 0.48, y + bh * 0.18, bw * 0.32, '26,22,18', 0.3, 5, 7, 0.8);
-        IP.stroke(c, x + bw * 0.08, y + bh * 0.28, x + bw * 1.05, y + bh * 0.2, 6, '30,26,20', 0.32, 21, 0.06);
-        IP.stroke(c, x + bw * 0.04, y + bh * 0.72, x + bw * 0.85, y + bh * 0.8, 8, '24,20,16', 0.36, 24, -0.04);
-        IP.dots(c, x + bw * 0.28, y + bh * 0.4, bw * 0.08, bw * 1.35, 20, 1.4, 3.6, '24,20,16', 0.55, 16, 0.72);
-        IP.splash(c, x + bw * 0.18, y + bh * 0.66, bw * 0.04, bw * 0.85, 7, 4.5 * scale, null, 0.38, 19, 0.75);
+      var IP = XY.INKP, stamps = groveStamps(), scale = Math.max(0.75, Math.min(1.4, Math.min(bw, bh) / 260));
+      if (stamps) {
+        var place = [[0, 0.02, 0.58, 0.7, -0.12, 0.88], [1, 0.34, 0.22, 0.48, 0.18, 0.7], [2, -0.02, 0.78, 0.62, 0.08, 0.62]];
+        place.forEach(function (p) {
+          var im = stamps[p[0]]; if (!im) return;
+          var dw = bw * p[3], dh = dw * im.height / im.width;
+          c.save();
+          c.translate(x + bw * p[1] + dw * 0.5, y + bh * p[2]);
+          c.rotate(p[4]);
+          c.globalAlpha = p[5];
+          c.drawImage(im, -dw * 0.5, -dh * 0.5, dw, dh);
+          c.restore();
+        });
       }
-      if (VU.washE) VU.washE(c, x + bw * 0.35, y + bh * 0.78, bw * 0.42, bw * 0.28, '28,24,18', 0.16);
-      var stalks = [[0.05, 0.0, 1, 8.2], [0.2, 0.02, 0.94, 10], [0.36, 0.08, 0.8, 6.4], [0.52, 0.0, 1, 9], [0.7, 0.05, 0.86, 7.2], [0.86, 0.1, 0.74, 6]];
-      var rgb = '32,54,32';
+      var stalks = [[0.08, 0.0, 1, 15], [0.24, 0.03, 0.94, 12], [0.4, 0.06, 0.82, 17], [0.56, 0.0, 1, 13], [0.72, 0.04, 0.88, 16], [0.88, 0.1, 0.74, 11]];
+      var rgb = '26,56,32';
       stalks.forEach(function (s, i) {
-        var x0 = x + s[0] * bw, y0 = y + s[1] * bh, y1 = y + bh * s[2] + bh * 0.02;
-        var lean = (i % 2 ? 0.07 : -0.06) * bw;
+        var x0 = x + s[0] * bw, y0 = y + s[1] * bh, y1 = y + bh * s[2];
+        var lean = (i % 2 ? 0.05 : -0.04) * bw;
         var thick = s[3] * scale;
-        if (IP) IP.stroke(c, x0 + lean, y1, x0, y0, thick, rgb, 0.88, 30 + i * 3, (i - 2.5) * 0.035);
-        var j, t, jx, jy, ang, len;
-        for (j = 1; j <= 5; j++) {
-          t = j / 6;
+        if (IP) IP.stroke(c, x0 + lean, y1, x0, y0, thick, rgb, 0.94, 30 + i * 5, (i - 2.5) * 0.045);
+        var j, t, jx, jy, ang, len, node;
+        for (j = 1; j <= 4; j++) {
+          t = j / 5;
           jx = x0 + lean * (1 - t);
           jy = y1 + (y0 - y1) * t;
-          if (IP) IP.stroke(c, jx - thick, jy, jx + thick * 1.05, jy + 1.2, 1.5, '18,34,20', 0.85, 50 + i * 7 + j, 0.01);
+          node = thick * (1.15 - t * 0.55);
+          if (IP) IP.stroke(c, jx - node, jy, jx + node, jy + 1, Math.max(3.2, node * 0.55), '16,40,22', 0.96, 70 + i * 9 + j, 0.03);
           if (j >= 2) {
-            ang = (i % 2 ? 0.55 : -0.5) + (j - 3) * 0.18;
-            len = Math.min(bw, bh) * (0.075 + (j % 3) * 0.012);
-            leaf(c, jx, jy, len, ang, rgb, 0.8);
-            leaf(c, jx, jy, len * 0.82, ang + 0.75, '28,50,30', 0.72);
-            leaf(c, jx, jy, len * 0.7, ang - 0.85, '24,42,28', 0.66);
+            ang = (i % 2 ? 0.6 : -0.55) + (j - 3) * 0.22;
+            len = Math.min(bw, bh) * (0.08 + (j % 3) * 0.014);
+            leaf(c, jx, jy, len, ang, rgb, 0.88);
+            leaf(c, jx, jy, len * 0.76, ang + 0.72, '22,50,28', 0.8);
           }
         }
       });
@@ -24396,7 +24428,7 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
       return n;
     }
     function fitOnBody(draw, body, others, text) {
-      var size = short ? 14 : (land ? 26 : 14);
+      var size = short ? 18 : (land ? 26 : 14);
       var anchor = body && body.w ? body : draw;
       c.font = size + 'px GachaBrush, KaiTi, STKaiti, serif';
       function linesFor(maxW) {
@@ -24549,14 +24581,67 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
         });
         XY.gacha10.lastNames = names;
         XY.gacha10.lastNameAudit = audit;
+        function nameMist(x, y, w, h) {
+          var rx = Math.max(w * 0.72, h * 0.85), ry = Math.max(h * 0.95, rx * 0.42);
+          c.save();
+          c.translate(x, y); c.scale(1, ry / rx);
+          var mist = c.createRadialGradient(0, 0, rx * 0.2, 0, 0, rx);
+          mist.addColorStop(0, 'rgba(246,239,226,0.94)');
+          mist.addColorStop(0.55, 'rgba(246,239,226,0.8)');
+          mist.addColorStop(0.78, 'rgba(246,239,226,0.28)');
+          mist.addColorStop(1, 'rgba(246,239,226,0)');
+          c.fillStyle = mist; c.beginPath(); c.arc(0, 0, rx, 0, Math.PI * 2); c.fill();
+          c.restore();
+        }
+        function resultInk(text, x, y, size) {
+          c.save();
+          c.font = size + 'px GachaBrush, KaiTi, STKaiti, serif';
+          c.textAlign = 'center'; c.textBaseline = 'middle';
+          c.lineJoin = 'round';
+          c.lineWidth = Math.max(2, size * 0.14);
+          c.strokeStyle = '#f7f1e4';
+          c.strokeText(text, x, y);
+          c.fillStyle = '#1a120c';
+          c.fillText(text, x, y);
+          c.restore();
+        }
+        function relLum(r, g, b) {
+          function f(v) { v /= 255; return v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }
+          return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b);
+        }
+        function contrastAt(nm) {
+          var m = c.getTransform ? c.getTransform() : null, sx = m ? m.a : 1, sy = m ? m.d : 1, ox = m ? m.e : 0, oy = m ? m.f : 0;
+          var x0 = Math.max(0, Math.floor((nm.x - nm.w / 2) * sx + ox));
+          var y0 = Math.max(0, Math.floor((nm.y - nm.h / 2) * sy + oy));
+          var w = Math.max(2, Math.ceil(nm.w * sx)), h = Math.max(2, Math.ceil(nm.h * sy));
+          var cv = c.canvas;
+          if (x0 + w > cv.width) w = cv.width - x0;
+          if (y0 + h > cv.height) h = cv.height - y0;
+          if (w < 2 || h < 2) return 0;
+          var d = c.getImageData(x0, y0, w, h).data, i, lum, dark = null, light = null, r, g, b, L1, L2, hi, lo;
+          for (i = 0; i < d.length; i += 16) {
+            r = d[i]; g = d[i + 1]; b = d[i + 2];
+            lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+            if (!dark || lum < dark.l) dark = { l: lum, c: [r, g, b] };
+            if (!light || lum > light.l) light = { l: lum, c: [r, g, b] };
+          }
+          if (!dark || !light) return 0;
+          L1 = relLum(dark.c[0], dark.c[1], dark.c[2]); L2 = relLum(light.c[0], light.c[1], light.c[2]);
+          hi = Math.max(L1, L2); lo = Math.min(L1, L2);
+          return Math.round(((hi + 0.05) / (lo + 0.05)) * 100) / 100;
+        }
+        var contrastRows = [];
         names.forEach(function (nm) {
           var lines = nm.lines || [nm.text], gap = nm.size * 1.15, y0 = nm.y - (lines.length - 1) * gap / 2, li;
-          for (li = 0; li < lines.length; li++) inkName(c, lines[li], nm.x, y0 + li * gap, nm.size, nm.w + 8, '#1a120c', true);
+          nameMist(nm.x, nm.y, nm.w, nm.h);
+          for (li = 0; li < lines.length; li++) resultInk(lines[li], nm.x, y0 + li * gap, nm.size);
+          contrastRows.push({ id: nm.id, text: lines.join(''), lines: lines.slice(), size: nm.size, contrast: contrastAt(nm) });
           var hx = nm.x - nm.w / 2 - 6, hy = nm.y - nm.h / 2 - 4, hw = nm.w + 12, hh = Math.max(28, nm.h + 8);
           if (nm.unlock) cinSeal(c, nm.x + nm.w / 2 + nm.size * 0.85, nm.y + nm.h * 0.35, Math.max(14, nm.size * 0.42), '新');
           if (nm.n > 1) cinSeal(c, nm.x - nm.w / 2 - nm.size * 0.7, nm.y + nm.h * 0.15, Math.max(14, nm.size * 0.42), String(nm.n));
           st.hit(hx, hy, hw, hh, 'gachaPick', { id: nm.id });
         });
+        XY.gacha10.lastContrast = contrastRows;
       }
       st.btn(cw * 0.5 - 70, ch - 52, 140, 44, '收下', 'gachaAck', { pri: true, col: '#9d2b22', sz: 20 });
     }

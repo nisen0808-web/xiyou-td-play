@@ -180,10 +180,11 @@
         var xP = 6 - bP.x0;
         var xW = xP + bP.x1 + gap - bW.x0;
         if (xW + bW.x1 > W - 6) continue;
-        var yHero = H - 4 - Math.max(0, bP.y1, bW.y1);
+        var band = hudBands();
+        var yHero = band.bottomTop - 9 - Math.max(0, bP.y1, bW.y1);
         var topHero = yHero + Math.min(bP.y0, bW.y0);
         var yBoss = topHero - 16 - bN.y1;
-        if (yBoss + bN.y0 < 8) continue;
+        if (yBoss + bN.y0 < band.topH + 8) continue;
         var xN = Math.min(W - 8 - bN.x1, Math.max(-bN.x0 + 8, W * 0.62 - bN.x0 * 0));
         xN = Math.min(W - 8 - bN.x1, Math.max(8 - bN.x0, W * 0.7));
         feet = { phyrex: { x: xP, y: yHero }, wukong: { x: xW, y: yHero }, niumo: { x: xN, y: yBoss } };
@@ -1336,6 +1337,15 @@
     });
   }
 
+  function hudBands() {
+    var S = G.land ? G.H / 390 : G.W / 390, H = G.H, land = G.land;
+    var sealBottom = 8 * S + (land ? 26 : 22) * S + (land ? 29 : 22) * S + 4 + 30;
+    var timerBottom = 8 * S + 26 * S + (land ? 29 : 26) * S;
+    return {
+      topH: Math.ceil(Math.max(sealBottom, timerBottom)),
+      bottomTop: Math.floor(H - 62 * S)
+    };
+  }
   function pixelSep() {
     placeAll();
     var fit = G._fit, feet = fit && fit.feet, fh = G.fh;
@@ -1363,7 +1373,21 @@
       for (i = 0; i < names.length; i++) for (j = i + 1; j < names.length; j++) {
         key = names[i] + '-' + names[j]; c = hits(masks[names[i]], masks[names[j]]); pairs[key] = c; total += Math.max(0, c);
       }
-      return { pairs: pairs, overlap: total };
+      var band = hudBands(), hud = {}, topN = 0, botN = 0, minY = 1e9, maxY = -1, id, d, p, y, lo, hi, tn, bn, Wpx = G.W;
+      for (i = 0; i < names.length; i++) {
+        id = names[i]; d = masks[id]; tn = 0; bn = 0; lo = 1e9; hi = -1;
+        if (d) for (p = 3; p < d.length; p += 4) {
+          if (d[p] < 40) continue;
+          y = ((p / 4) / Wpx) | 0;
+          if (y < lo) lo = y; if (y > hi) hi = y;
+          if (y < band.topH) tn++;
+          if (y >= band.bottomTop) bn++;
+        }
+        hud[id] = { top: tn, bottom: bn, topGap: lo - band.topH, bottomGap: band.bottomTop - hi - 1 };
+        topN += tn; botN += bn;
+        if (lo < minY) minY = lo; if (hi > maxY) maxY = hi;
+      }
+      return { pairs: pairs, overlap: total, hud: { topH: band.topH, bottomTop: band.bottomTop, topPx: topN, bottomPx: botN, topGap: minY - band.topH, bottomGap: band.bottomTop - maxY - 1, pass: topN === 0 && botN === 0 && (minY - band.topH) >= 8 && (band.bottomTop - maxY - 1) >= 8, each: hud } };
     }
     return {
       idle: pack({ phyrex: { clip: 'bossIdle', frame: 0 }, wukong: { clip: 'bossIdle', frame: 0 }, niumo: { clip: 'bossIdle', frame: 0 } }),
