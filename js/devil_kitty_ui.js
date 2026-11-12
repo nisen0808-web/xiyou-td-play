@@ -517,6 +517,7 @@
 
   function hold(G, dt) {
     var run = ensureRun(G);
+    if (G.mode === 'cards') { G.dkSkip = false; return; }
     if (G.dkSkip && run.introLeft > 0) {
       API.skipIntro(run, G.levelId || 1);
       G.dkSkip = false;
@@ -1329,7 +1330,7 @@
       c.font = '32px "Ma Shan Zheng","KaiTi",serif';
       c.textAlign = 'center';
       c.textBaseline = 'middle';
-      c.fillText('猫叔登场', W / 2, y + bh * 0.38);
+      c.fillText('猫叔魔化', W / 2, y + bh * 0.38);
       c.fillStyle = '#24180f';
       c.font = '18px "Ma Shan Zheng","KaiTi",serif';
       c.fillText('点一下继续', W / 2, y + bh * 0.68);
@@ -2250,6 +2251,7 @@
     }
     if (h.act === 'dkSkip') {
       var G = window.__xy && window.__xy.G;
+      if (G && G.mode === 'cards') return true;
       if (G) G.dkSkip = true;
       return true;
     }
@@ -2275,16 +2277,8 @@
   }
 
   function yieldToOffer(G) {
-    var run = G && G.dkRun;
-    if (!G || G.mode !== 'cards' || !run) return;
-    if (run.formLeft > 0) {
-      if (run.unit && run.base && API.skipForm) API.skipForm(run);
-      else { run.formLeft = 0; run.hold = false; }
-    }
-    if (run.introLeft > 0 && API.skipIntro) API.skipIntro(run, G.levelId || 1);
+    if (!G || G.mode !== 'cards') return;
     G.dkSkip = false;
-    G.dkHold = false;
-    stopVideo();
   }
   var oldStep = XY.step;
   XY.step = function (G, dt) {
