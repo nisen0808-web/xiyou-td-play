@@ -1082,6 +1082,7 @@
     c.drawImage(wuBrushMask(im), x, y, dw, dh);
   }
   function drawWuClose(c) {
+    return;
     if (!(G.wuCut > 0) || G.wuCutOff) return;
     ensureWuClose();
     var total = 2.4, t = total - G.wuCut, idx = Math.max(0, Math.min(4, Math.floor(t / total * 5))), im = WUCLOSE[idx];
