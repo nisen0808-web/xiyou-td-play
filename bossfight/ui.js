@@ -828,6 +828,47 @@
     im.src = '../assets/art/menu-poster/nameh-' + id + '.webp';
     return null;
   }
+  function plateParts(im) {
+    if (im._parts) return im._parts;
+    var cv = document.createElement('canvas');
+    cv.width = im.naturalWidth; cv.height = im.naturalHeight;
+    var g = cv.getContext('2d', { willReadFrequently: true });
+    g.drawImage(im, 0, 0);
+    var w = cv.width, h = cv.height, data = g.getImageData(0, 0, w, h).data;
+    var anyL = w, anyR = 0, sealL = w, sealR = 0, y;
+    for (y = 0; y < h; y++) {
+      for (var x = 0; x < w; x++) {
+        var i = (y * w + x) * 4;
+        if (data[i + 3] < 24) continue;
+        if (x < anyL) anyL = x;
+        if (x > anyR) anyR = x;
+        if (data[i] > 150 && data[i] > data[i + 1] + 35 && data[i] > data[i + 2] + 35) {
+          if (x < sealL) sealL = x;
+          if (x > sealR) sealR = x;
+        }
+      }
+    }
+    var textR = sealL < w ? Math.max(anyL, sealL - 2) : anyR;
+    im._parts = {
+      full: { x: anyL, w: Math.max(1, anyR - anyL + 1), h: h },
+      text: { x: anyL, w: Math.max(1, textR - anyL + 1), h: h },
+      seal: sealR > sealL ? { x: sealL, w: sealR - sealL + 1, h: h } : null
+    };
+    return im._parts;
+  }
+  function fitPlate(im, maxW, maxH) {
+    var p = plateParts(im);
+    function sized(part) {
+      var dh = maxH, dw = dh * part.w / part.h;
+      if (dw > maxW) { dw = maxW; dh = dw * part.h / part.w; }
+      return { dw: dw, dh: dh };
+    }
+    var full = sized(p.full), part = p.full, box = full, dropped = false;
+    if (p.seal && (full.dw > maxW + 0.5 || full.dh < 15)) {
+      part = p.text; box = sized(p.text); dropped = true;
+    }
+    return { sx: part.x, sy: 0, sw: part.w, sh: part.h, dw: box.dw, dh: box.dh, dropped: dropped, parts: p };
+  }
   function brushName(c, text, x, y, size, col) {
     c.save();
     c.font = size + 'px "Ma Shan Zheng","KaiTi",serif';
@@ -912,26 +953,57 @@
       }
       return false;
     }
-    labels.forEach(function (text, i) {
+    var ihCap = Math.min(28, Math.max(16, nameH));
+    var halfChar = ihCap * 0.5;
+    var specs = labels.map(function (text, i) {
+      var leftEdge = i === 0 ? marginL : (xs[i - 1] + xs[i]) / 2;
+      var rightEdge = i === labels.length - 1 ? W - marginR : (xs[i] + xs[i + 1]) / 2;
+      var laneL = leftEdge + (i === 0 ? 0 : halfChar / 2);
+      var laneR = rightEdge - (i === labels.length - 1 ? 0 : halfChar / 2);
+      var maxW = Math.max(28, laneR - laneL);
       var im = nameArt(ids[i]);
-      var ih = nameH, iw = 0;
+      var dw, dh, fit = null;
       if (im) {
-        ih = Math.max(nameH, 26);
-        iw = ih * im.naturalWidth / im.naturalHeight;
-        if (iw > W * 0.34) { iw = W * 0.34; ih = iw * im.naturalHeight / im.naturalWidth; }
+        fit = fitPlate(im, maxW, ihCap);
+        dw = fit.dw; dh = fit.dh;
+      } else {
+        dh = Math.min(ihCap, Math.max(13, maxW / Math.max(1, text.length) * 1.2));
+        c.font = dh + 'px "Ma Shan Zheng","KaiTi",serif';
+        dw = Math.min(maxW, c.measureText(text).width);
+        if (c.measureText(text).width > maxW) dh = dh * maxW / c.measureText(text).width;
       }
-      c.font = nameH + 'px "Ma Shan Zheng","KaiTi",serif';
-      var tw = im ? iw : Math.min(c.measureText(text).width + 2, W * 0.28);
-      var r = rects[i];
-      var y = r.y - 2 - nameH * 0.15;
-      if (r.y - (y + nameH / 2) > nameH) y = r.y - nameH * 0.85;
-      var x = xs[i];
-      if (i === 2) x = Math.max(xs[i], r.x + r.w - tw * 0.15);
-      x = Math.max(marginL + tw / 2, Math.min(W - marginR - tw / 2, x));
-      y = Math.max(ih * 0.55, y);
-      if (outside(x, y, tw, ih)) y = Math.max(ih * 0.55, r.y - ih * 0.55);
-      if (im) c.drawImage(im, x - iw / 2, y - ih / 2, iw, ih);
-      else brushName(c, text, x, y, nameH, '#24180f');
+      var x = Math.max(laneL + dw / 2, Math.min(laneR - dw / 2, xs[i]));
+      var y = Math.max(dh / 2 + 2, rects[i].y - 4 - dh / 2);
+      return { id: ids[i], text: text, im: im, fit: fit, x: x, y: y, w: dw, h: dh, laneL: laneL, laneR: laneR, head: rects[i].y };
+    });
+    function boxesHit(a, b) {
+      var w = Math.min(a.x + a.w / 2, b.x + b.w / 2) - Math.max(a.x - a.w / 2, b.x - b.w / 2);
+      var h = Math.min(a.y + a.h / 2, b.y + b.h / 2) - Math.max(a.y - a.h / 2, b.y - b.h / 2);
+      return w > 0.5 && h > 0.5;
+    }
+    var pass, i, j;
+    for (pass = 0; pass < 4; pass++) {
+      var moved = false;
+      for (i = 0; i < specs.length; i++) for (j = i + 1; j < specs.length; j++) {
+        if (!boxesHit(specs[i], specs[j])) continue;
+        var lift = i < j ? specs[i] : specs[j];
+        lift.y = Math.max(lift.h / 2 + 2, Math.min(specs[i].y, specs[j].y) - lift.h - halfChar);
+        moved = true;
+      }
+      if (!moved) break;
+    }
+    specs.forEach(function (s) {
+      if (s.im) c.drawImage(s.im, s.fit.sx, s.fit.sy, s.fit.sw, s.fit.sh, s.x - s.w / 2, s.y - s.h / 2, s.w, s.h);
+      else brushName(c, s.text, s.x, s.y, s.h, '#24180f');
+      s.box = { x: s.x - s.w / 2, y: s.y - s.h / 2, w: s.w, h: s.h };
+      if (s.fit && !s.fit.dropped && s.fit.parts.seal) {
+        var sc = s.w / s.fit.sw, seal = s.fit.parts.seal;
+        s.seal = { x: s.box.x + (seal.x - s.fit.sx) * sc, y: s.box.y, w: seal.w * sc, h: s.h };
+        s.glyph = { x: s.box.x, y: s.box.y, w: Math.max(1, s.seal.x - s.box.x), h: s.h };
+      } else s.glyph = { x: s.box.x, y: s.box.y, w: s.w, h: s.h };
+    });
+    window.__bfNames = specs.map(function (s) {
+      return { id: s.id, box: s.box, glyph: s.glyph, seal: s.seal || null, lane: [s.laneL, s.laneR], head: s.head };
     });
     var zSize = Math.max(nameH, Math.min(42, H * 0.11));
     var gapMid = (rects[1].x + rects[1].w + rects[2].x) / 2;
