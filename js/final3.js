@@ -219,7 +219,7 @@
     if (G.villain || G.lair) return prevEnd(c, G, a, win);
     var K = open(c, a), W = K.W, H = K.H, port = K.port, short = !port && H < 420;
     var cause = G.ending && G.ending.cause;
-    var title = win ? '过 关' : cause === 'tang' ? '师傅阵亡' : '基地被入侵';
+    var title = G.godMode ? '调试局 · 不记星、不发奖' : win ? '过 关' : cause === 'tang' ? '师傅阵亡' : '基地被入侵';
     var x = port ? 18 : 24;
     var w = port ? W - 36 : Math.round(W * (short ? 0.46 : 0.5));
     var btnH = short ? 36 : 46;
@@ -231,7 +231,7 @@
     cutout(c, whoId(G), port ? W * 0.74 : (short ? W * 0.78 : W * 0.76), figFoot, figH);
     kai(c, title, port ? 18 : (short ? 20 : x), short ? 24 : 40, short ? 32 : 44, win ? '#a8680a' : '#a42d19', 'left', port ? W - 36 : (short ? W * 0.34 : w));
     kai(c, XY.lvPre(G) + G.lv.name + '」' + (win ? ' · 关口「' + G.gate.name + '」' : ''), port ? 18 : (short ? 20 : x), short ? 50 : 78, short ? 13 : 16, '#5c4a38', 'left', port ? W - 36 : (short ? W * 0.34 : w));
-    var si = XY.sweep09 && XY.sweep09.resultStars(G, win);
+    var si = !G.godMode && XY.sweep09 && XY.sweep09.resultStars(G, win);
     if (si) kai(c, si.show ? si.text + (si.isNew ? ' · 新纪录' : '') : (si.faint || ''), short ? 20 : (port ? 18 : x), short ? 72 : (port ? 112 : 112), short ? 16 : 22, '#a42d19', 'left', port ? W - 36 : (short ? W * 0.34 : w));
     var dead = (G.heroes || []).filter(function (h) { return h.down; }).map(function (h) { return h.def.name; });
     var lines = [];
