@@ -9567,6 +9567,14 @@ XY.BGS1={"src": "data:image/webp;base64,UklGRtT1GgBXRUJQVlA4IMj1GgCQwWGdASoAEAAK
   }
   function drawWorld(c, G, rt) {
     var i, v = G.view;
+    if (G._soloId) {
+      var x0 = G.cam.x - v.w / 2, y0 = G.cam.y - v.h / 2, solo = null, keep = G.ctrl;
+      c.fillStyle = '#f3ead6';
+      c.fillRect(x0 - 40, y0 - 40, v.w + 80, v.h + 80);
+      for (i = 0; i < G.heroes.length; i++) if (G.heroes[i].id === G._soloId && !G.heroes[i].ridden) solo = G.heroes[i];
+      if (solo) { G._quietShot = true; G.ctrl = -1; drawHero(c, G, solo, rt); G.ctrl = keep; }
+      return;
+    }
     drawGround(c, G);
     drawZones(c, G, rt);
     drawCamp(c, G, rt);
