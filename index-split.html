@@ -24381,7 +24381,7 @@ I.vendorKey=function(G,a,k){var n=X.vendor.stock(G).length;if(k==='ArrowLeft'||k
     var K=P.begin(c,a),L=I.layout(a),b=L.troop;
     c.save();var fw=L.small?370:450;c.translate(L.port?L.W/2:fw*.42,L.port?b.costY+22:L.H+17);c.scale(fw*.64,L.port?94:110);var fog=c.createRadialGradient(0,0,0,0,0,1);fog.addColorStop(0,'rgba(247,240,220,.98)');fog.addColorStop(.6,'rgba(247,240,220,.88)');fog.addColorStop(1,'rgba(247,240,220,0)');c.fillStyle=fog;c.fillRect(-1,-1,2,2);c.restore();
     c.save();c.shadowColor='#f7f0dc';c.shadowBlur=2;
-    K.t('在场 '+G.towers.length+' 名，最多 '+X.soldierCap(G)+' 名',b.first-b.r,b.cy-b.r-12,L.small?10.5:12,SOFT,'left',false);
+    if (L.H >= 420) K.t('在场 '+G.towers.length+' 名，最多 '+X.soldierCap(G)+' 名',b.first-b.r,b.cy-b.r-12,L.small?10.5:12,SOFT,'left',false);
     IDS.forEach(function(id,i){var d=X.TOWERS[id],price=X.soldierCost(G,id),cx=b.first+i*b.step,own=X.save.solOwned(id),ok=own&&G.coins>=price,on=a.build===id,n=G.towers.filter(function(t){return t.type===id;}).length;
       c.save();c.fillStyle='rgba(247,240,220,.82)';c.beginPath();c.arc(cx,b.cy,b.r,0,PI*2);c.fill();c.globalAlpha=own?1:.4;X.ICONINK.sol(c,id,cx,b.cy,b.r*2,1);c.restore();ring(c,cx,b.cy,b.r+1,on?RED:INK,18+i*23,on);
       kai(K,NAMES[i],cx,b.nameY,L.small?11.5:15,!own?SOFT:on?RED:INK,'center');K.tf(price+'金×'+n,cx,b.costY,b.w-2,L.small?10.5:12,!own?SOFT:!ok||on?RED:SOFT,'center',false,10.5);
@@ -24409,7 +24409,11 @@ I.vendorKey=function(G,a,k){var n=X.vendor.stock(G).length;if(k==='ArrowLeft'||k
   I.vendor=function(c,G,a){
     if(G.mode!=='play'||X.vendor.closedReason(G))return;
     var K=P.begin(c,a),L=I.layout(a),b=L.troop,left=X.vendor.stock(G).filter(function(v){return !v.sold;}).length;
-    var x=L.port?L.W/2-70:Math.max(b.first+4*b.step+b.w/2+12,L.W/2-70),box={x:x,y:L.H-61,w:140,h:44};
+    var lastCx=b.first+4*b.step, priceHalf=Math.max(b.w/2+6, 34);
+    var minX=lastCx+priceHalf+16, skyLeft=L.sky.cx-L.sky.r-10;
+    var x=L.port?L.W/2-70:Math.max(b.first+4*b.step+b.w/2+12,L.W/2-70,minX);
+    if(!L.port && x+140>skyLeft) x=Math.max(minX, skyLeft-140);
+    var box={x:x,y:L.H-61,w:140,h:44};
     var key=a.touchUI?'':' N';
     stamp(c,box.x,box.y,box.w,box.h,false,false);kai(K,'货郎·'+left+'件'+key,x+box.w/2,box.y+box.h/2,L.small?15:17,'#faefd8','center');hit(K,box,'vendorOpen');rec(a,'vendorBtn',box);P.end(c);
   };
