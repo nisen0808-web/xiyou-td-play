@@ -7066,10 +7066,15 @@ XY.TRAITS = {
   function stroke(c, pts) { c.beginPath(); pts.forEach(function (p, k) { k ? c.lineTo(p.x, p.y) : c.moveTo(p.x, p.y); }); c.stroke(); }
   function sign(c, x, y, txt, col, rt) {
     c.save(); c.translate(x, y);
-    c.fillStyle = 'rgba(120,96,60,0.9)'; c.fillRect(-3, -4, 6, 40);
-    c.fillStyle = col; c.strokeStyle = '#6a5128'; c.lineWidth = 2.5; var w = 12 + txt.length * 17;
-    c.beginPath(); c.rect(-w / 2, -34, w, 30); c.fill(); c.stroke();
-    c.font = 'bold 18px ' + C.FONT; c.fillStyle = '#4a3410'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(txt, 0, -19);
+    c.strokeStyle = 'rgba(74,52,28,0.85)'; c.lineWidth = 2.2; c.lineCap = 'round';
+    c.beginPath(); c.moveTo(0, 8); c.lineTo(0, 36); c.stroke();
+    c.fillStyle = 'rgba(244,232,204,0.92)';
+    c.beginPath();
+    c.moveTo(-28, -30); c.quadraticCurveTo(0, -40, 30, -28); c.quadraticCurveTo(36, -8, 26, 2); c.quadraticCurveTo(0, 8, -26, 0); c.quadraticCurveTo(-36, -10, -28, -30);
+    c.closePath(); c.fill();
+    c.strokeStyle = 'rgba(90,64,36,0.55)'; c.lineWidth = 1.2;
+    c.beginPath(); c.moveTo(-18, -16); c.quadraticCurveTo(4, -22, 20, -14); c.stroke();
+    c.font = '20px "Ma Shan Zheng","KaiTi",serif'; c.fillStyle = '#3a2a14'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(txt, 1, -14);
     c.restore();
   }
   F.drawWorld = function (c, G, rt) {
@@ -9144,8 +9149,6 @@ XY.TRAITS = {
     c.strokeStyle = 'rgba(' + INK + ',0.32)';
     c.lineWidth = 1.3;
     c.translate(x, y); c.scale(1.55, 1.55); c.translate(-x, -y);
-    c.fillStyle = 'rgba(90,70,40,0.08)';
-    c.beginPath(); c.ellipse(x, y + 24, 48, 11, 0, 0, Math.PI * 2); c.fill();
     c.strokeStyle = 'rgba(' + INK + ',0.88)';
     c.lineWidth = 2.2; c.lineCap = 'round';
     c.beginPath();
@@ -9177,9 +9180,6 @@ XY.TRAITS = {
     c.font = '12px "Ma Shan Zheng","KaiTi",serif';
     c.textAlign = 'center'; c.textBaseline = 'middle';
     c.fillText('歇', x + 43, y + 8);
-    c.strokeStyle = 'rgba(' + INK + ',0.75)';
-    c.lineWidth = 1.3;
-    c.beginPath(); c.ellipse(x + 2, y + 16, 7, 2.4, 0, 0, Math.PI * 2); c.stroke();
     c.restore();
   }
   function drawCamp(c, G, rt) {
@@ -9191,9 +9191,6 @@ XY.TRAITS = {
     if (!cp.active) {
       drawRestStall(c, x, y, rt);
       return;
-    }
-    if (G.station) {
-      otxt(c, '驻守', x, y - 118, 14, '#3a2e22', 'center', true);
     }
     // 营地圈：妖怪闯进来才画一圈飞白墨弧，不再用红虚线和粉橙光
     var zp = 0.5 + 0.5 * Math.sin(rt * 6);
@@ -9431,14 +9428,15 @@ XY.TRAITS = {
     }
     if (h.id === 'phyrex') { XY.R4.xfDraw = false; if (!(G.td && G.td.quiet > G.td.clock) && !G._quietShot) XY.phDrawHeroOver(c, G, h, x, y + bob - (useCb ? r * 0.5 : 0), r, rt); }
     if (h.hurtT > 0 && !useCb && !posed) { c.fillStyle = 'rgba(255,60,40,' + (h.hurtT * 2) + ')'; c.beginPath(); c.arc(x, y + bob, r, 0, PI2); c.fill(); }
-    if (h.inv > 0) { c.strokeStyle = 'rgba(42,32,22,0.28)'; c.lineWidth = 1.3; c.beginPath(); c.ellipse(x, y + r * 0.85, r + 8, r * 0.38, 0, 0, PI2); c.stroke(); }
+    var nearCamp = !!(G.camp && Math.abs(x - G.camp.x) < 170 && Math.abs(y - G.camp.y) < 150);
+    if (h.inv > 0 && !nearCamp) { c.strokeStyle = 'rgba(42,32,22,0.28)'; c.lineWidth = 1.3; c.beginPath(); c.ellipse(x, y + r * 0.85, r + 8, r * 0.38, 0, 0, PI2); c.stroke(); }
     if (G._quietShot) return;
     // 血条
     var bw = 44, f = h.hp / h.maxHp;
     if (h.id === 'tang') { c.save(); c.font = '13px "Ma Shan Zheng","KaiTi",serif'; c.fillStyle = '#5c4030'; c.textAlign = 'center'; c.fillText('仅一血', x, y - r - 8); c.restore(); }
     else bar(c, x - bw / 2, y + r + 5, bw, 6, f, hpColor(f), 'rgba(255,255,255,0.85)');
     // 命令标签：手动 / 自动命令（唐僧驻守生效时写明“只回血”）
-    var lab = isC ? '手动' : (h.id === 'tang' && G.station ? '驻守中·只回血' : (XY.ORDER_SHORT[h.order] || ''));
+    var lab = isC ? '手动' : (nearCamp && h.id !== 'tang' ? '' : (h.id === 'tang' && (G.station || (G.tang && G.tang.phase === 'rest')) ? '驻守·回血' : (XY.ORDER_SHORT[h.order] || '')));
     if (lab && G.heroes.length < 9 && !(G.td && G.td.quiet > G.td.clock)) {
       var seen = XY.R4._orderSeen || (XY.R4._orderSeen = []);
       var dup = false, si;
@@ -9455,7 +9453,7 @@ XY.TRAITS = {
     if (h.id === 'tang' && (G.tdanger || G.breach) && !(G.td && G.td.quiet > G.td.clock)) {
       otxt(c, G.breach ? '妖怪进营地了！' : '师傅危险！', x, clash ? y + r + 46 : y - tr - 42, 14, '#d62828', 'center', true);
     }
-    if (h.id === 'tang' && h.inv > 0 && G.t < C.TANG_START_INV + 0.5 && !(G.td && G.td.quiet > G.td.clock)) {
+    if (h.id === 'tang' && h.inv > 0 && !nearCamp && G.t < C.TANG_START_INV + 0.5 && !(G.td && G.td.quiet > G.td.clock)) {
       var invLab = '开局保护 ' + Math.ceil(h.inv) + ' 秒'; otxt(c, invLab, x, clash ? y + r + 46 : XY.R4.placeLabel(c, invLab, x, y - tr - 58, 12, -1), 12, '#a8700a', 'center', true);
     }
     // 名字（操控中的更醒目，头顶带小三角）
