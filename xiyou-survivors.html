@@ -9466,7 +9466,7 @@ XY.BGS1={"src": "data:image/webp;base64,UklGRtT1GgBXRUJQVlA4IMj1GgCQwWGdASoAEAAK
       var cap = Math.max(46, Math.min(box.w, nearD - 10));
       if (cap < box.w && box.w > 0) { var kk = cap / box.w; box.w *= kk; box.h *= kk; if (box.iw) box.iw *= kk; if (box.ih) box.ih *= kk; box.fs *= kk; }
       var tw = box.w, th = box.h, best = null;
-      var head = ownB ? ownB.y0 : n.y, nudge = Math.min(th * 0.4, 14);
+      var head = (n.h && n.h._drawBox) ? n.h._drawBox.y : (ownB ? ownB.y0 : n.y), nudge = Math.min(th * 0.4, 14);
       var cy0 = head - th / 2 - Math.min(4, th * 0.2);
       var cand = [[0, 0], [-nudge, 0], [nudge, 0]];
       for (k = 0; k < cand.length; k++) {
@@ -9478,7 +9478,7 @@ XY.BGS1={"src": "data:image/webp;base64,UklGRtT1GgBXRUJQVlA4IMj1GgCQwWGdASoAEAAK
       if (ov(best.r, placed, null) > 0) continue;
       if ((best.body > 0 || best.text > 0) && !(n.h && (n.h.i === ctrl || n.h.id === 'tang'))) continue;
       placed.push(best.r);
-      var plate = { id: n.h && n.h.id, box: best.r, glyph: best.r, seal: null, headGap: ownB ? (ownB.y0 - (best.y + th / 2)) : null, half: th * 0.5 };
+      var plate = { id: n.h && n.h.id, box: best.r, glyph: best.r, seal: null, headGap: head - (best.y + th / 2), half: th * 0.5 };
       if (box.art && box.art.im && box.w) {
         var sp = plateSplit(box.art.im), span = best.r.x1 - best.r.x0, imgW = box.iw / box.w * span;
         function seg(x0, x1) { return { x0: best.r.x0 + x0 / sp.w * imgW, y0: best.r.y0, x1: best.r.x0 + x1 / sp.w * imgW, y1: best.r.y1 }; }
@@ -10756,9 +10756,9 @@ XY.BGS1={"src": "data:image/webp;base64,UklGRtT1GgBXRUJQVlA4IMj1GgCQwWGdASoAEAAK
         ay = Math.max(y0, Math.min(y1, ay0 + tya * shifts[si]));
         lx = ax - ca * (34 + inns[ii]);
         ly = ay - sa * (34 + inns[ii]);
-        lx = Math.max(18 + tw / 2, Math.min(W - 18 - tw / 2, lx));
+        lx = Math.max(64 + tw / 2, Math.min(W - 18 - tw / 2, lx));
         ly = Math.max(18 + th / 2, Math.min(H - 18 - th / 2, ly));
-        ax = Math.max(16, Math.min(W - 16, lx - tw / 2 - 20));
+        ax = Math.max(28, Math.min(W - 16, lx - tw / 2 - 22));
         ar = box(ax, ay, 36, 32);
         lr = box(lx, ly, tw, th);
         hit = areaOf(ar, bodies) + areaOf(lr, bodies);
