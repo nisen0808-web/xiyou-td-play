@@ -267,7 +267,23 @@
     close(c);
   };
 
-  var faceBag = null;
+  function cnRank(raw) {
+    var s = String(raw || '');
+    var map = { L: '传说', SSR: '传说', SR: '传说', R: '稀有', N: '普通', '神品': '传说', '仙品': '传说', '灵品': '稀有', '凡品': '普通' };
+    if (map[s]) return map[s];
+    var d = ['零', '一', '二', '三', '四', '五', '六', '七', '八', '九'];
+    return s.replace(/Lv\s*(\d+)/gi, function (_, n) { return (d[+n] || n) + '重'; });
+  }
+  function offerWho(G) {
+    if (!G || !XY.xAvIcon || !XY.xAvIcon.isSpecial) return '';
+    if (G.special && XY.xAvIcon.isSpecial(G.special)) return G.special;
+    var h = G.heroes && G.heroes[G.ctrl || 1];
+    var id = h && (h.id || (h.def && h.def.id));
+    if (id && id !== 'tang' && XY.xAvIcon.isSpecial(id)) return id;
+    var carry = XY.save && XY.save.carryId && XY.save.carryId();
+    if (carry && XY.xAvIcon.isSpecial(carry)) return carry;
+    return '';
+  }
   var U = XY.fabaoui;
   if (U && U.scrolls) {
     var oldScroll = U.scrolls;
@@ -279,20 +295,18 @@
       var ph = Math.min(short ? H - 12 : H * 0.6, H - 16);
       var px = Math.round((W - pw) / 2), py = Math.round((H - ph) / 2);
       inkSheet(c, px, py, pw, ph);
-      kai(c, op.title || '选一件', px + 18, py + (short ? 22 : 28), short ? 18 : 26, '#a42d19', 'left', pw * 0.5);
+      var who = offerWho(G);
+      var av = Math.min(72, ph * 0.22);
+      if (who && XY.xAvIcon) XY.xAvIcon.draw(c, who, px + 14, py + 10, av, av);
+      kai(c, op.title || '选一件', px + 14 + av + 10, py + (short ? 22 : 28), short ? 18 : 26, '#a42d19', 'left', pw * 0.46);
       var n = Math.min(3, items.length), gap = port ? 8 : 12;
       var btnH = short ? 34 : 42;
       var btnY = py + ph - btnH - 12;
-      var top = py + (short ? 40 : 52);
+      var top = py + (short ? 48 : 64);
       var areaH = btnY - 8 - top;
       var cards = [];
-      if (port) {
-        var ch = (areaH - gap * (n - 1)) / n;
-        for (var i = 0; i < n; i++) cards.push({ x: px + 12, y: top + i * (ch + gap), w: pw - 24, h: ch });
-      } else {
-        var cw = (pw - 24 - gap * (n - 1)) / n;
-        for (var j = 0; j < n; j++) cards.push({ x: px + 12 + j * (cw + gap), y: top, w: cw, h: areaH });
-      }
+      var cw = (pw - 24 - gap * (n - 1)) / n;
+      for (var j = 0; j < n; j++) cards.push({ x: px + 12 + j * (cw + gap), y: top, w: cw, h: areaH });
       items.slice(0, n).forEach(function (it, i) {
         var b = cards[i], x = b.x, y = b.y, w = b.w, h = b.h;
         c.save();
@@ -307,28 +321,14 @@
         c.quadraticCurveTo(x - 1, y + h * 0.4, x + 8, y + 3);
         c.closePath(); c.fill();
         c.restore();
-        if (VU && VU.washE) VU.washE(c, x + w * 0.28, y + h * 0.62, w * 0.55, h * 0.28, '90,78,58', 0.14);
-        kai(c, it.name || '', x + 12, y + Math.max(18, h * 0.09), Math.max(16, Math.min(30, w * 0.11)), '#2b1c08', 'left', w * 0.62);
-        var rankRaw = String(it.lv || it.r || '');
-        var rankMap = { L: '传说', SSR: '传说', SR: '传说', R: '稀有', N: '普通', '神品': '传说', '仙品': '传说', '灵品': '稀有', '凡品': '普通', '传说': '传说', '稀有': '稀有', '普通': '普通' };
-        var rank = rankMap[rankRaw] || (rankRaw.length > 1 ? rankRaw : '普通');
-        kai(c, rank, x + w - 14, y + Math.max(36, h * 0.16), 15, '#a42d19', 'right', 72);
-        var sid = G.special || (XY.save && XY.save.carryId && XY.save.carryId()) || 'phyrex';
-        var face = null;
-        if (!faceBag) faceBag = {};
-        face = faceBag[sid];
-        if (!face) { face = faceBag[sid] = new Image(); face.src = 'assets/art/battle-hd/' + sid + '.webp'; }
-        var cr = Math.min(34, w * 0.16, h * 0.22), cx = x + 18 + cr, cy = y + h * 0.42;
-        c.save();
-        c.beginPath(); c.arc(cx, cy, cr, 0, 6.2832); c.clip();
-        if (face.complete && face.naturalWidth) {
-          var sc = Math.max(cr * 2 / face.naturalWidth, cr * 2 / face.naturalHeight);
-          c.drawImage(face, cx - face.naturalWidth * sc / 2, cy - face.naturalHeight * sc / 2, face.naturalWidth * sc, face.naturalHeight * sc);
-        }
-        c.restore();
-        c.save(); c.strokeStyle = '#24180f'; c.lineWidth = 2; c.beginPath(); c.arc(cx, cy, cr, 0.4, 5.4); c.stroke(); c.restore();
-        var eff = it.eff || '';
-        kai(c, eff, x + 12, y + h - Math.max(18, h * 0.12), Math.max(13, Math.min(16, h * 0.08)), '#24180f', 'left', w - 24);
+        if (VU && VU.washE) VU.washE(c, x + w * 0.28, y + h * 0.55, w * 0.55, h * 0.22, '90,78,58', 0.14);
+        kai(c, it.name || '', x + w / 2, y + Math.max(16, h * 0.1), Math.max(15, Math.min(26, w * 0.16)), '#2b1c08', 'center', w - 12);
+        var rank = cnRank(it.lv || it.r || '');
+        kai(c, rank, x + w / 2, y + Math.max(34, h * 0.2), 14, '#a42d19', 'center', w - 12);
+        var art = Math.min(w * 0.72, h * 0.38);
+        if (XY.ICONINK && it.name) XY.ICONINK.draw(c, it.name, x + w / 2, y + h * 0.48, art);
+        var eff = cnRank(it.eff || '');
+        kai(c, eff, x + w / 2, y + h - Math.max(16, h * 0.1), Math.max(13, Math.min(16, h * 0.08)), '#24180f', 'center', w - 16);
         K.hit(x, y, w, h - 4, 'offerPick', { k: i });
       });
       var bw = (pw - 36) / 2;
