@@ -787,8 +787,10 @@
   }
   function avaEl(id, o) {
     o = o || {}; var d = BF.SP[id], el = document.createElement('div'); el.className = 'ava' + (o.on ? ' on' : '') + (o.off ? ' off' : '') + (o.sel ? ' sel' : ''); el.dataset.id = id;
-    var faceH = id === 'kuanggong' ? 76 : 84;
-    el.innerHTML = '<div class="ring"><div class="face" style="background-image:url(' + avatarURL(id) + ');background-size:auto ' + faceH + '%;background-position:center bottom"></div></div><b><img class="nm" alt="' + NAMES[id] + '" src="../assets/art/menu-poster/nameh-' + id + '.webp">' + (o.badge ? '<span class="bd">' + o.badge + '</span>' : '') + '</b>';
+    var tall = window.innerHeight >= 400;
+    var faceH = (id === 'kuanggong' && tall) ? 70 : 84;
+    var bang = (id === 'kuanggong' && tall) ? ' !important' : '';
+    el.innerHTML = '<div class="ring"><div class="face" data-face="' + faceH + '" style="background-image:url(' + avatarURL(id) + ');background-size:auto ' + faceH + '%' + bang + ';background-position:center bottom' + bang + ';background-repeat:no-repeat"></div></div><b><img class="nm" alt="' + NAMES[id] + '" src="../assets/art/menu-poster/nameh-' + id + '.webp">' + (o.badge ? '<span class="bd">' + o.badge + '</span>' : '') + '</b>';
     return el;
   }
   function buildPick() {
