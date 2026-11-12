@@ -24119,72 +24119,63 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
       c.restore();
     }
     /* 竹后的墨用首页远山图里现成的泼墨块，抠掉宣纸后贴上。不画圆、不画椭圆。 */
-    function groveStamps() {
-      if (XY._groveStamps) return XY._groveStamps;
-      var im = XY._groveSrc;
-      if (!im) { im = XY._groveSrc = new Image(); im.src = 'assets/art/menu-v5/bg_v2.webp'; return null; }
-      if (!im.naturalWidth) return null;
-      var boxes = [[50, 90, 170, 150], [160, 120, 140, 140], [20, 180, 180, 140]];
+    function groveArt() {
+      if (XY._groveArt) return XY._groveArt;
+      var files = ['assets/art/bg-stage1/grove-a.webp', 'assets/art/bg-stage1/grove-b.webp'];
+      if (!XY._groveImgs) {
+        XY._groveImgs = files.map(function (src) { var im = new Image(); im.src = src; return im; });
+        return null;
+      }
+      if (!XY._groveImgs.every(function (im) { return im.naturalWidth; })) return null;
       var out = [];
-      boxes.forEach(function (b) {
+      XY._groveImgs.forEach(function (im) {
+        var w = im.naturalWidth, h = im.naturalHeight;
         var cv = document.createElement('canvas');
-        cv.width = b[2]; cv.height = b[3];
+        cv.width = w; cv.height = h;
         var g = cv.getContext('2d', { willReadFrequently: true });
-        g.drawImage(im, b[0], b[1], b[2], b[3], 0, 0, b[2], b[3]);
-        var d = g.getImageData(0, 0, b[2], b[3]), p = d.data, i, lum, a, ink;
+        g.drawImage(im, 0, 0);
+        var d = g.getImageData(0, 0, w, h), p = d.data, i, x, y, lum, edge, fade, a;
         for (i = 0; i < p.length; i += 4) {
+          x = (i / 4) % w; y = ((i / 4) / w) | 0;
+          edge = Math.min(x, y, w - 1 - x, h - 1 - y);
+          fade = Math.min(1, edge / 72);
           lum = p[i] * 0.3 + p[i + 1] * 0.59 + p[i + 2] * 0.11;
-          var px = (i / 4) % b[2], py = ((i / 4) / b[2]) | 0;
-          var edge = Math.min(px, py, b[2] - 1 - px, b[3] - 1 - py), fade = Math.min(1, edge / 22);
-          if (lum > 145 || fade <= 0) { p[i + 3] = 0; continue; }
-          a = Math.max(0, Math.min(255, (145 - lum) * 3.1 * fade));
-          ink = Math.min(p[i], p[i + 1], p[i + 2]);
-          p[i] = p[i + 1] = p[i + 2] = ink;
-          p[i + 3] = a;
+          if (lum > 175) a = 0;
+          else if (lum > 110) a = ((175 - lum) / 65) * 210 * fade;
+          else a = 255 * fade;
+          p[i + 3] = a < 0 ? 0 : (a > 255 ? 255 : a);
         }
         g.putImageData(d, 0, 0);
         out.push(cv);
       });
-      XY._groveStamps = out;
+      XY._groveArt = out;
       return out;
     }
     function grove(c, x, y, bw, bh) {
-      var IP = XY.INKP, stamps = groveStamps(), scale = Math.max(0.75, Math.min(1.4, Math.min(bw, bh) / 260));
-      if (stamps) {
-        var place = [[0, 0.02, 0.58, 0.7, -0.12, 0.88], [1, 0.34, 0.22, 0.48, 0.18, 0.7], [2, -0.02, 0.78, 0.62, 0.08, 0.62]];
-        place.forEach(function (p) {
-          var im = stamps[p[0]]; if (!im) return;
-          var dw = bw * p[3], dh = dw * im.height / im.width;
-          c.save();
-          c.translate(x + bw * p[1] + dw * 0.5, y + bh * p[2]);
-          c.rotate(p[4]);
-          c.globalAlpha = p[5];
-          c.drawImage(im, -dw * 0.5, -dh * 0.5, dw, dh);
-          c.restore();
-        });
-      }
-      var stalks = [[0.08, 0.0, 1, 15], [0.24, 0.03, 0.94, 12], [0.4, 0.06, 0.82, 17], [0.56, 0.0, 1, 13], [0.72, 0.04, 0.88, 16], [0.88, 0.1, 0.74, 11]];
-      var rgb = '26,56,32';
-      stalks.forEach(function (s, i) {
-        var x0 = x + s[0] * bw, y0 = y + s[1] * bh, y1 = y + bh * s[2];
-        var lean = (i % 2 ? 0.05 : -0.04) * bw;
-        var thick = s[3] * scale;
-        if (IP) IP.stroke(c, x0 + lean, y1, x0, y0, thick, rgb, 0.94, 30 + i * 5, (i - 2.5) * 0.045);
-        var j, t, jx, jy, ang, len, node;
-        for (j = 1; j <= 4; j++) {
-          t = j / 5;
-          jx = x0 + lean * (1 - t);
-          jy = y1 + (y0 - y1) * t;
-          node = thick * (1.15 - t * 0.55);
-          if (IP) IP.stroke(c, jx - node, jy, jx + node, jy + 1, Math.max(3.2, node * 0.55), '16,40,22', 0.96, 70 + i * 9 + j, 0.03);
-          if (j >= 2) {
-            ang = (i % 2 ? 0.6 : -0.55) + (j - 3) * 0.22;
-            len = Math.min(bw, bh) * (0.08 + (j % 3) * 0.014);
-            leaf(c, jx, jy, len, ang, rgb, 0.88);
-            leaf(c, jx, jy, len * 0.76, ang + 0.72, '22,50,28', 0.8);
-          }
+      var art = groveArt();
+      if (!art) return;
+      var tr = c.getTransform ? c.getTransform() : null;
+      var scale = Math.max(1, Math.abs(tr && tr.a ? tr.a : 1), Math.abs(tr && tr.d ? tr.d : 1));
+      var y0 = y, i, im, dw, dh, natW, natH;
+      c.save();
+      c.imageSmoothingEnabled = true;
+      c.imageSmoothingQuality = 'high';
+      for (i = 0; i < art.length && y0 < y + bh - 12; i++) {
+        im = art[i];
+        natW = im.width / scale; natH = im.height / scale;
+        dw = Math.min(bw * 0.96, natW);
+        dh = dw * im.height / im.width;
+        if (dh > natH) { dh = natH; dw = dh * im.width / im.height; }
+        if (y0 + dh > y + bh) {
+          var room = (y + bh - y0) / dh;
+          if (room < 0.4) break;
+          dw *= room; dh *= room;
         }
-      });
+        c.drawImage(im, x + (bw - dw) * 0.08, y0, dw, dh);
+        y0 += dh * 0.9;
+      }
+      c.restore();
+      XY._groveBox = { x: x, y: y, w: bw, h: Math.max(12, y0 - y) };
     }
     function crowdInk(cx, cy, rad) {
       var IP = XY.INKP;
@@ -24427,8 +24418,7 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
       for (i = 0; i < list.length; i++) n += cover(list[i], box, step).hits;
       return n;
     }
-    function fitOnBody(draw, body, others, text) {
-      var size = short ? 18 : (land ? 26 : 14);
+    function fitOnBody(draw, body, others, text, size) {
       var anchor = body && body.w ? body : draw;
       c.font = size + 'px GachaBrush, KaiTi, STKaiti, serif';
       function linesFor(maxW) {
@@ -24445,30 +24435,61 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
       var dimW = 0, li;
       for (li = 0; li < lines.length; li++) dimW = Math.max(dimW, Math.ceil(c.measureText(lines[li]).width));
       var gap = size * 1.15, dimH = Math.ceil(lines.length * gap);
-      var yf, sh, cx, cy, box, own, oth, frac, fine, fo, best = null;
-      var shifts = [0, -0.14, 0.14, -0.26, 0.26];
-      for (yf = 0.52; yf <= 0.9; yf += 0.06) {
+      var head = { x: anchor.x, y: anchor.y, w: anchor.w, h: anchor.h * 0.35 };
+      var waist = anchor.y + anchor.h * 0.5;
+      function mistOf(cx, cy) {
+        return { x: cx - dimW / 2 - 4, y: cy - dimH / 2 - 4, w: dimW + 8, h: dimH + 8, cx: cx, cy: cy, rx: dimW / 2 + 4, ry: dimH / 2 + 4 };
+      }
+      function hitsHead(m) {
+        var x0 = Math.max(m.x, head.x), y0 = Math.max(m.y, head.y);
+        var x1 = Math.min(m.x + m.w, head.x + head.w), y1 = Math.min(m.y + m.h, head.y + head.h);
+        return x1 - x0 > 0.5 && y1 - y0 > 0.5;
+      }
+      var yf, sh, cx, cy, box, own, oth, frac, m, best = null;
+      var shifts = [0, -0.06, 0.06];
+      var topFrac;
+      for (topFrac = 0.58; topFrac <= 1.02; topFrac += 0.04) {
         for (sh = 0; sh < shifts.length; sh++) {
+          var top = anchor.y + anchor.h * topFrac;
+          if (top < waist) continue;
           cx = anchor.x + anchor.w * (0.5 + shifts[sh]);
-          cy = anchor.y + anchor.h * yf;
+          cy = top + dimH / 2;
+          m = mistOf(cx, cy);
+          if (hitsHead(m)) continue;
           box = { x: cx - dimW / 2, y: cy - dimH / 2, w: dimW, h: dimH };
           if (box.x < 2 || box.y < 2 || box.x + box.w > cw - 2 || box.y + box.h > ch - 48) continue;
-          own = cover(draw, box, 3);
-          oth = othersHit(others, box, 3);
+          var stt = mistOn(draw, m);
+          if (stt.head || stt.frac > 0.15) continue;
+          own = cover(draw, box, 2);
+          oth = othersHit(others, box, 2);
           frac = own.hits / own.total;
-          if (frac >= 0.7 && oth === 0) {
-            fine = cover(draw, box, 2);
-            fo = othersHit(others, box, 2);
-            if (fine.hits / fine.total >= 0.7 && fo === 0) {
-              return { x: cx, y: cy, size: size, w: dimW, h: dimH, lines: lines, own: Math.round(fine.hits / fine.total * 1000) / 1000, other: 0 };
-            }
-          }
-          if (!best || (oth === 0 && frac > best.own)) best = { x: cx, y: cy, size: size, w: dimW, h: dimH, lines: lines, own: Math.round(frac * 1000) / 1000, other: oth };
+          var sc = (oth === 0 ? 0 : 400) - frac * 100 + topFrac;
+          if (!best || sc < best.sc) best = { x: cx, y: cy, size: size, w: dimW, h: dimH, lines: lines, own: Math.round(frac * 1000) / 1000, other: oth, sc: sc, mist: m, head: 0, mistFrac: Math.round(stt.frac * 1000) / 1000 };
         }
       }
-      return best || { x: anchor.x + anchor.w * 0.5, y: anchor.y + anchor.h * 0.72, size: size, w: dimW, h: dimH, lines: lines, own: 0, other: 1 };
+      if (!best) best = { x: anchor.x + anchor.w * 0.5, y: waist + dimH / 2, size: size, w: dimW, h: dimH, lines: lines, own: 0, other: 1, mist: mistOf(anchor.x + anchor.w * 0.5, waist + dimH / 2) };
+      return best;
     }
-
+    function mistOn(draw, mist) {
+      var mask = maskOf(draw && draw.im);
+      if (!mask || !mist) return { head: 0, frac: 0 };
+      var all = 0, hit = 0, headHit = 0, ix, iy, sx, sy, dx, dy, step = 2;
+      var top = draw.y, span = draw.h;
+      for (iy = 0; iy < mask.h; iy += step) {
+        for (ix = 0; ix < mask.w; ix += step) {
+          if (mask.a[iy * mask.w + ix] <= 40) continue;
+          all++;
+          sx = draw.x + (ix + 0.5) / mask.w * draw.w;
+          sy = draw.y + (iy + 0.5) / mask.h * draw.h;
+          dx = (sx - mist.cx) / mist.rx; dy = (sy - mist.cy) / mist.ry;
+          if (dx * dx + dy * dy <= 1) {
+            hit++;
+            if (sy < top + span * 0.35) headHit++;
+          }
+        }
+      }
+      return { head: headHit, frac: all ? hit / all : 0 };
+    }
     function softBamboo(c, x, y, w, h) {
       var IP = XY.INKP;
       if (!IP) return;
@@ -24570,27 +24591,37 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
           it.draw = d3;
           if (d3) draws.push(it);
         });
-        var names = [], audit = [];
-        draws.forEach(function (it) {
-          var others = [];
-          draws.forEach(function (o) { if (o !== it && o.draw) others.push(o.draw); });
-          var nm = fitOnBody(it.draw, it.body, others, it.label);
-          nm.id = it.id; nm.text = it.label; nm.unlock = it.unlock; nm.n = it.n;
+        var names = [], audit = [], chosen = null, szTry, trial, okTry;
+        for (szTry = (short ? 18 : (land ? 26 : 14)); szTry >= 13; szTry--) {
+          trial = []; okTry = true;
+          draws.forEach(function (it) {
+            var others = [];
+            draws.forEach(function (o) { if (o !== it && o.draw) others.push(o.draw); });
+            var nm = fitOnBody(it.draw, it.body, others, it.label, szTry);
+            nm.id = it.id; nm.text = it.label; nm.unlock = it.unlock; nm.n = it.n;
+            var stt = mistOn(it.draw, nm.mist);
+            nm.head = stt.head; nm.mistFrac = Math.round(stt.frac * 1000) / 1000;
+            if (stt.head !== 0 || stt.frac > 0.15) okTry = false;
+            trial.push(nm);
+          });
+          chosen = trial;
+          if (okTry) break;
+        }
+        chosen.forEach(function (nm) {
           names.push(nm);
-          audit.push({ id: it.id, text: it.label, own: nm.own, other: nm.other, size: nm.size, lines: (nm.lines || [nm.text]).length, pass: nm.own >= 0.7 && nm.other === 0 });
+          audit.push({ id: nm.id, text: nm.text, own: nm.own, other: nm.other, size: nm.size, lines: (nm.lines || [nm.text]).length, head: nm.head, mist: nm.mistFrac, pass: nm.head === 0 && nm.mistFrac <= 0.15 && nm.other === 0 });
         });
         XY.gacha10.lastNames = names;
         XY.gacha10.lastNameAudit = audit;
         function nameMist(x, y, w, h) {
-          var rx = Math.max(w * 0.72, h * 0.85), ry = Math.max(h * 0.95, rx * 0.42);
+          var rx = w / 2 + 4, ry = h / 2 + 4;
           c.save();
-          c.translate(x, y); c.scale(1, ry / rx);
-          var mist = c.createRadialGradient(0, 0, rx * 0.2, 0, 0, rx);
-          mist.addColorStop(0, 'rgba(246,239,226,0.94)');
-          mist.addColorStop(0.55, 'rgba(246,239,226,0.8)');
-          mist.addColorStop(0.78, 'rgba(246,239,226,0.28)');
-          mist.addColorStop(1, 'rgba(246,239,226,0)');
-          c.fillStyle = mist; c.beginPath(); c.arc(0, 0, rx, 0, Math.PI * 2); c.fill();
+          c.translate(x, y); c.scale(rx, ry);
+          var g = c.createRadialGradient(0, 0, 0.62, 0, 0, 1);
+          g.addColorStop(0, 'rgba(246,239,226,0.94)');
+          g.addColorStop(0.7, 'rgba(246,239,226,0.9)');
+          g.addColorStop(1, 'rgba(246,239,226,0)');
+          c.fillStyle = g; c.beginPath(); c.arc(0, 0, 1, 0, Math.PI * 2); c.fill();
           c.restore();
         }
         function resultInk(text, x, y, size) {
