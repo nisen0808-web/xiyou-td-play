@@ -1851,9 +1851,9 @@
     ctx.fillText('布阵', x + 16, y + 10);
     ctx.fillStyle = '#2a241c'; ctx.font = brushFont(bodyPx);
     ctx.fillText('最少 4 人', x + 16 + namePx * 2.4, y + 14);
-    seal(ctx, x + w - (narrow ? 78 : 64), y + 24, narrow ? 18 : 16, '谱');
+    seal(ctx, x + w - (narrow ? 86 : 72), y + 24, narrow ? 22 : 20, '阵谱');
     hit(x + w - (narrow ? 100 : 86), y + 4, 44, 40, 'tdOpenShop');
-    seal(ctx, x + w - 28, y + 24, narrow ? 16 : 14, '收');
+    seal(ctx, x + w - 28, y + 24, narrow ? 20 : 18, '收起');
     hit(x + w - 48, y + 4, 44, 40, 'tdDrawer');
     var listH = Math.max(rowH, viewH - head - footH);
     var maxScroll = Math.max(0, list.length * rowH - listH);
@@ -1880,8 +1880,8 @@
     });
     ctx.restore();
     if (maxScroll > 0) {
-      seal(ctx, x + w - 22, y + head + 16, 12, '上');
-      seal(ctx, x + w - 22, y + head + listH - 16, 12, '下');
+      seal(ctx, x + w - 26, y + head + 16, 16, '上翻');
+      seal(ctx, x + w - 26, y + head + listH - 16, 16, '下翻');
       hit(x + w - 40, y + head, 36, 32, 'tdPanelUp');
       hit(x + w - 40, y + head + listH - 32, 36, 32, 'tdPanelDown');
     }
@@ -1907,7 +1907,7 @@
       var footTop2 = y + head + listH;
       seal(ctx, x + w - 130, footTop2 + footH / 2, sealR, '确认');
       hit(x + w - 160, footTop2, 60, footH, 'tdConfirm', { who: 'line' });
-      seal(ctx, x + w - 52, footTop2 + footH / 2, sealR, '散');
+      seal(ctx, x + w - 52, footTop2 + footH / 2, sealR, '解散');
       hit(x + w - 82, footTop2, 60, footH, 'tdDisband', { who: 'line' });
     }
     bindHits(G, cur);
