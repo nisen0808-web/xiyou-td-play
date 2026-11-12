@@ -4294,22 +4294,46 @@ XY.TRAITS = {
     var safe = partySafe(G), vw = safe.vw, vh = safe.vh;
     var availW = Math.max(160, safe.right - safe.left), availH = Math.max(90, safe.bottom - safe.top);
     var head = 96, cloud = 42;
-    if (vh < vw * 0.45 && list.length >= 8) {
-      var per = Math.ceil(list.length / 2);
-      var gapY = Math.max(56, Math.min(120, availH - head - cloud));
-      var gapX = (availW - 80) / Math.max(1, per - 1);
-      gapX = Math.max(78, Math.min(176, gapX));
-      return list.map(function (hh, k) {
-        var row = k < per ? 0 : 1, col = row ? k - per : k, count = row ? list.length - per : per;
-        return { h: hh, x: tang.x + (col - (count - 1) / 2) * gapX + (row ? gapX * 0.48 : 0), y: tang.y + (row - 0.5) * gapY };
-      });
+    function relax(slots, minD) {
+      var pts = slots.map(function (s) { return { h: s.h, x: s.x, y: s.y }; });
+      pts.push({ h: tang, x: tang.x, y: tang.y, pin: true });
+      var p, i, j, dx, dy, d, push, ux, uy;
+      for (p = 0; p < 12; p++) for (i = 0; i < pts.length; i++) for (j = i + 1; j < pts.length; j++) {
+        dx = pts[j].x - pts[i].x; dy = pts[j].y - pts[i].y; d = Math.sqrt(dx * dx + dy * dy) || 0.01;
+        if (d >= minD) continue;
+        push = (minD - d) / 2; ux = dx / d; uy = dy / d;
+        if (!pts[i].pin) { pts[i].x -= ux * push; pts[i].y -= uy * push; }
+        if (!pts[j].pin) { pts[j].x += ux * push; pts[j].y += uy * push; }
+      }
+      return pts.filter(function (q) { return !q.pin; }).map(function (q) { return { h: q.h, x: q.x, y: q.y }; });
     }
+    if (vh < vw * 0.45 && list.length >= 8) {
+      var fig = 108;
+      var scale = Math.max(0.56, Math.min(0.82, (availH * 0.48) / fig));
+      XY._partyScale = scale;
+      var gapY = Math.max(64, Math.min(availH * 0.46, fig * scale * 0.95));
+      var backN = 6, front = list.length - backN;
+      var gapX = Math.max(86, Math.min(168, (availW - 90) / Math.max(3, front - 1)));
+      var slots = [];
+      list.forEach(function (hh, k) {
+        if (k < backN) {
+          var side = k < backN / 2 ? (k - backN / 2) : (k - backN / 2 + 1);
+          slots.push({ h: hh, x: tang.x + side * gapX, y: tang.y });
+        } else {
+          var col = k - backN;
+          slots.push({ h: hh, x: tang.x + (col - (front - 1) / 2) * gapX + gapX * 0.5, y: tang.y + gapY });
+        }
+      });
+      return relax(slots, Math.max(72, gapX * 0.72));
+    }
+    XY._partyScale = 1;
     var rx = Math.max(160, Math.min((availW - 70) / 2, availW * 0.46));
     var ry = Math.max(110, Math.min((availH - head - cloud) / 2, availH * 0.42));
-    return list.map(function (hh, k) {
+    var wide = list.map(function (hh, k) {
       a = (k / Math.max(1, list.length)) * Math.PI * 2 + 0.4;
       return { h: hh, x: tang.x + Math.cos(a) * rx, y: tang.y + Math.sin(a) * ry };
     });
+    return relax(wide, 108);
   }
   function frameParty(G) {
     if (!G || !G.heroes || G.heroes.length < 9 || !G.view) return false;
@@ -8902,7 +8926,7 @@ XY.TRAITS = {
   /* 在 (x, footY)（脚底位置）画云：云面在脚下。moving = 正在移动（身后拖云丝）。 */
   Cl.draw = function (c, h, x, footY, r, rt, moving) {
     if (!spr) bake();
-    var cv = spr[(h.bob > 3 || h.i === 1 || h.i === 3) ? 1 : 0] || spr[0], w = r * 7.4, k = w / 240, hh = 110 * k;
+    var cv = spr[(h.bob > 3 || h.i === 1 || h.i === 3) ? 1 : 0] || spr[0], w = r * 7.4 * ((XY && XY._partyScale) || 1), k = w / 240, hh = 110 * k;
     if (moving) {
       var fa = (h.face || 0) + Math.PI, ca = Math.cos(fa), sa = Math.sin(fa);
       c.save(); c.lineCap = 'round'; c.strokeStyle = 'rgba(112,108,94,0.42)'; c.lineWidth = 2;
@@ -12477,7 +12501,7 @@ XY.TRAITS = {
     if (wildKind) {
       var hdIm = S.hd(key);
       if (hdIm && wildKind === 'idle') {
-        var dh = r * 3.4 * ((G && G._shotScale) || 1), dw = hdIm.naturalWidth * dh / hdIm.naturalHeight;
+        var dh = r * 3.4 * ((G && G._shotScale) || 1) * ((XY && XY._partyScale) || 1), dw = hdIm.naturalWidth * dh / hdIm.naturalHeight;
         c.drawImage(hdIm, -dw / 2, -dh, dw, dh);
         h._drawBox = { x: x + hitX + (step ? step.sway : 0) - dw / 2, y: foot + bobY - dh, w: dw, h: dh };
         h._wildTop = foot + bobY - dh;
@@ -23793,7 +23817,7 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
       geo.tiles = nt; geo.strip = { y: stripY, h: labH + cellH };
       if (tiny && dkBot) XY.departDk = { bottom: dkBot, top: dkBot - 56 * zLay, right: (22 + 132 + 10 + 120) * zLay };
       // —— 中：左 竖卡 + 说明；右 立绘 + 按钮
-      var y1 = stripY - 10, LW = Math.round(cw * (cw >= 1000 ? 0.58 : 0.6)), detMin = Math.round(Math.min(150, 84 * s));
+      var y1 = (tiny && dkBot) ? (dkBot - 56 * zLay - 8) : (stripY - 10), LW = Math.round(cw * (cw >= 1000 ? 0.58 : 0.6)), detMin = Math.round(Math.min(150, 84 * s));
       // 说明行数（sweep09 已通关会多一行星级）：按最小 13px 行距给够，竖卡相应矮一点，免得「终点 / 最快用时」被挤掉
       var nDet = (cur0.k === 'boss' ? 3 : 4) + (cur0.k !== 'boss' && cur0.cleared && XY.sweep09 ? 1 : 0);
       detMin = Math.max(detMin, Math.round(Math.min(20 * s, 26) * 1.25 + 8 + nDet * Math.max(14, Math.min(12.5 * s, 16) * 1.3)));
