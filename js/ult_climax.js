@@ -68,7 +68,7 @@
       if (!sp) { q.shift(); return; }
       ctx.save();
       ctx.setTransform(app.zoom * app.dpr, 0, 0, app.zoom * app.dpr, 0, 0);
-      if (!(XY.gacha10 && XY.gacha10.overlay && XY.gacha10.overlay())) { q.length = 0; ctx.restore(); return; }
+      if (!app || app.screen !== 'levels' || !(XY.gacha10 && XY.gacha10.overlay && XY.gacha10.overlay())) { q.length = 0; if (XY.gacha10) XY.gacha10.forceHold = false; ctx.restore(); return; }
       if (XY.gacha10) XY.gacha10.forceHold = true;
       var W = app.lw, H = app.lh, pw = Math.min(560, W - 24), ph = Math.min(280, H * 0.46);
       var x = (W - pw) / 2, y = (H - ph) / 2;
@@ -91,12 +91,15 @@
       ctx.font = '28px "Ma Shan Zheng","KaiTi",serif';
       ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
       ctx.fillText(sp.name, x + pw * 0.46, y + 48);
+      var tx = x + pw * 0.46;
       ctx.fillStyle = '#24180f';
-      ctx.font = '15px "Ma Shan Zheng","KaiTi",serif';
-      ctx.fillText(sp.role || '', x + 24, y + 68);
-      ctx.fillText('大招 ' + (sp.ult || ''), x + 24, y + 96);
+      ctx.font = '18px "Ma Shan Zheng","KaiTi",serif';
+      ctx.fillText('身份  ' + (sp.role || sp.name), tx, y + 92);
+      ctx.fillText('擅长  ' + (sp.weapon || sp.trait && sp.trait.name || ''), tx, y + 124);
+      ctx.fillText('必杀  ' + (sp.ult || ''), tx, y + 156);
       ctx.fillStyle = '#5c4a38';
-      ctx.fillText('点一下收下', x + 24, y + ph - 28);
+      ctx.font = '15px "Ma Shan Zheng","KaiTi",serif';
+      ctx.fillText('点一下收下', tx, y + ph - 28);
       XY._introBox = { x: x, y: y, w: pw, h: ph };
       ctx.restore();
     }

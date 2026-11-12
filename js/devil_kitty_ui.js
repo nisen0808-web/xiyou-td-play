@@ -668,26 +668,8 @@
   }
   function inkWash(c, im, x, y, w, h, fallback) {
     c.save();
-    c.beginPath();
-    c.rect(x, y, w, h);
-    c.clip();
-    c.fillStyle = '#f3ead6';
-    c.fillRect(x, y, w, h);
     if (im) drawContain(c, im, x, y, w, h);
     else if (fallback) cursive(c, fallback, x + w / 2, y + h * 0.46, Math.min(42, w * 0.34), '#3a2a1c', 'center');
-    c.globalCompositeOperation = 'destination-in';
-    var rg = c.createRadialGradient(x + w * 0.5, y + h * 0.4, Math.min(w, h) * 0.06, x + w * 0.5, y + h * 0.46, Math.max(w, h) * 0.68);
-    rg.addColorStop(0, 'rgba(0,0,0,1)');
-    rg.addColorStop(0.62, 'rgba(0,0,0,1)');
-    rg.addColorStop(0.86, 'rgba(0,0,0,0.4)');
-    rg.addColorStop(1, 'rgba(0,0,0,0)');
-    c.fillStyle = rg;
-    c.fillRect(x, y, w, h);
-    var lg = c.createLinearGradient(x, y + h * 0.72, x, y + h);
-    lg.addColorStop(0, 'rgba(0,0,0,1)');
-    lg.addColorStop(1, 'rgba(0,0,0,0)');
-    c.fillStyle = lg;
-    c.fillRect(x, y, w, h);
     c.restore();
   }
   function namePlate(c, s, x, y, maxW) {
@@ -1057,7 +1039,7 @@
       foot = y + h - 6;
       sharedGround(c, left, foot, cardW * 2 + gap);
       blitCut(c, 'stage1cut', art.stage1Cut || 'stage1-cut.webp', left + cardW * 0.5, foot, h - 18, cardW - 8);
-      captionOn(c, left, y, cardW, h, API.HERO, API.HANDLE);
+      captionOn(c, left, y, cardW, h, API.HERO, '');
       blitCut(c, 'formcut', art.formCut || 'form-cut.webp', left + cardW + gap + cardW * 0.5, foot, h - 10, cardW - 8);
       captionOn(c, left + cardW + gap, y, cardW, h, API.HERO2, '');
       return;
@@ -1070,7 +1052,7 @@
     foot = top + cardH - 2;
     sharedGround(c, x, foot, w);
     blitCut(c, 'stage1cut', art.stage1Cut || 'stage1-cut.webp', x + cardW * 0.5, foot, cardH, cardW - 6);
-    captionOn(c, x, top, cardW, cardH, API.HERO, API.HANDLE);
+    captionOn(c, x, top, cardW, cardH, API.HERO, '');
     blitCut(c, 'formcut', art.formCut || 'form-cut.webp', x + cardW + gap + cardW * 0.5, foot, cardH, cardW - 6);
     captionOn(c, x + cardW + gap, top, cardW, cardH, API.HERO2, '');
   }
@@ -1845,14 +1827,16 @@
     inkName(c, heroName, heroX + heroW * 0.82, heroY + heroH * 0.16, heroW * 0.4, Math.round(heroW / 6), '#120c0a');
     function sidePiece(piece, x, y, w, h) {
       if (!piece) return;
-      var art = gearArt(piece.id);
-      var cut = art && cutout('gear-' + piece.id, art);
-      if (cut) paintCut(c, cut, x, y, w, h, false);
+      c.save();
+      c.translate(x, y);
+      inkShape(c, gearKind(piece.id), w, h);
+      c.restore();
       inkName(c, piece.name, x + w / 2, y + h + (port ? 18 : 16), w + 20, port ? 26 : 22, '#120c0a');
       var brief = String(piece.desc || '');
       var colon = brief.indexOf('：');
       if (colon >= 0) brief = brief.slice(colon + 1);
       brush(c, brief, x + w / 2, y + h + (port ? 40 : 38), port ? 14 : 16, '#5c4a36', 'center');
+      brush(c, '获得：活动十连，或战斗里掉落', x + w / 2, y + h + (port ? 58 : 56), port ? 13 : 14, '#8d1f18', 'center');
       var bagN = (gdoc.bag && gdoc.bag[piece.id]) || 0;
       var equipped = (piece.slot === 'weapon' ? eq.weapon : eq.item) === piece.id;
       if (bagN > 0 && !equipped) hit(x, y, Math.max(88, w), Math.max(88, h), 'dkEquip', { id: piece.id, hero: sel });

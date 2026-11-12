@@ -6989,7 +6989,7 @@ XY.TRAITS = {
       var sky = !!e.tdSky, flew = !sky && XY.MINK && XY.MINK.fly && XY.MINK.fly(c, e, rt, e.x, e.y - lift, look);
       if (!flew) { if (sky && XY.tdInkFly) XY.tdInkFly(c, e, rt, e.x, e.y - lift); else { var tint = e.flash > 0 ? '#ffffff' : (e.enraged ? '#2a2118' : null); if (e.type === 'owl') owl(c, e, rt, e.x, e.y - lift, e.r * 1.1, rt, e.wob, tint, false, look); else bat(c, e.x, e.y - lift, e.r * 1.15, rt, e.wob, tint, false); } }
       c.globalAlpha = 1;
-      if (e.slowT > 0) { c.strokeStyle = 'rgba(74,144,217,0.75)'; c.lineWidth = 2; c.beginPath(); c.ellipse(e.x, e.y + e.r * 0.5, e.r * 1.1, e.r * 0.4, 0, 0, PI2); c.stroke(); }
+      if (e.slowT > 0) { c.strokeStyle = 'rgba(42,32,22,0.35)'; c.lineWidth = 1.1; c.beginPath(); c.ellipse(e.x, e.y + e.r * 0.7, e.r * 0.45, e.r * 0.16, 0, 0.4, 2.2); c.stroke(); }
       if (e.stunT > 0) { c.fillStyle = '#e0a415'; c.font = 'bold 12px sans-serif'; c.textAlign = 'center'; c.fillText('★ ★', e.x, e.y - lift - e.r * 1.6); }
       if (e.hp < e.maxHp && !sky) bar(c, e.x - e.r, e.y - lift - e.r * 1.5 - 4, e.r * 2, 4, e.hp / e.maxHp, '#e0533d', 'rgba(255,255,255,0.85)');
     }
@@ -9120,11 +9120,7 @@ XY.BGS1={"src": "data:image/webp;base64,UklGRtT1GgBXRUJQVlA4IMj1GgCQwWGdASoAEAAK
     c.fillStyle = T.grass2;
     for (var iy = iy0; iy <= iy1; iy++) for (var ix = ix0; ix <= ix1; ix++) if ((ix + iy) & 1) c.fillRect(ix * ts, iy * ts, ts, ts);
     }
-    // 营地土地
     var cp = G.camp;
-    var gr = c.createRadialGradient(cp.x, cp.y, 60, cp.x, cp.y, 260);
-    gr.addColorStop(0, '#efe3c0'); gr.addColorStop(0.75, '#ecdfba'); gr.addColorStop(1, 'rgba(236,223,186,0)');
-    c.fillStyle = gr; c.beginPath(); c.arc(cp.x, cp.y, 260, 0, PI2); c.fill();
     // 装饰
     if (!XY.drawTerrain && !decor) decor = buildDecor();
     for (var i = 0; !XY.drawTerrain && i < decor.length; i++) {
@@ -9200,26 +9196,10 @@ XY.BGS1={"src": "data:image/webp;base64,UklGRtT1GgBXRUJQVlA4IMj1GgCQwWGdASoAEAAK
     // 驻守圈：唐僧命令是“驻守营地”时画出虚线圈；真正驻守生效时整个营地发金光
     if (!cp.active) {
       drawRestStall(c, x, y, rt);
-      var rl = '歇';
-      c.save();
-      c.font = '16px "Ma Shan Zheng","KaiTi",serif';
-      c.textAlign = 'center'; c.textBaseline = 'middle';
-      var ly = y + 92;
-      c.fillStyle = '#3a2a1c'; c.fillText(rl, x, ly);
-      c.restore();
       return;
     }
     if (G.station) {
-      var pu = 0.5 + 0.5 * Math.sin(rt * 2.2);
-      var gr = c.createRadialGradient(x, y, 16, x, y, C.STATION_R + 8);
-      gr.addColorStop(0, 'rgba(36,28,20,' + (0.06 + 0.03 * pu) + ')'); gr.addColorStop(1, 'rgba(36,28,20,0)');
-      c.fillStyle = gr; c.beginPath(); c.arc(x, y, C.STATION_R + 8, 0, PI2); c.fill();
-      c.strokeStyle = 'rgba(36,28,20,' + (0.32 + 0.12 * pu) + ')'; c.lineWidth = 1.6;
-      c.beginPath(); c.arc(x, y, C.STATION_R * 0.92, 0.25, 1.65); c.stroke();
-      c.beginPath(); c.arc(x, y, C.STATION_R * 0.92, 2.35, 4.15); c.stroke();
-      c.strokeStyle = 'rgba(90,82,70,0.4)'; c.lineWidth = 1;
-      c.beginPath(); c.arc(x, y, C.STATION_R * 0.78, 4.5, 5.7); c.stroke();
-      otxt(c, '驻守', x, y - 96, 14, '#3a2e22', 'center', true);
+      otxt(c, '驻守', x, y - 118, 14, '#3a2e22', 'center', true);
     }
     // 营地圈：妖怪闯进来才画一圈飞白墨弧，不再用红虚线和粉橙光
     var zp = 0.5 + 0.5 * Math.sin(rt * 6);
@@ -9245,7 +9225,7 @@ XY.BGS1={"src": "data:image/webp;base64,UklGRtT1GgBXRUJQVlA4IMj1GgCQwWGdASoAEAAK
     // 血条
     var f = cp.hp / cp.maxHp;
     bar(c, x - 50, y + 46, 100, 9, f, hpColor(f), 'rgba(255,255,255,0.8)');
-    otxt(c, '营地', x, y + 78, 13, T.ink, 'center', true);
+    otxt(c, '营地', x, y + 132, 13, T.ink, 'center', true);
   }
 
   function drawTower(c, G, t, rt) {          // 名字沿用旧的，画的是天兵（人形士兵），不再是塔
@@ -9356,7 +9336,7 @@ XY.BGS1={"src": "data:image/webp;base64,UklGRtT1GgBXRUJQVlA4IMj1GgCQwWGdASoAEAAK
     c.beginPath(); c.arc(x - r * 0.33 + look * es * 0.35, ey, es * 0.5, 0, PI2); c.arc(x + r * 0.33 + look * es * 0.35, ey, es * 0.5, 0, PI2); c.fill();
     if (baked) return;
     // 状态
-    if (e.slowT > 0) { c.strokeStyle = 'rgba(74,144,217,0.8)'; c.lineWidth = 2; c.beginPath(); c.arc(x, y, r + 3, 0, PI2); c.stroke(); }
+    if (e.slowT > 0) { c.strokeStyle = 'rgba(42,32,22,0.4)'; c.lineWidth = 1.2; c.beginPath(); c.arc(x, y + r * 0.7, r * 0.55, 0.3, 2.4); c.stroke(); }
     if (e.burnT > 0) { c.fillStyle = '#a83224'; c.beginPath(); c.arc(x + r * 0.5, y - r - 4, 3.5, 0, PI2); c.fill(); }
     if (e.stunT > 0) otxt(c, '★ ★', x, y - r - 12, 12, '#e0a415', 'center', true);
     // 血条（受伤后或强敌）
@@ -9419,11 +9399,8 @@ XY.BGS1={"src": "data:image/webp;base64,UklGRtT1GgBXRUJQVlA4IMj1GgCQwWGdASoAEAAK
       var mn0 = h.mounted ? G.heroes[4] : null, fo = mn0 ? r * 0.55 + mn0.def.r * 1.25 * 0.85 : r * 0.85;
       c.fillStyle = 'rgba(70,50,30,0.1)'; c.beginPath(); c.ellipse(x, y + lift + fo + 4, r * 1.3, r * 0.4, 0, 0, PI2); c.fill();   // 地面上一圈很淡的影
       if (false) XY.cloud.draw(c, h, x, y + fo + 3, r * (mn0 ? 1.25 : 1), rt, cloudMv);
-    } else if (!G._quietShot) { c.fillStyle = 'rgba(42,32,22,0.16)'; c.beginPath(); c.ellipse(x, y + r * 0.85, r * 0.95, r * 0.28, 0, 0, PI2); c.fill(); }
-    if (isC && !h.down && !G._quietShot) {
-      if (XY.INKP) XY.INKP.ring(c, x, y + r * 0.8, r * 1.35, 2.2, XY.INKP.INK, 0.7, 6, 5, 0.45, rt);
-      else { c.strokeStyle = 'rgba(24,20,16,0.75)'; c.lineWidth = 2; c.beginPath(); c.ellipse(x, y + r * 0.8, r * 1.35, r * 0.6, 0, 0, PI2); c.stroke(); }
-    }
+    } else if (false) {}
+    if (false && isC) {}
     if (h.down && !(XY.MINK && XY.MINK.poseOwns && XY.MINK.poseOwns(h))) {                                            // 有倒地立绘的角色留在下面画 ko；其余仍是墓碑
       c.fillStyle = 'rgba(70,50,30,0.15)'; c.beginPath(); c.ellipse(x, y + 12, 18, 6, 0, 0, PI2); c.fill();
       c.fillStyle = '#d6d3cb'; c.strokeStyle = '#8f8b80'; c.lineWidth = 2;
@@ -9472,7 +9449,12 @@ XY.BGS1={"src": "data:image/webp;base64,UklGRtT1GgBXRUJQVlA4IMj1GgCQwWGdASoAEAAK
       var seen = XY.R4._orderSeen || (XY.R4._orderSeen = []);
       var dup = false, si;
       for (si = 0; si < seen.length; si++) if (seen[si].s === lab && Math.abs(seen[si].x - x) < 86 && Math.abs(seen[si].y - y) < 42) dup = true;
-      if (!dup) { seen.push({ s: lab, x: x, y: y }); inkTag(c, lab, x, XY.R4.placeLabel(c, lab, x, y + r + 20, 15, 1), 15, isC ? '#a42d19' : '#24180f'); }
+      if (!dup) {
+        var nearCamp = G.camp && Math.abs(x - G.camp.x) < 120 && Math.abs(y - G.camp.y) < 120;
+        var lx = nearCamp ? x + r + 46 : x, ly = nearCamp ? y - r - 6 : y + r + 28;
+        seen.push({ s: lab, x: lx, y: ly });
+        inkTag(c, lab, lx, XY.R4.placeLabel(c, lab, lx, ly, 15, nearCamp ? -1 : 1), 15, isC ? '#a42d19' : '#24180f');
+      }
     }
     var clash = XY.R4.labelClash(G, x - 50, y + lift - tr - 54, 100, 52);          // v0.7：头顶标签碰到 BOSS 的名牌 / 血条区域 → 名字等挪到脚下
     // 唐僧血量低：红圈 + 感叹号
@@ -9486,7 +9468,7 @@ XY.BGS1={"src": "data:image/webp;base64,UklGRtT1GgBXRUJQVlA4IMj1GgCQwWGdASoAEAAK
     // v0.8.1：名牌延后到所有英雄画完再画（flushHeroNames），避开其他角色的身体 / 血条 / 命令标签和别的名牌，也不会被后画的角色盖住
     heroBodies.push({ h: h, x0: x - Math.max(rr * 1.15, tall ? 30 : 0), x1: x + Math.max(rr * 1.15, tall ? 30 : 0), y0: Math.min(y - (tall ? tr : r) - 2, h._wildTop == null ? 1e9 : h._wildTop), y1: y + r + 12 });
     var nameY = clash ? y + r + (h.sp ? 47 : 34) : y - tr - (isC ? 36 : 32); if (!clash && h._wildTop != null) nameY = Math.min(nameY, h._wildTop - (isC ? 34 : 30));
-    if (!(G.td && G.td.quiet > G.td.clock)) heroNames.push({ h: h, s: d.name + (h.sp ? ' Lv' + d.lv : ''), x: x, y: nameY, sz: isC ? 18 : 16, col: isC ? '#a42d19' : '#24180f', dir: clash ? 1 : -1, mark: isC && !clash, a: c.globalAlpha, tri: Math.sin(rt * 6) * 2 });
+    if (!(G.td && G.td.quiet > G.td.clock)) heroNames.push({ h: h, s: d.name, x: x, y: nameY, sz: isC ? 18 : 16, col: isC ? '#a42d19' : '#24180f', dir: clash ? 1 : -1, mark: isC && !clash, a: c.globalAlpha, tri: Math.sin(rt * 6) * 2 });
   }
   var heroBodies = [], heroNames = [];
   var NMIMG = {};
@@ -9561,8 +9543,6 @@ XY.BGS1={"src": "data:image/webp;base64,UklGRtT1GgBXRUJQVlA4IMj1GgCQwWGdASoAEAAK
       if (box.lv) {
         c.font = box.fs + 'px ' + face;
         c.textAlign = 'left'; c.textBaseline = 'middle';
-        c.lineWidth = 2; c.strokeStyle = 'rgba(255,250,240,0.92)'; c.lineJoin = 'round';
-        c.strokeText(box.lv, x - box.w / 2 + box.iw + 3, y + 1);
         c.fillStyle = col || '#24180f';
         c.fillText(box.lv, x - box.w / 2 + box.iw + 3, y + 1);
       }
@@ -9571,9 +9551,7 @@ XY.BGS1={"src": "data:image/webp;base64,UklGRtT1GgBXRUJQVlA4IMj1GgCQwWGdASoAEAAK
     c.save();
     c.font = box.fs + 'px ' + face;
     c.textAlign = 'center'; c.textBaseline = 'middle';
-    c.lineWidth = 2; c.strokeStyle = 'rgba(255,250,240,0.92)'; c.lineJoin = 'round';
     var s = XY.fmtStr(n.s);
-    c.strokeText(s, x, y);
     c.fillStyle = col || '#24180f';
     c.fillText(s, x, y);
     c.restore();
@@ -10451,7 +10429,7 @@ XY.BGS1={"src": "data:image/webp;base64,UklGRtT1GgBXRUJQVlA4IMj1GgCQwWGdASoAEAAK
     ctx.save();
     var v = G.view, camx = G.cam.x, camy = G.cam.y;
     var sh = G.shake > 0 ? G.shake : 0, shx = (Math.random() - 0.5) * sh, shy = (Math.random() - 0.5) * sh;
-    var worldZoom = (app.lh > app.lw * 1.05 && (s === 'play' || s === 'pause')) ? 2.4 : 1;
+    var worldZoom = (app.lh > app.lw * 1.05 && (s === 'play' || s === 'pause')) ? 3.2 : 1;
     if (worldZoom > 1) { ctx.translate(v.w / 2, v.h / 2); ctx.scale(worldZoom, worldZoom); ctx.translate(-v.w / 2, -v.h / 2); }
     ctx.translate(v.w / 2 - camx + shx, v.h / 2 - camy + shy);
     if (XY.ui2) XY.ui2.world = true;
@@ -11547,7 +11525,7 @@ XY.BGS1={"src": "data:image/webp;base64,UklGRtT1GgBXRUJQVlA4IMj1GgCQwWGdASoAEAAK
       T.panel(c, x, y, w, 62, 12, 'rgba(255,250,236,0.97)', d.frame); c.lineWidth = 3; c.strokeStyle = d.frame; T.rrect(c, x, y, w, 62, 12); c.stroke();
       R4.avatarDisc(c, d, x + 34, y + 31, 20, rt);
       T.txt(c, '获得角色卡「' + d.name + '」', x + 70, y + 18, 17, T.T.ink, 'left', true);
-      T.txt(c, b.cards + ' 张' + (b.first ? ' · 解锁！可在关卡选择页携带' : (b.up ? ' · 升到 Lv' + b.lv + '！' : '')), x + 70, y + 40, 12.5, b.first || b.up ? '#d62828' : '#2f7d3b', 'left', true);
+      T.txt(c, b.cards + ' 张' + (b.first ? ' · 解锁！可在关卡选择页携带' : (b.up ? ' · 升到' + b.lv + '重！' : '')), x + 70, y + 40, 12.5, b.first || b.up ? '#a42d19' : '#2f7d3b', 'left', true);
       c.globalAlpha = 1;
     });
     // 皮肤 / 栏位解锁弹窗
@@ -11555,8 +11533,8 @@ XY.BGS1={"src": "data:image/webp;base64,UklGRtT1GgBXRUJQVlA4IMj1GgCQwWGdASoAEAAK
     if (up) {
       var u = XY.UNLOCKS.filter(function (x) { return x.id === up.id; })[0], k2 = up.t / up.max, al2 = Math.min(1, up.t / 0.3, (up.max - up.t) / 0.5), w2 = 420, h2 = 150, x2 = W / 2 - w2 / 2, y2 = H / 2 - 170;
       c.globalAlpha = Math.max(0, al2);
-      T.panel(c, x2, y2, w2, h2, 16, 'rgba(255,250,236,0.98)', '#e0a415'); c.lineWidth = 4; c.strokeStyle = '#e0a415'; T.rrect(c, x2, y2, w2, h2, 16); c.stroke();
-      T.txt(c, u.kind === 'skin' ? '★ 皮肤解锁 ★' : (u.kind === 'slot' ? '★ 卡组栏位 +1 ★' : '★ 新角色 ★'), W / 2, y2 + 24, 20, '#b8300f', 'center', true);
+      T.panel(c, x2, y2, w2, h2, 16, 'rgba(246,239,226,0.96)', '#3a3226'); c.lineWidth = 1.4; c.strokeStyle = 'rgba(42,32,22,0.45)'; T.rrect(c, x2, y2, w2, h2, 16); c.stroke();
+      T.txt(c, u.kind === 'skin' ? '皮肤解锁' : (u.kind === 'slot' ? '卡组栏位加一' : '新角色'), W / 2, y2 + 24, 20, '#a42d19', 'center', true);
       if (u.kind === 'skin' && XY.SKINS[u.hero]) { var sk = XY.SKINS[u.hero], bi = XY.HEROES.map(function (hh) { return hh.id; }).indexOf(u.hero), dm = {}, kk; for (kk in XY.HEROES[bi]) dm[kk] = XY.HEROES[bi][kk]; dm.color = sk.color; dm.dark = sk.dark; dm.accent = sk.accent; c.save(); T.drawHeroShape(c, dm, x2 + 70, y2 + 92, 34); c.restore(); }
       else { c.fillStyle = '#ffe9a8'; c.beginPath(); c.arc(x2 + 70, y2 + 92, 34, 0, 6.3); c.fill(); T.txt(c, u.kind === 'slot' ? '+1' : '新', x2 + 70, y2 + 92, 26, '#8a5a05', 'center', true); }
       T.txt(c, u.name, x2 + 130, y2 + 72, 18, T.T.ink, 'left', true);
@@ -16956,7 +16934,7 @@ XY.XC_TPL={"scholar":{"w":310,"h":520,"foot":[182,516],"head":[182,45,32],"kb":5
         d.tag = '升'; d.lv = 'Lv' + cd.from + ' → Lv' + cd.to; d.lvCol = '#b8300f'; d.pips = [cd.to, mx];
         d.eff = shortEff(UI.upText(cd.id, cd.to)); rec = (rn ? '配方：' + rn + '。' : '') + '现有：' + it.d;
       } else {
-        d.tag = '新'; d.lv = 'Lv1'; d.lvCol = '#2f7d3b'; d.pips = [1, mx]; d.eff = shortEff(it.d);
+        d.tag = '新'; d.lv = '一重'; d.lvCol = '#2f7d3b'; d.pips = [1, mx]; d.eff = shortEff(it.d);
         rec = (rn ? '配方：' + rn + '。' : '') + (wh && wh !== '起手可用' ? wh + '。' : '') + it.d;
       }
       d.recipe = rec; d.rec2 = isF ? rec.split('。')[0] : (rn ? '配方：' + rn : (cd.k === 'new' && wh && wh !== '起手可用' ? wh : '')); return d;
@@ -19839,7 +19817,7 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
         items.push(r);
       });
     }
-    var note = tab === 'shelf' ? '角色卡和法宝用灵石买。灵石靠通关获得。点一张就买，不够会告诉你。' : (tab === 'fb' ? '买下就永久解锁，开局可以带。洞主专属的不在这里卖。' : '天兵卡：1 张是 Lv1，3 张 Lv2，6 张 Lv3。每次买 1 张。');
+    var note = tab === 'shelf' ? '角色卡和法宝用灵石买。灵石靠通关获得。点一张就买，不够会告诉你。' : (tab === 'fb' ? '买下就永久解锁，开局可以带。洞主专属的不在这里卖。' : '天兵卡：一张一阶，三张二阶，六张首领。每次买一张。');
     if (tab === 'shelf') {
       var VU0 = XY.villainUI;
       var cards = [], reroll = null, ri;
@@ -20358,7 +20336,7 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
   function helpPage(c,x,y,w,h){
     var pick=(P.folio.help||0)%HELP.length, sc=HELP[pick], rt=(XY.app&&XY.app.rt)||0;
     var narrow=w<480;
-    var foot=y+h-50, artH=narrow?Math.min(h*0.46, 220):Math.max(120, Math.min(h*0.62, w*0.42));
+    var foot=y+h-50, artH=Math.max(160, h*0.78);
     var ax=x+Math.min(narrow?w*0.28:w*0.22, narrow?80:160), ay=y+(narrow?6:28);
     function kaiSafe(c2,s,xx,yy,sz,col,align){ c2.save(); c2.font=sz+'px "Ma Shan Zheng","KaiTi",serif'; c2.fillStyle=col; c2.textAlign=align||'center'; c2.textBaseline='middle'; c2.fillText(s,xx,yy); c2.restore(); }
     function hd(id, cx, cy, ht){
@@ -20373,37 +20351,49 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
     c.strokeStyle='rgba(42,32,22,0.2)'; c.lineWidth=1.2;
     c.beginPath(); c.moveTo(x+16, ay+artH); c.quadraticCurveTo(x+w*0.18, ay+artH-6, x+w*0.4, ay+artH+1); c.stroke();
     var u=(rt*0.35)%1;
+    var span = Math.min(w * 0.62, 720);
     if(pick===0){
-      var px=x+28+u*(Math.min(120,w*0.2)), py=ay+artH*0.7;
-      c.strokeStyle='rgba(168,50,36,0.85)'; c.lineWidth=2;
-      c.beginPath(); c.arc(px, py, 7, 0.2, 5.6); c.stroke();
-      c.beginPath(); c.moveTo(px+4, py+4); c.lineTo(px+14, py+16); c.stroke();
-      hd('tang', x+36+u*Math.min(90,w*0.16), ay+6, artH*0.82);
+      hd('tang', x+span*0.16, ay, artH*0.92);
+      hd('wukong', x+span*0.38, ay+8, artH*0.78);
+      hd('bajie', x+span*0.58, ay+16, artH*0.7);
+      kaiSafe(c,'一路向西', x+span*0.42, ay+artH*0.96, 18, '#5c4a38');
     } else if(pick===1){
-      hd('wukong', ax-30, ay, artH);
-      hd('bajie', ax+70, ay+12, artH*0.86);
-      ['跟随','守护','出击'].forEach(function(t,i){ kaiSafe(c,t,ax+150, ay+24+i*26, 16, i===1?'#a42d19':'#24180f'); });
+      hd('wukong', x+span*0.22, ay, artH*0.9);
+      hd('bajie', x+span*0.55, ay, artH*0.9);
+      c.strokeStyle='#24180f'; c.lineWidth=2.2;
+      c.beginPath(); c.moveTo(x+span*0.34, ay+artH*0.45); c.lineTo(x+span*0.46, ay+artH*0.45); c.stroke();
+      c.beginPath(); c.moveTo(x+span*0.46, ay+artH*0.45); c.lineTo(x+span*0.42, ay+artH*0.40); c.moveTo(x+span*0.46, ay+artH*0.45); c.lineTo(x+span*0.42, ay+artH*0.50); c.stroke();
     } else if(pick===2){
-      kaiSafe(c,'弓', ax-40, ay+artH*0.4, 28, '#24180f');
-      kaiSafe(c,'炮', ax+10, ay+artH*0.4, 28, '#24180f');
-      kaiSafe(c,'点地放天兵', ax+80, ay+artH*0.4, 16, '#24180f');
+      ['arrow','cannon','frost'].forEach(function(id,i){
+        var cx=x+span*(0.2+i*0.28), cy=ay+artH*0.55, s=artH*0.42;
+        var drew=XY.ICONINK&&XY.ICONINK.sol&&XY.ICONINK.sol(c,id,cx,cy-s*0.2,s*1.6);
+        if(!drew){ c.save(); c.translate(cx,cy); c.strokeStyle=i===1?'#a42d19':'#24180f'; c.lineWidth=3; c.lineCap='round';
+          c.beginPath(); c.arc(0,-s*0.55,s*0.16,0,6.3); c.stroke();
+          c.beginPath(); c.moveTo(0,-s*0.36); c.lineTo(0,s*0.15); c.moveTo(-s*0.28,-s*0.05); c.lineTo(s*0.28,-s*0.12); c.moveTo(0,s*0.15); c.lineTo(-s*0.16,s*0.48); c.moveTo(0,s*0.15); c.lineTo(s*0.16,s*0.48); c.stroke();
+          c.restore(); }
+        kaiSafe(c,['弓手','炮手','冰阵'][i],cx,ay+artH*0.92,18,'#24180f');
+      });
     } else if(pick===3){
-      if (XY.ICONINK) { XY.ICONINK.draw(c, '金箍棒', ax-40, ay+artH*0.4, artH*0.7); XY.ICONINK.draw(c, '筋斗云', ax+30, ay+artH*0.4, artH*0.6); XY.ICONINK.draw(c, '紧箍咒', ax+100, ay+artH*0.4, artH*0.55); }
-      else ['棒','云','咒'].forEach(function(ch,i){ kaiSafe(c,ch, ax+i*42, ay+artH*0.42, 26, i===0?'#a42d19':'#24180f'); });
+      var icons=['金箍棒','筋斗云','紧箍咒'];
+      icons.forEach(function(nm,i){ var cx=x+span*(0.18+i*0.24), cy=ay+artH*0.38; if(!(XY.ICONINK&&XY.ICONINK.draw(c,nm,cx,cy,artH*0.62))) kaiSafe(c,nm,cx,cy,26,'#24180f'); else kaiSafe(c,nm,cx,ay+artH*0.78,16,'#24180f'); });
     } else if(pick===4){
-      c.fillStyle='#a83224'; c.beginPath(); c.arc(ax, ay+artH*0.45, 26, 0, 6.28); c.fill();
-      kaiSafe(c,'召', ax, ay+artH*0.46, 20, '#fff6e8');
-      hd('phyrex', ax+64, ay+8, artH*0.72);
+      hd('phyrex', x+span*0.28, ay, artH*0.92);
+      kaiSafe(c,'召唤登场', x+span*0.55, ay+artH*0.4, 28, '#a42d19');
     } else if(pick===5){
-      kaiSafe(c,'暂停', ax, ay+artH*0.32, 24, '#a42d19');
-      kaiSafe(c,'地图在右上', ax, ay+artH*0.62, 16, '#5c4a38');
-    } else if(!(pick===6 && XY.compactHud)) {
-      hd('tang', ax, ay, artH);
+      c.strokeStyle='rgba(42,32,22,0.7)'; c.lineWidth=1.6;
+      c.strokeRect(x+24, ay+12, Math.min(span, 280), artH*0.7);
+      kaiSafe(c,'暂驻', x+48, ay+36, 22, '#a42d19', 'left');
+      ['继续','声音','自动加点','自动选宝'].forEach(function(t,i){ kaiSafe(c,t, x+48, ay+70+i*28, 16, '#24180f', 'left'); });
+    } else {
+      c.strokeStyle='rgba(90,70,48,0.7)'; c.lineWidth=1.4;
+      c.beginPath(); c.moveTo(x+30, ay+artH*0.7); c.quadraticCurveTo(x+span*0.4, ay+artH*0.2, x+span*0.85, ay+artH*0.55); c.stroke();
+      hd('tang', x+span*0.45, ay+artH*0.15, artH*0.55);
+      kaiSafe(c,'关口', x+span*0.82, ay+artH*0.42, 16, '#a42d19');
     }
     c.restore();
-    if(pick===6 && XY.compactHud) XY.compactHud.details(K,XY.G,x,y,w,h-56);
+    if(false) {}
     else {
-      var reserve = narrow ? 0 : Math.min(w * 0.42, Math.max(120, w - 160));
+      var reserve = narrow ? 0 : Math.min(w * 0.58, Math.max(220, w * 0.55));
       var tx = x + (narrow ? 12 : reserve);
       var tw = Math.max(80, w - (narrow ? 24 : reserve + 12));
       var titleY = narrow ? ay + artH + 16 : y + 26;
@@ -20456,8 +20446,8 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
     kaiR('两件材料炼成一件更强的法宝。满级的那件配上带着的另一件。', x+w/2, y+18, 16, '#5c4a38', w-24, 'center');
     var mid=y+36+(h-120)*0.38, sz=Math.min(180, (h-130)*0.46, w*0.22);
     function piece(name, cx, cy, s){
-      if(!(XY.ICONINK && XY.ICONINK.draw(c, name, cx, cy, Math.min(s, 220)))) kaiR(name.charAt(0), cx, cy, 28, '#24180f', 40, 'center');
-      kaiR(name, cx, cy+s*0.62, 16, '#24180f', w*0.2, 'center');
+      var drew = XY.ICONINK && XY.ICONINK.draw(c, name, cx, cy, Math.min(s, 150));
+      kaiR(name, cx, cy + (drew ? Math.min(s, 150) * 0.58 : 0), 16, '#24180f', w*0.24, 'center');
     }
     piece(A.name, x+w*0.14, mid, sz);
     kaiR('+', x+w*0.28, mid, 32, '#a42d19', 36, 'center');
@@ -20479,7 +20469,7 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
       c.stroke(); c.restore();
       K.hit(xx, y+h-48, 36, 40, 'pvPage', {key:key, d:d});
     }
-    kaiR((idx+1)+' / '+rs.length, x+w-78, y+h-52, 14, '#5c4a38', 70, 'right');
+    kaiR((idx+1)+' / '+rs.length, x+w-12, y+40, 16, '#5c4a38', 80, 'right');
     arr(x+8, '上', -1); arr(x+w-44, '下', 1);
   }
   function fbDex(c,G,app,x,y,w,h){
@@ -23582,10 +23572,15 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
       var iw = im.naturalWidth || im.width, ih = im.naturalHeight || im.height;
       if (!iw || !ih) return;
       var ir = iw / ih, br = bw / bh, dw, dh, dx, dy;
-      if (ir > br) { dh = bh; dw = bh * ir; dx = bx - (dw - bw) / 2; dy = by; }
-      else { dw = bw; dh = bw / ir; dx = bx; dy = by - (dh - bh) * 0.08; }
+      var scFit = Math.min(bw / iw, bh / ih);
+      dw = iw * scFit; dh = ih * scFit; dx = bx + (bw - dw) / 2; dy = by + bh - dh;
       c.save();
-      c.beginPath(); c.rect(bx, by, bw, bh); c.clip();
+      c.beginPath();
+      c.moveTo(bx+8, by+2); c.quadraticCurveTo(bx+bw/2, by-3, bx+bw-6, by+3);
+      c.quadraticCurveTo(bx+bw+2, by+bh/2, bx+bw-4, by+bh-5);
+      c.quadraticCurveTo(bx+bw/2, by+bh+3, bx+6, by+bh-3);
+      c.quadraticCurveTo(bx-2, by+bh/2, bx+8, by+2);
+      c.clip();
       c.drawImage(im, dx, dy, dw, dh);
       var g = c.createLinearGradient(0, by + bh * 0.62, 0, by + bh);
       g.addColorStop(0, 'rgba(244,234,212,0)');
