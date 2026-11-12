@@ -618,13 +618,20 @@
       return { x: W - 156, y: 14, w: 136, h: 56 };
     }
     if (port) return { x: 12, y: H - 64, w: 112, h: 52 };
-    return { x: 360, y: Math.max(508, H - 210), w: 120, h: 44 };
+    var geo = XY.depart && XY.depart.geo;
+    var bw = 78, bh = 36, right = 0, i, card;
+    if (geo && geo.cards) for (i = 0; i < geo.cards.length; i++) { card = geo.cards[i]; if (card) right = Math.max(right, card.x + card.w); }
+    if (geo && geo.go && right) {
+      return { x: right + 10, y: geo.go.y + Math.max(0, (geo.go.h - bh) / 2), w: bw, h: bh };
+    }
+    var y = geo && geo.strip ? geo.strip.y - bh - 8 : H - 210;
+    return { x: 16, y: Math.max(8, y), w: bw, h: bh };
   }
   function gearBox(app, btn) {
     var port = app.lh > app.lw * 1.05;
     if (app.screen !== 'levels') return null;
     if (port) return { x: 132, y: app.lh - 64, w: 112, h: 52 };
-    return { x: btn.x + btn.w + 10, y: btn.y, w: 120, h: btn.h };
+    return { x: btn.x + btn.w + 8, y: btn.y, w: btn.w, h: btn.h };
   }
 
   function paintButton(c, app) {
