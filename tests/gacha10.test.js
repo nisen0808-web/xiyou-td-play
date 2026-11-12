@@ -101,9 +101,13 @@ async function frames(page, n) {
     check(JSON.stringify(a) === JSON.stringify(b) && a.length === 10, 'seeded roll');
     check(a.every(function (id) { return !!XY.SP_BY[id] && !XY.isHidden(id); }), 'roll pool');
 
+    var held = XY.gacha10.ensure();
+    check(held.rec && held.rec.pulls.length === 10 && !held.show && held.rec.granted !== true, 'roll waits until the player draws');
+    XY.gacha10._showFlip = true;
     var pack = XY.gacha10.ensure();
-    check(pack.show && pack.fresh && pack.rec.pulls.length === 10, 'first show');
-    check(pack.rec.granted === true, 'granted immediately');
+    XY.gacha10._showFlip = false;
+    check(pack.show && pack.rec.pulls.length === 10, 'first show');
+    check(pack.rec.granted === true, 'granted when the player draws');
     var seen = {};
     pack.rec.pulls.forEach(function (id) { seen[id] = 1; });
     XY.SPECIALS.forEach(function (d) {
@@ -174,7 +178,9 @@ async function frames(page, n) {
     XY.save.data.sp.chosen = 'phyrex';
     XY.save.data.gacha10 = null;
     XY.save.flush();
+    XY.gacha10._showFlip = true;
     var pack = XY.gacha10.ensure();
+    XY.gacha10._showFlip = false;
     var phy = pack.rec.rows.filter(function (r) { return r.id === 'phyrex'; });
     var firstPhy = phy[0];
     return {
@@ -226,7 +232,7 @@ async function frames(page, n) {
       if (r.locked !== !r.owned) fail(label + ' lock flag ' + r.name);
     });
   }
-  await page.evaluate(function () { XY.save.reset(); window.__xy.app.screen = 'levels'; XY.gacha10.ensure(); });
+  await page.evaluate(function () { XY.save.reset(); window.__xy.app.screen = 'levels'; XY.gacha10._showFlip = true; XY.gacha10.ensure(); XY.gacha10._showFlip = false; });
   await page.waitForFunction(function () {
     var g = XY.save.data.gacha10;
     if (!g || !g.pulls) return false;

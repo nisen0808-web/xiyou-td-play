@@ -98,7 +98,11 @@ function serverPulls() {
     check(XY.account && !XY.account.signedIn(), 'starts logged out');
     check(XY.TUT_STEPS && XY.TUT_STEPS.length === 20 && XY.TUT_STEPS[0].title === '欢迎取经！', 'tutorial');
     ['points', 'treat', 'guest', 'pick'].forEach(function (k) { check(XY.auto && XY.auto.DEF[k] === false, 'auto ' + k); });
+    var held = XY.gacha10.ensure();
+    check(held.rec && held.rec.pulls.length === 10 && !held.show && !held.rec.server, 'logged-out roll waits');
+    XY.gacha10._showFlip = true;
     var pack = XY.gacha10.ensure();
+    XY.gacha10._showFlip = false;
     check(pack.show && pack.rec && pack.rec.pulls.length === 10 && !pack.rec.server, 'logged-out local roll');
     check(XY.account.debug.calls().length === 0, 'no rpc while logged out');
     var again = XY.gacha10.ensure();

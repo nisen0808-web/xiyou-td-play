@@ -53,16 +53,56 @@
     var old = XY.render;
     function render(ctx, G, app) {
       old(ctx, G, app);
-      if (!U.hold) return;
-      if (app && app.rt > U.until) { U.skip(); return; }
+      if (U.hold) {
+        if (app && app.rt > U.until) U.skip();
+        else {
+          ctx.save();
+          ctx.setTransform(app.zoom * app.dpr, 0, 0, app.zoom * app.dpr, 0, 0);
+          U.paint(ctx, app, U.hold);
+          ctx.restore();
+        }
+      }
+      var q = XY.introQ;
+      if (!q || !q.length || !app) return;
+      var id = q[0], sp = XY.SP_BY && XY.SP_BY[id];
+      if (!sp) { q.shift(); return; }
       ctx.save();
       ctx.setTransform(app.zoom * app.dpr, 0, 0, app.zoom * app.dpr, 0, 0);
-      U.paint(ctx, app, U.hold);
+      var W = app.lw, H = app.lh, pw = Math.min(420, W - 24), ph = Math.min(220, H * 0.42);
+      var x = (W - pw) / 2, y = H * 0.28;
+      ctx.fillStyle = 'rgba(246,239,226,0.94)';
+      ctx.beginPath();
+      ctx.moveTo(x + 16, y + 6);
+      ctx.quadraticCurveTo(x + pw * 0.5, y - 8, x + pw - 12, y + 8);
+      ctx.quadraticCurveTo(x + pw + 6, y + ph * 0.5, x + pw - 10, y + ph - 8);
+      ctx.quadraticCurveTo(x + pw * 0.4, y + ph + 6, x + 14, y + ph - 6);
+      ctx.quadraticCurveTo(x - 6, y + ph * 0.4, x + 16, y + 6);
+      ctx.fill();
+      ctx.fillStyle = '#a42d19';
+      ctx.font = '26px "Ma Shan Zheng","KaiTi",serif';
+      ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+      ctx.fillText(sp.name, x + 24, y + 36);
+      ctx.fillStyle = '#24180f';
+      ctx.font = '15px "Ma Shan Zheng","KaiTi",serif';
+      ctx.fillText(sp.role || '', x + 24, y + 68);
+      ctx.fillText('大招 ' + (sp.ult || ''), x + 24, y + 96);
+      ctx.fillStyle = '#5c4a38';
+      ctx.fillText('点一下收下', x + 24, y + ph - 28);
+      XY._introBox = { x: x, y: y, w: pw, h: ph };
       ctx.restore();
     }
     render._ult = 1;
     XY.render = render;
   }
   hook();
-  window.addEventListener('pointerdown', function () { if (U.hold) U.skip(); }, true);
+  window.addEventListener('pointerdown', function (ev) {
+    if (U.hold) U.skip();
+    var q = XY.introQ, box = XY._introBox;
+    if (!q || !q.length || !box) return;
+    var id = q[0];
+    var data = XY.save && XY.save.data;
+    if (data) { data.intros = data.intros || {}; data.intros[id] = 1; if (XY.save.touch) XY.save.touch(); }
+    q.shift();
+    if (ev && ev.stopPropagation) ev.stopPropagation();
+  }, true);
 })();
