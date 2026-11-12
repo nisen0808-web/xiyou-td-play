@@ -9498,26 +9498,30 @@ XY.BGS1={"src": "data:image/webp;base64,UklGRtT1GgBXRUJQVlA4IMj1GgCQwWGdASoAEAAK
     for (j = 0; j < heroBodies.length; j++) { var o = heroBodies[j]; B.push({ h: o.h, x0: m.e + o.x0 * sc, x1: m.e + o.x1 * sc, y0: m.f + o.y0 * sc, y1: m.f + o.y1 * sc }); }
     function ov(r, list, skipH) { var a = 0; for (var q = 0; q < list.length; q++) { var t = list[q]; if (skipH && t.h === skipH) continue; var w = Math.min(r.x1, t.x1) - Math.max(r.x0, t.x0), h = Math.min(r.y1, t.y1) - Math.max(r.y0, t.y0); if (w > 0 && h > 0) a += w * h; } return a; }
     XY.R4.bodyRects = B;
-    if (XY.R4.planMapLabels && window.__xy && window.__xy.G && XY.app) {
-      var mapNow = XY.R4.planMapLabels(c, window.__xy.G, XY.app);
-      for (j = 0; j < mapNow.length; j++) { L.push(mapNow[j].lr); if (mapNow[j].ar) L.push(mapNow[j].ar); }
-    }
+    if (XY.R4.planMapLabels && window.__xy && window.__xy.G && XY.app) XY.R4.planMapLabels(c, window.__xy.G, XY.app);
     for (i = 0; i < heroNames.length; i++) {
       var n = heroNames[i], box = nameBox(c, n), ownB = null, bj, nearD = 1e9;
       for (bj = 0; bj < heroBodies.length; bj++) {
         if (heroBodies[bj].h === n.h) ownB = heroBodies[bj];
         else if (n.h) nearD = Math.min(nearD, Math.abs(heroBodies[bj].h.x - n.h.x));
       }
-      var zN = (XY.app && XY.app.zoom) || 1, cssMin = XY.app ? Math.min(XY.app.lw * zN, XY.app.lh * zN) : 0;
-      var minIh = (cssMin >= 700 && box.ih) ? (14 / zN) : 0;
-      var minW = (box.ih && minIh && box.ih > minIh) ? box.w * (minIh / box.ih) : 0;
-      var cap = Math.max(minW || 46, Math.min(box.w, nearD - 10));
-      if (cap < box.w && box.w > 0) { var kk = cap / box.w; box.w *= kk; box.h *= kk; if (box.iw) box.iw *= kk; if (box.ih) box.ih *= kk; box.fs *= kk; }
-      if (minIh && box.ih && box.ih < minIh) { var up = minIh / box.ih; box.w *= up; box.h *= up; if (box.iw) box.iw *= up; box.ih *= up; box.fs *= up; }
+      var zN = (XY.app && XY.app.zoom) || 1, cssW = XY.app ? XY.app.lw * zN : 0, cssH = XY.app ? XY.app.lh * zN : 0;
+      var wideN = Math.min(cssW, cssH) >= 700, narrowN = cssH < 420 || Math.min(cssW, cssH) < 520;
+      var wantIh = 0;
+      if (box.ih && wideN) wantIh = 20 / zN;
+      else if (box.ih && narrowN) wantIh = Math.max(box.ih, 12 / zN);
+      if (!(wideN || narrowN)) {
+        var cap = Math.max(46, Math.min(box.w, nearD - 10));
+        if (cap < box.w && box.w > 0) { var kk = cap / box.w; box.w *= kk; box.h *= kk; if (box.iw) box.iw *= kk; if (box.ih) box.ih *= kk; box.fs *= kk; }
+      }
+      if (wantIh && box.ih && Math.abs(box.ih - wantIh) > 0.15) {
+        var fit = wantIh / box.ih;
+        box.w *= fit; box.h *= fit; if (box.iw) box.iw *= fit; box.ih *= fit; box.fs *= fit;
+      }
       var tw = box.w, th = box.h, best = null;
-      var head = (n.h && n.h._drawBox) ? n.h._drawBox.y : (ownB ? ownB.y0 : n.y), nudge = Math.min(th * 0.4, 14);
+      var head = (n.h && n.h._drawBox) ? n.h._drawBox.y : (ownB ? ownB.y0 : n.y), nudge = Math.max(12, Math.min(th * 0.45, 22));
       var cy0 = head - th / 2 - Math.min(4, th * 0.2);
-      var cand = [[0, 0], [-nudge, 0], [nudge, 0]];
+      var cand = [[0, 0], [-nudge, 0], [nudge, 0], [-nudge * 2, 0], [nudge * 2, 0], [-nudge * 3, 0], [nudge * 3, 0]];
       for (k = 0; k < cand.length; k++) {
         var cy = cy0 + cand[k][1], cx = n.x + cand[k][0], r = { x0: m.e + (cx - tw / 2) * sc, x1: m.e + (cx + tw / 2) * sc, y0: m.f + (cy - th / 2) * sc, y1: m.f + (cy + th / 2) * sc };
         var onBody = ov(r, B, n.h), onText = ov(r, L, null);
@@ -10784,7 +10788,16 @@ XY.BGS1={"src": "data:image/webp;base64,UklGRtT1GgBXRUJQVlA4IMj1GgCQwWGdASoAEAAK
     var W = app.lw, H = app.lh, z = (app.zoom || 1) * (app.dpr || 1);
     var pOpen = !!(app.partyPanel && XY.party && XY.party.visible(G, app));
     var quiet = !!(G.td && G.td.quiet > G.td.clock);
-    var bodies = R4.bodyRects || [];
+    var bodies = [], zz = (app.zoom || 1) * (app.dpr || 1), hi, hb, db, bx0, by0;
+    for (hi = 0; hi < G.heroes.length; hi++) {
+      hb = G.heroes[hi]; if (!hb || hb.down || hb.ridden || !hb._drawBox) continue;
+      db = hb._drawBox;
+      bx0 = (G.view.w / 2 - G.cam.x + db.x) * zz;
+      by0 = (G.view.h / 2 - G.cam.y + db.y) * zz;
+      bodies.push({ x0: bx0 - 10 * zz, y0: by0 - 8 * zz, x1: bx0 + (db.w + 10) * zz, y1: by0 + (db.h + 18) * zz });
+    }
+    if (!bodies.length) bodies = (R4.bodyRects || []).slice();
+    (R4.plates || []).forEach(function (p) { if (p.box) bodies.push(p.box); });
     var marks = [], tg = G.heroes[0];
     function box(x, y, w, h) { return { x0: (x - w / 2) * z, y0: (y - h / 2) * z, x1: (x + w / 2) * z, y1: (y + h / 2) * z }; }
     function consider(tx, ty, label, alert) {
@@ -23469,7 +23482,7 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
   function cardRow(c, st, items, cur0, x, y, w, hMax, s, geo) {
     var groups = [], i; items.forEach(function (it) { if (!groups.length || groups[groups.length - 1].k !== it.k) groups.push({ k: it.k, n: 0 }); groups[groups.length - 1].n++; });
     var n = items.length, gg = Math.round(12 * s), cg = Math.round(6 * s), labH = Math.round(18 * Math.min(s, 1.2));
-    var cwd = Math.max(44, Math.min(Math.round(96 * s), (w - gg * (groups.length - 1) - cg * (n - groups.length)) / n)), cardFloor = hMax < 150 ? 46 : 84, chh = Math.min(cwd * 1.85, Math.max(cardFloor, hMax - labH)); if (chh + labH > hMax) chh = Math.max(36, hMax - labH);
+    var cwd = Math.max(44, Math.min(Math.round(96 * s), (w - gg * (groups.length - 1) - cg * (n - groups.length)) / n)), chh = Math.max(84, Math.min(cwd * 1.85, hMax - labH));
     var xx = x, gi = 0, k = 0;
     groups.forEach(function (g) {
       var gw = g.n * cwd + (g.n - 1) * cg, lbl = GROUP[g.k];
@@ -23844,18 +23857,9 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
       if (cellH > ch * 0.3) { cellH = Math.round(ch * 0.3); cellW = Math.min(cellW, cellH * 0.72); }
       cellW = Math.min(cellW, Math.max(64, (cw - 28) / nt));
       d = cellH; nameH = 0; cols = nt;
-      var zLay = a.zoom || 1, dkBot = 0;
-      if (tiny) {
-        var Hlog = a.lh || (ch / zLay), portLay = Hlog > (a.lw || cw / zLay) * 1.05;
-        if (!portLay) dkBot = Math.max(250, Hlog - 250) * zLay + 56 * zLay;
-      }
-      var labH = tiny ? 40 : 18;
-      if (tiny && dkBot) {
-        cellH = Math.max(44, Math.min(cellH, ch - 6 - labH - (dkBot + 8)));
-        cellW = Math.min(cellW, Math.max(56, cellH / 0.62));
-      }
-      var stripY = ch - 4 - cellH - labH;
-      if (tiny && dkBot && stripY < dkBot + 8) { cellH = Math.max(40, ch - 4 - labH - (dkBot + 8)); stripY = dkBot + 8; }
+      var labH = 18, stripY = ch - 4 - cellH - labH;
+      var overflow = stripY + labH + cellH - (ch - 3);
+      if (overflow > 0) stripY -= overflow;
       d = cellH;
       VU.washE(c, cw / 2, stripY + (labH + cellH) / 2 + 4, cw * 0.62, (labH + cellH) * 0.75, '250,244,228', 0.8);
       taper(c, 24, stripY - 2, cw - 24, 2.2, 0.32);
@@ -23870,12 +23874,7 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
       }
       var info0 = carryInfo(a, { hover: null });
       var note = XY.TEST_BUILD ? XY.SPECIALS.length + ' 位全可选 · 不写存档' : '没抽到的要集齐 ' + XY.SP_LV_AT[0] + ' 张角色卡';
-      if (tiny) {
-        kt(c, '携带常驻', 14, stripY + 11, 13, RED, 'left', cw * 0.4);
-        noteBox('携带常驻', 14, stripY + 11, 13, 'left', cw * 0.4);
-        kt(c, info0, 14, stripY + 30, 12, INK, 'left', cw - 28, false);
-        noteBox(info0, 14, stripY + 30, 12, 'left', cw - 28);
-      } else {
+      if (!tiny) {
         kt(c, '携带常驻', 14, stripY + 9, 13, RED, 'left', 80);
         noteBox('携带常驻', 14, stripY + 9, 13, 'left', 80);
         c.font = '12px ' + KAI; var nw0 = Math.min(cw * 0.3, c.measureText(note).width);
@@ -23886,15 +23885,14 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
       }
       out = carryStrip(c, st, a, tl, 12, stripY + labH, cw - 24, cols, cellW, cellH, d, 0);
       geo.tiles = nt; geo.strip = { y: stripY, h: labH + cellH };
-      if (tiny && dkBot) XY.departDk = { bottom: dkBot, top: dkBot - 56 * zLay, right: (22 + 132 + 10 + 120) * zLay };
       // —— 中：左 竖卡 + 说明；右 立绘 + 按钮
-      var y1 = (tiny && dkBot) ? (dkBot - 56 * zLay - 10) : (stripY - 10), LW = Math.round(cw * (cw >= 1000 ? 0.58 : 0.6)), detMin = Math.round(Math.min(150, 84 * s)); if (tiny && dkBot) detMin = Math.min(detMin, Math.max(28, (y1 - (top + 2)) * 0.42));
+      var y1 = stripY - 10, LW = Math.round(cw * (cw >= 1000 ? 0.58 : 0.6)), detMin = Math.round(Math.min(150, 84 * s));
       // 说明行数（sweep09 已通关会多一行星级）：按最小 13px 行距给够，竖卡相应矮一点，免得「终点 / 最快用时」被挤掉
       var nDet = (cur0.k === 'boss' ? 3 : 4) + (cur0.k !== 'boss' && cur0.cleared && XY.sweep09 ? 1 : 0);
       detMin = Math.max(detMin, Math.round(Math.min(20 * s, 26) * 1.25 + 8 + nDet * Math.max(14, Math.min(12.5 * s, 16) * 1.3)));
       cr = cardRow(c, st, items, cur0, 14, top + 2, LW - 14, y1 - top - 2 - detMin - 10, s, geo);
       var dy = cr.bottom + 12;
-      if (tiny && dkBot) { c.save(); c.beginPath(); c.rect(0, 0, LW, y1); c.clip(); } go = detail(c, cur0, 14, dy, LW - 14, y1 - dy, s); if (tiny && dkBot) c.restore();
+      go = detail(c, cur0, 14, dy, LW - 14, y1 - dy, s);
       var rx = LW + 14, rw = cw - rx - 14;
       gh = Math.round(Math.max(52, Math.min(80, 58 * s))); gw = Math.min(rw, Math.round(300 * s)); gx = rx + (rw - gw) / 2; gy = y1 - gh;
       var sy2 = gy - 10 - 44, fh = Math.min((gy - top) * 1.18, rw * 1.6);
@@ -23905,6 +23903,25 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
       else sbtn(gx + gw * 0.15, sy2, gw * 0.7, 44, '重新开始取经', 'menuRestart', { sz: Math.min(15, 13.5 * s), rgb: '122,74,50', vh: 30 });
       if (go.sw) { var swW = 76; gw -= swW + 8; sweepBtn(c, st, sbtn, gx + gw + 8, gy, swW, gh, go); }
       goBtn(c, st, a, gx, gy, gw, gh, go);
+      if (tiny) {
+        c.font = 'bold 13px ' + KAI;
+        var wCarry = c.measureText('携带常驻').width;
+        c.font = '12px ' + KAI;
+        var wInfo = c.measureText(info0).width;
+        var gapL = 14, rowW = wCarry + gapL + wInfo;
+        var xL = gx + Math.max(0, (gw - rowW) / 2);
+        if (xL + rowW > cw - 10) xL = Math.max(8, cw - 10 - rowW);
+        var zB = a.zoom || 1, sealR = (22 + 132 + 10 + 120) * zB + 10;
+        if (xL < sealR) xL = sealR;
+        var yL = Math.max(gy + gh + 18, stripY + 9);
+        if (yL + 8 > stripY + labH) yL = stripY + 9;
+        kt(c, '携带常驻', xL, yL, 13, RED, 'left', wCarry + 4);
+        noteBox('携带常驻', xL, yL, 13, 'left', wCarry + 4);
+        kt(c, info0, xL + wCarry + gapL, yL, 12, INK, 'left', cw - (xL + wCarry + gapL) - 8, false);
+        noteBox(info0, xL + wCarry + gapL, yL, 12, 'left', cw - (xL + wCarry + gapL) - 8);
+        var z2 = a.zoom || 1;
+        XY.departDk = { top: Math.max(250, (a.lh || 0) - 250) * z2, bottom: Math.max(250, (a.lh || 0) - 250) * z2 + 56 * z2, right: sealR };
+      }
       geo.go = { act: go.act, x: gx, y: gy, w: gw, h: gh }; geo.bottom = ch - 4;
     } else {
       // —— 竖屏：自下而上排：底栏小入口 → 头像 → 出发 → 反派 / 重开；自上而下：竖卡 → 说明；中间剩下的放立绘
@@ -24514,7 +24531,7 @@ I.vendorKey=function(G,a,k){var n=X.vendor.stock(G).length;if(k==='ArrowLeft'||k
     var K=P.begin(c,a),L=I.layout(a),b=L.troop;
     c.save();var fw=L.small?370:450;c.translate(L.port?L.W/2:fw*.42,L.port?b.costY+22:L.H+17);c.scale(fw*.64,L.port?94:110);var fog=c.createRadialGradient(0,0,0,0,0,1);fog.addColorStop(0,'rgba(247,240,220,.98)');fog.addColorStop(.6,'rgba(247,240,220,.88)');fog.addColorStop(1,'rgba(247,240,220,0)');c.fillStyle=fog;c.fillRect(-1,-1,2,2);c.restore();
     c.save();c.shadowColor='#f7f0dc';c.shadowBlur=2;
-    if (L.H >= 420) K.t('在场 '+G.towers.length+' 名，最多 '+X.soldierCap(G)+' 名',b.first-b.r,b.cy-b.r-12,L.small?10.5:12,SOFT,'left',false);
+    /* 在场人数改由天兵按钮本身表示，不再在地上写一行游离小字。 */
     IDS.forEach(function(id,i){var d=X.TOWERS[id],price=X.soldierCost(G,id),cx=b.first+i*b.step,own=X.save.solOwned(id),ok=own&&G.coins>=price,on=a.build===id,n=G.towers.filter(function(t){return t.type===id;}).length;
       c.save();c.fillStyle='rgba(247,240,220,.82)';c.beginPath();c.arc(cx,b.cy,b.r,0,PI*2);c.fill();c.globalAlpha=own?1:.4;X.ICONINK.sol(c,id,cx,b.cy,b.r*2,1);c.restore();ring(c,cx,b.cy,b.r+1,on?RED:INK,18+i*23,on);
       kai(K,NAMES[i],cx,b.nameY,L.small?11.5:15,!own?SOFT:on?RED:INK,'center');K.tf(price+'金×'+n,cx,b.costY,b.w-2,L.small?10.5:12,!own?SOFT:!ok||on?RED:SOFT,'center',false,10.5);

@@ -2492,13 +2492,6 @@
       c.moveTo(spanL, groundY);
       c.quadraticCurveTo((spanL + spanR) / 2, groundY - b.h * 0.04, spanR, groundY + 1);
       c.stroke();
-      if (!L.port) {
-        c.font = brushFont(L.small ? 11 : 13);
-        c.fillStyle = '#4a4034';
-        c.textAlign = 'left';
-        c.textBaseline = 'middle';
-        c.fillText('在场 ' + G.towers.length + ' 名，最多 ' + XY.soldierCap(G) + ' 名', spanR + 8, b.y + 14);
-      }
       SOL_IDS.forEach(function (id, i) {
         var d = XY.TOWERS[id];
         var price = XY.soldierCost(G, id);
