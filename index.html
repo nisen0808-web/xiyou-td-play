@@ -9368,7 +9368,7 @@ XY.BGS1={"src": "data:image/webp;base64,UklGRtT1GgBXRUJQVlA4IMj1GgCQwWGdASoAEAAK
     // 名字（操控中的更醒目，头顶带小三角）
     // v0.8.1：名牌延后到所有英雄画完再画（flushHeroNames），避开其他角色的身体 / 血条 / 命令标签和别的名牌，也不会被后画的角色盖住
     heroBodies.push({ h: h, x0: x - Math.max(rr * 1.15, tall ? 30 : 0), x1: x + Math.max(rr * 1.15, tall ? 30 : 0), y0: Math.min(y - (tall ? tr : r) - 2, h._wildTop == null ? 1e9 : h._wildTop), y1: y + r + 12 });
-    var nameY = clash ? y + r + (h.sp ? 47 : 34) : y - tr - (isC ? 17 : 13); if (!clash && h._wildTop != null) nameY = Math.min(nameY, h._wildTop - (isC ? 18 : 14));
+    var nameY = clash ? y + r + (h.sp ? 47 : 34) : y - tr - (isC ? 36 : 32); if (!clash && h._wildTop != null) nameY = Math.min(nameY, h._wildTop - (isC ? 34 : 30));
     if (!(G.td && G.td.quiet > G.td.clock)) heroNames.push({ h: h, s: d.name + (h.sp ? ' Lv' + d.lv : ''), x: x, y: nameY, sz: isC ? 18 : 16, col: isC ? '#a42d19' : '#24180f', dir: clash ? 1 : -1, mark: isC && !clash, a: c.globalAlpha, tri: Math.sin(rt * 6) * 2 });
   }
   var heroBodies = [], heroNames = [];
@@ -9389,6 +9389,7 @@ XY.BGS1={"src": "data:image/webp;base64,UklGRtT1GgBXRUJQVlA4IMj1GgCQwWGdASoAEAAK
     var lv = (n.h && n.h.sp && n.h.def) ? ('Lv' + n.h.def.lv) : '';
     var fs = Math.max(n.sz || 16, 18);
     if (art) {
+      XY.R4.nameArtN = (XY.R4.nameArtN || 0) + 1;
       var ih = Math.max(24, fs + 6), iw = ih * art.w / art.h;
       if (iw > 156) { iw = 156; ih = iw * art.h / art.w; }
       c.font = Math.max(13, ih * 0.62) + 'px "Ma Shan Zheng","KaiTi","STKaiti",serif';
@@ -9422,6 +9423,7 @@ XY.BGS1={"src": "data:image/webp;base64,UklGRtT1GgBXRUJQVlA4IMj1GgCQwWGdASoAEAAK
     var narrow = false, appN = XY.app;
     if (appN) { var cssW = appN.lw * (appN.zoom || 1), cssH = appN.lh * (appN.zoom || 1); narrow = Math.min(cssW, cssH) < 520 || cssH < 420; }
     if (narrow) heroNames = heroNames.filter(function (n) { return n.h && (n.h.i === ctrl || n.h.id === 'tang'); });
+    XY.R4.nameArtN = 0;
     var placed = [];
     for (j = 0; j < heroBodies.length; j++) { var o = heroBodies[j]; B.push({ h: o.h, x0: m.e + o.x0 * sc, x1: m.e + o.x1 * sc, y0: m.f + o.y0 * sc, y1: m.f + o.y1 * sc }); }
     function ov(r, list, skipH) { var a = 0; for (var q = 0; q < list.length; q++) { var t = list[q]; if (skipH && t.h === skipH) continue; var w = Math.min(r.x1, t.x1) - Math.max(r.x0, t.x0), h = Math.min(r.y1, t.y1) - Math.max(r.y0, t.y0); if (w > 0 && h > 0) a += w * h; } return a; }
@@ -10698,7 +10700,7 @@ XY.BGS1={"src": "data:image/webp;base64,UklGRtT1GgBXRUJQVlA4IMj1GgCQwWGdASoAEAAK
       var sz = 16, txa = -sa, tya = ca;
       c.font = sz + 'px "Ma Shan Zheng","KaiTi","STKaiti",serif';
       var tw = c.measureText(label).width + 8, th = sz + 6;
-      var shifts = [0, 56, -56, 112, -112, 168, -168, 224, -224, 280, -280];
+      var shifts = [0, 70, -70, 140, -140, 220, -220, 320, -320, 440, -440, 580, -580, 760, -760];
       var inns = [0, 42, 84];
       var best = null, si, ii, ax, ay, lx, ly, ar, lr, hit, score;
       for (si = 0; si < shifts.length; si++) for (ii = 0; ii < inns.length; ii++) {
@@ -11673,7 +11675,12 @@ XY.BGS1={"src": "data:image/webp;base64,UklGRtT1GgBXRUJQVlA4IMj1GgCQwWGdASoAEAAK
       c.lineWidth = 2.1;
       c.beginPath(); c.moveTo(13, 0); c.quadraticCurveTo(4, -6, -1, -8); c.moveTo(13, 0); c.quadraticCurveTo(4, 6, -1, 8); c.stroke();
       c.restore();
-      inkTag(c, m.label, m.lx, m.ly, m.sz, m.alert ? '#a83224' : '#24180f');
+      c.save();
+      c.font = m.sz + 'px "Ma Shan Zheng","KaiTi","STKaiti",serif';
+      c.textAlign = 'center'; c.textBaseline = 'middle';
+      c.fillStyle = m.alert ? '#a83224' : '#24180f';
+      c.fillText(m.label, m.lx, m.ly);
+      c.restore();
     });
     drawTip(c, app, tip || app._tip);
     if (G.tut) XY.tutDraw(c, G, app);
