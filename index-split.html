@@ -24502,6 +24502,36 @@ X.step=function(g,dt){if(!g._simRandom)return step.apply(this,arguments);var sel
   if (window.visualViewport && window.visualViewport.addEventListener) window.visualViewport.addEventListener('resize', resize);
   // 竖屏提示：只在战斗中出现，贴在顶栏下面，不压灵石、等级和当前目标。点「知道了」或八秒后消失。
   var portraitDismissed = false;
+  function placePortrait(el) {
+    var dpr = (XY.app && XY.app.dpr) || window.devicePixelRatio || 1;
+    var bodies = (XY.R4 && XY.R4.bodyRects) || [];
+    var W = window.innerWidth, H = window.innerHeight, hw = Math.min(228, W - 16), hh = 36;
+    var boxes = bodies.map(function (b) { return { x: b.x0 / dpr, y: b.y0 / dpr, w: (b.x1 - b.x0) / dpr, h: (b.y1 - b.y0) / dpr }; });
+    function area(r) {
+      if (r.x < -0.5 || r.y < -0.5 || r.x + r.w > W + 0.5 || r.y + r.h > H + 0.5) return 1;
+      var a = 0, i, b, w, h;
+      for (i = 0; i < boxes.length; i++) {
+        b = boxes[i];
+        w = Math.min(r.x + r.w, b.x + b.w) - Math.max(r.x, b.x);
+        h = Math.min(r.y + r.h, b.y + b.h) - Math.max(r.y, b.y);
+        if (w > 0 && h > 0) a += w * h;
+      }
+      return a;
+    }
+    var port = H > W, bar = H - (port ? 168 : 124), best = null, y, x, r;
+    for (y = bar - hh - 6; y >= 92 && !best; y -= 10) {
+      for (x = 8; x <= W - hw - 8; x += Math.max(20, Math.round((W - hw) / 5))) {
+        r = { x: x, y: y, w: hw, h: hh };
+        if (area(r) === 0) { best = r; break; }
+      }
+    }
+    if (!best) best = { x: 8, y: Math.max(8, bar - hh - 4), w: hw, h: hh };
+    el.style.left = Math.round(best.x) + 'px';
+    el.style.top = Math.round(best.y) + 'px';
+    el.style.maxWidth = Math.round(hw) + 'px';
+    XY.R4 = XY.R4 || {};
+    XY.R4.hintBox = { x: best.x, y: best.y, w: best.w, h: best.h, hit: area(best) };
+  }
   function portraitHint() {
     var touch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
     var portrait = window.innerHeight > window.innerWidth * 1.1;
@@ -24512,7 +24542,7 @@ X.step=function(g,dt){if(!g._simRandom)return step.apply(this,arguments);var sel
       if (!el) {
         el = document.createElement('div');
         el.id = 'xyPortrait';
-        el.style.cssText = 'position:fixed;left:12px;top:204px;z-index:35;max-width:200px;padding:4px 8px 6px;pointer-events:auto;color:#2b1c08;font:16px/1.2 "Ma Shan Zheng","KaiTi","STKaiti","楷体",serif;letter-spacing:1px;text-shadow:0 0 2px rgba(246,238,220,.96);background:linear-gradient(90deg,rgba(243,234,214,.94),rgba(243,234,214,.2));border:0;white-space:nowrap;opacity:.96';
+        el.style.cssText = 'position:fixed;left:8px;top:8px;z-index:35;max-width:228px;padding:4px 8px 6px;pointer-events:auto;color:#2b1c08;font:16px/1.2 "Ma Shan Zheng","KaiTi","STKaiti","楷体",serif;letter-spacing:1px;text-shadow:0 0 2px rgba(246,238,220,.96);background:linear-gradient(90deg,rgba(243,234,214,.94),rgba(243,234,214,.2));border:0;white-space:nowrap;opacity:.96';
         el.appendChild(document.createTextNode('竖着也能，请横过来'));
         var btn = document.createElement('button');
         btn.type = 'button';
@@ -24523,6 +24553,7 @@ X.step=function(g,dt){if(!g._simRandom)return step.apply(this,arguments);var sel
         (document.body || document.documentElement).appendChild(el);
         setTimeout(function () { portraitDismissed = true; if (el.parentNode) el.parentNode.removeChild(el); }, 8200);
       }
+      placePortrait(el);
     } else if (el && el.parentNode) el.parentNode.removeChild(el);
   }
   XY.portraitHint = portraitHint;
