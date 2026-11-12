@@ -787,7 +787,8 @@
   }
   function avaEl(id, o) {
     o = o || {}; var d = BF.SP[id], el = document.createElement('div'); el.className = 'ava' + (o.on ? ' on' : '') + (o.off ? ' off' : '') + (o.sel ? ' sel' : ''); el.dataset.id = id;
-    el.innerHTML = '<div class="ring"><div class="face" style="background-image:url(' + avatarURL(id) + ')"></div></div><b><img class="nm" alt="' + NAMES[id] + '" src="../assets/art/menu-poster/nameh-' + id + '.webp">' + (o.badge ? '<span class="bd">' + o.badge + '</span>' : '') + '</b>';
+    var faceH = id === 'kuanggong' ? 66 : 84;
+    el.innerHTML = '<div class="ring"><div class="face" style="background-image:url(' + avatarURL(id) + ');background-size:auto ' + faceH + '%;background-position:center bottom"></div></div><b><img class="nm" alt="' + NAMES[id] + '" src="../assets/art/menu-poster/nameh-' + id + '.webp">' + (o.badge ? '<span class="bd">' + o.badge + '</span>' : '') + '</b>';
     return el;
   }
   function buildPick() {
