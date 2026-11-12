@@ -9466,7 +9466,7 @@ XY.TRAITS = {
       if (ov(best.r, placed, null) > 0) continue;
       if ((best.body > 0 || best.text > 0) && !(n.h && (n.h.i === ctrl || n.h.id === 'tang'))) continue;
       placed.push(best.r);
-      var plate = { id: n.h && n.h.id, box: best.r, glyph: best.r, seal: null, headGap: ownB ? (ownB.y0 - best.r.y1) / sc : null, half: th * 0.5 };
+      var plate = { id: n.h && n.h.id, box: best.r, glyph: best.r, seal: null, headGap: ownB ? (ownB.y0 - (best.y + th / 2)) : null, half: th * 0.5 };
       if (box.art && box.art.im && box.w) {
         var sp = plateSplit(box.art.im), span = best.r.x1 - best.r.x0, imgW = box.iw / box.w * span;
         function seg(x0, x1) { return { x0: best.r.x0 + x0 / sp.w * imgW, y0: best.r.y0, x1: best.r.x0 + x1 / sp.w * imgW, y1: best.r.y1 }; }
