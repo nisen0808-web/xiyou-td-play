@@ -19929,11 +19929,14 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
       torn(x, y, w, h, 20 + k * 3);
       c.save();
       if (dim) c.globalAlpha = 0.55;
-      c.beginPath(); c.rect(x + 8, y + 8, w - 16, h * 0.5); c.clip();
+      var textH = Math.min(h * 0.48, Math.max(52, h < 170 ? 58 : 78));
+      var artTop = y + 6, artHgt = Math.max(20, h - textH - 8);
+      c.beginPath(); c.rect(x + 6, artTop, w - 12, artHgt); c.clip();
       var drew = false;
-      var textBand = r.kind === 'sol' ? Math.max(64, Math.min(78, h * 0.28)) : 0;
-      if (r.kind === 'sol' && XY.soldierInk) drew = XY.soldierInk.draw(c, r.sol, x + w / 2, y + h * 0.40, Math.min(150, h * 0.36), Math.min(110, w * 0.62));
-      if (!drew && r.inkName && XY.ICONINK) drew = XY.ICONINK.draw(c, r.inkName, x + w / 2, y + h * 0.36, Math.min(120, Math.min(w, h) * 0.42));
+      var textBand = textH;
+      var artCy = artTop + artHgt * 0.62, artSz = Math.min(artHgt * 0.92, w * 0.7, 140);
+      if (r.kind === 'sol' && XY.soldierInk) drew = XY.soldierInk.draw(c, r.sol, x + w / 2, artTop + artHgt - 2, artSz, Math.min(artSz, w * 0.7));
+      if (!drew && r.inkName && XY.ICONINK) drew = XY.ICONINK.draw(c, r.inkName, x + w / 2, artCy, Math.min(artSz, 120));
       if (!drew && r.spId && XY.bgArt) { try { XY.bgArt(r.spId); } catch (e) {} var sealRoom = Math.max(44, Math.min(56, w * 0.22)); drew = fitArt(XY.bgArt(r.spId), x + 8, y + 8, Math.max(48, w - 20 - sealRoom), h - 18); }
       if (!drew && r.card) { inkWord(x, y, w, h, String(r.title || '宝').replace(/^.*· /, '').charAt(0) || '宝'); drew = true; }
       if (!drew && r.kind === 'shard') { inkShard(x, y, w, h); drew = true; }
@@ -19944,14 +19947,18 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
       c.fillStyle = g; c.fillRect(x + 2, y + h * 0.84, w - 4, h * 0.16);
       c.restore();
       var name = String(r.title || '').replace(/^天兵卡 · |^角色卡 · |^法宝 · |^灵物 · /, '');
-      inkName(name, x + w / 2, y + h - 78, Math.min(22, Math.max(16, w * 0.1)), '#24180f', w - 24);
+      var nameY = y + h - textH + Math.max(12, textH * 0.28);
+      var subY = nameY + Math.max(14, textH * 0.30);
+      var ownY = Math.min(y + h - 10, subY + Math.max(14, textH * 0.28));
+      var nameSz = h < 150 ? 14 : Math.min(22, Math.max(16, w * 0.1));
+      inkName(name, x + w / 2, nameY, nameSz, '#24180f', w - 16);
       if (r.kind === 'sol') {
         var td = XY.TOWERS[r.sol];
-        inkName(td ? td.desc : (r.sub || ''), x + w / 2, y + h - 52, Math.max(13, Math.min(15, w * 0.065)), '#3a2a1c', w - 18);
-        inkName('持有 ' + (r.cards || 0) + ' 张' + (r.lv ? ' · Lv' + r.lv : ' · 还没解锁'), x + w / 2, y + h - 28, 15, '#24180f', w - 18);
+        inkName(td ? td.desc : (r.sub || ''), x + w / 2, subY, h < 150 ? 11 : Math.max(13, Math.min(15, w * 0.065)), '#3a2a1c', w - 12);
+        inkName('持有 ' + (r.cards || 0) + ' 张' + (r.lv ? ' · Lv' + r.lv : ' · 还没解锁'), x + w / 2, ownY, h < 150 ? 12 : 15, '#24180f', w - 12);
       } else {
-        if (r.sub) inkName(String(r.sub), x + w / 2, y + h - 52, Math.max(13, Math.min(16, w * 0.07)), '#3a2a1c', w - 18);
-        inkName(r.full ? '已解锁' : '未解锁', x + w / 2, y + h - 28, 15, r.full ? '#2f7d3b' : '#a42d19', w - 18);
+        if (r.sub) inkName(String(r.sub), x + w / 2, subY, h < 150 ? 11 : Math.max(13, Math.min(16, w * 0.07)), '#3a2a1c', w - 12);
+        inkName(r.full ? '已解锁' : '未解锁', x + w / 2, ownY, h < 150 ? 12 : 15, r.full ? '#2f7d3b' : '#a42d19', w - 12);
       }
       var seal = r.full ? '满' : (r.sold ? '售' : String(r.price == null ? '' : r.price));
       var ss = Math.max(44, Math.min(56, w * 0.22));
@@ -20237,8 +20244,9 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
   }
   function helpPage(c,x,y,w,h){
     var pick=(P.folio.help||0)%HELP.length, sc=HELP[pick], rt=(XY.app&&XY.app.rt)||0;
-    var foot=y+h-50, artH=Math.max(72, Math.min(h-118, w*0.32));
-    var ax=x+Math.min(w*0.22, 160), ay=y+28;
+    var narrow=w<480;
+    var foot=y+h-50, artH=narrow?Math.min(84, Math.max(44, (h-120)*0.42)):Math.max(72, Math.min(h-118, w*0.32));
+    var ax=x+Math.min(narrow?w*0.28:w*0.22, narrow?80:160), ay=y+(narrow?6:28);
     function kaiSafe(c2,s,xx,yy,sz,col,align){ c2.save(); c2.font=sz+'px "Ma Shan Zheng","KaiTi",serif'; c2.fillStyle=col; c2.textAlign=align||'center'; c2.textBaseline='middle'; c2.fillText(s,xx,yy); c2.restore(); }
     function hd(id, cx, cy, ht){
       if(!helpPage.bag) helpPage.bag={};
@@ -20279,10 +20287,14 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
     c.restore();
     if(pick===6 && XY.compactHud) XY.compactHud.details(K,XY.G,x,y,w,h-56);
     else {
-      var tx=x+Math.max(w*0.42, 220), tw=w-(tx-x)-12;
-      kaiSafe(c, sc[0], tx, y+26, 26, '#a42d19', 'left');
-      var yy=y+58, lines=sc[1].length?sc[1]:['这里汇总当前战况：血量、任务和还要走多久。'];
-      lines.forEach(function(t){ yy=K.lines(t,tx,yy,tw,16,24,'#24180f',8,false)+10; });
+      var reserve = narrow ? 0 : Math.min(w * 0.42, Math.max(120, w - 160));
+      var tx = x + (narrow ? 12 : reserve);
+      var tw = Math.max(80, w - (narrow ? 24 : reserve + 12));
+      var titleY = narrow ? ay + artH + 16 : y + 26;
+      var yy = titleY + (narrow ? 22 : 32);
+      kaiSafe(c, sc[0], tx, titleY, narrow ? 20 : 26, '#a42d19', 'left');
+      var lines=sc[1].length?sc[1]:['这里汇总当前战况：血量、任务和还要走多久。'];
+      lines.forEach(function(t){ if (yy > foot - 26) return; yy=K.lines(t,tx,yy,tw,narrow?14:16,narrow?20:24,'#24180f',8,false)+(narrow?6:10); });
     }
     HELP.forEach(function(v,i){
       var bx=x+i*w/HELP.length, bw=w/HELP.length-4, on=i===pick;
