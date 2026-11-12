@@ -12622,10 +12622,10 @@ XY.CHIBI_INK=Object.assign(XY.CHIBI_INK||{},{"phyrex":{"w":944,"h":392,"fr":[[1,
       h._stepPh = (h._stepPh || (h.bob || 0)) + dt * pace * Math.PI * 2;
       ph = h._stepPh;
     }
-    var s = Math.sin(ph), cyc = Math.cos(ph), amp = horse ? 2.2 : 3.2;
+    var s = Math.sin(ph), cyc = Math.cos(ph), amp = horse ? 0.8 : 1.0;
     var contact = Math.pow(Math.max(0, 1 - Math.abs(s) * 2.2), 1.2);
-    var squash = (horse ? 0.02 : 0.03) * contact;
-    return { bob: Math.abs(s) * amp, rot: s * 2.5 * Math.PI / 180, sway: cyc * (horse ? 1.6 : 2.4), sx: 1 + squash, sy: 1 - squash };
+    var squash = (horse ? 0.01 : 0.015) * contact;
+    return { bob: (1 - Math.cos(ph * 2)) / 2 * amp, rot: s * 2.5 * Math.PI / 180, sway: cyc * (horse ? 0.6 : 1.0), sx: 1 + squash, sy: 1 - squash };
   };
   S.draw = function (c, G, h, rt, x, y, r) {
     var key = XY.chibiKey(h);
@@ -12658,7 +12658,7 @@ XY.CHIBI_INK=Object.assign(XY.CHIBI_INK||{},{"phyrex":{"w":944,"h":392,"fr":[[1,
     if (!wildKind && (h.moving || tangStep) && !acting) a = { anim: 'walk', i: 2 + (Math.floor(rt * 10 + (h.bob || 0)) & 3), mix: 0 };
     var moving = !wildKind && a.anim === 'walk', foot = y + r * 0.85;
     var step = wantWalk ? S.stepPose(h, rt) : null;
-    var bobY = step ? -step.bob : (wildKind ? 0 : (moving ? -Math.abs(Math.sin(rt * 10 + (h.bob || 0))) * r * 0.14 : -Math.sin(rt * 2.4 + (h.bob || 0)) * r * 0.025));
+    var bobY = step ? -step.bob : (wildKind ? 0 : (moving ? -((1 - Math.cos((rt * 10 + (h.bob || 0)) * 2)) / 2) * r * 0.03 : -Math.sin(rt * 2.4 + (h.bob || 0)) * r * 0.012));
     var lean = step ? step.rot : (wildKind ? 0 : (moving ? (fl ? -0.05 : 0.05) * Math.sin(rt * 10 + (h.bob || 0)) : 0));
     var sy = step ? step.sy : 1, sx = step ? step.sx : 1;
     if (!step && !wildKind && a.anim === 'idle') { var br = Math.sin(rt * 2.4 + (h.bob || 0)); sy = 1 + br * 0.012; sx = 1 - br * 0.008; }
