@@ -20302,8 +20302,8 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
   function helpPage(c,x,y,w,h){
     var pick=(P.folio.help||0)%HELP.length, sc=HELP[pick], rt=(XY.app&&XY.app.rt)||0;
     var narrow=w<480;
-    var foot=y+h-50, artH=Math.max(160, h*0.78);
-    var ax=x+Math.min(narrow?w*0.28:w*0.22, narrow?80:160), ay=y+(narrow?6:28);
+    var foot=y+h-50, artH=Math.max(120, Math.min(h*0.46, foot-y-150));
+    var ax=x+48, ay=y+8;
     function kaiSafe(c2,s,xx,yy,sz,col,align){ c2.save(); c2.font=sz+'px "Ma Shan Zheng","KaiTi",serif'; c2.fillStyle=col; c2.textAlign=align||'center'; c2.textBaseline='middle'; c2.fillText(s,xx,yy); c2.restore(); }
     function hd(id, cx, cy, ht){
       if(!helpPage.bag) helpPage.bag={};
@@ -20314,60 +20314,73 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
       c.drawImage(im, cx-dw/2, cy, dw, ht);
     }
     c.save();
-    c.strokeStyle='rgba(42,32,22,0.2)'; c.lineWidth=1.2;
-    c.beginPath(); c.moveTo(x+16, ay+artH); c.quadraticCurveTo(x+w*0.18, ay+artH-6, x+w*0.4, ay+artH+1); c.stroke();
-    var u=(rt*0.35)%1;
-    var span = Math.min(w * 0.62, 720);
+    c.beginPath(); c.rect(x, y, w, artH + 12); c.clip();
+    if (XY.INKP) XY.INKP.stroke(c, x+20, ay+artH, x+w*0.46, ay+artH-2, 1.2, '83,61,34', 0.35, 4, 0.01);
+    var span = Math.min(w - 96, 820), ox = x + 56;
     if(pick===0){
-      hd('tang', x+span*0.16, ay, artH*0.92);
-      hd('wukong', x+span*0.38, ay+8, artH*0.78);
-      hd('bajie', x+span*0.58, ay+16, artH*0.7);
-      kaiSafe(c,'一路向西', x+span*0.42, ay+artH*0.96, 18, '#5c4a38');
+      hd('tang', ox+span*0.20, ay, artH*0.92);
+      hd('wukong', ox+span*0.42, ay+6, artH*0.78);
+      hd('bajie', ox+span*0.64, ay+10, artH*0.7);
+      kaiSafe(c,'一路向西', ox+span*0.46, ay+artH*0.9, 18, '#5c4a38');
     } else if(pick===1){
-      hd('wukong', x+span*0.22, ay, artH*0.9);
-      hd('bajie', x+span*0.55, ay, artH*0.9);
+      hd('wukong', ox+span*0.28, ay, artH*0.88);
+      hd('bajie', ox+span*0.62, ay, artH*0.88);
       c.strokeStyle='#24180f'; c.lineWidth=2.2;
-      c.beginPath(); c.moveTo(x+span*0.34, ay+artH*0.45); c.lineTo(x+span*0.46, ay+artH*0.45); c.stroke();
-      c.beginPath(); c.moveTo(x+span*0.46, ay+artH*0.45); c.lineTo(x+span*0.42, ay+artH*0.40); c.moveTo(x+span*0.46, ay+artH*0.45); c.lineTo(x+span*0.42, ay+artH*0.50); c.stroke();
+      c.beginPath(); c.moveTo(ox+span*0.40, ay+artH*0.42); c.lineTo(ox+span*0.52, ay+artH*0.42); c.stroke();
+      c.beginPath(); c.moveTo(ox+span*0.52, ay+artH*0.42); c.lineTo(ox+span*0.48, ay+artH*0.37); c.moveTo(ox+span*0.52, ay+artH*0.42); c.lineTo(ox+span*0.48, ay+artH*0.47); c.stroke();
     } else if(pick===2){
       ['arrow','cannon','frost'].forEach(function(id,i){
-        var cx=x+span*(0.2+i*0.28), cy=ay+artH*0.55, s=artH*0.42;
+        var cx=ox+span*(0.16+i*0.28), cy=ay+artH*0.5, s=artH*0.4;
         var drew=XY.ICONINK&&XY.ICONINK.sol&&XY.ICONINK.sol(c,id,cx,cy-s*0.2,s*1.6);
         if(!drew){ c.save(); c.translate(cx,cy); c.strokeStyle=i===1?'#a42d19':'#24180f'; c.lineWidth=3; c.lineCap='round';
           c.beginPath(); c.arc(0,-s*0.55,s*0.16,0,6.3); c.stroke();
           c.beginPath(); c.moveTo(0,-s*0.36); c.lineTo(0,s*0.15); c.moveTo(-s*0.28,-s*0.05); c.lineTo(s*0.28,-s*0.12); c.moveTo(0,s*0.15); c.lineTo(-s*0.16,s*0.48); c.moveTo(0,s*0.15); c.lineTo(s*0.16,s*0.48); c.stroke();
           c.restore(); }
-        kaiSafe(c,['弓手','炮手','冰阵'][i],cx,ay+artH*0.92,18,'#24180f');
+        kaiSafe(c,['弓手','炮手','冰阵'][i],cx,ay+artH*0.88,18,'#24180f');
       });
     } else if(pick===3){
       var icons=['金箍棒','筋斗云','紧箍咒'];
-      icons.forEach(function(nm,i){ var cx=x+span*(0.18+i*0.24), cy=ay+artH*0.38; if(!(XY.ICONINK&&XY.ICONINK.draw(c,nm,cx,cy,artH*0.62))) kaiSafe(c,nm,cx,cy,26,'#24180f'); else kaiSafe(c,nm,cx,ay+artH*0.78,16,'#24180f'); });
+      icons.forEach(function(nm,i){ var cx=ox+span*(0.16+i*0.26), cy=ay+artH*0.36; if(!(XY.ICONINK&&XY.ICONINK.draw(c,nm,cx,cy,artH*0.55))) kaiSafe(c,nm,cx,cy,26,'#24180f'); else kaiSafe(c,nm,cx,ay+artH*0.78,16,'#24180f'); });
     } else if(pick===4){
-      hd('phyrex', x+span*0.28, ay, artH*0.92);
-      kaiSafe(c,'召唤登场', x+span*0.55, ay+artH*0.4, 28, '#a42d19');
+      hd('phyrex', ox+span*0.32, ay, artH*0.9);
+      kaiSafe(c,'召唤登场', ox+span*0.62, ay+artH*0.4, 26, '#a42d19');
     } else if(pick===5){
-      c.strokeStyle='rgba(42,32,22,0.7)'; c.lineWidth=1.6;
-      c.strokeRect(x+24, ay+12, Math.min(span, 280), artH*0.7);
-      kaiSafe(c,'暂驻', x+48, ay+36, 22, '#a42d19', 'left');
-      ['继续','声音','自动加点','自动选宝'].forEach(function(t,i){ kaiSafe(c,t, x+48, ay+70+i*28, 16, '#24180f', 'left'); });
+      kaiSafe(c,'暂驻', ox + span * 0.08, ay + artH * 0.16, 32, '#a42d19', 'left');
+      ['继续','声音','自动加点','自动选宝'].forEach(function(t,i){ kaiSafe(c, t, ox + span * 0.08, ay + artH * (0.34 + i * 0.15), 26, '#24180f', 'left'); });
     } else {
       c.strokeStyle='rgba(90,70,48,0.7)'; c.lineWidth=1.4;
-      c.beginPath(); c.moveTo(x+30, ay+artH*0.7); c.quadraticCurveTo(x+span*0.4, ay+artH*0.2, x+span*0.85, ay+artH*0.55); c.stroke();
-      hd('tang', x+span*0.45, ay+artH*0.15, artH*0.55);
-      kaiSafe(c,'关口', x+span*0.82, ay+artH*0.42, 16, '#a42d19');
+      c.beginPath(); c.moveTo(ox+10, ay+artH*0.7); c.quadraticCurveTo(ox+span*0.4, ay+artH*0.2, ox+span*0.85, ay+artH*0.55); c.stroke();
+      hd('tang', ox+span*0.42, ay+artH*0.12, artH*0.62);
+      kaiSafe(c,'关口', ox+span*0.78, ay+artH*0.4, 16, '#a42d19');
     }
     c.restore();
-    if(false) {}
-    else {
-      var reserve = narrow ? 0 : Math.min(w * 0.58, Math.max(220, w * 0.55));
-      var tx = x + (narrow ? 12 : reserve);
-      var tw = Math.max(80, w - (narrow ? 24 : reserve + 12));
-      var titleY = narrow ? ay + artH + 16 : y + 26;
-      var yy = titleY + (narrow ? 22 : 32);
-      kaiSafe(c, sc[0], tx, titleY, narrow ? 20 : 26, '#a42d19', 'left');
-      var lines=sc[1].length?sc[1]:['这里汇总当前战况：血量、任务和还要走多久。'];
-      lines.forEach(function(t){ if (yy > foot - 26) return; yy=K.lines(t,tx,yy,tw,narrow?14:16,narrow?20:24,'#24180f',8,false)+(narrow?6:10); });
-    }
+    var tx = x + 28, tw = w - 56, titleY = ay + artH + 22;
+    kaiSafe(c, sc[0], tx, titleY, narrow ? 24 : 32, '#a42d19', 'left');
+    if (XY.INKP) XY.INKP.stroke(c, tx, titleY + 18, tx + Math.min(160, tw * 0.2), titleY + 18, 1.8, '164,45,25', 0.55, pick + 2, 0.01);
+    var lines=sc[1].length?sc[1]:['这里汇总当前战况：血量、任务和还要走多久。'];
+    var top = titleY + 36, bot = foot - 6, band = (bot - top) / lines.length;
+    lines.forEach(function (sentence, i) {
+      var sz = narrow ? 22 : 36;
+      c.font = sz + 'px "Ma Shan Zheng","KaiTi",serif';
+      while (sz > 18 && c.measureText(sentence).width > tw) { sz -= 1; c.font = sz + 'px "Ma Shan Zheng","KaiTi",serif'; }
+      var wrapped = [], cur = '';
+      for (var ci = 0; ci < sentence.length; ci++) {
+        var ch = sentence.charAt(ci);
+        if (cur && c.measureText(cur + ch).width > tw) { wrapped.push(cur); cur = ch; }
+        else cur += ch;
+      }
+      if (cur) wrapped.push(cur);
+      var step = Math.min(sz + 12, (band - 8) / wrapped.length);
+      wrapped.forEach(function (ln, k) {
+        var ly = top + band * i + 8 + k * step + sz * 0.45;
+        c.font = sz + 'px "Ma Shan Zheng","KaiTi",serif';
+        var twid = c.measureText(ln).width, extra = Math.max(0, tw - twid), gap = ln.length > 1 ? Math.min(sz * 0.85, extra / (ln.length - 1)) : 0;
+        var cx = tx;
+        c.save(); c.font = sz + 'px "Ma Shan Zheng","KaiTi",serif'; c.fillStyle = '#24180f'; c.textAlign = 'left'; c.textBaseline = 'middle';
+        for (var gi = 0; gi < ln.length; gi++) { c.fillText(ln.charAt(gi), cx, ly); cx += c.measureText(ln.charAt(gi)).width + gap; }
+        c.restore();
+      });
+    });
     HELP.forEach(function(v,i){
       var bx=x+i*w/HELP.length, bw=w/HELP.length-4, on=i===pick;
       c.save();
