@@ -24396,36 +24396,47 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
       return n;
     }
     function fitOnBody(draw, body, others, text) {
+      var size = short ? 14 : (land ? 26 : 14);
       var anchor = body && body.w ? body : draw;
-      var maxSize = land ? (short ? 20 : 40) : 16, minSize = short ? 11 : (land ? 13 : 11);
-      var size, tw, th, yf, sh, cx, cy, box, own, oth, frac, fine, fo, best = null;
-      var shifts = [0, -0.16, 0.16, -0.28, 0.28];
-      for (size = maxSize; size >= minSize; size--) {
-        c.font = size + 'px GachaBrush, KaiTi, STKaiti, serif';
-        tw = Math.ceil(c.measureText(text).width);
-        th = Math.ceil(size * 1.05);
-        for (yf = 0.58; yf <= 0.86; yf += 0.07) {
-          for (sh = 0; sh < shifts.length; sh++) {
-            cx = anchor.x + anchor.w * (0.5 + shifts[sh]);
-            cy = anchor.y + anchor.h * yf;
-            box = { x: cx - tw / 2, y: cy - th / 2, w: tw, h: th };
-            if (box.x < 2 || box.y < 2 || box.x + box.w > cw - 2 || box.y + box.h > ch - 48) continue;
-            own = cover(draw, box, 3);
-            oth = othersHit(others, box, 3);
-            frac = own.hits / own.total;
-            if (frac >= 0.7 && oth === 0) {
-              fine = cover(draw, box, 2);
-              fo = othersHit(others, box, 2);
-              if (fine.hits / fine.total >= 0.7 && fo === 0) {
-                return { x: cx, y: cy, size: size, w: tw, h: th, own: Math.round(fine.hits / fine.total * 1000) / 1000, other: 0 };
-              }
+      c.font = size + 'px GachaBrush, KaiTi, STKaiti, serif';
+      function linesFor(maxW) {
+        if (c.measureText(text).width <= maxW) return [text];
+        var best = null, i, a, b, w;
+        for (i = 1; i < text.length; i++) {
+          a = text.slice(0, i); b = text.slice(i);
+          w = Math.max(c.measureText(a).width, c.measureText(b).width);
+          if (!best || w < best.w) best = { w: w, lines: [a, b] };
+        }
+        return best ? best.lines : [text];
+      }
+      var lines = linesFor(Math.max(24, anchor.w * 0.96));
+      var dimW = 0, li;
+      for (li = 0; li < lines.length; li++) dimW = Math.max(dimW, Math.ceil(c.measureText(lines[li]).width));
+      var gap = size * 1.15, dimH = Math.ceil(lines.length * gap);
+      var yf, sh, cx, cy, box, own, oth, frac, fine, fo, best = null;
+      var shifts = [0, -0.14, 0.14, -0.26, 0.26];
+      for (yf = 0.52; yf <= 0.9; yf += 0.06) {
+        for (sh = 0; sh < shifts.length; sh++) {
+          cx = anchor.x + anchor.w * (0.5 + shifts[sh]);
+          cy = anchor.y + anchor.h * yf;
+          box = { x: cx - dimW / 2, y: cy - dimH / 2, w: dimW, h: dimH };
+          if (box.x < 2 || box.y < 2 || box.x + box.w > cw - 2 || box.y + box.h > ch - 48) continue;
+          own = cover(draw, box, 3);
+          oth = othersHit(others, box, 3);
+          frac = own.hits / own.total;
+          if (frac >= 0.7 && oth === 0) {
+            fine = cover(draw, box, 2);
+            fo = othersHit(others, box, 2);
+            if (fine.hits / fine.total >= 0.7 && fo === 0) {
+              return { x: cx, y: cy, size: size, w: dimW, h: dimH, lines: lines, own: Math.round(fine.hits / fine.total * 1000) / 1000, other: 0 };
             }
-            if (!best || (oth === 0 && frac > best.own) || (best.other > 0 && oth === 0)) best = { x: cx, y: cy, size: size, w: tw, h: th, own: Math.round(frac * 1000) / 1000, other: oth };
           }
+          if (!best || (oth === 0 && frac > best.own)) best = { x: cx, y: cy, size: size, w: dimW, h: dimH, lines: lines, own: Math.round(frac * 1000) / 1000, other: oth };
         }
       }
-      return best || { x: anchor.x + anchor.w * 0.5, y: anchor.y + anchor.h * 0.7, size: minSize, w: 10, h: minSize, own: 0, other: 1 };
+      return best || { x: anchor.x + anchor.w * 0.5, y: anchor.y + anchor.h * 0.72, size: size, w: dimW, h: dimH, lines: lines, own: 0, other: 1 };
     }
+
     function softBamboo(c, x, y, w, h) {
       var IP = XY.INKP;
       if (!IP) return;
@@ -24440,8 +24451,8 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
     var scroll = { x: cw * 0.02, y: ch * 0.03, w: cw * 0.96, h: ch * 0.94 };
     if (stage && elapsed < XY.gacha10.timing.intro) {
       drawScroll(c, scroll.x, scroll.y, scroll.w, scroll.h, !land);
-      softBamboo(c, scroll.x + scroll.w * 0.02, scroll.y + scroll.h * 0.06, scroll.w * 0.34, scroll.h * 0.86);
-      var titleX = scroll.x + scroll.w * (land ? 0.22 : 0.62);
+      grove(c, scroll.x - scroll.w * 0.01, scroll.y + scroll.h * 0.02, scroll.w * 0.3, scroll.h * 0.92);
+      var titleX = scroll.x + scroll.w * (land ? 0.36 : 0.62);
       var titleY = scroll.y + scroll.h * (land ? 0.28 : 0.12);
       var titleS = land ? Math.min(72, scroll.h * 0.14) : Math.min(36, scroll.w * 0.1);
       inkName(c, '画十张', titleX, titleY, titleS, scroll.w * 0.34);
@@ -24534,14 +24545,15 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
           var nm = fitOnBody(it.draw, it.body, others, it.label);
           nm.id = it.id; nm.text = it.label; nm.unlock = it.unlock; nm.n = it.n;
           names.push(nm);
-          audit.push({ id: it.id, text: it.label, own: nm.own, other: nm.other, pass: nm.own >= 0.7 && nm.other === 0 });
+          audit.push({ id: it.id, text: it.label, own: nm.own, other: nm.other, size: nm.size, lines: (nm.lines || [nm.text]).length, pass: nm.own >= 0.7 && nm.other === 0 });
         });
         XY.gacha10.lastNames = names;
         XY.gacha10.lastNameAudit = audit;
         names.forEach(function (nm) {
+          var lines = nm.lines || [nm.text], gap = nm.size * 1.15, y0 = nm.y - (lines.length - 1) * gap / 2, li;
+          for (li = 0; li < lines.length; li++) inkName(c, lines[li], nm.x, y0 + li * gap, nm.size, nm.w + 8, '#1a120c', true);
           var hx = nm.x - nm.w / 2 - 6, hy = nm.y - nm.h / 2 - 4, hw = nm.w + 12, hh = Math.max(28, nm.h + 8);
-          inkName(c, nm.text, nm.x, nm.y, nm.size, nm.w + 4, '#1a120c', true);
-          if (nm.unlock) cinSeal(c, nm.x + nm.w / 2 + nm.size * 0.95, nm.y + nm.h * 0.15, Math.max(14, nm.size * 0.42), '新');
+          if (nm.unlock) cinSeal(c, nm.x + nm.w / 2 + nm.size * 0.85, nm.y + nm.h * 0.35, Math.max(14, nm.size * 0.42), '新');
           if (nm.n > 1) cinSeal(c, nm.x - nm.w / 2 - nm.size * 0.7, nm.y + nm.h * 0.15, Math.max(14, nm.size * 0.42), String(nm.n));
           st.hit(hx, hy, hw, hh, 'gachaPick', { id: nm.id });
         });
