@@ -23376,12 +23376,16 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
     c.restore();
     nameOn(tl.xc ? ((tl.rec && tl.rec.name) || '自建') : (def && def.name) || '', owned ? INK : SOFT);
     if (!owned) {
-      var lk = Math.max(18, Math.round(Math.min(bw, bh) * 0.28));
-      VU.drawSeal(c, bx + bw - lk * 0.2, by + 2, lk, lk, '锁', { style: 'solid', col: RED, sz: Math.round(lk * 0.62), rot: -0.06, stack: false });
+      var lk = Math.max(14, Math.round(Math.min(bw, bh) * 0.22));
+      lk = Math.min(lk, Math.max(12, bw - 6), Math.max(12, bh - 6));
+      var lx = bx + bw - lk - 3, ly = by + 3;
+      VU.drawSeal(c, lx, ly, lk, lk, '锁', { style: 'solid', col: RED, sz: Math.round(lk * 0.62), rot: -0.04, stack: false });
+      (XY.departSeals = XY.departSeals || []).push({ id: id, x: lx, y: ly, w: lk, h: lk, card: { x: bx, y: by, w: bw, h: bh } });
     }
     if (on && owned) {
-      var ss = Math.max(16, Math.round(Math.min(bw, bh) * 0.22));
-      VU.drawSeal(c, bx + bw - ss * 0.15, by - 2, ss, ss, '携', { style: 'solid', col: RED, sz: Math.round(ss * 0.66), rot: 0.08 });
+      var ss = Math.max(14, Math.round(Math.min(bw, bh) * 0.2));
+      ss = Math.min(ss, Math.max(12, bw - 6), Math.max(12, bh - 6));
+      VU.drawSeal(c, bx + bw - ss - 3, by + 3, ss, ss, '携', { style: 'solid', col: RED, sz: Math.round(ss * 0.66), rot: 0.04 });
     }
     if (!owned && tl.xc) { hit('xcharLocked'); return; }
     hit('carryPick', { id: id });
@@ -23794,7 +23798,7 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
 
 
   DP.draw = function (c, G, a) {
-    XY.departPlates = [];
+    XY.departPlates = []; XY.departSeals = []; XY.departTexts = [];
     var st = VU.begin(c, a), cw = st.cw, ch = st.ch, land = (cw >= 600 && cw > ch * 1.1) || (cw >= 480 && cw > ch * 1.5), tiny = land && ch <= 360, cmp = tiny || (!land && ch < 720);
     var geo = DP.geo = { land: land, tiny: tiny, cmp: cmp, cards: [], tiles: 0, btns: [], bottom: 0 };
     bgPoster(c, cw, ch, land);
