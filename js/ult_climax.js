@@ -68,7 +68,7 @@
       if (!sp) { q.shift(); return; }
       ctx.save();
       ctx.setTransform(app.zoom * app.dpr, 0, 0, app.zoom * app.dpr, 0, 0);
-      if (!app || app.screen !== 'levels' || !(XY.gacha10 && XY.gacha10.overlay && XY.gacha10.overlay())) { q.length = 0; if (XY.gacha10) XY.gacha10.forceHold = false; ctx.restore(); return; }
+      if (app.screen !== 'levels') { q.length = 0; XY._introBox = null; if (XY.gacha10) XY.gacha10.forceHold = false; ctx.restore(); return; }
       if (XY.gacha10) XY.gacha10.forceHold = true;
       var W = app.lw, H = app.lh, pw = Math.min(560, W - 24), ph = Math.min(280, H * 0.46);
       var x = (W - pw) / 2, y = (H - ph) / 2;
@@ -107,14 +107,23 @@
     XY.render = render;
   }
   hook();
-  window.addEventListener('pointerdown', function (ev) {
-    if (U.hold) U.skip();
-    var q = XY.introQ, box = XY._introBox;
-    if (!q || !q.length || !box) return;
-    var id = q[0];
-    var data = XY.save && XY.save.data;
-    if (data) { data.intros = data.intros || {}; data.intros[id] = 1; if (XY.save.touch) XY.save.touch(); }
-    q.shift();
-    if (ev && ev.stopPropagation) ev.stopPropagation();
-  }, true);
+  function showingIntro() {
+    return !!(XY.introQ && XY.introQ.length && XY._introBox);
+  }
+  function eatIntro(ev) {
+    if (U.hold && ev.type === 'pointerdown') U.skip();
+    if (!showingIntro()) return;
+    if (ev.type === 'pointerdown') {
+      var q = XY.introQ, id = q[0];
+      var data = XY.save && XY.save.data;
+      if (data) { data.intros = data.intros || {}; data.intros[id] = 1; if (XY.save.touch) XY.save.touch(); }
+      q.shift();
+      if (!q.length) XY._introBox = null;
+    }
+    if (ev.stopPropagation) ev.stopPropagation();
+    if (ev.preventDefault && ev.cancelable) ev.preventDefault();
+  }
+  window.addEventListener('pointerdown', eatIntro, true);
+  window.addEventListener('mousedown', eatIntro, true);
+  window.addEventListener('touchstart', eatIntro, true);
 })();
