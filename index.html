@@ -26205,7 +26205,9 @@ X.step=function(g,dt){if(!g._simRandom)return step.apply(this,arguments);var sel
     if (app.screen === 'play' && G.mode === 'play') {
       var wo = worldOf(p), wx = wo.x, wy = wo.y;
       if (app.build) {
-        if (XY.placeTower(G, app.build, wx, wy) && (touch || G.coins < XY.TOWERS[app.build].cost)) app.build = null;   // 触屏没有右键 / Esc：放下一个就退出选点模式
+        if (app._placeAte && performance.now() - app._placeAte < 80) return;
+        var placedType = app.build;
+        if (XY.placeTower(G, placedType, wx, wy)) { app.build = null; app._placeAte = performance.now(); }
       } else if (app.summon) {
         var sr = XY.summonSky(G, app.summon.mode, wx, wy); if (sr.ok || sr.reason !== 'mode') app.summon = null;
       } else if (app.selTower) app.selTower = null;                      // 选着塔时再点一下只是取消选中，不走路
