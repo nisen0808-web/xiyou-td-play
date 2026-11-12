@@ -613,7 +613,7 @@
   function buttonBox(app) {
     var W = app.lw, H = app.lh, port = H > W * 1.05;
     if (app.screen === 'start') {
-      if (port) return { x: W - 124, y: 10, w: 112, h: 52 };
+      if (port) return { x: W - 132, y: 28, w: 112, h: 52 };
       return { x: W - 156, y: 14, w: 136, h: 56 };
     }
     if (port) return { x: 12, y: H - 64, w: 112, h: 52 };
@@ -1033,20 +1033,30 @@
     }
     return Math.max(size + 8, cols * (size + 7));
   }
+  function sharedGround(c, x, y, w) {
+    var g = c.createRadialGradient(x + w / 2, y, 6, x + w / 2, y, w * 0.55);
+    g.addColorStop(0, 'rgba(36,28,22,0.32)');
+    g.addColorStop(0.5, 'rgba(36,28,22,0.1)');
+    g.addColorStop(1, 'rgba(36,28,22,0)');
+    c.fillStyle = g;
+    c.beginPath();
+    c.ellipse(x + w / 2, y, w * 0.48, Math.max(10, w * 0.07), 0, 0, Math.PI * 2);
+    c.fill();
+  }
   function paintStory(c, x, y, w, h) {
     var lines = storyLines();
-    var stage = img('stage1', art.stage1 || 'stage1.webp');
-    var form = img('form', art.form || 'form.webp');
-    var gap = 10, textW, px, cardW, textH, top, cardH;
+    var gap = 8, textW, left, cardW, textH, top, cardH, foot;
     if (w > h && w >= 640) {
       textW = Math.max(188, Math.min(300, Math.floor(w * 0.36)));
       paintLines(c, lines, x + 2, y + 12, textW - 8, h - 20);
-      px = x + textW + 4;
-      cardW = Math.floor((w - textW - gap - 4) / 2);
-      inkWash(c, stage, px, y, cardW, h, '猫');
-      captionOn(c, px, y, cardW, h, API.HERO, API.HANDLE);
-      inkWash(c, form, px + cardW + gap, y, cardW, h, '化');
-      captionOn(c, px + cardW + gap, y, cardW, h, API.HERO2, '');
+      left = x + textW + 4;
+      cardW = Math.floor((w - textW - gap - 8) / 2);
+      foot = y + h - 6;
+      sharedGround(c, left, foot, cardW * 2 + gap);
+      blitCut(c, 'stage1cut', art.stage1Cut || 'stage1-cut.webp', left + cardW * 0.5, foot, h - 18, cardW - 8);
+      captionOn(c, left, y, cardW, h, API.HERO, API.HANDLE);
+      blitCut(c, 'formcut', art.formCut || 'form-cut.webp', left + cardW + gap + cardW * 0.5, foot, h - 10, cardW - 8);
+      captionOn(c, left + cardW + gap, y, cardW, h, API.HERO2, '');
       return;
     }
     textH = Math.min(Math.max(118, h * 0.38), h * 0.46);
@@ -1054,9 +1064,11 @@
     top = y + textH + 8;
     cardH = Math.max(72, h - (top - y));
     cardW = Math.floor((w - gap) / 2);
-    inkWash(c, stage, x, top, cardW, cardH, '猫');
+    foot = top + cardH - 2;
+    sharedGround(c, x, foot, w);
+    blitCut(c, 'stage1cut', art.stage1Cut || 'stage1-cut.webp', x + cardW * 0.5, foot, cardH, cardW - 6);
     captionOn(c, x, top, cardW, cardH, API.HERO, API.HANDLE);
-    inkWash(c, form, x + cardW + gap, top, cardW, cardH, '化');
+    blitCut(c, 'formcut', art.formCut || 'form-cut.webp', x + cardW + gap + cardW * 0.5, foot, cardH, cardW - 6);
     captionOn(c, x + cardW + gap, top, cardW, cardH, API.HERO2, '');
   }
   function paintPopup(c, app) {
@@ -1208,11 +1220,13 @@
     }
     c.restore();
   }
-  function blitCut(c, key, file, cx, foot, ht) {
+  function blitCut(c, key, file, cx, foot, ht, maxW) {
     var im = img(key, file);
     if (!im) return false;
-    var w = ht * im.naturalWidth / im.naturalHeight;
-    c.drawImage(im, cx - w / 2, foot - ht, w, ht);
+    var ir = im.naturalWidth / im.naturalHeight;
+    var h = ht, w = h * ir;
+    if (maxW && w > maxW) { w = maxW; h = w / ir; }
+    c.drawImage(im, cx - w / 2, foot - h, w, h);
     return true;
   }
   function paintPaperField(c, W, H) {
@@ -2017,31 +2031,25 @@
   function ownerMark(c, id, name, x, y, r, alpha) {
     c.save();
     c.globalAlpha = alpha;
-    c.beginPath();
-    c.arc(x, y, r, 0, Math.PI * 2);
-    c.clip();
     var face = anyImg('xav-' + id, 'assets/art/x-avatars/' + id + '.webp');
-    if (face) {
-      var ir = face.naturalWidth / face.naturalHeight;
-      var side = r * 2;
-      var dw = ir > 1 ? side * ir : side, dh = ir > 1 ? side : side / ir;
-      c.drawImage(face, x - dw / 2, y - dh / 2, dw, dh);
-    } else {
-      c.fillStyle = '#efe6d4';
-      c.fillRect(x - r, y - r, r * 2, r * 2);
+    var drew = XY.xAvIcon && face && XY.xAvIcon.featherImage(c, face, x - r, y - r, r * 2, r * 2);
+    if (!drew) {
+      c.beginPath();
+      c.arc(x, y, r, 0, Math.PI * 2);
+      c.clip();
+      if (face) {
+        var ir = face.naturalWidth / face.naturalHeight;
+        var side = r * 2;
+        var dw = ir > 1 ? side * ir : side, dh = ir > 1 ? side : side / ir;
+        c.drawImage(face, x - dw / 2, y - dh / 2, dw, dh);
+      } else {
+        c.fillStyle = '#efe6d4';
+        c.fillRect(x - r, y - r, r * 2, r * 2);
+      }
     }
     c.restore();
     c.save();
     c.globalAlpha = alpha;
-    c.strokeStyle = 'rgba(28,22,18,0.82)';
-    c.lineWidth = Math.max(4, r * 0.09);
-    c.beginPath();
-    c.arc(x, y, r * 1.06, 0.2, 5.6);
-    c.stroke();
-    c.lineWidth = Math.max(2, r * 0.04);
-    c.beginPath();
-    c.arc(x + 2, y - 1, r * 1.16, 0.4, 2.4);
-    c.stroke();
     var nameSize = Math.round(r * 0.42);
     brushFit(c, name || '', x, y + r + nameSize * 0.85, r * 3.4, nameSize, '#24180f', 'center');
     brush(c, '专属', x, y + r + nameSize * 1.7, Math.round(nameSize * 0.72), '#24180f', 'center');
@@ -2059,7 +2067,8 @@
     var fade = Math.max(0, Math.min(1, (t - 0.85) / 0.4));
     c.save();
     c.globalAlpha = 0.2 + 0.8 * open;
-    obtainPaper(c, W, H, port);
+    c.fillStyle = '#f6efe2';
+    c.fillRect(0, 0, W, H);
     c.globalAlpha = 1;
     if (item.kind === 'gear') {
       var piece = API.gearById[item.id];

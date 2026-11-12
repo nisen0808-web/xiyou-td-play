@@ -1632,6 +1632,18 @@
     ctx.stroke();
     ctx.restore();
   }
+  function inkStrip(ctx, x, y, w, h) {
+    ctx.save();
+    ctx.fillStyle = 'rgba(43,28,8,0.92)';
+    ctx.beginPath();
+    ctx.moveTo(x + 10, y + 4);
+    ctx.quadraticCurveTo(x + w * 0.45, y - 1, x + w - 8, y + 5);
+    ctx.lineTo(x + w - 3, y + h - 7);
+    ctx.quadraticCurveTo(x + w * 0.5, y + h + 2, x + 8, y + h - 4);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
   function drawFx(ctx, G) {
     var i, fx, k, p;
     for (i = 0; i < G.td.fx.length; i++) {
@@ -1674,21 +1686,21 @@
       var sr = narrow ? 30 : 38;
       seal(ctx, W - sr - 18, 78 + sr, sr, '出发');
       hit(W - sr * 2 - 26, 78, sr * 2 + 16, sr * 2 + 16, 'tdStart');
-      ctx.fillStyle = '#2a241c'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#f6efe2'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       if (narrow) {
         var bw = Math.min(W - 24, 340);
-        torn(ctx, 12, 210, bw, 30);
+        inkStrip(ctx, 12, 210, bw, 30);
         ctx.font = brushFont(15);
         ctx.fillText('布置天兵，再点出发', 12 + bw / 2, 225);
         var hw = Math.min(W - 24, 460);
-        torn(ctx, 12, 246, hw, 34);
+        inkStrip(ctx, 12, 246, hw, 34);
         ctx.font = brushFont(14);
         ctx.fillText(R.FLY_HINT, 12 + hw / 2, 263);
       } else {
-        torn(ctx, W / 2 - 168, 40, 336, 34);
+        inkStrip(ctx, W / 2 - 168, 40, 336, 34);
         ctx.font = brushFont(20);
         ctx.fillText('布置天兵，再点出发', W / 2, 57);
-        torn(ctx, W / 2 - 240, 78, 480, 32);
+        inkStrip(ctx, W / 2 - 240, 78, 480, 32);
         ctx.font = brushFont(16);
         ctx.fillText(R.FLY_HINT, W / 2, 94);
       }
@@ -1933,11 +1945,11 @@
     var cw = phone() ? Math.min(340, W * 0.62) : 420, ch = phone() ? 176 : 148;
     var x = 18, y = phone() ? 300 : 132;
     if (x < target.x + target.w && x + cw > target.x && y < target.y + target.h && y + ch > target.y) y = Math.min(H - ch - 150, target.y + target.h + 24);
-    torn(ctx, x, y, cw, ch);
+    inkStrip(ctx, x, y, cw, ch);
     var list = G.td.guide.kind === 'td3' ? R.GUIDE3 : R.GUIDE2;
-    ctx.fillStyle = '#6e211b'; ctx.font = brushFont(phone() ? 18 : 22); ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+    ctx.fillStyle = '#f6efe2'; ctx.font = brushFont(phone() ? 18 : 22); ctx.textAlign = 'left'; ctx.textBaseline = 'top';
     ctx.fillText((G.td.guide.kind === 'td3' ? '阵型' : '布阵') + ' ' + (G.td.guide.i + 1) + '/' + list.length, x + 16, y + 10);
-    ctx.fillStyle = '#2a241c'; ctx.font = brushFont(phone() ? 15 : 17);
+    ctx.fillStyle = '#f3e6c8'; ctx.font = brushFont(phone() ? 15 : 17);
     var words = st.text, line = '', lines = [], i;
     for (i = 0; i < words.length; i++) {
       if (ctx.measureText(line + words.charAt(i)).width > cw - 24) { lines.push(line); line = words.charAt(i); }
@@ -2055,9 +2067,10 @@
   function drawFormShop(ctx, G, a) {
     var art = shopArt();
     var W = G.view.w, H = G.view.h;
-    var narrow = phone() || W < 900;
+    var shortWide = W > H * 1.5 && H < 800;
+    var narrow = !shortWide && (phone() || W < 900);
     var z = (a && a.zoom) || 1;
-    var S = W / (narrow ? 390 : 1920);
+    var S = shortWide ? Math.min(W / 1920, H / 1080) : (W / (narrow ? 390 : 1920));
     var pages = ["四人", "五人", "六人", "七人", "八人"];
     var page = Math.max(0, Math.min(4, G.td.shopPage || 0));
     G.td.shopPage = page;
@@ -2281,7 +2294,7 @@
     if (keptFx) G.fx = keptFx;
     if (!a) return;
     if (a.tdChooser) { try { drawChooser(ctx, a); } catch (e) {} }
-    if (!G || !G.td || !G.td.on || a.screen !== 'play') return;
+    if (!G || !G.td || !G.td.on || a.screen !== 'play' || G.mode !== 'play') return;
     try {
       var z = (a.zoom || 1) * (a.dpr || 1);
       ctx.setTransform(z, 0, 0, z, 0, 0);
@@ -2328,76 +2341,136 @@
   if (XY.compactHud && XY.compactHud.soldiers && XY.compactHud.layout) {
     var SOL_IDS = ['arrow', 'cannon', 'frost', 'siege', 'heal'];
     var SOL_NAMES = ['弓兵', '炮兵', '寒冰', '破阵', '佛光'];
+    function paperOpen(r, g, b, a) {
+      if (a < 18) return true;
+      var yv = (r + g + b) / 3, ch = Math.max(r, g, b) - Math.min(r, g, b);
+      return yv > 196 && ch < 34;
+    }
+    /* 整张天兵图集只抠一次：纸色从透明边漫进去，脚下残雪再蚀掉，武器和衣服留着。 */
+    function cleanSoldierSheet(en) {
+      if (!en || en._cut || !en.img || !en.d || !en.d.fr) return;
+      var src = en.img, w = src.naturalWidth || src.width, h = src.naturalHeight || src.height;
+      if (!w || !h) return;
+      var cnv = document.createElement('canvas');
+      cnv.width = w; cnv.height = h;
+      var g = cnv.getContext('2d', { willReadFrequently: true });
+      g.drawImage(src, 0, 0);
+      var image = g.getImageData(0, 0, w, h), d = image.data, n = w * h;
+      var seen = new Uint8Array(n), qx = new Int32Array(n), qy = new Int32Array(n), qs = 0, qe = 0;
+      function push(x, y) {
+        if (x < 0 || y < 0 || x >= w || y >= h) return;
+        var i = y * w + x;
+        if (seen[i]) return;
+        var p = i * 4;
+        if (!paperOpen(d[p], d[p + 1], d[p + 2], d[p + 3])) return;
+        seen[i] = 1;
+        qx[qe] = x; qy[qe] = y; qe++;
+      }
+      var x, y, i;
+      for (x = 0; x < w; x++) { push(x, 0); push(x, h - 1); }
+      for (y = 0; y < h; y++) { push(0, y); push(w - 1, y); }
+      while (qs < qe) {
+        x = qx[qs]; y = qy[qs]; qs++;
+        push(x + 1, y); push(x - 1, y); push(x, y + 1); push(x, y - 1);
+      }
+      for (i = 0; i < n; i++) if (seen[i]) d[i * 4 + 3] = 0;
+      var frames = en.d.fr, fi, f, pass, x0, y0, fw, fh, yy, xx, p, r, gg, b, a, yv, ch, touch, kills, ki;
+      for (fi = 0; fi < frames.length; fi++) {
+        f = frames[fi]; x0 = f[0]; y0 = f[1]; fw = f[2]; fh = f[3];
+        for (pass = 0; pass < 16; pass++) {
+          kills = [];
+          for (yy = y0 + (fh * 0.58 | 0); yy < y0 + fh; yy++) {
+            if (yy < 0 || yy >= h) continue;
+            for (xx = x0; xx < x0 + fw; xx++) {
+              if (xx < 0 || xx >= w) continue;
+              p = (yy * w + xx) * 4;
+              a = d[p + 3]; if (a < 18) continue;
+              r = d[p]; gg = d[p + 1]; b = d[p + 2];
+              yv = (r + gg + b) / 3; ch = Math.max(r, gg, b) - Math.min(r, gg, b);
+              if (yv < 180 || ch > 30) continue;
+              touch = (xx + 1 >= w || d[(yy * w + xx + 1) * 4 + 3] < 18) || (xx - 1 < 0 || d[(yy * w + xx - 1) * 4 + 3] < 18) || (yy + 1 >= h || d[((yy + 1) * w + xx) * 4 + 3] < 18) || (yy - 1 < 0 || d[((yy - 1) * w + xx) * 4 + 3] < 18);
+              if (touch) kills.push(p);
+            }
+          }
+          if (!kills.length) break;
+          for (ki = 0; ki < kills.length; ki++) d[kills[ki] + 3] = 0;
+        }
+      }
+      for (y = 1; y < h - 1; y++) {
+        for (x = 1; x < w - 1; x++) {
+          p = (y * w + x) * 4;
+          a = d[p + 3]; if (a < 30) continue;
+          r = d[p]; gg = d[p + 1]; b = d[p + 2];
+          yv = (r + gg + b) / 3; ch = Math.max(r, gg, b) - Math.min(r, gg, b);
+          if (yv < 175 || ch > 36) continue;
+          touch = d[p + 7] < 18 || d[p - 1] < 18 || d[p + w * 4 + 3] < 18 || d[p - w * 4 + 3] < 18;
+          if (!touch) continue;
+          if (yv > 220 && ch < 26) d[p + 3] = 0;
+          else {
+            d[p] = (r * 0.62 + 36 * 0.38) | 0;
+            d[p + 1] = (gg * 0.62 + 28 * 0.38) | 0;
+            d[p + 2] = (b * 0.62 + 22 * 0.38) | 0;
+            d[p + 3] = (a * 0.45) | 0;
+          }
+        }
+      }
+      g.putImageData(image, 0, 0);
+      try {
+        Object.defineProperty(cnv, 'naturalWidth', { value: w });
+        Object.defineProperty(cnv, 'naturalHeight', { value: h });
+      } catch (e) {}
+      cnv.complete = true;
+      en.img = cnv;
+      en._cut = true;
+    }
     function soldierFrame(id) {
       var en = XY.SINK && XY.SINK.has && XY.SINK.has(id) ? XY.SINK.entry(id) : null;
       if (!en || !en.d || !en.d.fr || !en.d.fr[0] || !en.img) return null;
+      cleanSoldierSheet(en);
       return { img: en.img, f: en.d.fr[0] };
     }
-    var SOL_WASH = {};
-    function soldierWash(id) {
-      var fr = soldierFrame(id);
-      if (!fr) return null;
-      var hit = SOL_WASH[id];
-      if (hit && hit.img === fr.img) return hit;
-      var f = fr.f, sw = f[2], sh = f[3], pad = 8, rad = 4;
-      var cnv = document.createElement('canvas');
-      cnv.width = sw + pad * 2;
-      cnv.height = sh + pad * 2;
-      var g = cnv.getContext('2d');
-      g.drawImage(fr.img, f[0], f[1], sw, sh, pad, pad, sw, sh);
-      var img = g.getImageData(0, 0, cnv.width, cnv.height);
-      var d = img.data, ww = cnv.width, hh = cnv.height, n = ww * hh;
-      var alpha = new Uint8Array(n), i, yy, xx, dy, dx, ny, nx, acc, cnt, ink, a, p;
-      for (i = 0; i < n; i++) alpha[i] = d[i * 4 + 3];
-      for (yy = 0; yy < hh; yy++) {
-        for (xx = 0; xx < ww; xx++) {
-          i = yy * ww + xx;
-          if (alpha[i] > 24) continue;
-          acc = 0; cnt = 0;
-          for (dy = -rad; dy <= rad; dy++) {
-            ny = yy + dy;
-            if (ny < 0 || ny >= hh) continue;
-            for (dx = -rad; dx <= rad; dx++) {
-              nx = xx + dx;
-              if (nx < 0 || nx >= ww) continue;
-              acc += alpha[ny * ww + nx];
-              cnt++;
-            }
-          }
-          ink = cnt ? acc / cnt : 0;
-          if (ink < 10) continue;
-          a = Math.min(78, ink * 0.42);
-          p = i * 4;
-          d[p] = 48; d[p + 1] = 38; d[p + 2] = 28; d[p + 3] = a;
-        }
-      }
-      g.putImageData(img, 0, 0);
-      hit = SOL_WASH[id] = { img: fr.img, cnv: cnv, pad: pad, sw: sw, sh: sh };
-      return hit;
-    }
     function soldierCard(c, id, name, price, x, y, w, h, alpha, on) {
-      var wash = soldierWash(id);
-      var ground = y + h * 0.7;
+      var fr = soldierFrame(id);
+      var band = Math.max(34, Math.min(42, h * 0.38));
+      var footY = y + h - band;
       c.save();
       c.globalAlpha = alpha == null ? 1 : alpha;
-      if (wash) {
-        var boxH = h * 0.66;
-        var sc = Math.min((w * 1.05) / wash.sw, boxH / wash.sh);
-        var dw = wash.cnv.width * sc, dh = wash.cnv.height * sc;
-        c.drawImage(wash.cnv, x + (w - dw) / 2, ground - wash.sh * sc - wash.pad * sc, dw, dh);
+      if (fr) {
+        var f = fr.f;
+        var sc = Math.min((w * 0.96) / f[2], Math.max(8, h - band - 2) / Math.max(8, f[5] || f[3]));
+        c.drawImage(fr.img, f[0], f[1], f[2], f[3], x + w / 2 - f[4] * sc, footY - f[5] * sc, f[2] * sc, f[3] * sc);
       } else if (XY.ICONINK && XY.ICONINK.sol) {
-        XY.ICONINK.sol(c, id, x + w / 2, y + h * 0.36, Math.min(w, h) * 0.62, 1);
+        XY.ICONINK.sol(c, id, x + w / 2, y + (h - band) * 0.5, Math.min(w, h - band) * 0.8, 1);
       }
       c.globalAlpha = 1;
       c.textAlign = 'center';
-      c.textBaseline = 'middle';
-      c.font = brushFont(Math.max(11, Math.min(16, w * 0.28)));
+      c.textBaseline = 'top';
+      c.font = brushFont(Math.max(14, Math.min(16, w * 0.26)));
       c.fillStyle = on ? '#9a2e24' : '#241c18';
-      c.fillText(name, x + w / 2, y + h * 0.82);
-      c.font = brushFont(Math.max(10, Math.min(13, w * 0.22)));
+      c.fillText(name, x + w / 2, footY + 1);
+      c.font = brushFont(Math.max(13, Math.min(15, w * 0.24)));
       c.fillStyle = '#9a2e24';
-      c.fillText(price, x + w / 2, y + h * 0.94);
+      c.fillText(price, x + w / 2, footY + 18);
       c.restore();
+    }
+    XY.soldierInk = {
+      draw: function (c, id, cx, foot, maxH, maxW) {
+        var fr = soldierFrame(id);
+        if (!fr) return false;
+        var f = fr.f, ah = f[5] || f[3];
+        var sc = Math.min((maxW || f[2]) / f[2], (maxH || ah) / ah);
+        c.drawImage(fr.img, f[0], f[1], f[2], f[3], cx - f[4] * sc, foot - ah * sc, f[2] * sc, f[3] * sc);
+        return true;
+      }
+    };
+    if (XY.SINK && XY.SINK.draw && !XY.SINK._cutHook) {
+      XY.SINK._cutHook = true;
+      var prevSinkDraw = XY.SINK.draw;
+      XY.SINK.draw = function (c, G, t) {
+        var en = t && XY.SINK.entry(t.type);
+        if (en) cleanSoldierSheet(en);
+        return prevSinkDraw.apply(this, arguments);
+      };
     }
     XY.compactHud.soldiers = function (c, G, a) {
       var P = XY.pv2;
@@ -2406,7 +2479,7 @@
       var L = XY.compactHud.layout(a);
       var b = L.troop;
       c.save();
-      var groundY = b.y + b.h * 0.7;
+      var groundY = b.y + b.h - Math.max(34, Math.min(42, b.h * 0.38));
       var spanL = b.first - b.w * 0.2;
       var spanR = b.first + 4 * b.step + b.w * 0.2;
       c.fillStyle = 'rgba(42,32,24,0.16)';
@@ -2419,13 +2492,6 @@
       c.moveTo(spanL, groundY);
       c.quadraticCurveTo((spanL + spanR) / 2, groundY - b.h * 0.04, spanR, groundY + 1);
       c.stroke();
-      if (!L.port) {
-        c.font = brushFont(L.small ? 11 : 13);
-        c.fillStyle = '#4a4034';
-        c.textAlign = 'left';
-        c.textBaseline = 'middle';
-        c.fillText('在场 ' + G.towers.length + ' 名，最多 ' + XY.soldierCap(G) + ' 名', spanR + 8, b.y + 14);
-      }
       SOL_IDS.forEach(function (id, i) {
         var d = XY.TOWERS[id];
         var price = XY.soldierCost(G, id);

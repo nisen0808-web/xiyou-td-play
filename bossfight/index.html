@@ -4,6 +4,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
 <title>西游X · Boss 对战（原型）</title>
 <style>
+@font-face{font-family:"Ma Shan Zheng";src:url("../assets/fonts/MaShanZheng-Regular.ttf") format("truetype");font-display:swap}
 :root{--paper:#f8f1df;--paper2:#fcf7ea;--paper3:#f1e7cd;--ink:#2f2a1f;--ink2:#6d6455;--gold:#b8863b;--gold2:#e6c474;--red:#c8341f;--kai:"Ma Shan Zheng","STKaiti","KaiTi","Noto Serif CJK SC",serif;--sans:"PingFang SC","Noto Sans CJK SC","Microsoft YaHei",sans-serif}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none}
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#efe6cf;font-family:var(--sans);color:var(--ink)}
@@ -23,7 +24,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
 #sumbtn .av{width:38px;height:38px;border-radius:50%;background:radial-gradient(circle,#fff6d8,#e6c474);border:2px solid #fff6d8;box-shadow:0 0 0 2px var(--gold);display:grid;place-items:center;font-size:22px;color:var(--red)}
 #sumbtn.ready{animation:pulse 1.4s ease-in-out infinite}
 @keyframes pulse{50%{transform:scale(1.04) rotate(-1deg);outline-color:#d45a3a}}
-#spd{left:50%;transform:translateX(-50%);top:72px;min-height:44px;padding:0 14px;font-size:16px;opacity:.92;border-radius:4px 14px 8px 18px/10px 6px 14px 6px}
+#spd{position:absolute;left:50%;top:64px;z-index:6;transform:translateX(-50%) rotate(-8deg);width:40px;height:28px;padding:0;border:none;border-radius:2px;background:#9d2b22;color:#f6efe2;font-family:var(--kai);font-size:16px;line-height:28px;letter-spacing:0;opacity:1;box-shadow:none;filter:none}
 .grid{display:grid;gap:8px}
 /* 圆形头像：定妆头部裁切 + 水墨描金圆框；灰掉=不可选，.on=已出战，.sel=选中高亮 */
 .ava{position:relative;display:flex;flex-direction:column;align-items:center;gap:1px;cursor:pointer;min-width:0}
@@ -38,7 +39,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
 .ava.on b,.ava.sel b{color:var(--red)}
 .ava.sel .bd{display:none}
 .ava.sel .ring::after{content:"✓";position:absolute;left:50%;top:-8px;transform:translateX(-50%);background:#c8341f;color:#fff6e4;font:700 11px/1 var(--sans);padding:2px 6px;border-radius:4px;box-shadow:0 0 0 1.5px #2f2a1f}
-.ava.off{cursor:default;filter:grayscale(1);opacity:.5}
+.ava.off{cursor:default;filter:none;opacity:.55}
 .ava.off .bd{background:#6d6455;filter:none}
 .ava:not(.off):hover .ring{transform:scale(1.06)}
 /* 选人界面 */
@@ -81,21 +82,85 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
 #pgrid .ava{position:absolute;width:18%;left:calc(var(--x)*1%);top:calc(var(--y)*1%);--d:48px}
 #pgrid .ava:nth-child(1){--x:1;--y:0}#pgrid .ava:nth-child(2){--x:21;--y:5}#pgrid .ava:nth-child(3){--x:41;--y:0}#pgrid .ava:nth-child(4){--x:61;--y:7}#pgrid .ava:nth-child(5){--x:81;--y:0}
 #pgrid .ava:nth-child(6){--x:10;--y:52}#pgrid .ava:nth-child(7){--x:31;--y:57}#pgrid .ava:nth-child(8){--x:52;--y:50}#pgrid .ava:nth-child(9){--x:73;--y:56}
-#pgrid .ava .ring{background:#f4ebd3;box-shadow:none;border:2px dashed rgba(47,42,31,.6);padding:2px}
-#pgrid .ava .ring:before{box-shadow:none}#pgrid .ava.sel .ring{border-color:var(--red);background:rgba(184,48,15,.18);box-shadow:none}
+#pgrid .ava .ring{background:#f4ead4;box-shadow:none;border:none;border-radius:3px 12px 4px 10px;padding:0}
+#pgrid .ava .ring:before{box-shadow:none;border-radius:0}
+#pgrid .ava .face{border-radius:3px 12px 4px 10px;background-size:contain;background-repeat:no-repeat;background-position:center;background-color:#f4ead4;box-shadow:none;-webkit-mask-image:radial-gradient(ellipse at center,#000 60%,transparent 80%);mask-image:radial-gradient(ellipse at center,#000 60%,transparent 80%)}
+#pgrid .ava b{white-space:normal;line-height:1.05;text-align:center;font-size:12px}
+#pgrid .ava.sel .ring{border:none;background:#f4ead4;box-shadow:none}
 #res .card{border:0;border-radius:0;box-shadow:none;background:linear-gradient(90deg,rgba(244,235,211,.12),#f4ebd3 8%,#f4ebd3 92%,rgba(244,235,211,.12));padding:22px 24px}
 #res .rw div{border:0;border-radius:0;background:none;padding:7px 8px;border-bottom:1px solid rgba(90,70,39,.3)}
 @media(orientation:portrait){#pick .stage{flex:.9}#pick .panel{background:linear-gradient(180deg,rgba(244,235,211,0),rgba(244,235,211,.95) 12%)}#pgrid .ava{--d:44px}}
 @media(max-width:950px){#pgrid .ava b{font-size:11px;letter-spacing:0}}
+
+/* 选人：彩色 X 头像完整放进宣纸卡，墨晕边，书法名写在浅色底上。 */
+#pgrid .ava{width:17%;height:46%}
+#pgrid .ava .ring{width:100%;height:100%;aspect-ratio:auto;border-radius:2px 8px 3px 6px;padding:0;background:#f4ead4;border:1.4px solid rgba(42,33,24,.55);box-shadow:none;overflow:hidden}
+#pgrid .ava .ring::before,#pgrid .ava .tag,#pgrid .ava i{display:none}
+#pgrid .ava .face{border-radius:0;background-size:contain;background-repeat:no-repeat;background-position:center 18%;background-color:#f4ead4;box-shadow:none;-webkit-mask-image:linear-gradient(#000 0 68%,transparent 92%);mask-image:linear-gradient(#000 0 68%,transparent 92%)}
+#pgrid .ava b{position:absolute;left:0;right:0;bottom:0;margin:0;padding:3px 2px 4px;text-align:center;color:#24180f;font-family:var(--kai);font-size:13px;line-height:1.05;letter-spacing:0;white-space:normal;background:transparent;text-shadow:0 0 4px #f6efe2,0 0 4px #f6efe2;z-index:3;pointer-events:none}
+#pgrid .ava.on .ring,#pgrid .ava.sel .ring,#pgrid .ava:not(.off):hover .ring{transform:none;background:#f4ead4;box-shadow:none;border-color:#a42d19}
+#pgrid .ava .bd{top:4px;border-radius:2px}
+@media(orientation:portrait){#pgrid .ava{height:31%;width:30%}#pgrid .ava b{font-size:12px}}
+/* 选人卡：立绘铺满，书法名贴在卡下沿，不要白底细框。 */
+#pgrid{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:10px!important;align-content:start!important;min-height:0!important}
+#pgrid .ava{position:relative!important;left:auto!important;top:auto!important;width:auto!important;height:auto!important;aspect-ratio:3/4.2}
+#pgrid .ava .ring{width:100%!important;height:78%!important;aspect-ratio:auto!important;border:0!important;border-radius:4px 14px 6px 12px!important;padding:0!important;background:#f4ead4!important;box-shadow:none!important;overflow:hidden}
+#pgrid .ava .face{border-radius:0!important;background-size:cover!important;background-position:center 12%!important;background-color:#f4ead4!important;box-shadow:none!important;-webkit-mask-image:linear-gradient(#000 0 72%,transparent 96%)!important;mask-image:linear-gradient(#000 0 72%,transparent 96%)!important}
+#pgrid .ava b{position:absolute!important;left:0!important;right:0!important;bottom:2px!important;margin:0!important;font-family:"Ma Shan Zheng",KaiTi,serif!important;font-size:20px!important;line-height:1.05!important;color:#24180f!important;text-align:center!important}
+#pgrid .ava .ring::before,#pgrid .ava .tag,#pgrid .ava i{display:none!important}
+@media(orientation:portrait){#pgrid{grid-template-columns:repeat(3,minmax(0,1fr))!important}#pgrid .ava b{font-size:16px!important}}
+@media(max-height:340px){#pgrid{grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:6px!important}#pgrid .ava{aspect-ratio:3/4}#pgrid .ava b{font-size:14px!important}}
+/* 选人收束：同一张宣纸，透明抠图，书法名贴着人，按钮不压最后一排。 */
+#pick{background:#f3ead6}
+#pick .wrap{flex-direction:column;padding:6px 10px 8px;gap:4px;min-height:0}
+#pick .stage{flex:0 0 36%;min-height:0}
+#pick .panel{display:flex!important;flex-direction:column!important;flex:1;min-height:0;overflow:hidden;border:0;border-radius:0;box-shadow:none;background:linear-gradient(180deg,rgba(243,234,214,0),#f3ead6 12%);padding:2px 4px 0;gap:2px}
+#pick h2{font-family:"Ma Shan Zheng",KaiTi,serif;flex:none;font-size:22px}
+#pinfo{font-family:"Ma Shan Zheng",KaiTi,serif;color:#3a2a1c;flex:none;max-height:1.45em;overflow:hidden}
+#pick .pick-scroll{flex:1 1 auto;min-height:0;overflow:hidden;display:flex;flex-direction:column;padding-bottom:0}
+#pgrid{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;grid-template-rows:repeat(3,minmax(0,1fr))!important;gap:2px 10px!important;align-content:stretch!important;flex:1;min-height:0!important;height:100%!important;position:relative!important}
+#pgrid .ava{position:relative!important;left:auto!important;top:auto!important;width:auto!important;height:100%!important;aspect-ratio:auto!important;display:flex!important;flex-direction:column;align-items:center;gap:0!important;margin:0!important;opacity:1;min-height:0;min-width:0!important;overflow:hidden}
+#pgrid .ava.off{opacity:.45}
+#pgrid .ava .ring{width:100%!important;flex:1 1 auto;min-height:0;height:auto!important;aspect-ratio:auto!important;max-height:none!important;margin:0;border:0!important;border-radius:0!important;padding:0!important;background:transparent!important;box-shadow:none!important;overflow:hidden!important;transform:none!important}
+#pgrid .ava .face{width:100%;height:100%;border-radius:0!important;background-size:contain!important;background-repeat:no-repeat!important;background-position:center bottom!important;background-color:transparent!important;box-shadow:none!important;-webkit-mask-image:none!important;mask-image:none!important}
+#pgrid .ava b{position:static!important;margin:-2px 0 0!important;padding:0!important;width:100%!important;max-width:100%!important;min-width:0!important;display:flex!important;flex-direction:column;align-items:center;overflow:hidden;font-family:"Ma Shan Zheng",KaiTi,serif!important;font-size:20px!important;line-height:1!important;color:#24180f!important;background:none!important;text-shadow:none!important;white-space:nowrap!important}
+#pgrid .ava b img.nm{height:auto!important;max-height:30px;width:auto!important;max-width:calc(100% - 8px)!important;object-fit:contain;display:block;margin:0 auto;pointer-events:none}
+#pgrid .ava.on b,#pgrid .ava.sel b{color:#a83224!important}
+#pgrid .ava .bd{position:static!important;display:inline!important;transform:none!important;background:transparent!important;color:#a83224!important;box-shadow:none!important;border-radius:0!important;padding:0 0 0 4px!important;font:inherit!important;font-family:"Ma Shan Zheng",KaiTi,serif!important}
+#pgrid .ava .ring::before,#pgrid .ava .tag,#pgrid .ava i,#pgrid .ava .ring::after{display:none!important}
+#go{position:static!important;flex:none;margin:12px auto 6px;left:auto;right:auto;top:auto;bottom:auto}
+@media (min-width:1100px) and (min-height:640px){
+  #pick .wrap{flex-direction:row;align-items:stretch}
+  #pick .stage{flex:1.05 1 0}
+  #pick .panel{flex:0.95 1 0;background:linear-gradient(90deg,rgba(243,234,214,0),#f3ead6 10%)}
+}
+@media(orientation:portrait){
+  #pick .stage{flex:0 0 24%}
+  #pick .panel{background:linear-gradient(180deg,rgba(243,234,214,0),#f3ead6 8%)}
+  #pinfo{max-height:2.6em}
+  #pgrid .ava b{font-size:16px!important}
+  #pgrid .ava b img.nm{max-height:24px}
+}
+@media(max-height:360px){
+  #pick .wrap{flex-direction:row;padding:4px 8px}
+  #pick .stage{flex:0.78}
+  #pick .panel{flex:1.28;background:linear-gradient(90deg,rgba(243,234,214,0),#f3ead6 10%)}
+  #pick h2{font-size:15px}
+  #pinfo{display:none}
+  #pgrid{grid-template-columns:repeat(5,minmax(0,1fr))!important;grid-template-rows:repeat(2,minmax(0,1fr))!important;gap:1px 4px!important}
+  #pgrid .ava b{font-size:12px!important}
+  #pgrid .ava b img.nm{max-height:22px}
+  #go{min-height:32px;font-size:15px;padding:0 10px;margin-top:18px!important}
+}
 </style></head>
 <body><div id="app">
 <canvas id="cv"></canvas>
 <button class="pill red off" id="sumbtn"><span class="av">援</span><span>召唤援军 <small id="sumhint">每局一次</small></span></button>
-<button class="pill" id="spd">×1</button>
+<button id="spd">×1</button>
 <div class="ov" id="load">载入 Boss 战…</div>
-<div class="ov" id="pick"><div class="bgp"></div><div class="wrap"><div class="stage"><canvas id="pcv"></canvas></div>
+<div class="ov" id="pick"><div class="wrap"><div class="stage"><canvas id="pcv"></canvas></div>
 <div class="panel"><h2><span class="seal">战</span>第一关 · 牛魔王 <small id="pEntry">入口：关底</small></h2>
-<div id="pinfo"></div><div class="grid" id="pgrid"></div>
+<div id="pinfo"></div><div class="pick-scroll"><div class="grid" id="pgrid"></div></div>
 <button class="pill red" id="go">出战 · 火焰山</button></div></div></div>
 <div class="ov" id="res"><div class="card"><div class="big" id="rbig">胜</div><div class="stars" id="rstars">★★★</div><div class="sub" id="rsub"></div><div class="rw" id="rrw"></div><div class="btns"><button class="pill" id="rretry">再战</button><button class="pill red" id="rnext">继续</button></div></div></div>
 </div>
@@ -103,5 +168,6 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
 <script src="sim.js"></script>
 <script src="../assets/wild/wild-anim.js"></script>
 <script>if(new URLSearchParams(location.search).has("manual"))window.XY_BF_MANUAL=true;</script>
+<script src="../js/xav_icon.js"></script>
 <script src="ui.js"></script>
 </body></html>

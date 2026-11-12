@@ -6,7 +6,6 @@
    对外接口：XY.bossfight.open(ctx) / close() / state()，见 integrate.md。 */
 (function () {
   'use strict';
-  window.XY_NO_WILD = true;
   var BF = window.BF, Q = new URLSearchParams(location.search);
   var $ = function (id) { return document.getElementById(id); };
   var cv = $('cv'), ctx = cv.getContext('2d'), pcv = $('pcv'), pctx = pcv.getContext('2d');
@@ -35,20 +34,22 @@
   var MIDP = {};
   function loadMids(id) { if (MIDP[id] || !SMETA[id]) return MIDP[id]; var ps = Object.keys(SMETA[id]).filter(function (p) { return SMETA[id][p].m; }); return (MIDP[id] = Promise.all(ps.map(function (p) { return loadPose(id, p); }))); }
   function loadBG(k) { if (BGP[k]) return BGP[k]; return (BGP[k] = loadImg('assets/bg-' + k + '.webp').then(function (i) { if (i.naturalWidth) BG[k] = i; })); }
+  function loadInk(k, url) { return loadImg(url).then(function (i) { if (i.naturalWidth) BG[k] = i; }); }
   function ensureLoaded() {
     if (ready) return ready;
     var portrait = (Q.get('w') ? +Q.get('w') < +Q.get('h') : innerWidth < innerHeight);
     ready = Promise.resolve(window.BF_SPR_META).then(function (m) {
-      SMETA = m; if (window.BFUI) window.BFUI.SMETA = m; var jobs = [loadChar('wukong'), loadChar('niumo'), loadBG('land')];
+      SMETA = m; if (window.BFUI) window.BFUI.SMETA = m; var jobs = [loadChar('wukong'), loadChar('niumo'), loadInk('far', '../assets/art/menu-v5/bg_v4.webp'), loadInk('wash', '../assets/art/menu-v5/bg_v2.webp')];
       if (portrait) jobs.push(loadBG('port'));
-      FIGS.forEach(function (k) { jobs.push(loadImg('assets/xav/' + k + '.webp').then(function (i) { AV[k] = i; })); });
+      FIGS.forEach(function (k) { jobs.push(loadColorAv(k)); });
       jobs.push(loadImg('assets/mink-elite.webp').then(function (i) { MINK = i; }),
         Promise.resolve().then(function () { MINK_META = window.BF_MINK_META; }),
         (document.fonts && document.fonts.load ? document.fonts.load('40px "Ma Shan Zheng"', '胜败破招暴击0123456789') : Promise.resolve()));
-      if (window.XY && XY.wildAnim && XY.wildAnim.arm) {
+      if (window.XY && XY.wildAnim && (XY.wildAnim.armBoss || XY.wildAnim.arm)) {
         XY.wildAnim.base = '../assets/wild/';
-        jobs.push(XY.wildAnim.arm().catch(function () { return null; }));
+        jobs.push((XY.wildAnim.armBoss ? XY.wildAnim.armBoss() : XY.wildAnim.arm()).catch(function () { return null; }));
       }
+      jobs.push(preloadWu());
       return Promise.all(jobs);
     });
     if (window.BFUI) window.BFUI.ready = ready; return ready;
@@ -71,12 +72,12 @@
   function ease(t) { t = clamp(t, 0, 1); return 1 - Math.pow(1 - t, 3); }
 
   function layout() {
-    var W = innerWidth, H = innerHeight, dpr = Math.min(window.devicePixelRatio || 1, 2);
+    var W = innerWidth, H = innerHeight, dpr = Math.min(window.devicePixelRatio || 1, 4);
     if (Q.get('w')) { W = +Q.get('w'); H = +Q.get('h'); }
     G.W = W; G.H = H; G.land = W > H; G.dpr = dpr; G.S = G.land ? H / 390 : W / 390;
     cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
     if (ready && !G.land) loadBG('port');
-    G.gy = G.land ? H * 0.845 : H * 0.78; G.fh = G.land ? H * 0.76 : H * 0.38;
+    G.gy = G.land ? H * 0.845 : H * 0.82; G.fh = G.land ? H * 0.58 : H * 0.4;
     var p = $('pick').getBoundingClientRect(); pcv.width = Math.max(2, Math.round(p.width * dpr * 0.5)); pcv.height = Math.max(2, Math.round(p.height * dpr));
     var st = pcv.parentNode.getBoundingClientRect(); pcv.width = Math.round(st.width * dpr); pcv.height = Math.round(st.height * dpr);
     var bsb = $('sumbtn'); bsb.style.display = 'none';
@@ -114,21 +115,151 @@
     F.heroes.forEach(function (h, i) { if (stepH[i] && h.alive && h.st !== 'jump') { dust(P.h[h.id], gy + hvLane(h).dy, 2, 18 * S); wkick('h:' + h.id, 'land', .28); } });
   }
   function softclamp(s) { var W = G.W, lo = W * .09, hi = W * .91, m = W * .05; return s < lo ? lo - m * (1 - Math.exp(-(lo - s) / m)) : (s > hi ? hi + m * (1 - Math.exp(-(s - hi) / m)) : s); }
+  function cellOpaque(id, clipName, frame) {
+    clipName = clipName || 'bossIdle';
+    frame = frame || 0;
+    var Wld = window.XY && XY.wildAnim;
+    if (!Wld || !Wld.ready || !Wld.ready(id, clipName)) return null;
+    var clip = Wld.clip(id, clipName);
+    if (!clip) return null;
+    var key = frame;
+    clip._oboxF = clip._oboxF || {};
+    if (clip._oboxF[key]) return clip._oboxF[key];
+    var im = Wld.img(id, clipName);
+    if (!im || !im.naturalWidth) return null;
+    var cw = clip.cell[0], ch = clip.cell[1], cv = document.createElement('canvas');
+    cv.width = cw; cv.height = ch;
+    var g = cv.getContext('2d', { willReadFrequently: true });
+    var col = frame % clip.cols, row = (frame / clip.cols) | 0;
+    g.drawImage(im, col * cw, row * ch, cw, ch, 0, 0, cw, ch);
+    var d = g.getImageData(0, 0, cw, ch).data, x0 = cw, y0 = ch, x1 = 0, y1 = 0, i, x, y, seen = 0;
+    for (i = 0; i < cw * ch; i++) {
+      if (d[i * 4 + 3] < 40) continue;
+      y = (i / cw) | 0; x = i - y * cw; seen = 1;
+      if (x < x0) x0 = x; if (y < y0) y0 = y; if (x > x1) x1 = x; if (y > y1) y1 = y;
+    }
+    if (!seen) return null;
+    clip._oboxF[key] = { x0: x0, y0: y0, x1: x1, y1: y1, ax: clip.anchor[0], ay: clip.anchor[1], stand: clip.stand || ch, fit: clip.fit || 1 };
+    return clip._oboxF[key];
+  }
+  function screenBox(id, footX, footY, fh, clipName, frame) {
+    var b = cellOpaque(id, clipName || 'bossIdle', frame || 0); if (!b) return null;
+    var body = fh * (SZ[id] || 1) * 0.74 * b.fit, k = body / b.stand, face = id === 'niumo' ? -1 : 1;
+    var left = (b.ax - b.x0) * k, right = (b.x1 - b.ax) * k, top = (b.ay - b.y0) * k, bot = (b.y1 - b.ay) * k;
+    if (face < 0) { var t = left; left = right; right = t; }
+    return { x0: footX - left, x1: footX + right, y0: footY - top, y1: footY + bot, h: top + bot };
+  }
+  function boxesHit(a, b) { return a && b && a.x0 < b.x1 - 1 && b.x0 < a.x1 - 1 && a.y0 < b.y1 - 1 && b.y0 < a.y1 - 1; }
+  function hitFrame(id) {
+    var Wld = window.XY && XY.wildAnim, clip = Wld && Wld.clip(id, 'bossAttack');
+    return clip && clip.hit ? clip.hit.frame : 0;
+  }
+  function wideBox(id, fh) {
+    return screenBox(id, 0, 0, fh, 'bossIdle', 0);
+  }
+  function fitOpening(W, H, land) {
+    var ids = ['phyrex', 'wukong', 'niumo'];
+    if (!cellOpaque('niumo') || !cellOpaque('wukong') || !cellOpaque('phyrex')) return null;
+    function trial(fh, feet) {
+      var names = ['phyrex', 'wukong', 'niumo'], i, j, a, b, boxes = {};
+      for (i = 0; i < names.length; i++) {
+        a = wideBox(names[i], fh);
+        boxes[names[i]] = { x0: feet[names[i]].x + a.x0, x1: feet[names[i]].x + a.x1, y0: feet[names[i]].y + a.y0, y1: feet[names[i]].y + a.y1, h: a.h };
+      }
+      for (i = 0; i < names.length; i++) for (j = i + 1; j < names.length; j++) {
+        if (boxesHit(boxes[names[i]], boxes[names[j]])) return { boxes: boxes, hit: true };
+      }
+      return { boxes: boxes, hit: false };
+    }
+    var fh, feet, t, best = null;
+    if (!land) {
+      for (var f = 0.40; f >= 0.16; f -= 0.01) {
+        fh = f / 0.62 * H;
+        var bP = wideBox('phyrex', fh), bW = wideBox('wukong', fh), bN = wideBox('niumo', fh);
+        var gap = 18;
+        var xP = 6 - bP.x0;
+        var xW = xP + bP.x1 + gap - bW.x0;
+        if (xW + bW.x1 > W - 6) continue;
+        var band = hudBands();
+        var yHero = band.bottomTop - 9 - Math.max(0, bP.y1, bW.y1);
+        var topHero = yHero + Math.min(bP.y0, bW.y0);
+        var yBoss = topHero - 16 - bN.y1;
+        if (yBoss + bN.y0 < band.topH + 8) continue;
+        var xN = Math.min(W - 8 - bN.x1, Math.max(-bN.x0 + 8, W * 0.62 - bN.x0 * 0));
+        xN = Math.min(W - 8 - bN.x1, Math.max(8 - bN.x0, W * 0.7));
+        feet = { phyrex: { x: xP, y: yHero }, wukong: { x: xW, y: yHero }, niumo: { x: xN, y: yBoss } };
+        t = trial(fh, feet);
+        if (!t.hit) { best = { fh: fh, feet: feet, boxes: t.boxes, frac: f }; break; }
+      }
+    } else {
+      var scales = [0.58, 0.5, 0.44, 0.38], si, guard;
+      for (si = 0; si < scales.length && !best; si++) {
+        fh = H * scales[si];
+        for (guard = 0; guard < 16; guard++) {
+          var xP2 = W * (0.1 + guard * 0.004);
+          var xW2 = W * (0.32 + guard * 0.02);
+          var xN2 = W * (0.78 + guard * 0.012);
+          feet = { phyrex: { x: xP2, y: H * 0.845 }, wukong: { x: xW2, y: H * 0.845 }, niumo: { x: Math.min(W * 0.92, xN2), y: H * 0.845 } };
+          t = trial(fh, feet);
+          if (!t.hit) { best = { fh: fh, feet: feet, boxes: t.boxes, frac: 0 }; break; }
+        }
+      }
+    }
+    if (!best) return null;
+    var vis = 0, id;
+    for (id in best.boxes) vis = Math.max(vis, best.boxes[id].h / H);
+    best.vis = Math.round(vis * 1000) / 1000;
+    best.overlap = 0;
+    return best;
+  }
   function placeAll() {   // 世界 → 屏幕：每个绘制帧算一次；heroVis / bossVis 读缓存
     var V = vcalc(), F = G.F, W = G.W, a = ACC(), k = V.k, cw = V.cw + V.cv * a, bo = vo('boss', F.boss.x), bxw = bo.x + bo.v * a, bxs = W * .5 + (bxw - cw) * k;
-    var A = W * .075, L = 110, pos = { boss: 0, h: {}, fs: { boss: bo.fs } }, hs = [];
+    var A = W * (G.land ? .12 : .2), L = 110, pos = { boss: 0, h: {}, fs: { boss: bo.fs } }, hs = [];
     F.heroes.forEach(function (h) {
       var o = vo('h' + h.id, h.x), d = o.x + o.v * a - bxw, s = bxs + d * k + (d < 0 ? -1 : 1) * A * (1 - Math.exp(-Math.abs(d) / L));   // 靠近 Boss 时屏幕上略拉开，不叠成一团
       hs.push({ h: h, s: s, r: s - bxs }); pos.fs[h.id] = o.fs; });
     if (hs.length === 2) {   // 两个英雄屏幕距离太近：把离 Boss 远的那位往外推（按远近差平滑分摊，不会跳）
-      var ms = W * (G.land ? .105 : .19), dd = Math.abs(hs[1].s - hs[0].s);
+      var ms = W * (G.land ? .32 : .28), dd = Math.abs(hs[1].s - hs[0].s);
       if (dd < ms) { var def = ms - dd, u = clamp((Math.abs(hs[1].r) - Math.abs(hs[0].r)) / ms, -1, 1);
         hs[1].s += (hs[1].r < 0 ? -1 : 1) * def * (.5 + .5 * u); hs[0].s += (hs[0].r < 0 ? -1 : 1) * def * (.5 - .5 * u); } }
-    hs.forEach(function (e) { pos.h[e.h.id] = softclamp(e.s); }); pos.boss = softclamp(bxs); G.pos = pos; return pos;
+    if (!G.land) {
+      var fit = (G._fit && G._fit.w === W && G._fit.h === G.H) ? G._fit : fitOpening(W, G.H, false);
+      if (fit) { G._fit = fit; G._fit.w = W; G._fit.h = G.H; G.fh = fit.fh; }
+      if (fit && fit.feet) {
+        hs.forEach(function (e) { pos.h[e.h.id] = fit.feet[e.h.id].x; });
+        pos.boss = fit.feet.niumo.x;
+        pos.gy = { phyrex: fit.feet.phyrex.y, wukong: fit.feet.wukong.y, niumo: fit.feet.niumo.y };
+      } else {
+        hs.forEach(function (e) { pos.h[e.h.id] = e.h.w ? W * 0.62 : W * 0.22; });
+        pos.boss = W * 0.72;
+        pos.gy = null;
+      }
+    } else if (hs.length >= 2) {
+      var fitL = (G._fit && G._fit.w === W && G._fit.h === G.H) ? G._fit : fitOpening(W, G.H, true);
+      if (fitL && fitL.feet) {
+        G._fit = fitL; G._fit.w = W; G._fit.h = G.H;
+        hs.forEach(function (e) { pos.h[e.h.id] = fitL.feet[e.h.id].x; });
+        pos.boss = fitL.feet.niumo.x;
+      } else {
+        hs.forEach(function (e) { pos.h[e.h.id] = e.h.w ? W * 0.36 : W * 0.12; });
+        pos.boss = W * 0.8;
+      }
+      pos.gy = null;
+    } else {
+      hs.forEach(function (e) { pos.h[e.h.id] = softclamp(e.s); });
+      pos.boss = softclamp(bxs);
+      var ids = Object.keys(pos.h), i, right = -1, rid = null;
+      for (i = 0; i < ids.length; i++) if (pos.h[ids[i]] > right) { right = pos.h[ids[i]]; rid = ids[i]; }
+      if (rid && pos.boss - right < W * 0.2) {
+        var shift = W * 0.2 - (pos.boss - right);
+        for (i = 0; i < ids.length; i++) pos.h[ids[i]] = softclamp(pos.h[ids[i]] - shift);
+      }
+    }
+    G.pos = pos; G.gyBy = pos.gy || null; G.sep = (G._fit && G._fit.w === W) ? { overlap: G._fit.overlap || 0, vis: G._fit.vis || 0, pass: !G._fit.hit } : null; return pos;
   }
-  function hvLane(h) { var key = h.w ? 'wukong' : 'partner', ln = G.lane[key]; return { ln: ln, sc: 1 - (G.land ? 0.07 : 0.14) * ln, dy: -(G.land ? 0.02 : 0.034) * G.H * ln }; }
+  function hvLane(h) { if (G.gyBy) return { ln: 0, sc: 1, dy: 0 }; var key = h.w ? 'wukong' : 'partner', ln = G.lane[key]; return { ln: ln, sc: 1 - (G.land ? 0.07 : 0.14) * ln, dy: -(G.land ? 0.02 : 0.034) * G.H * ln }; }
   function heroVis(h) { var p = G.pos || placeAll(), o = hvLane(h); o.x = p.h[h.id] != null ? p.h[h.id] : p.boss; return o; }
-  function bossVis() { var p = G.pos || placeAll(); return { x: p.boss, sc: G.land ? 1.1 : 1.04, dy: 0 }; }
+  function bossVis() { var p = G.pos || placeAll(); return { x: p.boss, sc: G.gyBy ? 1 : (G.land ? 1.1 : 1.04), dy: 0 }; }
   // 步态：按屏幕上实际移动速度（不是 sim 的 walk 状态）决定。迈步用 stance ↔ leap（抬腿）交替 + 上下颠 + 前倾；站桩/撞墙不再原地“走”
   function gait(key, S) {
     var o = VP[key]; if (!o) return null; var V = G.V, vs = o.vs * (V ? V.k : 1), m = clamp((Math.abs(vs) - 24 * S) / (110 * S), 0, 1); if (m <= 0) return null;
@@ -227,7 +358,7 @@
       case 'flames': dust(bv.x - 60 * S, gy, 8, 46 * S, '42,34,24'); stain(bv.x - 60 * S, gy, 110 * S, .2); wkick('boss', 'land', 1); ring(bv.x - 60 * S, gy, 150 * S, '#2a2218', .5, 6 * S); inkBurst(bv.x - 60 * S, gy - 20 * S, 50 * S, '#2a2218', 8, .4); G.shake = Math.max(G.shake, 6 * S); break;
       case 'dodge': h = heroById(e.id); if (h) { hv = heroVis(h); text(hv.x, bodyY(hv.sc) - 60 * S, '闪', '#5c4034', 34, .7); } break;
       case 'trait': h = heroById(e.id); if (h) { hv = heroVis(h); if (!G.F.over) text(hv.x, bodyY(hv.sc) - 90 * S, e.name, '#b8863b', 22, 1.3); ring(hv.x, bodyY(hv.sc), 110 * S, h.color, .6); } break;
-      case 'wuult': G.wuUlt = .9; hv = heroVis(F.heroes[0]); text(hv.x, bodyY(hv.sc) - 100 * S, '如意金箍棒', '#c8341f', 26, 1.2); break;
+      case 'wuult': G.wuUlt = .9; G.wuCut = 2.4; G.wuCutOff = false; break;
       case 'heal': h = heroById(e.id); if (h) { hv = heroVis(h); text(hv.x, bodyY(hv.sc) - 50 * S, '+' + e.amt, '#5c4034', 22, .9); } break;
       case 'shot': { hv = null; var hh = heroById(e.id); if (hh) { hv = heroVis(hh); fxAdd({ k: 'shot', x0: hv.x + 40 * S, y0: bodyY(hv.sc) + hv.dy, x1: bv.x - 30 * S, y1: bodyY(bv.sc), col: e.color, max: Math.max(.1, e.t) }); } break; }
       case 'summon': G.sumShake = 0; break;
@@ -267,7 +398,7 @@
     G.lane.partner += ((wantFront === 'partner' ? 0 : 1) - G.lane.partner) * Math.min(1, dt * 3.2);
     F.heroes.forEach(function (h) { if (h.flash > 0) h.flash -= dt; });
     updateView(dt);
-    if (G.bossHit > 0) G.bossHit -= dt; if (G.bossBig > 0) G.bossBig -= dt; if (G.wuUlt > 0) G.wuUlt -= dt;
+    if (G.bossHit > 0) G.bossHit -= dt; if (G.bossBig > 0) G.bossBig -= dt; if (G.wuUlt > 0) G.wuUlt -= dt; if (G.wuCut > 0 && !G.wuCutOff) G.wuCut -= dt;
     G.shake *= Math.pow(0.002, dt); G.flash = Math.max(0, G.flash - dt * 1.6);
     G.fx = G.fx.filter(function (f) { f.age += dt; return f.age < f.max; });
     G.calls = G.calls.filter(function (c) { c.age += dt; return c.age < c.max; });
@@ -319,7 +450,7 @@
     if (Math.abs(fl) < .05) return true;
     var face = (fl < 0 ? -1 : 1), ref = p.fitH || fh;
     var tx = cx + (p.dx || 0), ty = gyy + (p.dy || 0) - (p.lift || 0) * fh, nudge = 0;
-    if (id === 'niumo') {
+    if (!G.gyBy && (id === 'niumo' || cw >= 480)) {
       var padX = G.W * 0.02, padTop = G.H * 0.07;
       var sprW = cw * k, sprH = chh * k, maxW = G.W - padX * 2, maxH = Math.max(80, gyy - padTop);
       var shrink = Math.min(1, maxW / sprW, maxH / sprH);
@@ -330,7 +461,7 @@
       tx += nudge;
     }
     if (!p.noShadow) drawShadow(c, cx + nudge, gyy, Math.min(body * .55, ref * .5), fh, p, al, face);
-    if (id !== 'niumo' && k > 2.2) k = 2.2;
+    if (id !== 'niumo' && !(clip.stand > 400) && k > 2.2) k = 2.2;
     c.save(); c.globalAlpha = al; c.imageSmoothingEnabled = true; c.imageSmoothingQuality = 'high';
     c.translate(tx, ty); c.rotate(p.rot || 0); c.transform(1, 0, (p.skew || 0) * fl, 1, 0, 0); c.scale(fl * (p.sx || 1), p.sy || 1);
     if (W.blit) W.blit(c, clip, im, fr.index, -ax * k, -ay * k, cw * k, chh * k);
@@ -338,36 +469,45 @@
     c.restore();
     return true;
   }
+  /* 只播验收过的 Boss 逐帧。旧 idle/attack/hit 灰粉图集一律不画，没有新图就回到彩色定妆。 */
+  function bossClipName(id, name) {
+    var W = window.XY && XY.wildAnim;
+    if (!W || !W.ready) return null;
+    var alt = name === 'idle' ? 'bossIdle' : name === 'attack' ? 'bossAttack' : name === 'hit' ? 'bossHit' : null;
+    if (!alt || !W.ready(id, alt)) return null;
+    return alt;
+  }
   function drawWildPose(c, id, pose, cx, gyy, fh, p) {
     if (window.XY_NO_WILD) return false;
     var W = window.XY && XY.wildAnim;
     if (!W || !W.poseClip || !W.frameAt || !W.ready) return false;
-    var vt = VT(), want = W.poseClip(id, pose), atk = W.ready(id, 'attack') ? W.clip(id, 'attack') : null;
+    var vt = VT(), want = W.poseClip(id, pose);
+    var idleN = bossClipName(id, 'idle'), atkN = bossClipName(id, 'attack'), hitN = bossClipName(id, 'hit');
+    if (!idleN && !atkN && !hitN) return false;
+    var atk = atkN ? W.clip(id, atkN) : null;
     if (!p.key) {
-      if (want === 'attack' && atk) return paintWild(c, id, 'attack', 250, cx, gyy, fh, p);
-      if (want === 'hit' && W.ready(id, 'hit')) return paintWild(c, id, 'hit', (W.clip(id, 'hit').hit || {}).atMs || 167, cx, gyy, fh, p);
-      if (want === 'idle' && W.ready(id, 'idle')) return paintWild(c, id, 'idle', vt * 1000, cx, gyy, fh, p);
+      if (want === 'attack' && atk) return paintWild(c, id, atkN, (atk.hit && atk.hit.atMs) || 250, cx, gyy, fh, p);
+      if (want === 'hit' && hitN) return paintWild(c, id, hitN, (W.clip(id, hitN).hit || {}).atMs || 167, cx, gyy, fh, p);
+      if (want === 'idle' && idleN) return paintWild(c, id, idleN, vt * 1000, cx, gyy, fh, p);
       return false;
     }
     if (pose && !WHOLD[pose]) delete WLAT[p.key];
     var lat = WLAT[p.key];
     if (atk && want === 'attack') { if (!lat || vt < lat.t0 || (vt - lat.t0) * 1000 > atk.durationMs + 40) lat = WLAT[p.key] = { t0: vt }; }
-    if (lat && atk && WHOLD[pose] && (vt - lat.t0) * 1000 < atk.durationMs) return paintWild(c, id, 'attack', (vt - lat.t0) * 1000, cx, gyy, fh, p);
-    if (want === 'hit' && W.ready(id, 'hit')) {
-      var hc = W.clip(id, 'hit'), hk = p.key, hlat = HLAT[hk];
+    if (lat && atk && WHOLD[pose] && (vt - lat.t0) * 1000 < atk.durationMs) return paintWild(c, id, atkN, (vt - lat.t0) * 1000, cx, gyy, fh, p);
+    if (want === 'hit' && hitN) {
+      var hc = W.clip(id, hitN), hk = p.key, hlat = HLAT[hk];
       if (!hlat || vt < hlat.t0 || (vt - hlat.t0) * 1000 > hc.durationMs + 40) hlat = HLAT[hk] = { t0: vt };
-      return paintWild(c, id, 'hit', Math.min(hc.durationMs, (vt - hlat.t0) * 1000), cx, gyy, fh, p);
+      return paintWild(c, id, hitN, Math.min(hc.durationMs, (vt - hlat.t0) * 1000), cx, gyy, fh, p);
     }
-    if (want === 'idle' && W.ready(id, 'idle')) {
+    if (want === 'idle' && idleN) {
       var off = 0, i; for (i = 0; i < id.length; i++) off = (off + id.charCodeAt(i) * 97) % 5000;
-      return paintWild(c, id, 'idle', vt * 1000 + off, cx, gyy, fh, p);
+      return paintWild(c, id, idleN, vt * 1000 + off, cx, gyy, fh, p);
     }
     return false;
   }
   function drawSpr1(c, id, pose, cx, gyy, fh, p) {
-    p = p || {}; if (!window.XY_NO_WILD && drawWildPose(c, id, pose, cx, gyy, fh, p)) return;
-    var Ww = window.XY && XY.wildAnim;
-    if (!window.XY_NO_WILD && Ww && Ww.ready && Ww.ready(id, 'idle')) { paintWild(c, id, 'idle', VT() * 1000, cx, gyy, fh, p); return; }
+    p = p || {}; if (drawWildPose(c, id, pose, cx, gyy, fh, p)) return;
     var im = spr(id, pose), m = SMETA[id] && (SMETA[id][pose] && has(id, pose) ? SMETA[id][pose] : SMETA[id].stance); if (!im || !im.naturalWidth || !m) { if (SMETA[id] && !/^ret/.test(pose)) inkBlob(c, cx + (p.dx || 0), gyy, (p.fitH || fh * (SZ[id] || 1) * .74), p.alpha); return; }
     var k = p.fitH ? p.fitH / m.h : fh * (SZ[id] || 1) * 0.74 / 480, w = m.w * k, h = m.h * k, fl0 = p.fs != null ? p.fs : (p.flip ? -1 : 1), fl = p.fs != null ? turnW(fl0) : fl0, al = p.alpha == null ? 1 : p.alpha; if (Math.abs(fl) < .05) return;
     var face = (id === 'niumo' ? -1 : 1) * (fl < 0 ? -1 : 1), afl = Math.abs(fl), ref = p.fitH || fh;
@@ -396,7 +536,15 @@
     return IDLEP[b] ? .14 : .11;                                // 没有中间帧的大跳：80–140ms 交叉淡入淡出
   }
   function drawSpr(c, id, pose, cx, gyy, fh, p) {
-    p = p || {}; if (!p.key) return drawSpr1(c, id, pose, cx, gyy, fh, p);
+    p = p || {};
+    /* Boss 战大图不再叠姿势淡出和冲刺残影，避免出招身上留下一块灰影。旧灰图集仍然不画。 */
+    if (p.key && bossClipName(id, 'idle')) {
+      var plate = {}; for (var pk in p) plate[pk] = p[pk];
+      if (plate.fs != null) plate.fs = plate.fs < 0 ? -1 : 1;
+      plate.gh = 0;
+      return drawSpr1(c, id, pose, cx, gyy, fh, plate);
+    }
+    if (!p.key) return drawSpr1(c, id, pose, cx, gyy, fh, p);
     var vt = VT(), T = TR[p.key];
     { var q0 = {}, kq; for (kq in p) q0[kq] = p[kq]; p = q0;
       if (p.fs != null && Math.abs(p.fs) < .995) { var tn = 1 - Math.abs(p.fs); p.air = (p.air || 0) + Math.sin(tn * 3.1416 * .5) * fh * .012; p.sy = (p.sy || 1) * (1 - .035 * tn); }   // 转身：身子微微提起一点再落下
@@ -454,7 +602,8 @@
     if (st === 'jump') P.air = Math.max(0, -(P.dy)) ; if (st === 'hurt' || st === 'ko') P.air = Math.max(0, -(P.dy));                                  // 朝左时，前冲/后仰这些“朝前”的量跟着翻
     if (g && (st === 'idle' || st === 'walk') && !(F_over_win()) && P.pose !== 'block' && !(h.w && G.wuUlt > 0)) { P.dy -= g.bob; P.rot += g.lean; P.skew = 0; P.pose = g.m > .4 && g.up ? 'leap' : 'stance'; P.fd = .07; if (g.m > .4 && g.up) P.sy = 1; P.gh = g.m > .9 && Math.abs(g.vs) > 230 * S ? 2 : P.gh; }
     if (!(st === 'hurt' || st === 'ko' || st === 'cast')) P.skew += lagSkew('h' + h.id);
-    if (G.poseLock) { P.pose = G.poseLock; P.dy = 0; P.rot = 0; P.skew = 0; }
+    if (G.poseBy && G.poseBy[h.id]) { P.pose = G.poseBy[h.id]; P.fs = 1; P.dy = 0; P.dx = 0; P.rot = 0; P.skew = 0; P.sx = 1; P.sy = 1; P.lift = 0; }
+    else if (G.poseLock) { P.pose = G.poseLock; P.dy = 0; P.dx = 0; P.rot = 0; P.skew = 0; P.sx = 1; P.sy = 1; P.lift = 0; }
     return P;
   }
   function F_over_win() { var F = G.F; return !!(F.over && F.over.win); }
@@ -471,7 +620,7 @@
     if (st === 'atk') {
       var q = Math.sin(clamp(k / .3, 0, 1) * Math.PI), melee = !h.atk.ranged, cb = u.combo;
       if (k < .3) P.pose = chain(h.id, melee ? COMBO[cb] : (cb === 1 ? 'atk2' : 'attack'), k); if (melee && k > .05 && k < .27) P.gh = 3;
-      P.dx = q * (melee ? 70 + 22 * cb : 12) * S; P.rot = q * (.04 + .02 * cb); P.skew = 0; P.sx = 1 + q * .03;
+      P.dx = q * (melee ? 70 + 22 * cb : 12) * S * (G.land ? 1 : .45); P.rot = q * (.04 + .02 * cb); P.skew = 0; P.sx = 1 + q * .03;
       if (melee && cb === 2) { P.lift = .018 * q; }
     }
     if (st === 'hurt') {
@@ -496,7 +645,7 @@
     if (b.hp > 0) P.skew += lagSkew('boss') * .7;
     P.air = Math.max(0, -(P.dy) - (b.st === 'tele' ? 0 : 0)); if (b.st !== 'charge' && b.st !== 'shot' && b.st !== 'final' && b.st !== 'spin') P.air = 0;
     if (G._niumoHit0 != null && b.hp > 0 && (VT() - G._niumoHit0) < 0.42 && (b.st === 'idle' || b.st === 'recover')) P.pose = 'hit';
-    if (G.bossPoseLock) { P.pose = G.bossPoseLock; P.dy = 0; P.rot = 0; P.skew = 0; }
+    if (G.bossPoseLock) { P.pose = G.bossPoseLock; P.fs = -1; P.dy = 0; P.dx = 0; P.rot = 0; P.skew = 0; P.sx = 1; P.sy = 1; }
     return P;
   }
   function bossPose0(b) {
@@ -532,13 +681,64 @@
   }
 
   /* ---------- 画：场景 ---------- */
+  function coverPlate(c, im, W, H, ox, oy, alpha) {
+    if (!im || !im.naturalWidth) return;
+    var sc = Math.max(W / im.naturalWidth, H / im.naturalHeight);
+    var w = im.naturalWidth * sc, h = im.naturalHeight * sc;
+    c.save();
+    c.globalAlpha = alpha;
+    c.drawImage(im, (W - w) / 2 + ox, oy, w, h);
+    c.restore();
+  }
   function drawBG(c, W, H, camx) {
-    var im = G.land ? (BG.port || BG.land) : BG.port; if (!G.land && !im) im = BG.land; if (!im) return;
-    var sc = Math.max(W / im.naturalWidth, H / im.naturalHeight) * 1.1, w = im.naturalWidth * sc, h = im.naturalHeight * sc;
-    var ox = (W - w) / 2 + camx, oy = G.land ? (H - h) : (H - h) * 0.55;
-    c.drawImage(im, ox, oy, w, h);
-    // 地平线薄雾，保持浅色纵深
-    var g = c.createLinearGradient(0, G.gy - G.fh * .55, 0, G.gy - G.fh * .05); g.addColorStop(0, 'rgba(250,244,228,0)'); g.addColorStop(1, 'rgba(250,244,228,.22)'); c.fillStyle = g; c.fillRect(0, G.gy - G.fh * .55, W, G.fh * .5);
+    /* 首页淡墨远山整幅铺满，再做一次纵向邻行混合，避免缩放后出现亮度硬缝。 */
+    var key = W + 'x' + H;
+    if (G._bgKey !== key) {
+      var cv = document.createElement('canvas');
+      cv.width = Math.max(2, W); cv.height = Math.max(2, H);
+      var g = cv.getContext('2d', { willReadFrequently: true });
+      g.fillStyle = '#f3eee4';
+      g.fillRect(0, 0, W, H);
+      var far = BG.far;
+      if (far && far.naturalWidth) {
+        var sc = Math.max(W / far.naturalWidth, H / far.naturalHeight) * 1.04;
+        var w = far.naturalWidth * sc, h = far.naturalHeight * sc;
+        g.imageSmoothingEnabled = true;
+        g.imageSmoothingQuality = 'high';
+        g.drawImage(far, (W - w) / 2, (H - h) / 2, w, h);
+      }
+      var img = g.getImageData(0, 0, W, H), d = img.data, src = new Uint8ClampedArray(d), y, x, i, up, dn, k;
+      for (y = 1; y < H - 1; y++) {
+        for (x = 0; x < W; x++) {
+          i = (y * W + x) * 4; up = i - W * 4; dn = i + W * 4;
+          for (k = 0; k < 3; k++) d[i + k] = (src[up + k] + src[i + k] * 2 + src[dn + k]) >> 2;
+        }
+      }
+      g.putImageData(img, 0, 0);
+      G._bgKey = key; G._bgCanvas = cv;
+    }
+    c.drawImage(G._bgCanvas, 0, 0);
+  }
+  function bgSeam() {
+    var W = G.W, H = G.H, cv = document.createElement('canvas');
+    cv.width = Math.max(2, W); cv.height = Math.max(2, H);
+    var g = cv.getContext('2d', { willReadFrequently: true });
+    drawBG(g, W, H, 0);
+    var data = g.getImageData(0, 0, W, H).data, rows = [], y, x, i, s, n, max = 0, at = 0, d;
+    for (y = 0; y < H; y++) {
+      s = 0; n = 0;
+      for (x = 0; x < W; x += 2) {
+        i = (y * W + x) * 4;
+        s += 0.2126 * data[i] + 0.7152 * data[i + 1] + 0.0722 * data[i + 2];
+        n++;
+      }
+      rows.push(s / Math.max(1, n));
+    }
+    for (y = 1; y < rows.length; y++) {
+      d = Math.abs(rows[y] - rows[y - 1]);
+      if (d > max) { max = d; at = y; }
+    }
+    return { max: Math.round(max * 1000) / 1000, at: at, pass: max <= 3, h: H };
   }
   function drawTele(c) {
     var F = G.F, b = F.boss, S = G.S, gy = G.gy;
@@ -578,10 +778,39 @@
 
   /* ---------- 画：HUD ---------- */
   function para(c, x, y, w, h, sk) { c.beginPath(); c.moveTo(x + sk, y); c.lineTo(x + w + sk, y); c.lineTo(x + w, y + h); c.lineTo(x, y + h); c.closePath(); }
+  function colorAvURL(id) {
+    if (id === 'wukong') return '../assets/art/menu-v5/fig_wukong.webp';
+    if (id === 'niumo') return '../assets/art/battle-hd/niumo.webp';
+    return '../assets/art/x-avatars/' + id + '.webp';
+  }
+  function faceNode(im) {
+    if (!im || !(im.naturalWidth || im.width)) return im;
+    if (im._face) return im._face;
+    if (im.naturalWidth === 384 && im.naturalHeight === 378) return im;
+    return im;
+  }
+  function loadColorAv(id) {
+    return loadImg(colorAvURL(id)).then(function (i) {
+      if (!i.naturalWidth) return loadImg('assets/xav/' + id + '.webp').then(function (j) { AV[id] = j; });
+      AV[id] = i;
+    });
+  }
+  function blitFace(c, im, cx, cy, r) {
+    var iw = im.naturalWidth || im.width, ih = im.naturalHeight || im.height;
+    if (!iw || !ih) return;
+    var side = r * 2, sc = Math.max(side / iw, side / ih);
+    var dw = iw * sc, dh = ih * sc;
+    c.drawImage(im, cx - dw / 2, cy - Math.min(dh * 0.42, dh - side), dw, dh);
+  }
   function head(c, id, cx, cy, r, ring) {
-    var im = AV[id]; if (!im || !im.naturalWidth) return;
-    c.save(); c.beginPath(); c.arc(cx, cy, r, 0, 7); c.clip(); c.fillStyle = '#f6ecd0'; c.fillRect(cx - r, cy - r, r * 2, r * 2); c.drawImage(im, cx - r, cy - r, r * 2, r * 2); c.restore();
-    c.lineWidth = r * .16; c.strokeStyle = '#2f2a1f'; c.beginPath(); c.arc(cx, cy, r, 0, 7); c.stroke(); c.lineWidth = r * .09; c.strokeStyle = ring || '#e6c474'; c.beginPath(); c.arc(cx, cy, r - r * .02, 0, 7); c.stroke();
+    var im = faceNode(AV[id]); if (!im || !(im.naturalWidth || im.width)) return;
+    if (id !== 'wukong' && id !== 'niumo' && window.XY && XY.xAvIcon) {
+      var side = r * 2.25;
+      XY.xAvIcon.featherImage(c, im, cx - side / 2, cy - side / 2, side, side);
+      return;
+    }
+    c.save(); c.beginPath(); c.arc(cx, cy, r, 0, 7); c.clip(); c.fillStyle = '#f6ecd0'; c.fillRect(cx - r, cy - r, r * 2, r * 2); blitFace(c, im, cx, cy, r); c.restore();
+    c.lineWidth = r * .16; c.strokeStyle = '#2f2a1f'; c.beginPath(); c.arc(cx, cy, r, 0, 7); c.stroke();
   }
   function bar(c, x, y, w, h, sk, frac, chip, colA, colB, dir) {
     // dir=1：左侧血条，满格靠外侧，往外掉；-1 反之
@@ -624,9 +853,23 @@
     head(c, 'wukong', 34 * S + (land ? 6 * S : 0), top + 24 * S, (land ? 27 : 24) * S, '#5c4030');
     head(c, 'niumo', W - 34 * S - (land ? 6 * S : 0), top + 24 * S, (land ? 27 : 24) * S, '#3a342c');
     var ny = top + bh / 2 + 1 * S;
-    label(c, '孙悟空', lx + 14 * S, ny, 15 * S, '#2f2a1f'); label(c, 'Lv' + wu.lv, lx + 14 * S + 56 * S, ny + 1 * S, 11 * S, '#6d6455');
-    label(c, '牛魔王', rx + rw + sk - 18 * S, ny, 15 * S, '#2f2a1f', 'right'); label(c, b.phase === 2 ? '狂暴' : '一阶段', rx + rw + sk - 18 * S - 58 * S, ny + 1 * S, 11 * S, b.phase === 2 ? '#c8341f' : '#6d6455', 'right');
-    if (pa) { var py2 = top + bh + 5 * S + 5 * S; head(c, pa.id, lx + 12 * S, py2, 11 * S, pa.alive ? ELC[pa.elem] || '#e6c474' : '#a39a86'); label(c, pa.name, lx + 27 * S, py2 + 1 * S, 12 * S, pa.alive ? '#2f2a1f' : '#9a927c'); }
+    var namePx = Math.max(G.H < 420 ? 16 : 14, 15 * S);
+    label(c, '孙悟空', lx + 14 * S, ny, namePx, '#2f2a1f'); label(c, 'Lv' + wu.lv, lx + 14 * S + namePx * 3.6, ny + 1 * S, Math.max(11, 11 * S), '#6d6455');
+    label(c, '牛魔王', rx + rw + sk - 18 * S, ny, namePx, '#2f2a1f', 'right'); label(c, b.phase === 2 ? '狂暴' : '一阶段', rx + rw + sk - 18 * S - namePx * 3.8, ny + 1 * S, Math.max(11, 11 * S), b.phase === 2 ? '#c8341f' : '#6d6455', 'right');
+    if (pa) {
+      var py2 = top + bh + 5 * S + 5 * S;
+      head(c, pa.id, lx + 12 * S, py2, 11 * S, pa.alive ? '#5c4030' : '#a39a86');
+      c.save();
+      c.globalAlpha = pa.alive ? 1 : 0.45;
+      c.font = (16 * S) + 'px "Ma Shan Zheng","KaiTi",serif';
+      c.textAlign = 'left'; c.textBaseline = 'middle';
+      c.lineWidth = Math.max(2, 3 * S * 0.4); c.lineJoin = 'round';
+      c.strokeStyle = '#fffaf0';
+      c.strokeText(pa.name, lx + 26 * S, py2);
+      c.fillStyle = '#1a120c';
+      c.fillText(pa.name, lx + 26 * S, py2);
+      c.restore();
+    }
     // 计时器
     var tr = (land ? 29 : 26) * S, ty = top + 26 * S; c.save(); c.beginPath(); c.arc(cx, ty, tr, 0, 7); var g = c.createRadialGradient(cx, ty - tr * .3, 2, cx, ty, tr); g.addColorStop(0, '#fffdf4'); g.addColorStop(1, '#f1e2b4'); c.fillStyle = g; c.fill(); c.lineWidth = 3.4 * S; c.strokeStyle = '#2f2a1f'; c.stroke(); c.lineWidth = 1.6 * S; c.strokeStyle = '#d4a53d'; c.beginPath(); c.arc(cx, ty, tr - 3.6 * S, 0, 7); c.stroke(); c.restore();
     label(c, String(Math.ceil(F.timer)), cx, ty + 1 * S, tr * 1.25, F.timer < 15 ? '#c8341f' : '#2f2a1f', 'center', '#fffaf0');
@@ -660,8 +903,8 @@
   }
   /* ---------- 召唤：随机转盘切入（<1 秒）+ 站场放必杀 ---------- */
   function avDisk(c, id, cx, cy, r, ring, a) {
-    var im = AV[id]; c.save(); c.globalAlpha = a == null ? 1 : a; c.beginPath(); c.arc(cx, cy, r, 0, 7); c.clip(); c.fillStyle = '#f6ecd0'; c.fillRect(cx - r, cy - r, r * 2, r * 2);
-    if (im && im.naturalWidth) c.drawImage(im, cx - r, cy - r, r * 2, r * 2); c.restore();
+    var im = faceNode(AV[id]); c.save(); c.globalAlpha = a == null ? 1 : a; c.beginPath(); c.arc(cx, cy, r, 0, 7); c.clip(); c.fillStyle = '#f6ecd0'; c.fillRect(cx - r, cy - r, r * 2, r * 2);
+    if (im && (im.naturalWidth || im.width)) blitFace(c, im, cx, cy, r); c.restore();
     c.save(); c.globalAlpha = a == null ? 1 : a; c.lineWidth = Math.max(2, r * .12); c.strokeStyle = '#2f2a1f'; c.beginPath(); c.arc(cx, cy, r, 0, 7); c.stroke(); c.lineWidth = Math.max(1.5, r * .07); c.strokeStyle = ring || '#e6c474'; c.beginPath(); c.arc(cx, cy, r - r * .03, 0, 7); c.stroke(); c.restore();
   }
   var ROUL = .42;   // 转盘转动时长；其后 0.48s 大立绘 + 名字 + 必杀名（切入合计 BF.SM.CUT = 0.9s）
@@ -706,6 +949,150 @@
   }
 
   /* ---------- 总绘制 ---------- */
+  var WUCLOSE = [];
+  function preloadWu() {
+    if (WUCLOSE._p) return WUCLOSE._p;
+    WUCLOSE._p = Promise.all([1, 2, 3, 4, 5].map(function (i) {
+      return loadImg('../assets/ult/wukong-close-' + i + '.webp').then(function (im) { WUCLOSE[i - 1] = im; }, function () { return null; });
+    }));
+    return WUCLOSE._p;
+  }
+  function ensureWuClose() { if (!WUCLOSE._p) preloadWu(); }
+  /* 窄屏：整幅居中铺在宣纸上。淡出在原图像素上生成，四边都透，书法和角色用平滑保护。 */
+  function wuGauss(src, w, h, sigma) {
+    var rad = Math.max(1, Math.ceil(sigma * 3));
+    var kern = new Float32Array(rad * 2 + 1), s2 = 2 * sigma * sigma, sum = 0, i, v;
+    for (i = -rad; i <= rad; i++) { v = Math.exp(-(i * i) / s2); kern[i + rad] = v; sum += v; }
+    for (i = 0; i < kern.length; i++) kern[i] /= sum;
+    var tmp = new Float32Array(w * h), out = new Float32Array(w * h), x, y, k, xx, yy, a;
+    for (y = 0; y < h; y++) {
+      for (x = 0; x < w; x++) {
+        a = 0;
+        for (k = -rad; k <= rad; k++) {
+          xx = x + k; if (xx < 0) xx = 0; else if (xx >= w) xx = w - 1;
+          a += src[y * w + xx] * kern[k + rad];
+        }
+        tmp[y * w + x] = a;
+      }
+    }
+    for (y = 0; y < h; y++) {
+      for (x = 0; x < w; x++) {
+        a = 0;
+        for (k = -rad; k <= rad; k++) {
+          yy = y + k; if (yy < 0) yy = 0; else if (yy >= h) yy = h - 1;
+          a += tmp[yy * w + x] * kern[k + rad];
+        }
+        out[y * w + x] = a;
+      }
+    }
+    return out;
+  }
+  function wuBrushMask(im) {
+    var pw = im.naturalWidth, ph = im.naturalHeight;
+    var key = im.src || (pw + 'x' + ph);
+    if (wuBrushMask.cache && wuBrushMask.cache.key === key) return wuBrushMask.cache.cv;
+    var cv = document.createElement('canvas');
+    cv.width = pw; cv.height = ph;
+    var g = cv.getContext('2d', { willReadFrequently: true });
+    g.imageSmoothingEnabled = true;
+    g.imageSmoothingQuality = 'high';
+    g.drawImage(im, 0, 0);
+    var id = g.getImageData(0, 0, pw, ph), d = id.data, n = pw * ph, i, r, gc, b, lum, sat;
+    var keep = new Float32Array(n), x, y;
+    for (y = 0; y < ph; y++) {
+      for (x = 0; x < pw; x++) {
+        i = y * pw + x;
+        r = d[i * 4]; gc = d[i * 4 + 1]; b = d[i * 4 + 2];
+        lum = (r + gc + b) / 3;
+        sat = Math.max(r, gc, b) - Math.min(r, gc, b);
+        /* 左边墨迹和上色的身体。灰纸、淡墨底不保护，交给四边淡出。 */
+        if ((lum < 72 && sat < 24 && x < pw * 0.38) || (sat > 34 && r > b + 8 && r > 45) || (b > r + 16 && b > 80)) keep[i] = 1;
+      }
+    }
+    var near = wuGauss(keep, pw, ph, 8);
+    for (i = 0; i < n; i++) {
+      if (keep[i]) continue;
+      r = d[i * 4]; gc = d[i * 4 + 1]; b = d[i * 4 + 2];
+      lum = (r + gc + b) / 3;
+      if (near[i] > 0.12 && lum < 115) keep[i] = 1;
+    }
+    /* 保护罩在全分辨率上高斯羽化，sigma 22px。笔画和身体像素保持不透明。 */
+    var soft = wuGauss(keep, pw, ph, 22), protect = new Float32Array(n);
+    for (i = 0; i < n; i++) protect[i] = keep[i] > 0 ? 1 : Math.min(1, soft[i] / 0.05);
+    protect = wuGauss(protect, pw, ph, 6);
+    for (i = 0; i < n; i++) if (keep[i] > 0) protect[i] = 1;
+    var fadeW = Math.min(pw, ph) * 0.12, dist, nse, reach, t, a, hold;
+    for (y = 0; y < ph; y++) {
+      for (x = 0; x < pw; x++) {
+        i = y * pw + x;
+        dist = Math.min(x, y, pw - 1 - x, ph - 1 - y);
+        nse = Math.sin(x * 0.011 + y * 0.007) * 0.62
+          + Math.sin(x * 0.0042 + 1.3) * Math.sin(y * 0.0055 + 0.6) * 0.5
+          + Math.sin(x * 0.017 - y * 0.013 + 2.0) * 0.38;
+        nse = Math.max(-1, Math.min(1, nse));
+        reach = fadeW * (1 + 0.7 * (nse * 0.5 + 0.5));
+        t = dist / reach;
+        a = t <= 0 ? 0 : (t >= 1 ? 1 : t * t * (3 - 2 * t));
+        if (keep[i] > 0) {
+          var ink = x < pw * 0.38;
+          var m = ink ? reach * 0.45 : reach;
+          var tt = dist / m;
+          a = tt <= 0 ? 0 : (tt >= 1 ? 1 : tt * tt * (3 - 2 * tt));
+        } else if (dist > reach && protect[i] > a) a = protect[i];
+        d[i * 4 + 3] = a <= 0 ? 0 : (a >= 1 ? 255 : (a * 255 + 0.5) | 0);
+      }
+    }
+    g.putImageData(id, 0, 0);
+    wuBrushMask.cache = { key: key, cv: cv };
+    return cv;
+  }
+  function paintWuPaper(c, W, H) {
+    c.fillStyle = '#f8f1df';
+    c.fillRect(0, 0, W, H);
+    var wash = BG.wash || BG.far;
+    if (wash && wash.naturalWidth) {
+      c.save();
+      c.globalAlpha = 0.14;
+      var sc = Math.max(W / wash.naturalWidth, H / wash.naturalHeight);
+      var ww = wash.naturalWidth * sc, hh = wash.naturalHeight * sc;
+      c.drawImage(wash, (W - ww) / 2, (H - hh) / 2, ww, hh);
+      c.restore();
+    }
+  }
+  function paintWuPlate(c, im, W, H) {
+    var iw = im.naturalWidth, ih = im.naturalHeight;
+    var fit = Math.min(W / iw, H / ih), cover = Math.max(W / iw, H / ih);
+    var s = fit, tight = false;
+    if (cover > fit + 0.001) {
+      var overflow = (W / iw >= H / ih) ? (ih - H / cover) : (iw - W / cover);
+      if (overflow < 36) { s = cover; tight = true; }
+    }
+    if (!tight && H > W * 1.35) s = W / iw;
+    var dw = iw * s, dh = ih * s;
+    var x = (W - dw) / 2, y = (H - dh) / 2;
+    if (tight && dh > H + 1) y = 0;
+    if (tight && dw > W + 1) x = 0;
+    c.imageSmoothingEnabled = true;
+    c.imageSmoothingQuality = 'high';
+    if (tight || (x < 2 && y < 2 && dw >= W - 2 && dh >= H - 2)) {
+      c.drawImage(im, x, y, dw, dh);
+      return;
+    }
+    paintWuPaper(c, W, H);
+    c.drawImage(wuBrushMask(im), x, y, dw, dh);
+  }
+  function drawWuClose(c) {
+    if (!(G.wuCut > 0) || G.wuCutOff) return;
+    ensureWuClose();
+    var total = 2.4, t = total - G.wuCut, idx = Math.max(0, Math.min(4, Math.floor(t / total * 5))), im = WUCLOSE[idx];
+    c.save();
+    if (im && im.naturalWidth) paintWuPlate(c, im, G.W, G.H);
+    else { c.fillStyle = '#f3ecdc'; c.fillRect(0, 0, G.W, G.H); }
+    var skip = Math.max(18, Math.round(16 * Math.min(G.S, 1.6)));
+    c.fillStyle = '#2a2218'; c.font = skip + 'px "Ma Shan Zheng","KaiTi",serif'; c.textAlign = 'right'; c.textBaseline = 'alphabetic';
+    c.fillText('点按跳过', G.W - 24, G.H - 28);
+    c.restore();
+  }
   function draw() {
     if (G.mode === 'pick') return;
     var F = G.F; if (!F) return; var W = G.W, H = G.H, S = G.S, c = ctx; c.setTransform(G.dpr, 0, 0, G.dpr, 0, 0); c.clearRect(0, 0, W, H);
@@ -714,16 +1101,33 @@
     drawBG(c, W, H, cam); drawTele(c); drawFx(c, true);
     var order = []; if (pa) order.push(G.lane.partner > G.lane.wukong ? pa : wu, G.lane.partner > G.lane.wukong ? wu : pa); else order.push(wu);
     function drawHero(h) { var hv = heroVis(h), P = heroPose(h, hv), id = h.id;
-      var gyy = G.gy + hv.dy;
+      var gyy = (G.gyBy && G.gyBy[h.id] != null ? G.gyBy[h.id] : G.gy) + hv.dy;
       if ((id === 'yuanzhang' || id === 'martin') && h.st === 'cast') drawRetinue(c, id, hv.x, gyy, G.fh * hv.sc, .9 * Math.sin(clamp(h.stT / .6, 0, 1) * Math.PI), G.t, P.fs < 0 ? -1 : 1);
       P.fog = clamp(hv.ln, 0, 1); P.alpha *= 1 - .05 * P.fog; G._ly = hv.dy; drawSpr(c, id, P.pose, hv.x, gyy, G.fh * hv.sc, P); G._ly = 0; }
-    function drawBoss() { var bps = bossPose(F.boss); drawSpr(c, 'niumo', bps.pose, bv.x, G.gy, G.fh * bv.sc, bps); if (F.boss.st === 'spin') drawWhirl(c, bv.x, F.boss.stT); }
+    function drawBoss() { var bps = bossPose(F.boss); var gyy = (G.gyBy && G.gyBy.niumo != null) ? G.gyBy.niumo : G.gy; drawSpr(c, 'niumo', bps.pose, bv.x, gyy, G.fh * bv.sc, bps); if (F.boss.st === 'spin') drawWhirl(c, bv.x, F.boss.stT); }
     // 景深：后排英雄 → 牛魔王 → 前排英雄（前排的人挥棒时不会被牛魔王挡住）
     if (order.length > 1) drawHero(order[0]); drawBoss(); drawHero(order[order.length - 1]);
     drawMinions(c); drawFx(c, false);
     c.restore();
     if (G.flash > 0) { c.save(); c.globalAlpha = Math.min(.55, G.flash); c.fillStyle = G.flashC; c.fillRect(0, 0, W, H); c.restore(); }
-    var cutin = F.sm && F.sm.t < BF.SM.CUT; $('spd').style.visibility = cutin || G.introT > 0 ? 'hidden' : 'visible'; drawSummon(c); if (!cutin) { drawHUD(c); drawCalls(c); }
+    var spd = $('spd');
+    if (spd && G.F) {
+      var tr0 = (G.land ? 29 : 22) * S, ty0 = 8 * S + (G.land ? 26 : 22) * S, seal = 30;
+      spd.style.top = Math.round(ty0 + tr0 + 4) + 'px';
+      spd.style.width = '36px';
+      spd.style.height = seal + 'px';
+      spd.style.fontSize = '17px';
+      spd.style.lineHeight = seal + 'px';
+    }
+    var showingClose = G.wuCut > 0 && !G.wuCutOff;
+    drawWuClose(c);
+    var cutin = F.sm && F.sm.t < BF.SM.CUT;
+    if (showingClose) $('spd').style.visibility = 'hidden';
+    else {
+      $('spd').style.visibility = cutin || G.introT > 0 ? 'hidden' : 'visible';
+      drawSummon(c);
+      if (!cutin) { drawHUD(c); drawCalls(c); }
+    }
     if (G.introT > 0) drawIntro(c);
     if (F.over && F.over.win) { var u = clamp(G.endT / .5, 0, 1); if (G.endT < 2.6) { c.save(); c.globalAlpha = .9 * ease(u) * (G.endT > 2.2 ? 1 - (G.endT - 2.2) / .4 : 1); label(c, '击败牛魔王', W * .27, H * .22, Math.min(W * .068, 42 * S), '#c8341f', 'center', '#fffaf0'); c.restore(); } }
   }
@@ -743,11 +1147,15 @@
 
   /* ---------- 选人界面 ---------- */
   /* ---------- 选人界面：只选搭档（圆形 X 头像） ---------- */
-  function avatarURL(id) { return 'assets/xav/' + id + '.webp'; }
+  function avatarURL(id) {
+    return '../assets/art/battle-hd/' + id + '.webp';
+  }
   function avaEl(id, o) {
     o = o || {}; var d = BF.SP[id], el = document.createElement('div'); el.className = 'ava' + (o.on ? ' on' : '') + (o.off ? ' off' : '') + (o.sel ? ' sel' : ''); el.dataset.id = id;
-    var col = id === 'wukong' ? ELC.fire : ELC[d.elem];
-    el.innerHTML = '<div class="ring" style="--el:' + col + '"><div class="face" style="background-image:url(' + avatarURL(id) + ')"></div>' + (o.badge ? '<span class="bd">' + o.badge + '</span>' : '') + '<span class="tag" style="background:' + col + '"></span></div><b>' + NAMES[id] + '</b><i>' + (o.sub || '') + '</i>';
+    var tall = window.innerHeight >= 400;
+    var faceH = (id === 'kuanggong' && tall) ? 80 : 84;
+    var bang = (id === 'kuanggong' && tall) ? ' !important' : '';
+    el.innerHTML = '<div class="ring"><div class="face" data-face="' + faceH + '" style="background-image:url(' + avatarURL(id) + ');background-size:auto ' + faceH + '%' + bang + ';background-position:center bottom' + bang + ';background-repeat:no-repeat"></div></div><b><img class="nm" alt="' + NAMES[id] + '" src="../assets/art/menu-poster/nameh-' + id + '.webp">' + (o.badge ? '<span class="bd">' + o.badge + '</span>' : '') + '</b>';
     return el;
   }
   function buildPick() {
@@ -760,16 +1168,218 @@
     var d = BF.SP[G.partner], m = BF.lvMul(5), hpv = Math.round(d.hp * m * BF.K.HPK);
     $('pinfo').innerHTML = '选一位搭档（悟空固定出战）。<b>' + d.name + '</b> ' + ELN[d.elem] + ' · 生命 ' + hpv + ' · 必杀「' + d.ult.name + '」。战中点“召唤援军”随机来一位，每局一次。';
   }
+  var STILL = {};
+  function stillNode(id) {
+    if (STILL[id]) return STILL[id].ok ? STILL[id].im : null;
+    var rec = STILL[id] = { ok: false, im: null };
+    var im = new Image();
+    im.onload = function () { if (im.naturalWidth) { rec.im = im; rec.ok = true; } };
+    im.src = '../assets/art/battle-hd/' + id + '.webp';
+    return null;
+  }
+  function drawStill(c, id, cx, foot, h) {
+    var im = stillNode(id); if (!im) return;
+    var iw = im.naturalWidth || im.width, ih = im.naturalHeight || im.height;
+    if (!iw || !ih) return;
+    var dh = h, dw = iw * (h / ih);
+    c.save();
+    c.imageSmoothingEnabled = true;
+    c.drawImage(im, cx - dw / 2, foot - dh, dw, dh);
+    c.restore();
+  }
+  var NAMEH = {};
+  function nameArt(id) {
+    if (NAMEH[id]) return NAMEH[id].ok ? NAMEH[id].im : null;
+    var rec = NAMEH[id] = { ok: false, im: null };
+    var im = new Image();
+    im.onload = function () { if (im.naturalWidth) { rec.im = im; rec.ok = true; } };
+    im.src = '../assets/art/menu-poster/nameh-' + id + '.webp';
+    return null;
+  }
+  function plateParts(im) {
+    if (im._parts) return im._parts;
+    var cv = document.createElement('canvas');
+    cv.width = im.naturalWidth; cv.height = im.naturalHeight;
+    var g = cv.getContext('2d', { willReadFrequently: true });
+    g.drawImage(im, 0, 0);
+    var w = cv.width, h = cv.height, data = g.getImageData(0, 0, w, h).data;
+    var anyL = w, anyR = 0, sealL = w, sealR = 0, y;
+    for (y = 0; y < h; y++) {
+      for (var x = 0; x < w; x++) {
+        var i = (y * w + x) * 4;
+        if (data[i + 3] < 24) continue;
+        if (x < anyL) anyL = x;
+        if (x > anyR) anyR = x;
+        if (data[i] > 150 && data[i] > data[i + 1] + 35 && data[i] > data[i + 2] + 35) {
+          if (x < sealL) sealL = x;
+          if (x > sealR) sealR = x;
+        }
+      }
+    }
+    var textR = sealL < w ? Math.max(anyL, sealL - 2) : anyR;
+    im._parts = {
+      full: { x: anyL, w: Math.max(1, anyR - anyL + 1), h: h },
+      text: { x: anyL, w: Math.max(1, textR - anyL + 1), h: h },
+      seal: sealR > sealL ? { x: sealL, w: sealR - sealL + 1, h: h } : null
+    };
+    return im._parts;
+  }
+  function fitPlate(im, maxW, maxH) {
+    var p = plateParts(im);
+    function sized(part) {
+      var dh = maxH, dw = dh * part.w / part.h;
+      if (dw > maxW) { dw = maxW; dh = dw * part.h / part.w; }
+      return { dw: dw, dh: dh };
+    }
+    var full = sized(p.full), part = p.full, box = full, dropped = false;
+    if (p.seal && (full.dw > maxW + 0.5 || full.dh < 15)) {
+      part = p.text; box = sized(p.text); dropped = true;
+    }
+    return { sx: part.x, sy: 0, sw: part.w, sh: part.h, dw: box.dw, dh: box.dh, dropped: dropped, parts: p };
+  }
+  function brushName(c, text, x, y, size, col) {
+    c.save();
+    c.font = size + 'px "Ma Shan Zheng","KaiTi",serif';
+    c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.fillStyle = col || '#24180f';
+    c.fillText(text, x, y);
+    c.restore();
+  }
   function drawPick() {
-    var st = pcv.parentNode.getBoundingClientRect(), W = st.width, H = st.height, dpr = G.dpr, c = pctx; if (W < 4) return;
-    c.setTransform(dpr, 0, 0, dpr, 0, 0); c.clearRect(0, 0, W, H);
-    var im = BG.land; if (im) { var r = Math.max(W / im.naturalWidth, H / im.naturalHeight), w = im.naturalWidth * r, h = im.naturalHeight * r; c.save(); c.beginPath(); c.roundRect(0, 0, W, H, 18); c.clip(); c.drawImage(im, (W - w) / 2, H - h, w, h); c.restore(); c.lineWidth = 3; c.strokeStyle = '#b8863b'; c.beginPath(); c.roundRect(0, 0, W, H, 18); c.stroke(); }
-    var gyy = H * .9, fh = Math.min(H * .86, W * .62), t = performance.now() / 1000;
-    var pf = Math.min(H * .76, W * .5), pw = idleV(0), pp = idleV(.37), pb = idleV(.55);
-    drawSpr(c, 'niumo', 'stance', W * .81, gyy, pf * 1.0, { sy: 1 + .013 * pb, skew: .012 * pb, flip: 0 });
-    drawSpr(c, G.partner, 'stance', W * .19, gyy - H * .01, pf * .94, { sy: 1 + .013 * pp, skew: .014 * pp });
-    drawSpr(c, 'wukong', 'stance', W * .49, gyy, pf * 1.0, { sy: 1 + .013 * pw, skew: .014 * pw });
-    label(c, 'VS', W * .66, H * .26, Math.min(70, W * .15), '#c8341f', 'center'); label(c, '孙悟空', W * .5, H * .06, 20, '#2f2a1f', 'center'); label(c, NAMES[G.partner], W * .2, H * .06, 17, '#2f2a1f', 'center'); label(c, '牛魔王', W * .8, H * .08, 20, '#2f2a1f', 'center');
+    var st = pcv.parentNode.getBoundingClientRect(), W = st.width, H = st.height, dpr = G.dpr || 1, c = pctx;
+    if (W < 4 || H < 4) return;
+    c.setTransform(dpr, 0, 0, dpr, 0, 0);
+    c.clearRect(0, 0, W, H);
+    var mx = W * 0.42, my = H * 0.64;
+    var rx = Math.min(W * 0.34, Math.max(24, mx - 22), Math.max(24, W - mx - 36));
+    var ry = Math.min(H * 0.32, Math.max(16, my - 16), Math.max(16, H - my - 28));
+    c.save();
+    c.translate(mx, my);
+    c.scale(rx, ry);
+    var mist = c.createRadialGradient(0, 0, 0.08, 0, 0, 1);
+    mist.addColorStop(0, 'rgba(78,58,38,0.12)');
+    mist.addColorStop(0.58, 'rgba(78,58,38,0.035)');
+    mist.addColorStop(1, 'rgba(78,58,38,0)');
+    c.fillStyle = mist;
+    c.beginPath();
+    c.arc(0, 0, 1, 0, Math.PI * 2);
+    c.fill();
+    c.restore();
+    var leftId = G.partner || 'heyuxi';
+    var ids = [leftId, 'wukong', 'niumo'];
+    var labels = [NAMES[leftId] || '', '孙悟空', '牛魔王'];
+    function asp(id) {
+      var im = stillNode(id);
+      return im && im.naturalHeight ? im.naturalWidth / im.naturalHeight : 0.8;
+    }
+    var aL = asp(leftId), aW = asp('wukong'), aN = asp('niumo');
+    var nameH = Math.max(15, Math.min(30, H * 0.085, W * 0.045));
+    var marginL = Math.max(48, Math.round(W * 0.07));
+    var marginR = Math.max(20, Math.round(W * 0.03));
+    var foot = H - Math.max(2, H * 0.012);
+    var maxH = Math.max(48, foot - nameH - 4);
+    var avail = W - marginL - marginR;
+    var pairOverlap = 0.14, duelGap = Math.max(nameH * 1.7, 28);
+    function pairWidth(h) { return h * (aL + aW * (1 - pairOverlap)); }
+    function totalWidth(h) { return pairWidth(h) + duelGap + h * aN; }
+    var h = maxH;
+    if (totalWidth(h) > avail) h = avail / (aL + aW * (1 - pairOverlap) + aN + duelGap / maxH);
+    h = Math.max(36, Math.min(maxH, h));
+    duelGap = Math.max(nameH * 1.6, Math.min(duelGap, avail - pairWidth(h) - h * aN));
+    if (duelGap < nameH) duelGap = nameH;
+    if (totalWidth(h) > avail) h = (avail - duelGap) / (aL + aW * (1 - pairOverlap) + aN);
+    var extra = foot - h - (nameH + 6);
+    if (extra > 10) foot -= extra * 0.5;
+    var wL = h * aL, wW = h * aW, wN = h * aN;
+    var block = pairWidth(h) + duelGap + wN;
+    var xL = marginL + Math.max(0, (avail - block) / 2) + wL / 2;
+    var xW = xL + wL / 2 + wW * (0.5 - pairOverlap);
+    var xN = xW + wW * (0.5 - pairOverlap * 0.15) + duelGap + wN / 2;
+    var top = foot - h;
+    var groundL = xL - wL * 0.35, groundR = xN + wN * 0.35;
+    c.save();
+    c.fillStyle = 'rgba(42,32,22,0.16)';
+    c.beginPath();
+    c.ellipse((groundL + groundR) / 2, foot - 1, (groundR - groundL) / 2, Math.max(7, h * 0.028), 0, 0, Math.PI * 2);
+    c.fill();
+    c.restore();
+    drawStill(c, 'wukong', xW, foot, h);
+    drawStill(c, leftId, xL, foot, h * 0.98);
+    drawStill(c, 'niumo', xN, foot, h);
+    var rects = [
+      { x: xL - wL / 2, y: top, w: wL, h: h },
+      { x: xW - wW / 2, y: top, w: wW, h: h },
+      { x: xN - wN / 2, y: top, w: wN, h: h }
+    ];
+    var xs = [xL, xW, xN];
+    function outside(x, y, tw, th) {
+      var a = x - tw / 2, b = y - th / 2;
+      if (a < 1 || b < 1 || a + tw > W - 1 || b + th > H - 1) return true;
+      for (var i = 0; i < rects.length; i++) {
+        var r = rects[i];
+        if (a + tw > r.x + 3 && a < r.x + r.w - 3 && b + th > r.y + 3 && b < r.y + r.h * 0.92) return true;
+      }
+      return false;
+    }
+    var ihCap = Math.min(28, Math.max(16, nameH));
+    var halfChar = ihCap * 0.5;
+    var specs = labels.map(function (text, i) {
+      var leftEdge = i === 0 ? marginL : (xs[i - 1] + xs[i]) / 2;
+      var rightEdge = i === labels.length - 1 ? W - marginR : (xs[i] + xs[i + 1]) / 2;
+      var laneL = leftEdge + (i === 0 ? 0 : halfChar / 2);
+      var laneR = rightEdge - (i === labels.length - 1 ? 0 : halfChar / 2);
+      var maxW = Math.max(28, laneR - laneL);
+      var im = nameArt(ids[i]);
+      var dw, dh, fit = null;
+      if (im) {
+        fit = fitPlate(im, maxW, ihCap);
+        dw = fit.dw; dh = fit.dh;
+      } else {
+        dh = Math.min(ihCap, Math.max(13, maxW / Math.max(1, text.length) * 1.2));
+        c.font = dh + 'px "Ma Shan Zheng","KaiTi",serif';
+        dw = Math.min(maxW, c.measureText(text).width);
+        if (c.measureText(text).width > maxW) dh = dh * maxW / c.measureText(text).width;
+      }
+      var x = Math.max(laneL + dw / 2, Math.min(laneR - dw / 2, xs[i]));
+      var y = Math.max(dh / 2 + 2, rects[i].y - 4 - dh / 2);
+      return { id: ids[i], text: text, im: im, fit: fit, x: x, y: y, w: dw, h: dh, laneL: laneL, laneR: laneR, head: rects[i].y };
+    });
+    function boxesHit(a, b) {
+      var w = Math.min(a.x + a.w / 2, b.x + b.w / 2) - Math.max(a.x - a.w / 2, b.x - b.w / 2);
+      var h = Math.min(a.y + a.h / 2, b.y + b.h / 2) - Math.max(a.y - a.h / 2, b.y - b.h / 2);
+      return w > 0.5 && h > 0.5;
+    }
+    var pass, i, j;
+    for (pass = 0; pass < 4; pass++) {
+      var moved = false;
+      for (i = 0; i < specs.length; i++) for (j = i + 1; j < specs.length; j++) {
+        if (!boxesHit(specs[i], specs[j])) continue;
+        var lift = i < j ? specs[i] : specs[j];
+        lift.y = Math.max(lift.h / 2 + 2, Math.min(specs[i].y, specs[j].y) - lift.h - halfChar);
+        moved = true;
+      }
+      if (!moved) break;
+    }
+    specs.forEach(function (s) {
+      if (s.im) c.drawImage(s.im, s.fit.sx, s.fit.sy, s.fit.sw, s.fit.sh, s.x - s.w / 2, s.y - s.h / 2, s.w, s.h);
+      else brushName(c, s.text, s.x, s.y, s.h, '#24180f');
+      s.box = { x: s.x - s.w / 2, y: s.y - s.h / 2, w: s.w, h: s.h };
+      if (s.fit && !s.fit.dropped && s.fit.parts.seal) {
+        var sc = s.w / s.fit.sw, seal = s.fit.parts.seal;
+        s.seal = { x: s.box.x + (seal.x - s.fit.sx) * sc, y: s.box.y, w: seal.w * sc, h: s.h };
+        s.glyph = { x: s.box.x, y: s.box.y, w: Math.max(1, s.seal.x - s.box.x), h: s.h };
+      } else s.glyph = { x: s.box.x, y: s.box.y, w: s.w, h: s.h };
+    });
+    window.__bfNames = specs.map(function (s) {
+      return { id: s.id, box: s.box, glyph: s.glyph, seal: s.seal || null, lane: [s.laneL, s.laneR], head: s.head };
+    });
+    var zSize = Math.max(nameH, Math.min(42, H * 0.11));
+    var gapMid = (rects[1].x + rects[1].w + rects[2].x) / 2;
+    var zy = top + h * 0.22;
+    c.font = zSize + 'px "Ma Shan Zheng","KaiTi",serif';
+    var zw = c.measureText('战').width + 4;
+    if (!outside(gapMid, zy, zw, zSize)) brushName(c, '战', gapMid, zy, zSize, '#a83224');
+    else if (!outside(gapMid, top + nameH, zw, zSize)) brushName(c, '战', gapMid, top + nameH, zSize, '#a83224');
   }
 
   /* ---------- 结算 ---------- */
@@ -790,6 +1400,7 @@
   /* ---------- 交互 ---------- */
   function doSummon(force) { var F = G.F; if (!F || F.sumUsed || F.over || F.sm || G.introT > 0) return; if (force) { F.sumId = force; F.sumLv = 5; } BF.pressSummon(F); if (F.sumId) loadChar(F.sumId); F.ev.forEach(onEvent); F.ev.length = 0; }
   cv.addEventListener('pointerdown', function (e) {
+    if (G.mode === 'fight' && G.wuCut > 0 && !G.wuCutOff) { G.wuCutOff = true; G.wuCut = 0; return; }
     if (G.mode !== 'fight') return; var r = cv.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top, R = G.sumRect;
     if (R && x >= R.x && x <= R.x + R.w && y >= R.y && y <= R.y + R.h) doSummon();
   });
@@ -844,6 +1455,65 @@
     });
   }
 
+  function hudBands() {
+    var S = G.land ? G.H / 390 : G.W / 390, H = G.H, land = G.land;
+    var sealBottom = 8 * S + (land ? 26 : 22) * S + (land ? 29 : 22) * S + 4 + 30;
+    var timerBottom = 8 * S + 26 * S + (land ? 29 : 26) * S;
+    return {
+      topH: Math.ceil(Math.max(sealBottom, timerBottom)),
+      bottomTop: Math.floor(H - 62 * S)
+    };
+  }
+  function pixelSep() {
+    placeAll();
+    var fit = G._fit, feet = fit && fit.feet, fh = G.fh;
+    if (!feet) return null;
+    function stamp(id, clipName, frame) {
+      var Wld = XY.wildAnim, clip = Wld.clip(id, clipName), im = Wld.img(id, clipName), b = cellOpaque(id, clipName, frame);
+      if (!clip || !im || !b) return null;
+      var body = fh * (SZ[id] || 1) * 0.74 * b.fit, k = body / b.stand, face = id === 'niumo' ? -1 : 1;
+      var cv = document.createElement('canvas'); cv.width = G.W; cv.height = G.H;
+      var g = cv.getContext('2d', { willReadFrequently: true });
+      var cw = clip.cell[0], ch = clip.cell[1], col = frame % clip.cols, row = (frame / clip.cols) | 0;
+      g.save(); g.translate(feet[id].x, feet[id].y); g.scale(face, 1);
+      g.drawImage(im, col * cw, row * ch, cw, ch, -b.ax * k, -b.ay * k, cw * k, ch * k);
+      g.restore();
+      return g.getImageData(0, 0, G.W, G.H).data;
+    }
+    function hits(a, b) {
+      if (!a || !b) return -1;
+      var n = 0, i; for (i = 3; i < a.length; i += 4) if (a[i] >= 40 && b[i] >= 40) n++;
+      return n;
+    }
+    function pack(spec) {
+      var names = ['phyrex', 'wukong', 'niumo'], masks = {}, pairs = {}, i, j, total = 0, key, c;
+      for (i = 0; i < names.length; i++) masks[names[i]] = stamp(names[i], spec[names[i]].clip, spec[names[i]].frame);
+      for (i = 0; i < names.length; i++) for (j = i + 1; j < names.length; j++) {
+        key = names[i] + '-' + names[j]; c = hits(masks[names[i]], masks[names[j]]); pairs[key] = c; total += Math.max(0, c);
+      }
+      var band = hudBands(), hud = {}, topN = 0, botN = 0, minY = 1e9, maxY = -1, id, d, p, y, lo, hi, tn, bn, Wpx = G.W;
+      for (i = 0; i < names.length; i++) {
+        id = names[i]; d = masks[id]; tn = 0; bn = 0; lo = 1e9; hi = -1;
+        if (d) for (p = 3; p < d.length; p += 4) {
+          if (d[p] < 40) continue;
+          y = ((p / 4) / Wpx) | 0;
+          if (y < lo) lo = y; if (y > hi) hi = y;
+          if (y < band.topH) tn++;
+          if (y >= band.bottomTop) bn++;
+        }
+        hud[id] = { top: tn, bottom: bn, topGap: lo - band.topH, bottomGap: band.bottomTop - hi - 1 };
+        topN += tn; botN += bn;
+        if (lo < minY) minY = lo; if (hi > maxY) maxY = hi;
+      }
+      return { pairs: pairs, overlap: total, hud: { topH: band.topH, bottomTop: band.bottomTop, topPx: topN, bottomPx: botN, topGap: minY - band.topH, bottomGap: band.bottomTop - maxY - 1, pass: topN === 0 && botN === 0 && (minY - band.topH) >= 8 && (band.bottomTop - maxY - 1) >= 8, each: hud } };
+    }
+    return {
+      idle: pack({ phyrex: { clip: 'bossIdle', frame: 0 }, wukong: { clip: 'bossIdle', frame: 0 }, niumo: { clip: 'bossIdle', frame: 0 } }),
+      attack: pack({ phyrex: { clip: 'bossIdle', frame: 0 }, wukong: { clip: 'bossAttack', frame: hitFrame('wukong') }, niumo: { clip: 'bossAttack', frame: hitFrame('niumo') } }),
+      vis: fit.vis, fh: Math.round(fh), aabb: !fit.hit
+    };
+  }
+
   /* ---------- 供截图 / 测试脚本用 ---------- */
   window.BFUI = {
     G: G, ready: null,
@@ -852,7 +1522,7 @@
     advance: function (sec) { var n = Math.round(sec * 60); for (var i = 0; i < n; i++) stepSim(1 / 60); },
     until: function (fn, max) { var n = Math.round((max || 90) * 60); for (var i = 0; i < n; i++) { stepSim(1 / 60); if (fn(G.F)) return true; } return false; },
     loadChar: loadChar, loadMids: loadMids, loadAll: function () { return ensureLoaded().then(function () { return Promise.all(FIGS.map(loadChar).concat([loadBG('port')])); }).then(function () { return Promise.all(FIGS.map(loadMids)); }); }, loaded: function () { return Object.keys(CHP); },
-    summon: doSummon, avatarURL: avatarURL, draw: draw, drawPick: drawPick, showResult: showResult, stepSim: stepSim, SPR: SPR, SMETA: SMETA, AV: AV, drawSpr: drawSpr, heroPose: heroPose, hui: hui
+    summon: doSummon, avatarURL: avatarURL, draw: draw, drawPick: drawPick, showResult: showResult, stepSim: stepSim, SPR: SPR, SMETA: SMETA, AV: AV, drawSpr: drawSpr, heroPose: heroPose, hui: hui, bgSeam: bgSeam, pixelSep: pixelSep
   };
   /* ---------- 独立页面启动（接入 td-game 时设 window.XY_BF_MANUAL = true，由游戏调用 XY.bossfight.open） ---------- */
   if (!window.XY_BF_MANUAL) {
