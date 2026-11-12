@@ -24989,6 +24989,10 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
         var z2 = a.zoom || 1;
         XY.departDk = { top: Math.max(250, (a.lh || 0) - 250) * z2, bottom: Math.max(250, (a.lh || 0) - 250) * z2 + 56 * z2, right: sealR };
       }
+      if (tiny) {
+        c.save(); c.fillStyle = '#f7f1e4'; c.fillRect(0, stripY - 16, cw, ch - stripY + 18); c.restore();
+        out = carryStrip(c, st, a, tl, 12, stripY + labH, cw - 24, cols, cellW, cellH, d, rowGap);
+      }
       geo.go = { act: go.act, x: gx, y: gy, w: gw, h: gh }; geo.bottom = ch - 4;
     } else {
       // —— 竖屏：自下而上排：底栏小入口 → 头像 → 出发 → 反派 / 重开；自上而下：竖卡 → 说明；中间剩下的放立绘
