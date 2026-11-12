@@ -9577,7 +9577,7 @@ XY.TRAITS = {
       var wideN = Math.min(cssW, cssH) >= 700, narrowN = cssH < 420 || Math.min(cssW, cssH) < 520;
       var wantIh = 0;
       if (box.ih && wideN) wantIh = 20 / zN;
-      else if (box.ih && narrowN) wantIh = Math.max(box.ih, 12 / zN);
+      else if (box.ih && narrowN) wantIh = Math.min(box.ih, 16 / Math.max(0.5, zN));
       if (!(wideN || narrowN)) {
         var cap = Math.max(46, Math.min(box.w, nearD - 10));
         if (cap < box.w && box.w > 0) { var kk = cap / box.w; box.w *= kk; box.h *= kk; if (box.iw) box.iw *= kk; if (box.ih) box.ih *= kk; box.fs *= kk; }
@@ -10027,13 +10027,13 @@ XY.TRAITS = {
       var stripY = boss ? 116 : 80;                                  // 师父危险红条的位置：横幅要让开它，不能叠在一起
       var bwid = Math.min(W - 20, Math.max(260, b.text.length * 24 + 60)), by2 = G.breach && !tg.down ? stripY + 42 : (boss ? 124 : 96);
       ui.banner = { x: W / 2 - bwid / 2, y: by2, w: bwid, h: 46 };
-      panel(c, W / 2 - bwid / 2, by2, bwid, 46, 14, 'rgba(255,248,225,0.95)', '#d9a21a');
+      panel(c, W / 2 - bwid / 2, by2, bwid, 46, 14, 'rgba(246,239,226,0.95)', '#5c4a38');
       txt(c, b.text, W / 2, by2 + 24, b.text.length > 22 ? 20 : 24, '#b8300f', 'center', true);
       c.globalAlpha = 1;
     }
     if (G.toast) {
       var tw = Math.max(240, G.toast.text.length * 15 + 40), ty = H - 182;
-      panel(c, W / 2 - tw / 2, ty, tw, 34, 10, 'rgba(255,255,255,0.95)', '#e0a415');
+      panel(c, W / 2 - tw / 2, ty, tw, 34, 10, 'rgba(246,239,226,0.95)', '#5c4a38');
       txt(c, G.toast.text, W / 2, ty + 18, 15, T.ink, 'center', true);
     }
 
@@ -11166,7 +11166,7 @@ XY.TRAITS = {
     var F = XY.waveForecast(G); if (!F) return y;
     var T = R(), rt = app.rt, w = Math.min(W - 20, 470), x = W / 2 - w / 2, W0 = F.now ? F.now.w : (F.next ? F.next.w : null), h = W0 ? 48 : 26;
     var near = F.next && F.next.left <= 8, hot = !!F.now || near, p = 0.5 + 0.5 * Math.sin(rt * 9);
-    var bd = F.now ? '#d62828' : (near ? '#e08a0b' : '#c9a24a');
+    var bd = F.now ? '#a42d19' : '#5c4a38';
     c.globalAlpha = 0.96; T.rrect(c, x, y, w, h, 11); c.fillStyle = F.now ? 'rgba(255,238,232,0.97)' : (near ? 'rgba(255,246,226,0.97)' : 'rgba(255,255,255,0.94)'); c.fill();
     c.lineWidth = hot ? 2.5 + p : 1.8; c.strokeStyle = bd; c.stroke(); c.globalAlpha = 1;
     var segT = F.seg ? '夜潮 ' + (F.seg.i + 1) + '/3 · ' + SEGN[F.seg.ph] + ' ' + XY.fmtTime(Math.ceil(F.seg.left)) : '行军 · 前方有妖群';
@@ -24827,7 +24827,7 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
     var items = DP.items(), cur0 = sel(a, items), narrow = cw < 520, villainOn = XY.chain09 && XY.chain09.visible('villain');
     var s = land ? Math.max(0.85, Math.min(1.4, Math.min(cw / 844, ch / 390))) : Math.max(0.88, Math.min(1.4, cw / 390));
     function sbtn(x, y, w, h, label, act, o) { st.btn(x, y, w, h, label, act, o); geo.btns.push({ act: act, x: x, y: y, w: w, h: Math.max(44, h) }); }
-    function weak(x, y, w, label, act) { sbtn(x, y, w, 44, label, act, { sz: 14, rgb: '58,50,38', vh: 28 }); }
+    function weak(x, y, w, label, act) { VU.txt(c, label, x + w / 2, y + 22, 16, INK, 'center', true, w - 4); if (VU.brush) VU.brush(c, x + 10, y + 36, Math.max(24, w - 20), 2.2, 0.4, label.length); st.hit(x, y, w, 44, act); }
 
     var top = 56, tl, nt, d, nameH, cellW, cellH, cols, rows, out, go, gx, gy, gw, gh, cr;
     if (land) {
@@ -25336,7 +25336,7 @@ var ab=/[ab]$/.test(n.id)&&n.tier>=3?(/a$/.test(n.id)?'A路 · ':'B路 · '):'';
 var effect=lv?X.nodeText(n,lv):n.desc?n.desc[0]:n.eff?n.eff(1):'',sz=small?16:18,lh=small?22:26,textKey='skillText'+tab+'-'+sub+'-'+n.id,allLines=[],text='',units=String(effect).match(/[+-]?\d[\d,]*(?:\.\d+)?(?:%|\/\d+|秒|级|点|倍)?|[A-Za-z][A-Za-z0-9_.-]*|[\s\S]/g)||[];c.font=sz+'px '+X.C.FONT;units.forEach(function(ch){if(c.measureText(text+ch).width>dw&&text){allLines.push(text);text=ch;}else text+=ch;});if(text)allLines.push(text);var per=port?8:small?4:6,pages=Math.max(1,Math.ceil(allLines.length/per)),tp=(P.folio[textKey]||0)%pages,shown=allLines.slice(tp*per,tp*per+per);shown.forEach(function(t,i){K.t(t,dx,y+64+i*lh,sz,T.ink,'left',false);});var sy=y+64+shown.length*lh;if(pages>1)K.btn(dx+dw-92,y+8,92,40,'说明 '+(tp+1)+'/'+pages,'folio',{key:textKey,i:(tp+1)%pages},{size:13,minS:12});var reason=st.st==='max'?'已圆满 · 等级 '+lv+'/'+max:can?'费用 '+st.cost+' 点 · 等级 '+lv+'/'+max:st.reason||(st.st==='nopts'?'还差 '+(st.cost-G.points)+' 点 · 要 '+st.cost+' 点':''),by=Math.min(b.y+b.h-48,Math.max(b.y+(port?250:small?120:175),sy+16)),bw=Math.min(168,dw*.48);
 K.lines(reason,dx,by+18,dw-bw-12,port?15:16,20,can?'#795714':T.inkSoft,3,true);K.btn(dx+dw-bw,by,bw,48,lv>=max?'已圆满':'点墨修习','node',{hero:hi,id:n.id},{primary:can,size:16});
 var ny=b.y+b.h+1,step=b.w/Math.max(1,ids.length);ids.forEach(function(nd,i){var letter=/[ab]$/.test(nd.id)&&nd.tier>=3?(/a$/.test(nd.id)?'A':'B'):'';K.btn(b.x+i*step,ny,step-2,44,(nd.tier||i+1)+letter,'folio',{key:leafKey,i:i},{on:i===sel,size:12,minS:10});});a.__inkSkillSpec={key:leafKey,n:ids.length,hi:hi,id:n.id,tab:tab,sub:sub,textKey:textKey,textPages:pages};};
-I.tutorialCard=function(c,G,a,tt,st,L){var K=P.begin(c,a),z=a.zoom,s=K.s||1,x=L.x*z/s,y=L.y*z/s,w=L.w*z/s,h=L.h*z/s,wait=!!st.wait,VU=X.villainUI;c.save();c.fillStyle='#f6edd8';c.beginPath();c.moveTo(x+3,y+1);c.lineTo(x+w-4,y);c.lineTo(x+w-1,y+h-3);c.lineTo(x+2,y+h);c.closePath();c.fill();c.strokeStyle='#2a2118';c.lineWidth=1.6;c.stroke();c.restore();if(VU&&VU.drawSeal)VU.drawSeal(c,x+6,y+6,32,32,'引',{sz:14,stack:false,rot:-0.05});c.save();c.font='18px "Ma Shan Zheng","KaiTi",serif';c.fillStyle='#3a2416';c.textAlign='left';c.textBaseline='middle';var title=String(st.title||'');if(c.measureText(title).width>w-52)c.font=Math.max(13,Math.floor(18*(w-52)/c.measureText(title).width))+'px "Ma Shan Zheng","KaiTi",serif';c.fillText(title,x+42,y+22);c.restore();L.lines.forEach(function(v,i){K.t(v,x+12,y+46+i*16,12,T.ink,'left',false);});K.hit(x,y,w,h,'ui');if(VU&&VU.drawBrush)VU.drawBrush(c,x+8,y+h-46,w*0.38,40,'跳过',{sz:13,vh:26});else K.btn(x+8,y+h-46,w*0.38,40,'跳过教程','tutSkip',null,{size:13});K.hit(x+8,y+h-46,w*0.38,40,'tutSkip');if(VU&&VU.drawSeal)VU.drawSeal(c,x+w*0.46,y+h-46,w*0.5,40,st.last?'开始':wait?'继续':'下一步',{style:wait?'line':'solid',sz:14,stack:false});else K.btn(x+w*0.46,y+h-46,w*0.5,40,'下一步','tutNext',null,{primary:!wait,size:14});K.hit(x+w*0.46,y+h-46,w*0.5,40,'tutNext');P.end(c);};
+I.tutorialCard=function(c,G,a,tt,st,L){var K=P.begin(c,a),z=a.zoom,s=K.s||1,x=L.x*z/s,y=L.y*z/s,w=L.w*z/s,h=L.h*z/s,wait=!!st.wait,VU=X.villainUI;c.save();c.fillStyle='#f6edd8';c.beginPath();c.moveTo(x+3,y+1);c.lineTo(x+w-4,y);c.lineTo(x+w-1,y+h-3);c.lineTo(x+2,y+h);c.closePath();c.fill();c.restore();if(VU&&VU.drawSeal)VU.drawSeal(c,x+6,y+6,32,32,'引',{sz:14,stack:false,rot:-0.05});c.save();c.font='18px "Ma Shan Zheng","KaiTi",serif';c.fillStyle='#3a2416';c.textAlign='left';c.textBaseline='middle';var title=String(st.title||'');if(c.measureText(title).width>w-52)c.font=Math.max(13,Math.floor(18*(w-52)/c.measureText(title).width))+'px "Ma Shan Zheng","KaiTi",serif';c.fillText(title,x+42,y+22);c.restore();L.lines.forEach(function(v,i){K.t(v,x+12,y+46+i*16,12,T.ink,'left',false);});K.hit(x,y,w,h,'ui');if(VU&&VU.drawBrush)VU.drawBrush(c,x+8,y+h-46,w*0.38,40,'跳过',{sz:13,vh:26});else K.btn(x+8,y+h-46,w*0.38,40,'跳过教程','tutSkip',null,{size:13});K.hit(x+8,y+h-46,w*0.38,40,'tutSkip');if(VU&&VU.drawSeal)VU.drawSeal(c,x+w*0.46,y+h-46,w*0.5,40,st.last?'开始':wait?'继续':'下一步',{style:wait?'line':'solid',sz:14,stack:false});else K.btn(x+w*0.46,y+h-46,w*0.5,40,'下一步','tutNext',null,{primary:!wait,size:14});K.hit(x+w*0.46,y+h-46,w*0.5,40,'tutNext');P.end(c);};
 I.tip=function(c,a,tip){if(!tip)return;var K=P.begin(c,a),sz=K.W<900?10.5:12,w=Math.min(320,K.W-24),lines=[];c.font=sz+'px '+X.C.FONT;(tip.lines||[tip.text]).forEach(function(txt){var v='';String(txt).split('').forEach(function(ch){if(c.measureText(v+ch).width>w-28&&v){lines.push(v);v=ch;}else v+=ch;});if(v)lines.push(v);});var s=K.s||1,tx=tip.x*a.zoom/s,ty=tip.y*a.zoom/s,h=18+lines.length*17,x=Math.max(8,Math.min(K.W-w-8,tx-w/2)),y=Math.max(8,Math.min(K.H-h-8,tip.below?ty:ty-h));wash(c,x,y,w,h);K.ink(x+10,y+7,Math.min(46,w-20),.5,91);lines.forEach(function(v,i){K.t(v,x+13,y+18+i*17,sz,i?T.inkSoft:T.ink,'left',i===0);});P.end(c);};
 I.vendor=function(c,G,a){X.ui.hits.length=0;var K=P.begin(c,a),W=K.W,H=K.H,port=K.port,V=X.vendor,items=V.stock(G),sel=(P.folio.vendorItem||0)%items.length,it=items[sel],d=V.DEFS[it.id],why=V.why(G,it),dx=port?24:W*.43,dy=port?H*.44:W>=900?H*.24:82,dw=port?W-48:W-dx-26;P.paper(c,W,H);K.t('货郎的担子',20,32,24,T.ink,'left',true);K.btn(W-178,9,164,44,'收摊（N / Esc）','vendorClose',null,{size:13});K.t('金币 '+Math.floor(G.coins),22,65,14,'#8a5a19','left',true);P.object(c,d.name,port?W*.5:W*.23,port?H*.26:H*.47,port?150:Math.min(W>=900?280:184,H*.49),it.sold);K.tf(d.name,dx,dy,dw,27,T.ink,'left',true,20);K.lines(d.d,dx,dy+37,dw,13,20,T.inkSoft,port?5:3,false);var by=Math.min(H-183,dy+(port?119:92));K.btn(dx,by,Math.min(196,dw),44,it.sold?'此处已买':X.C.VENDOR.price[it.id]+' 金币 · 换取','vendorBuy',{i:sel},{primary:!why,size:15});K.tf(why||'每件每个休息点限买一次',dx,by+61,dw,11,why?'#a42d19':T.inkSoft,'left',true,10);if(G.vendorMsg&&G.vendorMsg.t>0){K.tf(G.vendorMsg.text,dx,by+81,dw,11,G.vendorMsg.bad?'#a42d19':'#37643d','left',true,10);G.vendorMsg.t-=1/60;}var step=(W-32)/items.length;items.forEach(function(q,i){var cx=16+step*(i+.5),yy=H-94+[3,0,7,2][i];P.object(c,V.DEFS[q.id].name,cx,yy+20,45,q.sold);K.tf(V.DEFS[q.id].name,cx,yy+56,step-8,11,i===sel?'#a42d19':T.ink,'center',true,10);if(i===sel)K.ink(cx-18,yy+68,36,.6,i+7);K.hit(cx-step/2+2,H-101,step-4,94,'folio',{key:'vendorItem',i:i});});P.end(c);};
 I.skillKey=function(G,a,k){var s=a.__inkSkillSpec;if(!s||s.tab!==a.skillTab||s.sub!==((a._pvSub||{})[a.skillTab]||0))return false;if(k==='ArrowLeft'||k==='ArrowRight'){P.folio[s.key]=((P.folio[s.key]||0)+s.n+(k==='ArrowRight'?1:-1))%s.n;return true;}if(k==='PageDown'||k==='PageUp'){P.folio[s.textKey]=((P.folio[s.textKey]||0)+s.textPages+(k==='PageDown'?1:-1))%s.textPages;return true;}if(k==='Enter'){if(G.tut)return true;var r=X.learn(G,s.hi,s.id);a.skillMsg={text:r.reason,bad:!r.ok,until:a.rt+2.2};return true;}return false;};
@@ -25469,7 +25469,6 @@ I.vendorKey=function(G,a,k){var n=X.vendor.stock(G).length;if(k==='ArrowLeft'||k
     var sealX=L.skills.x+L.skills.w-48, sealY=L.xp.y-16;
     c.save(); c.fillStyle='#a83224'; c.beginPath(); c.moveTo(sealX+3,sealY+2); c.lineTo(sealX+42,sealY+4); c.lineTo(sealX+38,sealY+28); c.lineTo(sealX+1,sealY+26); c.closePath(); c.fill();
     c.fillStyle='#fff6e8'; c.font='15px "Ma Shan Zheng","KaiTi",serif'; c.textAlign='center'; c.textBaseline='middle'; c.fillText('修行', sealX+21, sealY+15); c.restore();
-    if(!L.port && !a.touchUI){ c.save(); c.font='11px "Ma Shan Zheng","KaiTi",serif'; c.fillStyle='rgba(90,70,48,0.62)'; c.textAlign='right'; c.textBaseline='middle'; c.fillText('Tab', sealX-2, sealY+15); c.restore(); }
     if(G.points>0){c.fillStyle=RED;c.beginPath();c.arc(L.xp.x-4,L.xp.y,2.5,0,PI*2);c.fill();}
     rec(a,'skillBtn',{x:L.skills.x,y:L.xp.y-9,w:L.skills.w,h:18});
     hit(K,L.skills,'skills',{label:'修行菜单 · 技能点 '+G.points});
@@ -25553,7 +25552,7 @@ I.vendorKey=function(G,a,k){var n=X.vendor.stock(G).length;if(k==='ArrowLeft'||k
     K.t(busy?Math.max(0,Math.ceil(s.max-s.t))+'秒':ready?'就绪':pool.length?Math.ceil(s.cd)+'秒':'无人',b.cx,b.cy+(L.small?12:15),L.small?10.5:13,'#fff0d5','center',false);
     if(busy||s.cd>0&&pool.length){var f=busy?1-s.t/s.max:1-s.cd/X.guest.cdMax(G);c.save();c.strokeStyle='#9b3a25';c.lineWidth=2;c.beginPath();c.arc(b.cx,b.cy,b.r+2,-PI/2,-PI/2+PI*2*X.clamp(f,0,1));c.stroke();c.restore();}
     var rr=b.r+4,box={x:b.cx-rr,y:b.cy-rr,w:rr*2,h:rr*2};hit(K,box,'guest',{label:'召唤特殊人物 · '+(busy?'在场':ready?'就绪':Math.ceil(s.cd)+'秒冷却')});rec(a,'sky',box);
-    tooltip(a,K,box,['召唤特殊人物 · G','随机召来 1 位特殊人物，立刻放大招','停留 '+X.C.GUEST.STAY+' 秒 · 冷却 '+X.guest.cdMax(G)+' 秒']);P.end(c);
+    tooltip(a,K,box,['召唤特殊人物','随机召来一位特殊人物，立刻放大招','停留 '+X.C.GUEST.STAY+' 秒 · 冷却 '+X.guest.cdMax(G)+' 秒']);P.end(c);
   };
   I.vendor=function(c,G,a){
     if(G.mode!=='play'||X.vendor.closedReason(G))return;
@@ -26784,19 +26783,20 @@ window.XY_LAZY_CHUNKS = [{"id": "ui", "src": "chunks/ui-008ff700a700.js", "bytes
     if (!session) {
       c.save();
       c.translate(x + w / 2, y + h / 2);
-      c.fillStyle = '#2b1c08';
+      c.fillStyle = '#f6efe2';
       c.beginPath();
       c.moveTo(-w / 2 + 4, -h * 0.34);
       c.quadraticCurveTo(0, -h * 0.5, w / 2 - 3, -h * 0.32);
       c.lineTo(w / 2 - 6, h * 0.34);
       c.quadraticCurveTo(0, h * 0.48, -w / 2 + 3, h * 0.32);
       c.closePath(); c.fill();
-      c.fillStyle = '#f6efe2';
+      c.strokeStyle = 'rgba(90,64,36,0.45)'; c.lineWidth = 1.2; c.stroke();
+      c.fillStyle = '#24180f';
       var sz = w < 170 ? 15 : 18;
       c.font = sz + 'px "Ma Shan Zheng","KaiTi",serif';
       c.textAlign = 'center'; c.textBaseline = 'middle';
-      while (sz > 12 && c.measureText('用 Google 登录').width > w - 16) { sz -= 1; c.font = sz + 'px "Ma Shan Zheng","KaiTi",serif'; }
-      c.fillText('用 Google 登录', 0, 1);
+      while (sz > 12 && c.measureText('登录云端').width > w - 16) { sz -= 1; c.font = sz + 'px "Ma Shan Zheng","KaiTi",serif'; }
+      c.fillText('登录云端', 0, 1);
       c.restore();
       st.hit(x, y, w, h, 'cloudLogin');
       return;

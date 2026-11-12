@@ -629,10 +629,7 @@
   function paintButton(c, app) {
     var b = buttonBox(app);
     boxes.event = b;
-    brush(c, '活动', b.x + 34, b.y + b.h * 0.55, 22, '#24180f', 'left');
-    c.save(); c.fillStyle = '#a83224'; c.fillRect(b.x + 4, b.y + 8, 24, 24);
-    c.fillStyle = '#f6efe2'; c.font = '14px "Ma Shan Zheng","KaiTi",serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
-    c.fillText('印', b.x + 16, b.y + 21); c.restore();
+    brush(c, '活动', b.x + 8, b.y + b.h * 0.55, 22, '#24180f', 'left');
     if (!API.gachaClaimed(XY.save.data)) dot(c, b.x + b.w - 8, b.y + 8);
     hit(b.x, b.y, b.w, b.h, 'dkOpen');
     if (app.screen === 'levels') {
@@ -1316,8 +1313,26 @@
   function paintForm(c, app, run) {
     var W = app.lw, H = app.lh, port = H > W;
     if (videoFrame()) {
+      var bw = Math.min(420, W - 40), bh = Math.min(200, H - 80), x = (W - bw) / 2, y = (H - bh) / 2;
       c.save();
-      paintFormVideo(c, W, H);
+      c.fillStyle = 'rgba(246,239,226,0.42)';
+      c.fillRect(0, 0, W, H);
+      c.fillStyle = '#f6efe2';
+      c.beginPath();
+      c.moveTo(x + 12, y + 4);
+      c.quadraticCurveTo(x + bw * 0.5, y - 6, x + bw - 10, y + 8);
+      c.lineTo(x + bw - 4, y + bh - 10);
+      c.quadraticCurveTo(x + bw * 0.4, y + bh + 6, x + 8, y + bh - 6);
+      c.closePath();
+      c.fill();
+      c.fillStyle = '#a42d19';
+      c.font = '32px "Ma Shan Zheng","KaiTi",serif';
+      c.textAlign = 'center';
+      c.textBaseline = 'middle';
+      c.fillText('猫叔登场', W / 2, y + bh * 0.38);
+      c.fillStyle = '#24180f';
+      c.font = '18px "Ma Shan Zheng","KaiTi",serif';
+      c.fillText('点一下继续', W / 2, y + bh * 0.68);
       c.restore();
       hit(0, 0, W, H, 'dkSkip');
       return;
