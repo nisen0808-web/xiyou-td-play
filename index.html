@@ -24118,41 +24118,140 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
       c.fill();
       c.restore();
     }
-    /* 左侧竹林：秆、节、叶都画出纸边，旁边用墨团洇开，不铺方板。 */
     function grove(c, x, y, bw, bh) {
-      var IP = XY.INKP, scale = Math.max(0.7, Math.min(1.3, bw / 180));
-      if (IP) {
-        IP.blot(c, x + bw * 0.16, y + bh * 0.8, bw * 0.58, '28,24,18', 0.5, 2, 14, 0.5);
-        IP.blot(c, x + bw * 0.02, y + bh * 0.46, bw * 0.36, '34,28,22', 0.38, 8, 8, 0.66);
-        IP.blot(c, x + bw * 0.48, y + bh * 0.18, bw * 0.32, '26,22,18', 0.3, 5, 7, 0.8);
-        IP.stroke(c, x + bw * 0.08, y + bh * 0.28, x + bw * 1.05, y + bh * 0.2, 6, '30,26,20', 0.32, 21, 0.06);
-        IP.stroke(c, x + bw * 0.04, y + bh * 0.72, x + bw * 0.85, y + bh * 0.8, 8, '24,20,16', 0.36, 24, -0.04);
-        IP.dots(c, x + bw * 0.28, y + bh * 0.4, bw * 0.08, bw * 1.35, 20, 1.4, 3.6, '24,20,16', 0.55, 16, 0.72);
-        IP.splash(c, x + bw * 0.18, y + bh * 0.66, bw * 0.04, bw * 0.85, 7, 4.5 * scale, null, 0.38, 19, 0.75);
-      }
-      if (VU.washE) VU.washE(c, x + bw * 0.35, y + bh * 0.78, bw * 0.42, bw * 0.28, '28,24,18', 0.16);
-      var stalks = [[0.05, 0.0, 1, 8.2], [0.2, 0.02, 0.94, 10], [0.36, 0.08, 0.8, 6.4], [0.52, 0.0, 1, 9], [0.7, 0.05, 0.86, 7.2], [0.86, 0.1, 0.74, 6]];
-      var rgb = '32,54,32';
-      stalks.forEach(function (s, i) {
-        var x0 = x + s[0] * bw, y0 = y + s[1] * bh, y1 = y + bh * s[2] + bh * 0.02;
-        var lean = (i % 2 ? 0.07 : -0.06) * bw;
-        var thick = s[3] * scale;
-        if (IP) IP.stroke(c, x0 + lean, y1, x0, y0, thick, rgb, 0.88, 30 + i * 3, (i - 2.5) * 0.035);
-        var j, t, jx, jy, ang, len;
-        for (j = 1; j <= 5; j++) {
-          t = j / 6;
-          jx = x0 + lean * (1 - t);
-          jy = y1 + (y0 - y1) * t;
-          if (IP) IP.stroke(c, jx - thick, jy, jx + thick * 1.05, jy + 1.2, 1.5, '18,34,20', 0.85, 50 + i * 7 + j, 0.01);
-          if (j >= 2) {
-            ang = (i % 2 ? 0.55 : -0.5) + (j - 3) * 0.18;
-            len = Math.min(bw, bh) * (0.075 + (j % 3) * 0.012);
-            leaf(c, jx, jy, len, ang, rgb, 0.8);
-            leaf(c, jx, jy, len * 0.82, ang + 0.75, '28,50,30', 0.72);
-            leaf(c, jx, jy, len * 0.7, ang - 0.85, '24,42,28', 0.66);
+      var file = 'assets/art/bg-stage1/grove-strip.webp';
+      if (!XY._groveIm) { XY._groveIm = new Image(); XY._groveIm.src = file; }
+      var im = XY._groveIm;
+      if (!im.naturalWidth || bw < 40 || bh < 40) return;
+      var tr = c.getTransform ? c.getTransform() : null;
+      var scale = Math.max(1, Math.abs(tr && tr.a ? tr.a : 1));
+      var key = (bw | 0) + 'x' + (bh | 0) + '@' + Math.round(scale * 100);
+      if (XY._groveKey !== key) {
+        var W = Math.max(2, Math.ceil(bw * scale)), H = Math.max(2, Math.ceil(bh * scale));
+        var cv = document.createElement('canvas');
+        cv.width = W; cv.height = H;
+        var g = cv.getContext('2d', { willReadFrequently: true });
+        g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high';
+        var sw = im.naturalWidth, sh = im.naturalHeight;
+        var cover = Math.max(W / sw, H / sh);
+        var vw = Math.min(sw, W / cover), vh = Math.min(sh, H / cover);
+        var sx = Math.max(0, (sw - vw) * 0.45);
+        var sy = Math.max(0, (sh - vh) * 0.5);
+        g.drawImage(im, sx, sy, vw, vh, 0, 0, W, H);
+        var img = g.getImageData(0, 0, W, H), p = img.data;
+        var fadeMin = 80 * scale;
+        function wob(p0, seed) {
+          return Math.sin(p0 * 0.015 + seed) * 0.50
+            + Math.sin(p0 * 0.006 + seed * 1.7) * 0.32
+            + Math.sin(p0 * 0.037 + seed * 0.4) * 0.22;
+        }
+        function smooth(t) {
+          if (t <= 0) return 0;
+          if (t >= 1) return 1;
+          return t * t * (3 - 2 * t);
+        }
+        var fadeL = new Float32Array(H), fadeR = new Float32Array(H);
+        var fadeT = new Float32Array(W), fadeB = new Float32Array(W);
+        var yi, xi, i, m;
+        for (yi = 0; yi < H; yi++) {
+          fadeL[yi] = fadeMin * (1 + 0.65 * (0.5 + 0.5 * wob(yi, 1.1)));
+          fadeR[yi] = fadeMin * (1 + 0.9 * (0.5 + 0.5 * wob(yi, 2.4)));
+        }
+        for (xi = 0; xi < W; xi++) {
+          fadeT[xi] = fadeMin * (1 + 0.55 * (0.5 + 0.5 * wob(xi, 3.2)));
+          fadeB[xi] = fadeMin * (1.05 + 0.75 * (0.5 + 0.5 * wob(xi, 4.1)));
+        }
+        for (yi = 0; yi < H; yi++) {
+          for (xi = 0; xi < W; xi++) {
+            m = smooth(xi / fadeL[yi]);
+            var dR = smooth((W - 1 - xi) / fadeR[yi]);
+            var dT = smooth(yi / fadeT[xi]);
+            var dB = smooth((H - 1 - yi) / fadeB[xi]);
+            if (dR < m) m = dR;
+            if (dT < m) m = dT;
+            if (dB < m) m = dB;
+            i = (yi * W + xi) * 4;
+            p[i + 3] = p[i + 3] * m;
           }
         }
-      });
+        g.putImageData(img, 0, 0);
+        function lumAt(x0, y0) {
+          var k = (y0 * W + x0) * 4, al = img.data[k + 3] / 255;
+          return 0.2126 * (img.data[k] * al + 243 * (1 - al))
+            + 0.7152 * (img.data[k + 1] * al + 234 * (1 - al))
+            + 0.0722 * (img.data[k + 2] * al + 215 * (1 - al));
+        }
+        function edgeMax(horiz, at) {
+          var n = horiz ? W : H, prev = horiz ? lumAt(0, at) : lumAt(at, 0), t, cur, max = 0, jump;
+          var win = Math.max(1, Math.round(40 * scale));
+          var buf = [];
+          for (t = 1; t < n; t++) {
+            cur = horiz ? lumAt(t, at) : lumAt(at, t);
+            jump = Math.abs(cur - prev);
+            buf.push(jump);
+            if (buf.length > win) buf.shift();
+            if (buf.length >= Math.min(win, n - 1)) {
+              var local = 0, j;
+              for (j = 0; j < buf.length; j++) if (buf[j] > local) local = buf[j];
+              if (local > max) max = local;
+            }
+            prev = cur;
+          }
+          return Math.round(max * 100) / 100;
+        }
+        function waveSpan(side) {
+          var vals = [], t, k, found, from, to, pos;
+          if (side === 'right' || side === 'left') {
+            from = Math.round(H * 0.2); to = Math.round(H * 0.8);
+            for (t = from; t < to; t += Math.max(1, Math.round(scale))) {
+              found = -1;
+              if (side === 'right') {
+                for (k = W - 1; k >= 0; k--) if (img.data[(t * W + k) * 4 + 3] > 48) { found = (W - 1 - k) / scale; break; }
+              } else {
+                for (k = 0; k < W; k++) if (img.data[(t * W + k) * 4 + 3] > 48) { found = k / scale; break; }
+              }
+              if (found >= 0) vals.push(found);
+            }
+          } else {
+            from = Math.round(W * 0.2); to = Math.round(W * 0.8);
+            for (t = from; t < to; t += Math.max(1, Math.round(scale))) {
+              found = -1;
+              if (side === 'bottom') {
+                for (k = H - 1; k >= 0; k--) if (img.data[(k * W + t) * 4 + 3] > 48) { found = (H - 1 - k) / scale; break; }
+              } else {
+                for (k = 0; k < H; k++) if (img.data[(k * W + t) * 4 + 3] > 48) { found = k / scale; break; }
+              }
+              if (found >= 0) vals.push(found);
+            }
+          }
+          if (!vals.length) return 0;
+          var lo = vals[0], hi = vals[0], vi;
+          for (vi = 1; vi < vals.length; vi++) { if (vals[vi] < lo) lo = vals[vi]; if (vals[vi] > hi) hi = vals[vi]; }
+          return Math.round(hi - lo);
+        }
+        XY._groveSeam = {
+          top: edgeMax(true, 0),
+          bottom: edgeMax(true, H - 1),
+          left: edgeMax(false, 0),
+          right: edgeMax(false, W - 1),
+          fadePx: 80,
+          waveRight: waveSpan('right'),
+          waveBottom: waveSpan('bottom'),
+          waveTop: waveSpan('top'),
+          waveLeft: waveSpan('left')
+        };
+        var s = XY._groveSeam;
+        s.max = Math.max(s.top, s.bottom, s.left, s.right);
+        s.pass = s.max <= 12;
+        XY._groveStrip = cv;
+        XY._groveKey = key;
+      }
+      c.save();
+      c.imageSmoothingEnabled = true;
+      c.imageSmoothingQuality = 'high';
+      c.drawImage(XY._groveStrip, x, y, bw, bh);
+      c.restore();
+      XY._groveBox = { x: x, y: y, w: bw, h: bh };
     }
     function crowdInk(cx, cy, rad) {
       var IP = XY.INKP;
@@ -24481,8 +24580,7 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
     var scroll = { x: cw * 0.02, y: ch * 0.03, w: cw * 0.96, h: ch * 0.94 };
     if (stage && elapsed < XY.gacha10.timing.intro) {
       drawScroll(c, scroll.x, scroll.y, scroll.w, scroll.h, !land);
-      if (land) grove(c, -cw * 0.01, -ch * 0.04, cw * 0.22, ch * 1.06);
-      else grove(c, -cw * 0.02, -ch * 0.02, cw * 0.36, ch * 0.20);
+      grove(c, scroll.x, scroll.y, scroll.w * (land ? 0.34 : 0.50), scroll.h);
       var titleX = scroll.x + scroll.w * (land ? 0.36 : 0.62);
       var titleY = scroll.y + scroll.h * (land ? 0.28 : 0.12);
       var titleS = land ? Math.min(72, scroll.h * 0.14) : Math.min(36, scroll.w * 0.1);
