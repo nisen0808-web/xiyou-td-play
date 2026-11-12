@@ -2213,13 +2213,33 @@
     }
   }
 
-  function act(h) {
+  function act(h, p) {
     if (!h || !h.act || h.act.indexOf('dk') !== 0) return false;
     var app = appOf();
     if (!app) return false;
     if (h.act === 'dkNoop') return true;
     if (h.act === 'dkOpen') { app.dkOpen = true; app.dkGear = false; return true; }
-    if (h.act === 'dkClose') { app.dkOpen = false; app.dkClosed = true; rememberClosed(); return true; }
+    if (h.act === 'dkClose') {
+      app.dkOpen = false;
+      app.dkClosed = true;
+      rememberClosed();
+      if (XY.audio && XY.audio.init) XY.audio.init();
+      if (p && XY.ui && XY.ui.hits) {
+        var hits = XY.ui.hits, i, u, under = null;
+        for (i = hits.length - 1; i >= 0; i--) {
+          u = hits[i];
+          if (!u || u.act === 'dkClose' || u.act === 'dkOpen' || u.act === 'dkNoop') continue;
+          if (p.x < u.x || p.x > u.x + u.w || p.y < u.y || p.y > u.y + u.h) continue;
+          if (u.act === 'menuLevels' || u.act === 'start') { under = u; break; }
+        }
+        if (under) {
+          var go = function () { app.screen = 'levels'; };
+          if (XY.lazy && XY.lazy.on && XY.lazy.enter) XY.lazy.enter(go);
+          else go();
+        }
+      }
+      return true;
+    }
     if (h.act === 'dkGear') { app.dkGear = true; app.dkOpen = false; return true; }
     if (h.act === 'dkGearClose') { app.dkGear = false; return true; }
     if (h.act === 'dkHero') { app.dkHero = h.id; return true; }
@@ -2306,7 +2326,7 @@
   if (XY.hubUI && XY.hubUI.act) {
     var oldAct = XY.hubUI.act;
     XY.hubUI.act = function (h, p, a) {
-      if (act(h)) return true;
+      if (act(h, p)) return true;
       return oldAct(h, p, a);
     };
   }
