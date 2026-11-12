@@ -19829,7 +19829,7 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
         var sold = st.sold[k], r = { sold: sold, kind: sl.kind, price: sl.price, btn: { label: sold ? '已买走' : (sl.kind === 'reroll' ? '刷新 ' : '买 ') + sl.price + (can(sl.price) ? '' : ' 不够'), act: sold ? null : 'shopBuy', ex: { slot: k }, primary: !sold && can(sl.price), off: sold || !can(sl.price) } };
         if (sl.kind === 'sp') { r.spId=sl.id; var d = XY.SP_BY[sl.id], lv = S.spLevel(sl.id), nx = XY.spNext(sl.id); r.title = '角色卡 · ' + d.name; r.sub = d.role; r.l2 = lv ? '已有 ' + S.spCards(sl.id) + ' 张 · Lv' + lv + (nx ? '（再 ' + (nx.need - nx.have) + ' 张升级）' : '（满级）') : '已有 ' + S.spCards(sl.id) + '/' + XY.SP_LV_AT[0] + ' 张'; r.icon = function (x, y, s) { var hd=XY.specialDef(sl.id,Math.max(1,lv)); XY.hud2.face(c,{id:sl.id,def:hd},x+s/2,y+s/2,s*.44,app.rt); }; r.col = d.frame; }
         else if (sl.kind === 'card') { var cd = XY.CARD_BY[sl.id], Rr = XY.RARITY[cd.r]; r.card = cd; r.inkName = cd.name; r.title = '法宝 · ' + cd.name; r.sub = Rr.name + ' · ' + XY.CARD_SETS[cd.set].name + '套'; r.l2 = XY.cardFxText(cd, 1); r.icon = function (x, y, s) { R.drawCardMini(c, cd, x + s / 2, y + s / 2, s * 0.7, s, 1); }; r.col = Rr.color; }
-        else if (sl.kind === 'shard') { r.title = '皮肤碎片 ' + sl.n + ' 件'; r.sub = '集齐解锁皮肤'; r.l2 = '现有 ' + S.data.shards + ' 枚'; r.icon = function (x, y, s) { c.strokeStyle = '#3a3226'; c.fillStyle = 'rgba(58,50,38,0.12)'; c.lineWidth = 1.6; c.beginPath(); c.moveTo(x + s / 2, y + 6); c.lineTo(x + s - 10, y + s / 2); c.lineTo(x + s / 2, y + s - 6); c.lineTo(x + 10, y + s / 2); c.closePath(); c.fill(); c.stroke(); }; }
+        else if (sl.kind === 'shard') { r.title = '皮肤碎片 ' + sl.n + ' 件'; r.sub = '集齐解锁皮肤'; r.l2 = '现有 ' + S.data.shards + ' 枚'; r.icon = function (x, y, s) { if (!shop._shardIm) { shop._shardIm = new Image(); shop._shardIm.src = 'assets/art/x-avatars/heyuxi.webp'; } c.save(); c.beginPath(); c.moveTo(x + 6, y + 8); c.lineTo(x + s * 0.7, y + 4); c.lineTo(x + s * 0.6, y + s * 0.4); c.lineTo(x + s * 0.78, y + s * 0.55); c.lineTo(x + s * 0.5, y + s - 6); c.lineTo(x + 4, y + s - 10); c.closePath(); c.clip(); var sim = shop._shardIm; if (sim.complete && sim.naturalWidth) c.drawImage(sim, x, y, s, s); else { c.fillStyle = '#d7b48a'; c.fill(); } c.restore(); }; }
         else { r.title = '刷新货架'; r.sub = '换一批角色卡和法宝'; r.l2 = ''; r.icon = function (x, y, s) { c.strokeStyle = '#8a7d63'; c.lineWidth = 5; c.lineCap = 'round'; c.beginPath(); c.arc(x + s / 2, y + s / 2, s * 0.3, 0.6, 5.4); c.stroke(); c.lineCap = 'butt'; }; }
         items.push(r);
       });
@@ -19916,12 +19916,38 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
             c.save(); c.translate(x + cardW / 2, y + cardH * 0.36); c.strokeStyle = '#24180f'; c.fillStyle = 'rgba(168,50,36,0.2)'; c.lineWidth = 2.4;
             c.beginPath(); c.ellipse(0, -10, 16, 12, 0, 0, 6.3); c.ellipse(0, 14, 22, 16, 0, 0, 6.3); c.fill(); c.stroke(); c.restore();
           }
-        } else if (r.kind === 'shard' || r.kind === 'reroll') {
-          c.save(); c.translate(x + cardW / 2, y + cardH * 0.38); c.rotate(r.kind === 'shard' ? -0.18 : 0.08);
-          c.fillStyle = r.kind === 'shard' ? '#a02820' : '#3a2a1c';
-          c.beginPath(); c.moveTo(0, -Math.min(36, cardH * 0.16)); c.lineTo(Math.min(26, cardW * 0.16), 0); c.lineTo(0, Math.min(36, cardH * 0.16)); c.lineTo(-Math.min(26, cardW * 0.16), 0); c.closePath(); c.fill();
-          c.fillStyle = '#f6efe2'; c.font = '22px "Ma Shan Zheng","KaiTi",serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
-          c.fillText(r.kind === 'shard' ? '碎' : '换', 0, 1); c.restore();
+        } else if (r.kind === 'shard') {
+          var sw = cardW * 0.62, sh = cardH * 0.4, sx = x + (cardW - sw) / 2, sy = y + cardH * 0.14;
+          if (!shop._shardIm) { shop._shardIm = new Image(); shop._shardIm.src = 'assets/art/x-avatars/heyuxi.webp'; }
+          c.save();
+          c.beginPath();
+          c.moveTo(sx + sw * 0.06, sy + sh * 0.08);
+          c.lineTo(sx + sw * 0.7, sy + sh * 0.02);
+          c.lineTo(sx + sw * 0.62, sy + sh * 0.28);
+          c.lineTo(sx + sw * 0.78, sy + sh * 0.4);
+          c.lineTo(sx + sw * 0.58, sy + sh * 0.58);
+          c.lineTo(sx + sw * 0.72, sy + sh * 0.78);
+          c.lineTo(sx + sw * 0.5, sy + sh * 0.96);
+          c.lineTo(sx + sw * 0.04, sy + sh * 0.88);
+          c.closePath();
+          c.clip();
+          var sim = shop._shardIm;
+          if (sim.complete && sim.naturalWidth) c.drawImage(sim, sx - sw * 0.15, sy, sw * 1.35, sh);
+          else { c.fillStyle = '#d7b48a'; c.fillRect(sx, sy, sw, sh); }
+          c.restore();
+          c.save();
+          c.strokeStyle = 'rgba(36,24,15,0.55)'; c.lineWidth = 1.6; c.lineJoin = 'round';
+          c.beginPath();
+          c.moveTo(sx + sw * 0.06, sy + sh * 0.08);
+          c.lineTo(sx + sw * 0.7, sy + sh * 0.02);
+          c.lineTo(sx + sw * 0.62, sy + sh * 0.28);
+          c.lineTo(sx + sw * 0.78, sy + sh * 0.4);
+          c.lineTo(sx + sw * 0.58, sy + sh * 0.58);
+          c.lineTo(sx + sw * 0.72, sy + sh * 0.78);
+          c.lineTo(sx + sw * 0.5, sy + sh * 0.96);
+          c.lineTo(sx + sw * 0.04, sy + sh * 0.88);
+          c.closePath(); c.stroke();
+          c.restore();
         } else {
           c.save(); c.fillStyle = 'rgba(90,70,48,0.08)'; c.fillRect(x, y, cardW, cardH); c.restore();
           c.save(); c.font = Math.min(42, cardW * 0.4) + 'px "Ma Shan Zheng","KaiTi",serif'; c.fillStyle = '#24180f'; c.textAlign = 'center'; c.fillText(String(r.title || '宝').replace(/^.*· /, '').charAt(0), x + cardW / 2, y + cardH * 0.42); c.restore();
