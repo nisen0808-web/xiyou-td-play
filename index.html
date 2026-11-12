@@ -10268,6 +10268,7 @@ XY.BGS1={"src": "data:image/webp;base64,UklGRtT1GgBXRUJQVlA4IMj1GgCQwWGdASoAEAAK
   // app: { screen, lw, lh, zoom, dpr, rt, mouse, fps, showFps }
   XY.R = { T: T, wrapLines: wrapLines, breakAt: breakAt, font: font, txt: txt, otxt: otxt, rrect: rrect, panel: panel, bar: bar, btn: btn, btnS: btnS, wrap: wrap, dim: dim, drawCardMini: drawCardMini, drawHeroShape: drawHeroShape, btnS2: null, hpColor: hpColor, drawCardsHUD: drawCardsHUD, drawCard: null };
   XY.render = function (ctx, G, app) {
+    if (XY.portraitHint) XY.portraitHint();
     ui.hits.length = 0; if (ui.ovBtns) ui.ovBtns.length = 0; XY.R4.lblReset();
     var z = app.zoom * app.dpr;
     ctx.setTransform(z, 0, 0, z, 0, 0);
@@ -24523,7 +24524,8 @@ X.step=function(g,dt){if(!g._simRandom)return step.apply(this,arguments);var sel
   function portraitHint() {
     var touch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
     var portrait = window.innerHeight > window.innerWidth * 1.1;
-    var playing = XY.app && XY.app.screen === 'play';
+    var Gnow = window.__xy && window.__xy.G;
+    var playing = XY.app && XY.app.screen === 'play' && (!Gnow || Gnow.mode === 'play') && !(XY.gacha10 && XY.gacha10.blocking && XY.gacha10.blocking());
     var el = document.getElementById('xyPortrait');
     if (touch && portrait && playing && !portraitDismissed) {
       if (!el) {
