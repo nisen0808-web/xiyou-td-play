@@ -861,6 +861,8 @@
     duelGap = Math.max(nameH * 1.6, Math.min(duelGap, avail - pairWidth(h) - h * aN));
     if (duelGap < nameH) duelGap = nameH;
     if (totalWidth(h) > avail) h = (avail - duelGap) / (aL + aW * (1 - pairOverlap) + aN);
+    var extra = foot - h - (nameH + 6);
+    if (extra > 10) foot -= extra * 0.5;
     var wL = h * aL, wW = h * aW, wN = h * aN;
     var block = pairWidth(h) + duelGap + wN;
     var xL = margin + Math.max(0, (avail - block) / 2) + wL / 2;
