@@ -787,7 +787,7 @@
   }
   function avaEl(id, o) {
     o = o || {}; var d = BF.SP[id], el = document.createElement('div'); el.className = 'ava' + (o.on ? ' on' : '') + (o.off ? ' off' : '') + (o.sel ? ' sel' : ''); el.dataset.id = id;
-    el.innerHTML = '<div class="ring"><div class="face" style="background-image:url(' + avatarURL(id) + ')"></div></div><b>' + NAMES[id] + (o.badge ? '<span class="bd">' + o.badge + '</span>' : '') + '</b>';
+    el.innerHTML = '<div class="ring"><div class="face" style="background-image:url(' + avatarURL(id) + ')"></div></div><b><img class="nm" alt="' + NAMES[id] + '" src="../assets/art/menu-poster/nameh-' + id + '.webp">' + (o.badge ? '<span class="bd">' + o.badge + '</span>' : '') + '</b>';
     return el;
   }
   function buildPick() {
@@ -818,6 +818,15 @@
     c.imageSmoothingEnabled = true;
     c.drawImage(im, cx - dw / 2, foot - dh, dw, dh);
     c.restore();
+  }
+  var NAMEH = {};
+  function nameArt(id) {
+    if (NAMEH[id]) return NAMEH[id].ok ? NAMEH[id].im : null;
+    var rec = NAMEH[id] = { ok: false, im: null };
+    var im = new Image();
+    im.onload = function () { if (im.naturalWidth) { rec.im = im; rec.ok = true; } };
+    im.src = '../assets/art/menu-poster/nameh-' + id + '.webp';
+    return null;
   }
   function brushName(c, text, x, y, size, col) {
     c.save();
@@ -895,8 +904,15 @@
       return false;
     }
     labels.forEach(function (text, i) {
+      var im = nameArt(ids[i]);
+      var ih = nameH, iw = 0;
+      if (im) {
+        ih = Math.max(nameH, 26);
+        iw = ih * im.naturalWidth / im.naturalHeight;
+        if (iw > W * 0.34) { iw = W * 0.34; ih = iw * im.naturalHeight / im.naturalWidth; }
+      }
       c.font = nameH + 'px "Ma Shan Zheng","KaiTi",serif';
-      var tw = Math.min(c.measureText(text).width + 2, W * 0.28);
+      var tw = im ? iw : Math.min(c.measureText(text).width + 2, W * 0.28);
       var r = rects[i];
       var y = r.y - 2 - nameH * 0.15;
       if (r.y - (y + nameH / 2) > nameH) y = r.y - nameH * 0.85;
@@ -904,9 +920,10 @@
       if (i === 0) x = Math.min(xs[i], r.x + tw * 0.2);
       if (i === 2) x = Math.max(xs[i], r.x + r.w - tw * 0.2);
       x = Math.max(margin + tw / 2, Math.min(W - margin - tw / 2, x));
-      y = Math.max(nameH * 0.55, y);
-      if (outside(x, y, tw, nameH)) y = Math.max(nameH * 0.55, r.y - nameH * 0.55);
-      brushName(c, text, x, y, nameH, '#24180f');
+      y = Math.max(ih * 0.55, y);
+      if (outside(x, y, tw, ih)) y = Math.max(ih * 0.55, r.y - ih * 0.55);
+      if (im) c.drawImage(im, x - iw / 2, y - ih / 2, iw, ih);
+      else brushName(c, text, x, y, nameH, '#24180f');
     });
     var zSize = Math.max(nameH, Math.min(42, H * 0.11));
     var gapMid = (rects[1].x + rects[1].w + rects[2].x) / 2;

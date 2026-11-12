@@ -9360,6 +9360,44 @@ XY.TRAITS = {
     if (!(G.td && G.td.quiet > G.td.clock)) heroNames.push({ h: h, s: d.name + (h.sp ? ' Lv' + d.lv : ''), x: x, y: nameY, sz: isC ? 18 : 16, col: isC ? '#a42d19' : '#24180f', dir: clash ? 1 : -1, mark: isC && !clash, a: c.globalAlpha, tri: Math.sin(rt * 6) * 2 });
   }
   var heroBodies = [], heroNames = [];
+  var NMIMG = {};
+  function nameArt(id) {
+    if (Object.prototype.hasOwnProperty.call(NMIMG, id)) return NMIMG[id].ok ? NMIMG[id] : null;
+    var rec = NMIMG[id] = { ok: false };
+    var D = window.XY_MENU_STAGE, spec = D && D.name && D.name[id] && D.name[id].h;
+    if (!spec || !spec.src) return null;
+    var im = new Image();
+    im.onload = function () { rec.im = im; rec.w = spec.w || im.naturalWidth; rec.h = spec.h || im.naturalHeight; rec.ok = !!(rec.w && rec.h); };
+    im.src = spec.src;
+    if (im.complete && im.naturalWidth) { rec.im = im; rec.w = spec.w || im.naturalWidth; rec.h = spec.h || im.naturalHeight; rec.ok = !!(rec.w && rec.h); return rec; }
+    return null;
+  }
+  function nameBox(c, n) {
+    var id = n.h && n.h.id, art = id && nameArt(id);
+    var lv = (n.h && n.h.sp && n.h.def) ? ('Lv' + n.h.def.lv) : '';
+    var fs = Math.max(n.sz || 16, 18);
+    if (art) {
+      var ih = Math.max(24, fs + 6), iw = ih * art.w / art.h;
+      if (iw > 156) { iw = 156; ih = iw * art.h / art.w; }
+      c.font = Math.max(13, ih * 0.62) + 'px "Ma Shan Zheng","KaiTi","STKaiti",serif';
+      var lw = lv ? c.measureText(lv).width + 4 : 0;
+      return { w: iw + lw + 2, h: ih + 2, art: art, ih: ih, iw: iw, lv: lv, fs: Math.max(13, ih * 0.62) };
+    }
+    c.font = fs + 'px "Ma Shan Zheng","KaiTi","STKaiti",serif';
+    return { w: c.measureText(XY.fmtStr(n.s)).width + 6, h: fs + 3, art: null, fs: fs };
+  }
+  function paintName(c, n, x, y, box, col) {
+    if (box.art) {
+      c.drawImage(box.art.im, x - box.w / 2, y - box.ih / 2, box.iw, box.ih);
+      if (box.lv) {
+        c.font = box.fs + 'px "Ma Shan Zheng","KaiTi","STKaiti",serif';
+        c.textAlign = 'left'; c.textBaseline = 'middle'; c.fillStyle = col || '#24180f';
+        c.fillText(box.lv, x - box.w / 2 + box.iw + 3, y + 1);
+      }
+      return;
+    }
+    inkTag(c, n.s, x, y, box.fs, col);
+  }
   function flushHeroNames(c) {                                  // 名牌防叠：挤在一起超过三人时只留主控的名字；其余左右、上下错开
     var R4 = XY.R4, L = R4.lblList(), m = c.getTransform(), sc = m.a || 1, i, j, k, B = [], pile = [], ctrl = window.__xy && window.__xy.G ? window.__xy.G.ctrl : -1;
     for (i = 0; i < heroNames.length; i++) {
@@ -9376,17 +9414,16 @@ XY.TRAITS = {
     for (j = 0; j < heroBodies.length; j++) { var o = heroBodies[j]; B.push({ h: o.h, x0: m.e + o.x0 * sc, x1: m.e + o.x1 * sc, y0: m.f + o.y0 * sc, y1: m.f + o.y1 * sc }); }
     function ov(r, list, skipH) { var a = 0; for (var q = 0; q < list.length; q++) { var t = list[q]; if (skipH && t.h === skipH) continue; var w = Math.min(r.x1, t.x1) - Math.max(r.x0, t.x0), h = Math.min(r.y1, t.y1) - Math.max(r.y0, t.y0); if (w > 0 && h > 0) a += w * h; } return a; }
     for (i = 0; i < heroNames.length; i++) {
-      var n = heroNames[i], fs = n.sz; c.font = fs + 'px "Ma Shan Zheng","KaiTi","STKaiti",serif';
-      var tw = c.measureText(XY.fmtStr(n.s)).width + 6, th = fs + 3, best = null, sg = n.dir < 0 ? -1 : 1, dx = 64, cand = [[0, 0], [-dx, 0], [dx, 0], [0, sg * th], [-dx, sg * th], [dx, sg * th], [0, sg * th * 2.2], [-dx * 1.8, 0], [dx * 1.8, 0], [-dx, sg * th * 2.2], [dx, sg * th * 2.2]];
+      var n = heroNames[i], box = nameBox(c, n), tw = box.w, th = box.h, best = null, sg = n.dir < 0 ? -1 : 1, dx = 64, cand = [[0, 0], [-dx, 0], [dx, 0], [0, sg * th], [-dx, sg * th], [dx, sg * th], [0, sg * th * 2.2], [-dx * 1.8, 0], [dx * 1.8, 0], [-dx, sg * th * 2.2], [dx, sg * th * 2.2]];
       for (k = 0; k < cand.length; k++) {
-        var cy = n.y + cand[k][1], cx = n.x + cand[k][0], r = { x0: m.e + (cx - tw / 2) * sc, x1: m.e + (cx + tw / 2) * sc, y0: m.f + (cy - fs / 2 - 1.5) * sc, y1: m.f + (cy - fs / 2 - 1.5 + th) * sc };
-        var sc0 = ov(r, L, null) * 4 + ov(r, B, n.h) * 0.12 + (Math.abs(cand[k][0]) * 0.6 + Math.abs(cand[k][1])) * 0.05 * sc;   // 名牌 / 标签重叠重罚；身体只轻罚；离头顶越远略扣分
+        var cy = n.y + cand[k][1], cx = n.x + cand[k][0], r = { x0: m.e + (cx - tw / 2) * sc, x1: m.e + (cx + tw / 2) * sc, y0: m.f + (cy - th / 2) * sc, y1: m.f + (cy + th / 2) * sc };
+        var sc0 = ov(r, L, null) * 4 + ov(r, B, n.h) * 0.12 + (Math.abs(cand[k][0]) * 0.6 + Math.abs(cand[k][1])) * 0.05 * sc;
         if (!best || sc0 < best.s) best = { s: sc0, x: cx, y: cy, r: r };
       }
       if (ov(best.r, placed, null) > 0 && !(n.h && (n.h.i === ctrl || n.h.id === 'tang'))) continue;
       placed.push(best.r);
       L.push(best.r);
-      c.save(); c.globalAlpha = n.a; inkTag(c, n.s, best.x, best.y, n.sz, n.col);
+      c.save(); c.globalAlpha = n.a; paintName(c, n, best.x, best.y, box, n.col);
       if (n.mark && best.x === n.x && Math.abs(best.y - n.y) < th * 1.5) { var ty = best.y - 19; c.fillStyle = '#e0533d'; c.beginPath(); c.moveTo(best.x - 6, ty + n.tri); c.lineTo(best.x + 6, ty + n.tri); c.lineTo(best.x, ty + 8 + n.tri); c.fill(); }
       c.restore();
     }
