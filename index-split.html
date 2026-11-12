@@ -9372,6 +9372,27 @@ XY.TRAITS = {
     if (im.complete && im.naturalWidth) { rec.im = im; rec.w = spec.w || im.naturalWidth; rec.h = spec.h || im.naturalHeight; rec.ok = !!(rec.w && rec.h); return rec; }
     return null;
   }
+  function plateSplit(im) {
+    if (im._split) return im._split;
+    var cv = document.createElement('canvas');
+    cv.width = im.naturalWidth; cv.height = im.naturalHeight;
+    var g = cv.getContext('2d', { willReadFrequently: true });
+    g.drawImage(im, 0, 0);
+    var w = cv.width, h = cv.height, data = g.getImageData(0, 0, w, h).data;
+    var anyL = w, anyR = 0, sealL = w, sealR = -1, y, x, i;
+    for (y = 0; y < h; y++) for (x = 0; x < w; x++) {
+      i = (y * w + x) * 4;
+      if (data[i + 3] < 24) continue;
+      if (x < anyL) anyL = x;
+      if (x > anyR) anyR = x;
+      if (data[i] > 150 && data[i] > data[i + 1] + 35 && data[i] > data[i + 2] + 35) {
+        if (x < sealL) sealL = x;
+        if (x > sealR) sealR = x;
+      }
+    }
+    im._split = { w: w, h: h, anyL: anyL, anyR: anyR, sealL: sealR >= sealL ? sealL : null, sealR: sealR >= sealL ? sealR : null };
+    return im._split;
+  }
   function nameBox(c, n) {
     var id = n.h && n.h.id, art = id && nameArt(id);
     var lv = (n.h && n.h.sp && n.h.def) ? ('Lv' + n.h.def.lv) : '';
@@ -9412,6 +9433,7 @@ XY.TRAITS = {
     if (appN) { var cssW = appN.lw * (appN.zoom || 1), cssH = appN.lh * (appN.zoom || 1); narrow = Math.min(cssW, cssH) < 520 || cssH < 420; }
     if (narrow) heroNames = heroNames.filter(function (n) { return n.h && (n.h.i === ctrl || n.h.id === 'tang'); });
     XY.R4.nameArtN = 0;
+    XY.R4.plates = [];
     var placed = [];
     for (j = 0; j < heroBodies.length; j++) { var o = heroBodies[j]; B.push({ h: o.h, x0: m.e + o.x0 * sc, x1: m.e + o.x1 * sc, y0: m.f + o.y0 * sc, y1: m.f + o.y1 * sc }); }
     function ov(r, list, skipH) { var a = 0; for (var q = 0; q < list.length; q++) { var t = list[q]; if (skipH && t.h === skipH) continue; var w = Math.min(r.x1, t.x1) - Math.max(r.x0, t.x0), h = Math.min(r.y1, t.y1) - Math.max(r.y0, t.y0); if (w > 0 && h > 0) a += w * h; } return a; }
@@ -9428,8 +9450,18 @@ XY.TRAITS = {
         var sc0 = onText * 8 + onBody * 24 + (Math.abs(cand[k][0]) * 0.6 + Math.abs(cand[k][1])) * 0.05 * sc;
         if (!best || sc0 < best.s) best = { s: sc0, x: cx, y: cy, r: r, body: onBody, text: onText };
       }
-      if ((best.body > 0 || best.text > 0 || ov(best.r, placed, null) > 0) && !(n.h && (n.h.i === ctrl || n.h.id === 'tang'))) continue;
+      if (ov(best.r, placed, null) > 0) continue;
+      if ((best.body > 0 || best.text > 0) && !(n.h && (n.h.i === ctrl || n.h.id === 'tang'))) continue;
       placed.push(best.r);
+      var plate = { id: n.h && n.h.id, box: best.r, glyph: best.r, seal: null };
+      if (box.art && box.art.im && box.w) {
+        var sp = plateSplit(box.art.im), span = best.r.x1 - best.r.x0, imgW = box.iw / box.w * span;
+        function seg(x0, x1) { return { x0: best.r.x0 + x0 / sp.w * imgW, y0: best.r.y0, x1: best.r.x0 + x1 / sp.w * imgW, y1: best.r.y1 }; }
+        plate.box = seg(sp.anyL, sp.anyR + 1);
+        plate.glyph = seg(sp.anyL, (sp.sealL == null ? sp.anyR : sp.sealL) + (sp.sealL == null ? 1 : 0));
+        if (sp.sealL != null) plate.seal = seg(sp.sealL, sp.sealR + 1);
+      }
+      (XY.R4.plates = XY.R4.plates || []).push(plate);
       L.push(best.r);
       c.save(); c.globalAlpha = n.a; paintName(c, n, best.x, best.y, box, n.col);
       if (n.mark && best.x === n.x && Math.abs(best.y - n.y) < th * 1.5) { var ty = best.y - 19; c.fillStyle = '#e0533d'; c.beginPath(); c.moveTo(best.x - 6, ty + n.tri); c.lineTo(best.x + 6, ty + n.tri); c.lineTo(best.x, ty + 8 + n.tri); c.fill(); }
@@ -23184,7 +23216,28 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
       var nm = id && !tl.xc && stageName(id);
       if (nm && nm.img) {
         var nmH = Math.min(bh * 0.2, 22), nw = nm.w * nmH / nm.h, k2 = Math.min(1, (bw - 8) / nw);
-        c.drawImage(nm.img, bx + (bw - nw * k2) / 2, by + bh - nmH * k2 - 6, nw * k2, nmH * k2);
+        var dx = bx + (bw - nw * k2) / 2, dy = by + bh - nmH * k2 - 6, dw = nw * k2, dh = nmH * k2;
+        c.drawImage(nm.img, dx, dy, dw, dh);
+        var m = c.getTransform(), sc = m.a || 1;
+        function dev(x, y, w, h) { return { x0: m.e + x * sc, y0: m.f + y * sc, x1: m.e + (x + w) * sc, y1: m.f + (y + h) * sc }; }
+        var sp = nm.img._split;
+        if (!sp) {
+          var cv = document.createElement('canvas'); cv.width = nm.img.naturalWidth; cv.height = nm.img.naturalHeight;
+          var g = cv.getContext('2d', { willReadFrequently: true }); g.drawImage(nm.img, 0, 0);
+          var sw = cv.width, sh = cv.height, data = g.getImageData(0, 0, sw, sh).data, anyL = sw, anyR = 0, sealL = sw, sealR = -1, yy, xx, ii;
+          for (yy = 0; yy < sh; yy++) for (xx = 0; xx < sw; xx++) {
+            ii = (yy * sw + xx) * 4; if (data[ii + 3] < 24) continue;
+            if (xx < anyL) anyL = xx; if (xx > anyR) anyR = xx;
+            if (data[ii] > 150 && data[ii] > data[ii + 1] + 35 && data[ii] > data[ii + 2] + 35) { if (xx < sealL) sealL = xx; if (xx > sealR) sealR = xx; }
+          }
+          sp = nm.img._split = { w: sw, anyL: anyL, anyR: anyR, sealL: sealR >= sealL ? sealL : null, sealR: sealR >= sealL ? sealR : null };
+        }
+        function part(x0, x1) { return dev(dx + x0 / sp.w * dw, dy, (x1 - x0) / sp.w * dw, dh); }
+        (XY.departPlates = XY.departPlates || []).push({
+          id: id, box: dev(dx, dy, dw, dh), cell: dev(bx, by, bw, bh),
+          glyph: part(sp.anyL, (sp.sealL == null ? sp.anyR + 1 : sp.sealL)),
+          seal: sp.sealL == null ? null : part(sp.sealL, sp.sealR + 1)
+        });
         return;
       }
       var nsz = Math.min(20, Math.max(11, bh * 0.2)), face = '"Ma Shan Zheng","KaiTi",serif';
@@ -23631,6 +23684,7 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
 
 
   DP.draw = function (c, G, a) {
+    XY.departPlates = [];
     var st = VU.begin(c, a), cw = st.cw, ch = st.ch, land = (cw >= 600 && cw > ch * 1.1) || (cw >= 480 && cw > ch * 1.5), tiny = land && ch <= 360, cmp = tiny || (!land && ch < 720);
     var geo = DP.geo = { land: land, tiny: tiny, cmp: cmp, cards: [], tiles: 0, btns: [], bottom: 0 };
     bgPoster(c, cw, ch, land);
