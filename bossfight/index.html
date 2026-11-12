@@ -24,7 +24,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
 #sumbtn .av{width:38px;height:38px;border-radius:50%;background:radial-gradient(circle,#fff6d8,#e6c474);border:2px solid #fff6d8;box-shadow:0 0 0 2px var(--gold);display:grid;place-items:center;font-size:22px;color:var(--red)}
 #sumbtn.ready{animation:pulse 1.4s ease-in-out infinite}
 @keyframes pulse{50%{transform:scale(1.04) rotate(-1deg);outline-color:#d45a3a}}
-#spd{left:50%;transform:translateX(-50%);top:72px;min-height:44px;padding:0 14px;font-size:16px;opacity:.92;border-radius:4px 14px 8px 18px/10px 6px 14px 6px}
+#spd{position:absolute;left:50%;top:128px;z-index:6;transform:translateX(-50%) rotate(-8deg);width:48px;height:48px;padding:0;border:none;border-radius:2px;background:#9d2b22;color:#f6efe2;font-family:var(--kai);font-size:18px;line-height:48px;letter-spacing:0;opacity:1;box-shadow:none;filter:none}
 .grid{display:grid;gap:8px}
 /* 圆形头像：定妆头部裁切 + 水墨描金圆框；灰掉=不可选，.on=已出战，.sel=选中高亮 */
 .ava{position:relative;display:flex;flex-direction:column;align-items:center;gap:1px;cursor:pointer;min-width:0}
@@ -156,7 +156,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
 <body><div id="app">
 <canvas id="cv"></canvas>
 <button class="pill red off" id="sumbtn"><span class="av">援</span><span>召唤援军 <small id="sumhint">每局一次</small></span></button>
-<button class="pill" id="spd">×1</button>
+<button id="spd">×1</button>
 <div class="ov" id="load">载入 Boss 战…</div>
 <div class="ov" id="pick"><div class="wrap"><div class="stage"><canvas id="pcv"></canvas></div>
 <div class="panel"><h2><span class="seal">战</span>第一关 · 牛魔王 <small id="pEntry">入口：关底</small></h2>

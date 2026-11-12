@@ -76,7 +76,7 @@
     G.W = W; G.H = H; G.land = W > H; G.dpr = dpr; G.S = G.land ? H / 390 : W / 390;
     cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
     if (ready && !G.land) loadBG('port');
-    G.gy = G.land ? H * 0.845 : H * 0.78; G.fh = G.land ? H * 0.76 : H * 0.38;
+    G.gy = G.land ? H * 0.845 : H * 0.78; G.fh = G.land ? H * 0.58 : Math.min(H * 0.26, W * 0.38);
     var p = $('pick').getBoundingClientRect(); pcv.width = Math.max(2, Math.round(p.width * dpr * 0.5)); pcv.height = Math.max(2, Math.round(p.height * dpr));
     var st = pcv.parentNode.getBoundingClientRect(); pcv.width = Math.round(st.width * dpr); pcv.height = Math.round(st.height * dpr);
     var bsb = $('sumbtn'); bsb.style.display = 'none';
@@ -121,10 +121,26 @@
       var o = vo('h' + h.id, h.x), d = o.x + o.v * a - bxw, s = bxs + d * k + (d < 0 ? -1 : 1) * A * (1 - Math.exp(-Math.abs(d) / L));   // 靠近 Boss 时屏幕上略拉开，不叠成一团
       hs.push({ h: h, s: s, r: s - bxs }); pos.fs[h.id] = o.fs; });
     if (hs.length === 2) {   // 两个英雄屏幕距离太近：把离 Boss 远的那位往外推（按远近差平滑分摊，不会跳）
-      var ms = W * (G.land ? .24 : .36), dd = Math.abs(hs[1].s - hs[0].s);
+      var ms = W * (G.land ? .32 : .28), dd = Math.abs(hs[1].s - hs[0].s);
       if (dd < ms) { var def = ms - dd, u = clamp((Math.abs(hs[1].r) - Math.abs(hs[0].r)) / ms, -1, 1);
         hs[1].s += (hs[1].r < 0 ? -1 : 1) * def * (.5 + .5 * u); hs[0].s += (hs[0].r < 0 ? -1 : 1) * def * (.5 - .5 * u); } }
-    hs.forEach(function (e) { pos.h[e.h.id] = softclamp(e.s); }); pos.boss = softclamp(bxs); G.pos = pos; return pos;
+    if (!G.land) {
+      hs.forEach(function (e) { pos.h[e.h.id] = e.h.w ? W * 0.36 : W * 0.14; });
+      pos.boss = W * 0.8;
+    } else if (hs.length >= 2) {
+      hs.forEach(function (e) { pos.h[e.h.id] = e.h.w ? W * 0.28 : W * 0.1; });
+      pos.boss = W * 0.74;
+    } else {
+      hs.forEach(function (e) { pos.h[e.h.id] = softclamp(e.s); });
+      pos.boss = softclamp(bxs);
+      var ids = Object.keys(pos.h), i, right = -1, rid = null;
+      for (i = 0; i < ids.length; i++) if (pos.h[ids[i]] > right) { right = pos.h[ids[i]]; rid = ids[i]; }
+      if (rid && pos.boss - right < W * 0.2) {
+        var shift = W * 0.2 - (pos.boss - right);
+        for (i = 0; i < ids.length; i++) pos.h[ids[i]] = softclamp(pos.h[ids[i]] - shift);
+      }
+    }
+    G.pos = pos; return pos;
   }
   function hvLane(h) { var key = h.w ? 'wukong' : 'partner', ln = G.lane[key]; return { ln: ln, sc: 1 - (G.land ? 0.07 : 0.14) * ln, dy: -(G.land ? 0.02 : 0.034) * G.H * ln }; }
   function heroVis(h) { var p = G.pos || placeAll(), o = hvLane(h); o.x = p.h[h.id] != null ? p.h[h.id] : p.boss; return o; }
@@ -328,10 +344,6 @@
       if (tx + right > G.W - padX) nudge = (G.W - padX) - (tx + right);
       if (tx - left + nudge < padX) nudge = padX - (tx - left);
       tx += nudge;
-    }
-    if (id !== 'niumo' && !G.land && G.pos && G.pos.boss != null) {
-      var back = (G._ly || 0) < -1, keep = G.W * (back ? .58 : .42), minX = G.W * 0.04;
-      if (tx > G.pos.boss - keep) tx = Math.max(minX, G.pos.boss - keep);
     }
     if (!p.noShadow) drawShadow(c, cx + nudge, gyy, Math.min(body * .55, ref * .5), fh, p, al, face);
     if (id !== 'niumo' && !(clip.stand > 400) && k > 2.2) k = 2.2;
@@ -554,12 +566,56 @@
 
   /* ---------- 画：场景 ---------- */
   function drawBG(c, W, H, camx) {
-    var im = G.land ? (BG.port || BG.land) : BG.port; if (!G.land && !im) im = BG.land; if (!im) return;
-    var sc = Math.max(W / im.naturalWidth, H / im.naturalHeight) * 1.1, w = im.naturalWidth * sc, h = im.naturalHeight * sc;
-    var ox = (W - w) / 2 + camx, oy = G.land ? (H - h) : (H - h) * 0.55;
-    c.drawImage(im, ox, oy, w, h);
-    // 地平线薄雾，保持浅色纵深
-    var g = c.createLinearGradient(0, G.gy - G.fh * .55, 0, G.gy - G.fh * .05); g.addColorStop(0, 'rgba(250,244,228,0)'); g.addColorStop(1, 'rgba(250,244,228,.22)'); c.fillStyle = g; c.fillRect(0, G.gy - G.fh * .55, W, G.fh * .5);
+    /* 仓库里的 bg-land / bg-port 是 1280 的 yuv420，放大后山缘锯齿、地面碎点。
+       这里按当前画布分辨率现画淡色水墨山，不再放大那张有损图。 */
+    c.save();
+    c.fillStyle = '#f6f0e4';
+    c.fillRect(0, 0, W, H);
+    c.translate(camx * 0.35, 0);
+    function ridge(y0, amp, col, alpha, seed) {
+      c.beginPath();
+      c.moveTo(-W * 0.2, H);
+      var i, n = 18, x, y;
+      for (i = 0; i <= n; i++) {
+        x = -W * 0.2 + (W * 1.4) * i / n;
+        y = y0 + Math.sin(i * 1.7 + seed) * amp + Math.sin(i * 0.63 + seed * 2) * amp * 0.45;
+        if (i === 0) c.lineTo(x, y);
+        else c.quadraticCurveTo(x - (W * 1.4) / n * 0.5, y + Math.sin(i + seed) * amp * 0.2, x, y);
+      }
+      c.lineTo(W * 1.3, H);
+      c.closePath();
+      c.globalAlpha = alpha;
+      c.fillStyle = col;
+      c.fill();
+      c.globalAlpha = Math.min(1, alpha + 0.15);
+      c.strokeStyle = 'rgba(42,34,26,0.35)';
+      c.lineWidth = 1.4;
+      c.stroke();
+    }
+    ridge(H * 0.34, H * 0.035, '#e4d5c4', 0.9, 1.2);
+    ridge(H * 0.42, H * 0.05, '#d7c4b0', 0.85, 2.4);
+    ridge(H * 0.52, H * 0.045, '#cbb6a2', 0.8, 0.4);
+    c.globalAlpha = 0.55;
+    c.fillStyle = '#efe4d4';
+    c.beginPath();
+    c.moveTo(0, G.gy - H * 0.02);
+    c.quadraticCurveTo(W * 0.5, G.gy - H * 0.06, W, G.gy - H * 0.01);
+    c.lineTo(W, H);
+    c.lineTo(0, H);
+    c.closePath();
+    c.fill();
+    c.globalAlpha = 0.22;
+    c.strokeStyle = '#8a7560';
+    c.lineWidth = 1.2;
+    var k;
+    for (k = 0; k < 7; k++) {
+      var bx = W * (0.08 + k * 0.13);
+      c.beginPath();
+      c.moveTo(bx, G.gy - H * 0.02);
+      c.quadraticCurveTo(bx + 6, G.gy - H * 0.16, bx - 2, G.gy - H * 0.28);
+      c.stroke();
+    }
+    c.restore();
   }
   function drawTele(c) {
     var F = G.F, b = F.boss, S = G.S, gy = G.gy;
@@ -601,7 +657,7 @@
   function para(c, x, y, w, h, sk) { c.beginPath(); c.moveTo(x + sk, y); c.lineTo(x + w + sk, y); c.lineTo(x + w, y + h); c.lineTo(x, y + h); c.closePath(); }
   function colorAvURL(id) {
     if (id === 'wukong') return '../assets/art/menu-v5/fig_wukong.webp';
-    if (id === 'niumo') return '../assets/wild/niumo-idle.webp';
+    if (id === 'niumo') return '../assets/art/battle-hd/niumo.webp';
     return '../assets/art/x-avatars/' + id + '.webp';
   }
   function faceNode(im) {
@@ -613,17 +669,6 @@
   function loadColorAv(id) {
     return loadImg(colorAvURL(id)).then(function (i) {
       if (!i.naturalWidth) return loadImg('assets/xav/' + id + '.webp').then(function (j) { AV[id] = j; });
-      if (id === 'niumo') {
-        var cv = document.createElement('canvas');
-        cv.width = 384; cv.height = 378;
-        cv.getContext('2d').drawImage(i, 0, 0, 384, 378, 0, 0, 384, 378);
-        try {
-          Object.defineProperty(cv, 'naturalWidth', { value: 384 });
-          Object.defineProperty(cv, 'naturalHeight', { value: 378 });
-        } catch (e) {}
-        AV[id] = cv;
-        return;
-      }
       AV[id] = i;
     });
   }
@@ -687,7 +732,20 @@
     var ny = top + bh / 2 + 1 * S;
     label(c, '孙悟空', lx + 14 * S, ny, 15 * S, '#2f2a1f'); label(c, 'Lv' + wu.lv, lx + 14 * S + 56 * S, ny + 1 * S, 11 * S, '#6d6455');
     label(c, '牛魔王', rx + rw + sk - 18 * S, ny, 15 * S, '#2f2a1f', 'right'); label(c, b.phase === 2 ? '狂暴' : '一阶段', rx + rw + sk - 18 * S - 58 * S, ny + 1 * S, 11 * S, b.phase === 2 ? '#c8341f' : '#6d6455', 'right');
-    if (pa) { var py2 = top + bh + 5 * S + 5 * S; head(c, pa.id, lx + 12 * S, py2, 11 * S, pa.alive ? ELC[pa.elem] || '#e6c474' : '#a39a86'); label(c, pa.name, lx + 27 * S, py2 + 1 * S, 12 * S, pa.alive ? '#2f2a1f' : '#9a927c'); }
+    if (pa) {
+      var py2 = top + bh + 5 * S + 5 * S;
+      head(c, pa.id, lx + 12 * S, py2, 11 * S, pa.alive ? '#5c4030' : '#a39a86');
+      c.save();
+      c.globalAlpha = pa.alive ? 1 : 0.45;
+      c.font = (16 * S) + 'px "Ma Shan Zheng","KaiTi",serif';
+      c.textAlign = 'left'; c.textBaseline = 'middle';
+      c.lineWidth = Math.max(2, 3 * S * 0.4); c.lineJoin = 'round';
+      c.strokeStyle = '#fffaf0';
+      c.strokeText(pa.name, lx + 26 * S, py2);
+      c.fillStyle = '#1a120c';
+      c.fillText(pa.name, lx + 26 * S, py2);
+      c.restore();
+    }
     // 计时器
     var tr = (land ? 29 : 26) * S, ty = top + 26 * S; c.save(); c.beginPath(); c.arc(cx, ty, tr, 0, 7); var g = c.createRadialGradient(cx, ty - tr * .3, 2, cx, ty, tr); g.addColorStop(0, '#fffdf4'); g.addColorStop(1, '#f1e2b4'); c.fillStyle = g; c.fill(); c.lineWidth = 3.4 * S; c.strokeStyle = '#2f2a1f'; c.stroke(); c.lineWidth = 1.6 * S; c.strokeStyle = '#d4a53d'; c.beginPath(); c.arc(cx, ty, tr - 3.6 * S, 0, 7); c.stroke(); c.restore();
     label(c, String(Math.ceil(F.timer)), cx, ty + 1 * S, tr * 1.25, F.timer < 15 ? '#c8341f' : '#2f2a1f', 'center', '#fffaf0');
@@ -809,8 +867,15 @@
     drawMinions(c); drawFx(c, false);
     c.restore();
     if (G.flash > 0) { c.save(); c.globalAlpha = Math.min(.55, G.flash); c.fillStyle = G.flashC; c.fillRect(0, 0, W, H); c.restore(); }
+    var showingClose = G.wuCut > 0 && !G.wuCutOff;
     drawWuClose(c);
-    var cutin = F.sm && F.sm.t < BF.SM.CUT; $('spd').style.visibility = cutin || G.introT > 0 ? 'hidden' : 'visible'; drawSummon(c); if (!cutin) { drawHUD(c); drawCalls(c); }
+    var cutin = F.sm && F.sm.t < BF.SM.CUT;
+    if (showingClose) $('spd').style.visibility = 'hidden';
+    else {
+      $('spd').style.visibility = cutin || G.introT > 0 ? 'hidden' : 'visible';
+      drawSummon(c);
+      if (!cutin) { drawHUD(c); drawCalls(c); }
+    }
     if (G.introT > 0) drawIntro(c);
     if (F.over && F.over.win) { var u = clamp(G.endT / .5, 0, 1); if (G.endT < 2.6) { c.save(); c.globalAlpha = .9 * ease(u) * (G.endT > 2.2 ? 1 - (G.endT - 2.2) / .4 : 1); label(c, '击败牛魔王', W * .27, H * .22, Math.min(W * .068, 42 * S), '#c8341f', 'center', '#fffaf0'); c.restore(); } }
   }
