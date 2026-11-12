@@ -4181,6 +4181,7 @@ XY.TRAITS = {
   /* ================= 主循环：推进一步 ================= */
   XY.step = function (G, dt) {
     if (G.mode !== 'play') return;
+    if (G._quietShot) return;
     if (G.cut) dt = XY.cutin.tick(G, dt);                 // 召唤特殊人物的“定妆图施法”过场：世界慢放（过场时钟走真实时间）
     // v0.5 顿帧：暂停战斗模拟（画面 / 输入照常），恢复时不补跑；预算每秒回复 HITSTOP_BUDGET
     G.hsBud = Math.min(C.HITSTOP_BUDGET, (G.hsBud === undefined ? C.HITSTOP_BUDGET : G.hsBud) + C.HITSTOP_BUDGET * dt);
@@ -8736,7 +8737,7 @@ XY.TRAITS = {
       c.lineJoin = 'round'; c.lineCap = 'round'; c.beginPath(); c.moveTo(R.pts[0].x, R.pts[0].y);
       for (var i = 1; i < R.pts.length && R.cum[i] <= s; i++) c.lineTo(R.pts[i].x, R.pts[i].y);
       var e = XY.routeAt(R, s); c.lineTo(e.x, e.y);
-      c.strokeStyle = 'rgba(255,226,140,0.26)'; c.lineWidth = 62; c.stroke();
+      c.strokeStyle = 'rgba(42,32,22,0.16)'; c.lineWidth = 62; c.stroke();
     }
     return 1;
   }
@@ -8764,8 +8765,8 @@ XY.TRAITS = {
       c.lineJoin = 'round'; c.lineCap = 'round'; c.beginPath(); c.moveTo(R.pts[0].x, R.pts[0].y);
       for (var i = 1; i < R.pts.length && R.cum[i] <= s; i++) c.lineTo(R.pts[i].x, R.pts[i].y);
       var e = XY.routeAt(R, s); c.lineTo(e.x, e.y);
-      c.strokeStyle = 'rgba(255,224,130,0.80)'; c.lineWidth = 70; c.stroke();
-      c.strokeStyle = 'rgba(255,246,200,0.9)'; c.lineWidth = 8; c.stroke();
+      c.strokeStyle = 'rgba(42,32,22,0.20)'; c.lineWidth = 70; c.stroke();
+      c.strokeStyle = 'rgba(246,239,226,0.45)'; c.lineWidth = 8; c.stroke();
     }
     c.lineWidth = 6; c.strokeStyle = ink ? 'rgba(120,104,76,0.45)' : th.edge; c.strokeRect(0, 0, W, H);
     return n;
@@ -9231,8 +9232,8 @@ XY.TRAITS = {
       var mn0 = h.mounted ? G.heroes[4] : null, fo = mn0 ? r * 0.55 + mn0.def.r * 1.25 * 0.85 : r * 0.85;
       c.fillStyle = 'rgba(70,50,30,0.1)'; c.beginPath(); c.ellipse(x, y + lift + fo + 4, r * 1.3, r * 0.4, 0, 0, PI2); c.fill();   // 地面上一圈很淡的影
       XY.cloud.draw(c, h, x, y + fo + 3, r * (mn0 ? 1.25 : 1), rt, cloudMv);
-    } else { c.fillStyle = 'rgba(70,50,30,0.2)'; c.beginPath(); c.ellipse(x, y + r * 0.85, r * 0.95, r * 0.36, 0, 0, PI2); c.fill(); }
-    if (isC && !h.down) {
+    } else if (!G._quietShot) { c.fillStyle = 'rgba(42,32,22,0.16)'; c.beginPath(); c.ellipse(x, y + r * 0.85, r * 0.95, r * 0.28, 0, 0, PI2); c.fill(); }
+    if (isC && !h.down && !G._quietShot) {
       if (XY.INKP) XY.INKP.ring(c, x, y + r * 0.8, r * 1.35, 2.2, XY.INKP.INK, 0.7, 6, 5, 0.45, rt);
       else { c.strokeStyle = 'rgba(24,20,16,0.75)'; c.lineWidth = 2; c.beginPath(); c.ellipse(x, y + r * 0.8, r * 1.35, r * 0.6, 0, 0, PI2); c.stroke(); }
     }
@@ -9273,6 +9274,7 @@ XY.TRAITS = {
     if (h.id === 'phyrex') { XY.R4.xfDraw = false; if (!(G.td && G.td.quiet > G.td.clock)) XY.phDrawHeroOver(c, G, h, x, y + bob - (useCb ? r * 0.5 : 0), r, rt); }
     if (h.hurtT > 0 && !useCb && !posed) { c.fillStyle = 'rgba(255,60,40,' + (h.hurtT * 2) + ')'; c.beginPath(); c.arc(x, y + bob, r, 0, PI2); c.fill(); }
     if (h.inv > 0) { c.strokeStyle = 'rgba(42,32,22,0.28)'; c.lineWidth = 1.3; c.beginPath(); c.ellipse(x, y + r * 0.85, r + 8, r * 0.38, 0, 0, PI2); c.stroke(); }
+    if (G._quietShot) return;
     // 血条
     var bw = 44, f = h.hp / h.maxHp;
     if (h.id === 'tang') { rrect(c, x - 20, y + r + 4, 40, 12, 6); c.fillStyle = (G.tdanger || G.breach) && Math.sin(rt * 14) > 0 ? '#e0533d' : '#f3b3a6'; c.fill(); txt(c, '仅 1 血', x, y + r + 10.5, 10, '#7a1d10', 'center', true); }
@@ -12190,7 +12192,7 @@ XY.TRAITS = {
     var attacking = !!(st && st.mode === 'attack');
     var wildKind = null;
     if (!acting && st && S.useWild(h)) wildKind = attacking ? 'attack' : 'idle';
-    if (!acting && !attacking && S.hd(key)) wildKind = 'idle';
+    if (!h.ultInk && S.hd(key)) wildKind = 'idle';
     var wantWalk = !!(wildKind === 'idle' && (h.moving || tangStep));
     if (!wildKind && (h.moving || tangStep) && !acting) a = { anim: 'walk', i: 2 + (Math.floor(rt * 10 + (h.bob || 0)) & 3), mix: 0 };
     var moving = !wildKind && a.anim === 'walk', foot = y + r * 0.85;
@@ -12208,7 +12210,7 @@ XY.TRAITS = {
     if (wildKind) {
       var hdIm = S.hd(key);
       if (hdIm && wildKind === 'idle') {
-        var dh = r * 3.4, dw = hdIm.naturalWidth * dh / hdIm.naturalHeight;
+        var dh = r * 3.4 * ((G && G._shotScale) || 1), dw = hdIm.naturalWidth * dh / hdIm.naturalHeight;
         c.drawImage(hdIm, -dw / 2, -dh, dw, dh);
         h._wildTop = foot + bobY - dh;
         c.restore(); c.globalAlpha = 1;
@@ -12248,6 +12250,7 @@ XY.TRAITS = {
     S.frames[key + ':' + a.anim + ':' + a.i] = 1;
     return true;
   };
+  ['tang','wukong','bajie','wujing','horse','phyrex','sisi','laosiji','kuanggong','haiteng','yuanzhang','heyuxi','diaoyulao','martin'].forEach(function (id) { S.hd(id); });
   if (XY.CHIBI) S.preload(); else setTimeout(function () { if (XY.CHIBI) S.preload(); }, 0);
 })();
 // 菜单 / 卡片用的静态立绘：画 Q 版第 0 帧（待机），脚底在 (x, foot)，站高 h 像素；返回是否画出
@@ -19541,7 +19544,8 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
       if (dim) c.globalAlpha = 0.55;
       c.beginPath(); c.rect(x + 2, y + 2, w - 4, h - 4); c.clip();
       var drew = false;
-      if (r.kind === 'sol' && XY.soldierInk) drew = XY.soldierInk.draw(c, r.sol, x + w / 2, y + h * 0.76, h * 0.7, w * 0.96);
+      var textBand = r.kind === 'sol' ? Math.max(64, Math.min(78, h * 0.28)) : 0;
+      if (r.kind === 'sol' && XY.soldierInk) drew = XY.soldierInk.draw(c, r.sol, x + w / 2, y + h - textBand - 2, Math.max(40, h - textBand - 8), w * 0.96);
       if (!drew && r.inkName && XY.ICONINK) drew = XY.ICONINK.draw(c, r.inkName, x + w / 2, y + h * 0.46, Math.max(w, h) * 1.35);
       if (!drew && r.spId && XY.bgArt) { try { XY.bgArt(r.spId); } catch (e) {} var sealRoom = Math.max(44, Math.min(56, w * 0.22)); drew = fitArt(XY.bgArt(r.spId), x + 8, y + 8, Math.max(48, w - 20 - sealRoom), h - 18); }
       if (!drew && r.card) { inkWord(x, y, w, h, String(r.title || '宝').replace(/^.*· /, '').charAt(0) || '宝'); drew = true; }
@@ -19552,8 +19556,9 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
       g.addColorStop(0, 'rgba(243,231,207,0)'); g.addColorStop(1, 'rgba(243,231,207,0.7)');
       c.fillStyle = g; c.fillRect(x + 2, y + h * 0.84, w - 4, h * 0.16);
       c.restore();
-      inkName(String(r.title || '').replace(/^天兵卡 · |^角色卡 · |^法宝 · |^灵物 · /, ''), x + w / 2, y + h * 0.84, Math.min(28, Math.max(16, w * 0.13)), '#24180f', w - 24);
-      if (r.kind === 'sol') inkName((r.cards || 0) + ' 张' + (r.lv ? '  Lv' + r.lv : ''), x + w / 2, y + h * 0.93, Math.max(18, Math.min(26, w * 0.11)), '#2b1c08', w - 16);
+      var titleY = r.kind === 'sol' ? y + h - 42 : y + h * 0.84;
+      inkName(String(r.title || '').replace(/^天兵卡 · |^角色卡 · |^法宝 · |^灵物 · /, ''), x + w / 2, titleY, Math.min(26, Math.max(15, w * 0.12)), '#24180f', w - 24);
+      if (r.kind === 'sol') inkName((r.cards || 0) + ' 张' + (r.lv ? '  Lv' + r.lv : ''), x + w / 2, y + h - 16, Math.max(15, Math.min(18, w * 0.08)), '#2b1c08', w - 16);
       var seal = r.full ? '满' : (r.sold ? '售' : String(r.price == null ? '' : r.price));
       var ss = Math.max(44, Math.min(56, w * 0.22));
       cinnabar(x + w - ss - 6, y + 8, ss, seal);
@@ -23308,7 +23313,7 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
     if (VU.paperBg) VU.paperBg(c, { cw: cw, ch: ch }, { rgb: '201,162,74', rgb2: '184,50,42', seed: 21 });
     else { c.fillStyle = '#f6efe0'; c.fillRect(0, 0, cw, ch); }
     VU.seal(c, 14, 10, land ? 46 : 40, land ? 46 : 40, '抽', RED, land ? 24 : 20);
-    var stage = v.phase !== 'result';
+    var stage = v.phase !== 'result' && XY.gacha10.forceResult !== true;
     var focus = v.hold && v.focus != null ? v.focus : XY.gacha10.focusOf(elapsed);
     if (!v.hold) v.focus = focus;
     kt(c, stage ? '天机十连' : '十连结果', 70, land ? 26 : 24, land ? 30 : 24, '#2b1c08', 'left', cw - 160);
