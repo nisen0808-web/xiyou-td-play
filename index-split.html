@@ -9428,6 +9428,7 @@ XY.TRAITS = {
       c.restore();
     }
     XY.R4.nameRects = placed;
+    XY.R4.bodyRects = B;
     heroBodies.length = 0; heroNames.length = 0;
   }
 
@@ -10650,6 +10651,60 @@ XY.TRAITS = {
     }
     LBL.push(r); return y;
   };
+  function areaOf(r, list) {
+    var a = 0, i, t, w, h;
+    for (i = 0; i < list.length; i++) {
+      t = list[i];
+      w = Math.min(r.x1, t.x1) - Math.max(r.x0, t.x0);
+      h = Math.min(r.y1, t.y1) - Math.max(r.y0, t.y0);
+      if (w > 0 && h > 0) a += w * h;
+    }
+    return a;
+  }
+  R4.planMapLabels = function (c, G, app) {
+    if (!G || !app || !G.gate || !G.camp || !G.heroes || !G.heroes.length) return [];
+    var W = app.lw, H = app.lh, z = (app.zoom || 1) * (app.dpr || 1);
+    var pOpen = !!(app.partyPanel && XY.party && XY.party.visible(G, app));
+    var quiet = !!(G.td && G.td.quiet > G.td.clock);
+    var bodies = R4.bodyRects || [];
+    var marks = [], tg = G.heroes[0];
+    function box(x, y, w, h) { return { x0: (x - w / 2) * z, y0: (y - h / 2) * z, x1: (x + w / 2) * z, y1: (y + h / 2) * z }; }
+    function consider(tx, ty, label, alert) {
+      var dx = tx - G.cam.x, dy = ty - G.cam.y;
+      if (Math.abs(dx) <= G.view.w / 2 - 20 && Math.abs(dy) <= G.view.h / 2 - 20) return;
+      var ang = Math.atan2(dy, dx), ca = Math.cos(ang), sa = Math.sin(ang);
+      var x0 = Math.min(150, W * 0.18), x1 = W - Math.min(140, W * 0.18), y0 = Math.min(140, H * 0.12), y1 = H - Math.min(130, H * 0.14);
+      var kx = ca > 0 ? (x1 - W / 2) / ca : (ca < 0 ? (x0 - W / 2) / ca : 1e9);
+      var ky = sa > 0 ? (y1 - H / 2) / sa : (sa < 0 ? (y0 - H / 2) / sa : 1e9);
+      var span = Math.min(kx, ky), ax0 = W / 2 + ca * span, ay0 = H / 2 + sa * span;
+      var sz = 16, txa = -sa, tya = ca;
+      c.font = sz + 'px "Ma Shan Zheng","KaiTi","STKaiti",serif';
+      var tw = c.measureText(label).width + 8, th = sz + 6;
+      var shifts = [0, 56, -56, 112, -112, 168, -168, 224, -224, 280, -280];
+      var inns = [0, 42, 84];
+      var best = null, si, ii, ax, ay, lx, ly, ar, lr, hit, score;
+      for (si = 0; si < shifts.length; si++) for (ii = 0; ii < inns.length; ii++) {
+        ax = Math.max(x0, Math.min(x1, ax0 + txa * shifts[si]));
+        ay = Math.max(y0, Math.min(y1, ay0 + tya * shifts[si]));
+        lx = ax - ca * (34 + inns[ii]);
+        ly = ay - sa * (34 + inns[ii]);
+        lx = Math.max(x0 + tw / 2, Math.min(x1 - tw / 2, lx));
+        ly = Math.max(y0 + th / 2, Math.min(y1 - th / 2, ly));
+        ar = box(ax, ay, 36, 32);
+        lr = box(lx, ly, tw, th);
+        hit = areaOf(ar, bodies) + areaOf(lr, bodies);
+        for (var q = 0; q < marks.length; q++) hit += areaOf(lr, [marks[q].lr]) + areaOf(ar, [marks[q].ar]);
+        score = hit + Math.abs(shifts[si]) * z * 0.15 + inns[ii] * z * 0.05;
+        if (!best || score < best.score) best = { score: score, hit: hit, ax: ax, ay: ay, lx: lx, ly: ly, ang: ang, label: label, alert: !!alert, ar: ar, lr: lr, sz: sz };
+        if (hit === 0 && shifts[si] === 0 && inns[ii] === 0) break;
+      }
+      if (best) marks.push(best);
+    }
+    if (!pOpen && (G.camp.active || (G.tang && G.tang.phase === 'walk')) && !quiet) consider(G.camp.x, G.camp.y, G.campAlert > 0 ? '营地被攻击！' : (G.camp.active ? '营地' : '休息点'), G.campAlert > 0);
+    if (!pOpen && tg && !tg.down && !quiet) consider(tg.x, tg.y, (G.breach || G.tdanger) ? '师傅危险！' : '师傅', G.breach || G.tdanger);
+    if (!pOpen && !quiet) consider(G.gate.x, G.gate.y, G.gate.sealed ? '关口（主线未完成）' : '关口：师父走到就通关', false);
+    return marks;
+  };
   R4.enemyOver = function (c, G, e, rt) {
     var T = R(), d = e.def, x = e.x, y = e.y, r = e.r;
     if (e.shield > 0) {                                   // 精英元素护盾：元素色光罩 + 剩余量弧条
@@ -11586,20 +11641,22 @@ XY.TRAITS = {
       XY.ui.hits.push({ x: px2 + 10 * u, y: py2 + by0 * u, w: bw * u, h: bh * u, act: 'treat' });
     }
     // 边缘箭头：营地 / 唐僧 / 关口
-    function edge(tx, ty, label, col, alert) {
-      var dx = tx - G.cam.x, dy = ty - G.cam.y;
-      if (Math.abs(dx) <= G.view.w / 2 - 20 && Math.abs(dy) <= G.view.h / 2 - 20) return;
-      var ang = Math.atan2(dy, dx), ca = Math.cos(ang), sa = Math.sin(ang), x0 = Math.min(150, W * 0.18), x1 = W - Math.min(140, W * 0.18), y0 = Math.min(140, H * 0.12), y1 = H - Math.min(130, H * 0.14);
-      var kx = ca > 0 ? (x1 - W / 2) / ca : (ca < 0 ? (x0 - W / 2) / ca : 1e9), ky = sa > 0 ? (y1 - H / 2) / sa : (sa < 0 ? (y0 - H / 2) / sa : 1e9), sc = Math.min(kx, ky);
-      var ax = W / 2 + ca * sc, ay = H / 2 + sa * sc;
-      c.save(); c.translate(ax, ay); c.rotate(ang); c.fillStyle = alert && Math.sin(rt * 14) > 0 ? '#e0533d' : col; c.strokeStyle = '#fff'; c.lineWidth = 3;
-      c.beginPath(); c.moveTo(18, 0); c.lineTo(-10, -13); c.lineTo(-4, 0); c.lineTo(-10, 13); c.closePath(); c.stroke(); c.fill(); c.restore();
-      var ly = R4.placeLabel(c, label, ax - Math.cos(ang) * 40, ay - Math.sin(ang) * 40, 13, -1);
-      T.otxt(c, label, ax - Math.cos(ang) * 40, ly, 13, alert ? '#c0392b' : T.T.ink, 'center', true);
-    }
-    if (!pOpen && (G.camp.active || G.tang.phase === 'walk') && !(G.td && G.td.quiet > G.td.clock)) edge(G.camp.x, G.camp.y, G.campAlert > 0 ? '营地被攻击！' : (G.camp.active ? '营地' : '休息点'), '#d9a21a', G.campAlert > 0);
-    if (!pOpen && !tg.down && !(G.td && G.td.quiet > G.td.clock)) edge(tg.x, tg.y, (G.breach || G.tdanger) ? '师傅危险！' : '师傅', '#e2a63a', G.breach || G.tdanger);
-    if (!pOpen && !(G.td && G.td.quiet > G.td.clock)) edge(G.gate.x, G.gate.y, G.gate.sealed ? '关口（主线未完成）' : '关口：师父走到就通关', G.gate.sealed ? '#a39a8a' : '#e0a415', false);
+    var mapMarks = R4.planMapLabels(c, G, app);
+    R4.mapLabels = mapMarks;
+    mapMarks.forEach(function (m) {
+      var ink = m.alert && Math.sin(rt * 10) > 0 ? '#a83224' : '#24180f';
+      c.save();
+      c.translate(m.ax, m.ay);
+      c.rotate(m.ang);
+      c.lineCap = 'round'; c.lineJoin = 'round';
+      c.strokeStyle = ink; c.globalAlpha = 0.92;
+      c.lineWidth = 3.1;
+      c.beginPath(); c.moveTo(-14, 0); c.quadraticCurveTo(-2, -1.4, 12, 0); c.stroke();
+      c.lineWidth = 2.1;
+      c.beginPath(); c.moveTo(13, 0); c.quadraticCurveTo(4, -6, -1, -8); c.moveTo(13, 0); c.quadraticCurveTo(4, 6, -1, 8); c.stroke();
+      c.restore();
+      inkTag(c, m.label, m.lx, m.ly, m.sz, m.alert ? '#a83224' : '#24180f');
+    });
     drawTip(c, app, tip || app._tip);
     if (G.tut) XY.tutDraw(c, G, app);
   };
