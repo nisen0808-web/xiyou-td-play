@@ -2445,10 +2445,10 @@
       c.globalAlpha = 1;
       c.textAlign = 'center';
       c.textBaseline = 'top';
-      c.font = brushFont(Math.max(12, Math.min(14, w * 0.22)));
+      c.font = brushFont(Math.max(14, Math.min(16, w * 0.26)));
       c.fillStyle = on ? '#9a2e24' : '#241c18';
-      c.fillText(name, x + w / 2, footY + 2);
-      c.font = brushFont(Math.max(11, Math.min(12, w * 0.18)));
+      c.fillText(name, x + w / 2, footY + 1);
+      c.font = brushFont(Math.max(13, Math.min(15, w * 0.24)));
       c.fillStyle = '#9a2e24';
       c.fillText(price, x + w / 2, footY + 18);
       c.restore();

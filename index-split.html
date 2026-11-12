@@ -24216,6 +24216,11 @@ I.vendorKey=function(G,a,k){var n=X.vendor.stock(G).length;if(k==='ArrowLeft'||k
       L.notice={x:nx,y:head+8,w:nw,h:small?22:28};L.combo={x:nx+nw+8,y:head+8,w:small?82:118,h:small?22:28};
     }
     L.skills={x:L.xp.x-6,y:port?32:0,w:L.xp.w+8,h:44};
+    if(!port && H<420){
+      var mapBot=L.map.y+L.map.h+18, skyTop=L.sky.cy-L.sky.r-8;
+      L.fabao.r=Math.min(L.fabao.r, Math.max(13,(skyTop-mapBot)*0.22));
+      L.fabao.cy=Math.max(mapBot+L.fabao.r+2, Math.min((mapBot+skyTop)/2, skyTop-L.fabao.r-16));
+    }
     // 临时反馈避开真实热区（不只是可见文字），主控件几何不变。
     if(L.small&&!port){L.notice.h=18;L.combo.h=18;}
     var gap=port||L.small?1:4, goal={x:L.quest.x,y:L.quest.y+(port?2:0),w:L.quest.w,h:44};
@@ -24291,7 +24296,7 @@ I.vendorKey=function(G,a,k){var n=X.vendor.stock(G).length;if(k==='ArrowLeft'||k
     var xpt='Lv'+G.level+' · 经验'+X.fmtNum(Math.floor(G.xp))+'/'+X.fmtNum(need);
     var tabHint=!L.port&&!a.touchUI, xpW=L.xp.w-(tabHint?52:0);
     K.tf(xpt,L.xp.x,L.xp.y,Math.max(48,xpW),L.small?11:14,SOFT,'left',false,10.5);
-    if(tabHint)K.t('Tab 修行',L.skills.x+L.skills.w-4,L.skills.y+L.skills.h-8,12,'#8a5a12','right',true);
+    if(tabHint && L.H>=420)K.t('Tab 修行',L.skills.x+L.skills.w-4,L.skills.y+L.skills.h-8,12,'#8a5a12','right',true);
     if(G.points>0){c.fillStyle=RED;c.beginPath();c.arc(L.xp.x-4,L.xp.y,2.5,0,PI*2);c.fill();}
     rec(a,'skillBtn',{x:L.skills.x,y:L.xp.y-9,w:L.skills.w,h:18});
     hit(K,L.skills,'skills',{label:'修行菜单 · 技能点 '+G.points});
@@ -24339,7 +24344,8 @@ I.vendorKey=function(G,a,k){var n=X.vendor.stock(G).length;if(k==='ArrowLeft'||k
     // 空装备以既有乾坤袋图作收纳入口，不把某件武器假装成已获得。
     X.ICONINK.draw(c,it?it.name:'乾坤袋',b.cx,b.cy,b.r*1.9);ring(c,b.cx,b.cy,b.r,'#81704c',104,false);
     c.save();c.translate(b.cx,b.cy+b.r+9);c.scale(L.small?23:30,10);var glow=c.createRadialGradient(0,0,0,0,0,1);glow.addColorStop(0,'rgba(249,242,224,.98)');glow.addColorStop(.7,'rgba(249,242,224,.9)');glow.addColorStop(1,'rgba(249,242,224,0)');c.fillStyle=glow;c.fillRect(-1,-1,2,2);c.restore();
-    K.t('法宝'+(all.length?' '+all.length:''),b.cx,b.cy+b.r+9,L.small?10.5:13,INK,'center',false);
+    var labelY=b.cy+b.r+9; if(L.sky && labelY+7>L.sky.cy-L.sky.r) labelY=b.cy-b.r-9;
+    K.t('法宝'+(all.length?' '+all.length:''),b.cx,labelY,L.small?12:13,INK,'center',false);
     if(rdy.length||s){c.fillStyle=RED;c.beginPath();c.arc(b.cx+b.r-2,b.cy-b.r+2,3,0,PI*2);c.fill();}
     var box={x:b.cx-Math.max(22,b.r+3),y:b.cy-Math.max(22,b.r+3),w:Math.max(44,(b.r+3)*2),h:Math.max(44,(b.r+3)*2)+14};
     hit(K,box,'battleFabao',{label:'法宝详情 · 已有 '+all.length+' 件 · 可炼 '+rdy.length});rec(a,'fabao',box);X.ui.cardPanel={x:XY.kToLog(a,box.x),y:XY.kToLog(a,box.y),w:XY.kToLog(a,box.w),h:XY.kToLog(a,box.h)};
