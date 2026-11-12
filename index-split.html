@@ -10918,7 +10918,16 @@ XY.TRAITS = {
         if (!best || score < best.score) best = { score: score, hit: hit, ax: ax, ay: ay, lx: lx, ly: ly, ang: ang, label: label, alert: !!alert, ar: ar, lr: lr, sz: sz };
         if (hit === 0 && shifts[si] === 0 && inns[ii] === 0) break;
       }
-      if (best && !best.hit) marks.push(best);
+      if (best && !best.hit) {
+        var qi, other;
+        for (qi = 0; qi < marks.length; qi++) {
+          other = marks[qi];
+          if (Math.abs(best.lx - other.lx) < 240 && Math.abs(best.ly - other.ly) < 24) {
+            best.ly = Math.max(18 + best.sz, Math.min(H - 18 - best.sz, other.ly + (best.ly >= other.ly ? 28 : -28)));
+          }
+        }
+        marks.push(best);
+      }
     }
     if (!pOpen && (G.camp.active || (G.tang && G.tang.phase === 'walk')) && !quiet) consider(G.camp.x, G.camp.y, G.campAlert > 0 ? '营地被攻击！' : (G.camp.active ? '营地' : '休息点'), G.campAlert > 0);
     if (!pOpen && tg && !tg.down && !quiet) consider(tg.x, tg.y, (G.breach || G.tdanger) ? '师傅危险！' : '师傅', G.breach || G.tdanger);
@@ -11873,7 +11882,7 @@ XY.TRAITS = {
       var ink = m.alert && Math.sin(rt * 10) > 0 ? '#a83224' : '#24180f';
       c.save();
       var ag = c.createRadialGradient(m.ax, m.ay, 3, m.ax, m.ay, 28);
-      ag.addColorStop(0, 'rgba(246,239,226,0.92)');
+      ag.addColorStop(0, 'rgba(246,239,226,0.28)');
       ag.addColorStop(1, 'rgba(243,234,214,0)');
       c.fillStyle = ag;
       c.beginPath();
@@ -11893,20 +11902,15 @@ XY.TRAITS = {
       c.save();
       var tw = 0; c.font = m.sz + 'px "Ma Shan Zheng","KaiTi","STKaiti",serif';
       tw = c.measureText(m.label).width;
-      var gx = c.createRadialGradient(m.lx, m.ly, m.sz * 0.2, m.lx, m.ly, Math.max(tw, m.sz) * 0.72);
-      gx.addColorStop(0, 'rgba(246,239,226,0.97)');
-      gx.addColorStop(0.72, 'rgba(246,239,226,0.93)');
+      var gx = c.createRadialGradient(m.lx, m.ly, m.sz * 0.15, m.lx, m.ly, Math.max(tw, m.sz) * 0.55);
+      gx.addColorStop(0, 'rgba(246,239,226,0.34)');
       gx.addColorStop(1, 'rgba(243,234,214,0)');
       c.fillStyle = gx;
       c.beginPath();
-      c.ellipse(m.lx, m.ly, tw * 0.62 + 14, m.sz * 1.15, 0, 0, Math.PI * 2);
+      c.ellipse(m.lx, m.ly, tw * 0.42 + 6, m.sz * 0.72, 0, 0, Math.PI * 2);
       c.fill();
       c.fillStyle = m.alert ? '#a83224' : '#24180f';
       c.textAlign = 'center'; c.textBaseline = 'middle';
-      c.shadowColor = 'rgba(250,243,226,0.96)';
-      c.shadowBlur = Math.max(4, m.sz * 0.35);
-      c.fillText(m.label, m.lx, m.ly);
-      c.shadowBlur = 0;
       c.fillText(m.label, m.lx, m.ly);
       c.restore();
     });
