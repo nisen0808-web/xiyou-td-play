@@ -1634,7 +1634,7 @@
   }
   function inkStrip(ctx, x, y, w, h) {
     ctx.save();
-    ctx.fillStyle = 'rgba(43,28,8,0.92)';
+    ctx.fillStyle = 'rgba(246,239,226,0.94)';
     ctx.beginPath();
     ctx.moveTo(x + 10, y + 4);
     ctx.quadraticCurveTo(x + w * 0.45, y - 1, x + w - 8, y + 5);
@@ -1642,6 +1642,9 @@
     ctx.quadraticCurveTo(x + w * 0.5, y + h + 2, x + 8, y + h - 4);
     ctx.closePath();
     ctx.fill();
+    ctx.strokeStyle = 'rgba(90,64,36,0.4)';
+    ctx.lineWidth = 1.3;
+    ctx.stroke();
     ctx.restore();
   }
   function drawFx(ctx, G) {
@@ -1947,9 +1950,9 @@
     if (x < target.x + target.w && x + cw > target.x && y < target.y + target.h && y + ch > target.y) y = Math.min(H - ch - 150, target.y + target.h + 24);
     inkStrip(ctx, x, y, cw, ch);
     var list = G.td.guide.kind === 'td3' ? R.GUIDE3 : R.GUIDE2;
-    ctx.fillStyle = '#f6efe2'; ctx.font = brushFont(phone() ? 18 : 22); ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+    ctx.fillStyle = '#a42d19'; ctx.font = brushFont(phone() ? 18 : 22); ctx.textAlign = 'left'; ctx.textBaseline = 'top';
     ctx.fillText((G.td.guide.kind === 'td3' ? '阵型' : '布阵') + ' ' + (G.td.guide.i + 1) + '/' + list.length, x + 16, y + 10);
-    ctx.fillStyle = '#f3e6c8'; ctx.font = brushFont(phone() ? 15 : 17);
+    ctx.fillStyle = '#24180f'; ctx.font = brushFont(phone() ? 15 : 17);
     var words = st.text, line = '', lines = [], i;
     for (i = 0; i < words.length; i++) {
       if (ctx.measureText(line + words.charAt(i)).width > cw - 24) { lines.push(line); line = words.charAt(i); }
