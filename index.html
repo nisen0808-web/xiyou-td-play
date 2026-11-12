@@ -4290,7 +4290,7 @@ XY.TRAITS = {
     var troopTop = port ? (H - 143) : (H - (small ? 75 : 111));
     var mapLeft = port ? (W - 8) : (W - (small ? 82 : 134));
     var squat = !port && H < 420;
-    return { top: (questBottom + (squat ? 16 : 8)) * k, bottom: (troopTop - (squat ? 16 : 10)) * k, left: (port ? 18 : 36) * k, right: (mapLeft - 12) * k, vw: vw, vh: vh, z: z };
+    return { top: (questBottom + (squat ? 6 : 8)) * k, bottom: (troopTop - (squat ? 8 : 10)) * k, left: (port ? 18 : 36) * k, right: (mapLeft - 12) * k, vw: vw, vh: vh, z: z };
   }
   function partyRing(G) {
     var safe = partySafe(G), availH = Math.max(80, safe.bottom - safe.top);
@@ -4316,10 +4316,9 @@ XY.TRAITS = {
       return pts.filter(function (q) { return !q.pin; }).map(function (q) { return { h: q.h, x: q.x, y: q.y }; });
     }
     if (vh < vw * 0.45 && list.length >= 8) {
-      var fig = 108;
-      var scale = Math.max(0.5, Math.min(0.66, (availH * 0.36) / fig));
+      var scale = 0.55;
       XY._partyScale = scale;
-      var gapY = Math.max(52, Math.min(availH * 0.34, fig * scale * 0.78));
+      var gapY = Math.max(20, Math.min(36, availH * 0.16));
       var backN = 6, front = list.length - backN;
       var gapX = Math.max(86, Math.min(168, (availW - 90) / Math.max(3, front - 1)));
       var slots = [];
@@ -4354,7 +4353,8 @@ XY.TRAITS = {
       if (hb.x - half < b0) b0 = hb.x - half;
       if (hb.x + half > b1) b1 = hb.x + half;
       if (top < b2) b2 = top;
-      if (foot + rr * 2.15 > b3) b3 = foot + rr * 2.15;
+      var psc = (XY._partyScale || 1);
+      if (foot + rr * 2.15 * psc > b3) b3 = foot + rr * 2.15 * psc;
     }
     if (!(b1 > b0 && b3 > b2)) return false;
     var destCx = (safe.left + safe.right) / 2, destCy = (safe.top + safe.bottom) / 2;
