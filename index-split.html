@@ -20138,6 +20138,7 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
     if(!sel){K.lines('没有符合筛选的藏品。',rx,top+70,rw,15,20,T.inkSoft,6,false);P.end(c);return;}
     var title='',sub='',text='',colour=T.ink,seen=false,artH=Math.min(port?230:350,ribbonY-top-30,lw*1.18),foot=port?Math.min(ribbonY-24,top+340):ribbonY-18,cx=f.x+lw*.52;
     function hero(id,x,y,r){var d=XY.SP_BY[id]?XY.specialDef(id,Math.max(1,S.spLevel(id))):XY.HEROES.filter(function(z){return z.id===id;})[0];if(d)XY.hud2.face(c,{id:id,def:d},x,y,r,app.rt);}
+    function relicInk(cd,x,y,w,h,owned){c.save();c.globalAlpha=owned?1:.34;var nm=cd&&cd.name&&cd.name!=='未'&&cd.name!=='？'?cd.name:'';var drew=!!(owned&&nm&&XY.ICONINK&&XY.ICONINK.draw(c,nm,x,y,Math.min(w,h)*.86));if(!drew&&owned&&nm){c.fillStyle='#5c4a38';c.textAlign='center';c.textBaseline='middle';var sz=Math.max(14,Math.min(28,h*.22));c.font=sz+'px "Ma Shan Zheng","KaiTi",serif';c.fillText(nm,x,y);}else if(!drew){c.fillStyle='rgba(92,74,56,.28)';c.beginPath();c.ellipse(x,y,Math.max(8,w*.18),Math.max(10,h*.22),-.3,0,6.283);c.fill();}c.restore();}
     if(tab==='enemy'){
       var ee=S.dexOf(sel),sn=ee&&ee.seen>0,dd=XY.ENEMIES[sel],bz=XY.BESTIARY[sel];title=sn?dd.name:'未曾相逢';sub=sn?'遇见 '+ee.seen+' · 击杀 '+ee.kills:'在战场相逢，才会记进此卷';
       c.save();if(!sn){c.globalAlpha=.22;}var drawn=XY.MINK&&(XY.MINK.portrait(c,sel,cx,foot,artH)||(XY.MINK.dexPose&&XY.MINK.dexPose(c,sel,cx,foot,artH)));c.restore();if(!drawn)hp.enemyIcon(c,sel,cx,foot-artH*0.42,Math.min(artH*0.42,lw*0.38),!sn,app.rt);
@@ -20146,8 +20147,8 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
       else if(view===1)text='生命 '+dd.hp+' · 速度 '+dd.speed+' · '+(dd.dive?'俯冲伤害 '+Math.round(dd.dmg*dd.dive.mul*10)/10:'碰撞伤害 '+dd.dmg)+(dd.range?' · 远程':'')+(dd.fly?' · 飞行':'')+'\n对付它：'+bz.tip+'\n掉落：'+bz.drop;
       else{var names=Object.keys(S.data.cosFrames||{}).map(function(k){return S.data.cosFrames[k];});text=(ee.card?'已得「'+ee.card+'」':'这种小妖进化到Ⅲ阶，可得西游线图鉴卡。')+'\n'+(names.length?'头像框：'+names.join('、'):'小妖进化到Ⅴ阶，可得头像框。');}
     }else if(tab==='card'){
-      var cd=XY.CARD_BY[sel],own=S.has(sel),rar=XY.RARITY[cd.r],set=XY.CARD_SETS[cd.set],rec=S.data.cards[sel];title=own?cd.name:'未收得';sub=rar.name+' · '+set.name+'套（'+set.theme+'）';colour=rar.color;
-      c.save();c.translate(cx,foot-artH*.48);c.rotate(-.065);R.drawCardMini(c,own?cd:{name:'未',set:cd.set,r:cd.r},0,0,artH*.62,artH*.88,own?1:.45);c.restore();
+      var cd=XY.CARD_BY[sel],own=S.has(sel),rar=XY.RARITY[cd.r],set=XY.CARD_SETS[cd.set],rec=S.data.cards[sel];title=cd.name;sub=rar.name+' · '+set.name+'套（'+set.theme+'）';colour=own?'#24180f':'#8a7964';
+      c.save();c.translate(cx,foot-artH*.48);c.rotate(-.065);relicInk(cd,0,0,artH*.62,artH*.88,!!own);c.restore();
       if(view===0)text=own?cd.lore:'还没有获得。局内精英、宝箱、牛魔王都有机会掉落。';
       else if(view===1)text=own?'效果（Lv'+rec.lv+'）：'+XY.cardFxText(cd,rec.lv)+'\n累计获得 '+rec.got+' 次 · 等级 Lv'+rec.lv+'/'+XY.CARD_MAXLV:'未获得，还没有法宝等级。';
       else text=S.fbTag(sel).text+'\n'+(S.data.dex['hid:phcollect']?'图鉴线索已解开：Phyrex在场且由你亲自操控满30秒，可一次吸来全图灵石与金币。':'图鉴线索：听说有位大佬，被亲自带着走一阵子，战场上会发生一件好事。');
@@ -20163,7 +20164,7 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
     K.t(tab==='enemy'?'众生':tab==='card'?'珍藏':'同修',f.x+2,top+20,24,'#a42d19','left',true);
     P.objects(c,app,list.slice(from,from+per),{x:f.x,y:ribbonY,w:port?f.w:lw,h:91},sel,'dexSel',function(z,x,y,w,h){
       if(tab==='enemy'){var e=S.dexOf(z.id);if(e&&e.seen>0)hp.enemyIcon(c,z.id,x,y,Math.min(24,w*.34),false,app.rt);else{c.save();c.font='22px "Ma Shan Zheng","KaiTi",serif';c.fillStyle='#6d5b45';c.textAlign='center';c.textBaseline='middle';c.fillText('未',x,y);c.restore();}}
-      else if(tab==='card')R.drawCardMini(c,S.has(z.id)?z:{name:'未',set:z.set,r:z.r},x,y,Math.min(50,w*.68),Math.min(76,h),S.has(z.id)?1:.45);
+      else if(tab==='card')relicInk(z,x,y,Math.min(50,w*.68),Math.min(76,h),S.has(z.id));
       else{hero(z.a,x-w*.12,y-7,Math.min(18,w*.25));hero(z.b,x+w*.14,y+12,Math.min(17,w*.24));}
     },function(z){if(tab==='enemy'){var e=S.dexOf(z.id);return e&&e.seen>0?XY.ENEMIES[z.id].name:'未得';}if(tab==='card')return S.has(z.id)?z.name:'未得';return S.data.dex['syn:'+z.id]?z.fullName:'同修 '+(XY.SYNS.indexOf(z)+1);});
     P.end(c);

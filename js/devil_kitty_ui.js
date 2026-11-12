@@ -1578,7 +1578,9 @@
       if (a < 12) return true;
       var lum = (r + g0 + b) / 3;
       var chroma = Math.max(r, g0, b) - Math.min(r, g0, b);
-      return lum > 188 && chroma < 42;
+      var dr = r - pr, dg = g0 - pg, db = b - pb;
+      var dist = Math.sqrt(dr * dr + dg * dg + db * db);
+      return lum > 165 && chroma < 70 && dist < 55;
     }
     var seen = new Uint8Array(n), qx = new Int16Array(n), qy = new Int16Array(n), qh = 0, qt = 0;
     function push(x0, y0) {
@@ -1606,7 +1608,9 @@
           if (d[p + 3] < 12) continue;
           lum = (d[p] + d[p + 1] + d[p + 2]) / 3;
           chroma = Math.max(d[p], d[p + 1], d[p + 2]) - Math.min(d[p], d[p + 1], d[p + 2]);
-          if (lum < 168 || chroma > 46) continue;
+          if (lum < 155 || chroma > 72) continue;
+          var fdr = d[p] - pr, fdg = d[p + 1] - pg, fdb = d[p + 2] - pb;
+          if (Math.sqrt(fdr * fdr + fdg * fdg + fdb * fdb) > 60) continue;
           t = 0;
           for (yy = y - 1; yy <= y + 1; yy++) for (xx = x - 1; xx <= x + 1; xx++) {
             if (d[(yy * w + xx) * 4 + 3] < 12) t++;
