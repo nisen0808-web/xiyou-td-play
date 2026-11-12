@@ -9163,6 +9163,7 @@ XY.BGS1={"src": "data:image/webp;base64,UklGRtT1GgBXRUJQVlA4IMj1GgCQwWGdASoAEAAK
   function drawRestStall(c, x, y, rt) {
     var INK = (XY.INKP && XY.INKP.INK) || '42,32,22';
     c.save();
+    c.translate(x, y); c.scale(1.5, 1.5); c.translate(-x, -y);
     c.strokeStyle = 'rgba(' + INK + ',0.32)';
     c.lineWidth = 1.3;
     c.translate(x, y); c.scale(1.55, 1.55); c.translate(-x, -y);
@@ -9205,10 +9206,7 @@ XY.BGS1={"src": "data:image/webp;base64,UklGRtT1GgBXRUJQVlA4IMj1GgCQwWGdASoAEAAK
     var cp = G.camp, x = cp.x, y = cp.y;
     var tg = G.heroes[0];
     // 驻守圈：唐僧命令是“驻守营地”时画出虚线圈；真正驻守生效时整个营地发金光
-    if (!cp.active) {
-      drawRestStall(c, x, y, rt);
-      return;
-    }
+    if (!cp.active) return;
     // 营地圈：妖怪闯进来才画一圈飞白墨弧，不再用红虚线和粉橙光
     var zp = 0.5 + 0.5 * Math.sin(rt * 6);
     if (G.breach) {
@@ -9222,7 +9220,6 @@ XY.BGS1={"src": "data:image/webp;base64,UklGRtT1GgBXRUJQVlA4IMj1GgCQwWGdASoAEAAK
       c.strokeStyle = 'rgba(90,82,70,0.35)'; c.lineWidth = 1;
       c.beginPath(); c.arc(x, y, C.CAMP_ZONE_R * 0.84, 0.7, 2.15); c.stroke();
     }                                                                  // v0.6：平时不再画虚线营地圈（只有被攻破时才画红色警戒圈）
-    drawRestStall(c, x, y - 8, rt);
     if (cp.ward && XY.R4 && XY.R4.drawWard) XY.R4.drawWard(c, cp.ward, x + 56, y - 34, 12, rt);   // v0.8.3：定海神珠的营地水珠
     // 经书（卷轴）
     c.fillStyle = '#fffdf2'; c.strokeStyle = '#8a5a2b'; c.lineWidth = 2; rrect(c, x - 14, y - 4, 28, 20, 4); c.fill(); c.stroke();
@@ -9855,6 +9852,7 @@ XY.BGS1={"src": "data:image/webp;base64,UklGRtT1GgBXRUJQVlA4IMj1GgCQwWGdASoAEAAK
       drawHero(c, G, order[i], rt); XY.R4.heroOver(c, G, order[i], rt);
     }
     flushHeroNames(c);
+    if (G.camp && !G.villain) drawRestStall(c, G.camp.x, G.camp.y - (G.camp.active ? 8 : 0), rt);
     if (XY.fly) XY.fly.drawAir(c, G, rt, inView, bar);                       // v0.8.4：飞妖本体盖在英雄上面
     if (gh) XY.guest.drawTag(c, G);
     drawFx(c, G); if (XY.ultscene) XY.ultscene.draw(c, G, 'air'); if (G.fb && XY.fabao.draw) XY.fabao.draw(c, G); if (XY.animItems) XY.animItems(c, G);
@@ -11221,7 +11219,12 @@ XY.BGS1={"src": "data:image/webp;base64,UklGRtT1GgBXRUJQVlA4IMj1GgCQwWGdASoAEAAK
     var dx = Math.cos(w0.a), dy = Math.sin(w0.a), tt = 1e9;
     if (dx > 1e-3) tt = Math.min(tt, (xr - x0) / dx); else if (dx < -1e-3) tt = Math.min(tt, (xl - x0) / dx);
     if (dy > 1e-3) tt = Math.min(tt, (yb - y0) / dy); else if (dy < -1e-3) tt = Math.min(tt, (yt - y0) / dy);
-    var px = x0 + dx * tt, py = y0 + dy * tt; XY.ui.waveArrow = { x: px, y: py, a: w0.a, x0: x0, y0: y0 }; var _u = 0, p = 0.5 + 0.5 * Math.sin(rt * 8), hot = !!F.now || (F.next && F.next.left <= 8);
+    var px = x0 + dx * tt, py = y0 + dy * tt; XY.ui.waveArrow = { x: px, y: py, a: w0.a, x0: x0, y0: y0 };
+    if (G.camp) {
+      var csx = G.camp.x - G.cam.x + G.view.w / 2, csy = G.camp.y - G.cam.y + G.view.h / 2;
+      if (Math.hypot(px - csx, py - csy) < 150) return;
+    }
+    var p = 0.5 + 0.5 * Math.sin(rt * 8), hot = !!F.now || (F.next && F.next.left <= 8);
     var col = hot ? '#a42d19' : '#3a2a1c', s = 15 + 3 * p;
     c.save(); c.globalAlpha = 0.28 + 0.2 * p; var gr = c.createRadialGradient(px, py, 4, px, py, 90); gr.addColorStop(0, col); gr.addColorStop(1, 'rgba(255,255,255,0)'); c.fillStyle = gr; c.fillRect(px - 90, py - 90, 180, 180); c.restore();
     waveTri(c, px - dx * 6, py - dy * 6, w0.a, s, col);
