@@ -25589,13 +25589,14 @@ I.vendorKey=function(G,a,k){var n=X.vendor.stock(G).length;if(k==='ArrowLeft'||k
   function kai(K,s,x,y,size,col,align){K._fam=(X.menu&&X.menu.KAI)||X.C.FONT;K.t(s,x,y,size,col,align||'left',true);K._fam=null;}
   function tooltip(a,K,b,lines){if(K.over(b.x,b.y,b.w,b.h))a._tip={x:XY.kToLog(a,b.x+b.w/2),y:XY.kToLog(a,b.y+b.h+6),below:true,lines:lines};}
   function statChips(K,G,a,L){
-    var chips=X.R4.battleChips(G,a),x=L.port?L.W-115:L.skills.x+L.skills.w+4,w=L.port?48:L.speed.x-x-4;
+    var chips=X.R4.battleChips(G,a),x=L.port?L.W-115:L.skills.x+L.skills.w+4,w=L.port?48:Math.max(18,L.speed.x-x-12);
     X.ui.topChips=[];X.ui.strip=null;
     if(!chips.length||w<18)return;
     var ch=chips[0],s=ch.text;
-    if(L.small)s=ch.id==='breach'?'营危':ch.id==='rage'?'怒':ch.id==='wave'?'妖潮':'妖府';
+    if(ch.id==='rage'){var rm=/(\d+:\d+)/.exec(String(ch.text));s='狂 '+(rm?rm[1]:'');}
+    else if(L.small)s=ch.id==='breach'?'营危':ch.id==='wave'?'妖潮':'妖府';
     var b={x:x,y:L.port?7:5,w:w,h:L.small?20:27};
-    var cc=K.c; cc.save(); cc.font=(L.small?12:14)+'px "Ma Shan Zheng","KaiTi",serif'; cc.fillStyle='#24180f'; cc.textAlign='center'; cc.textBaseline='middle'; cc.fillText(s, x+w/2, b.y+b.h/2); cc.restore();
+    var cc=K.c; cc.save(); cc.font=(L.small?12:14)+'px "Ma Shan Zheng","KaiTi",serif'; cc.fillStyle='#24180f'; cc.textAlign='left'; cc.textBaseline='middle'; cc.fillText(s, x+4, b.y+b.h/2); cc.restore();
     X.ui.topChips.push({id:ch.id,x:XY.kToLog(a,x),y:XY.kToLog(a,b.y),w:XY.kToLog(a,w),h:XY.kToLog(a,b.h)});
     if(ch.id==='breach')X.ui.strip=X.ui.topChips[0];tooltip(a,K,b,ch.tip||[ch.text]);
   }
@@ -25607,18 +25608,28 @@ I.vendorKey=function(G,a,k){var n=X.vendor.stock(G).length;if(k==='ArrowLeft'||k
     var need=X.xpNeed(G.level),xf=X.clamp(G.xp/need,0,1);
     rec(a,'xp',{x:0,y:L.head+1,w:W,h:3});
     c.save();c.translate(L.small?14:18,yy);c.fillStyle='#9d8144';c.beginPath();for(var ci=0;ci<6;ci++){var ca=ci*PI/3;c.lineTo(Math.cos(ca)*(L.small?4.7:6),Math.sin(ca)*(L.small?4.7:6));}c.closePath();c.fill();c.fillStyle='#f4efdf';c.fillRect(-1.5,-1.5,3,3);c.restore();
-    K.tf(X.fmtNum(Math.floor(G.coins)),L.small?25:36,yy,L.small?52:70,L.small?13:18,INK,'left',true,11);
-    var icCost=160+(G._incense||0)*80, icx=L.small?72:112;
-    K.t('香火'+icCost, icx, yy, L.small?12:15, G.coins>=icCost?'#a42d19':'#8a7a68', 'left', true);
-    hit(K,{x:icx-4,y:yy-14,w:L.small?70:88,h:28},'incense');
-    var tx=L.small?108:174,hx=L.small?140:221,hw=L.small?54:78;
+    var icCost=160+(G._incense||0)*80, coinX=L.small?22:32, incLabel='香火 '+icCost, incY=L.port?yy+22:yy, incX=coinX;
+    c.save();
+    c.font=(L.small?18:22)+'px "Ma Shan Zheng","KaiTi",serif';
+    c.fillStyle='#a42d19'; c.textAlign='left'; c.textBaseline='middle';
+    c.fillText(X.fmtNum(Math.floor(G.coins)), coinX, yy);
+    var coinW=c.measureText(X.fmtNum(Math.floor(G.coins))).width;
+    if(!L.port) incX=coinX+coinW+16;
+    c.font=(L.port?16:(L.small?15:17))+'px "Ma Shan Zheng","KaiTi",serif';
+    c.fillStyle=G.coins>=icCost?'#a42d19':'#8a6a58';
+    c.fillText(incLabel, incX, incY);
+    var incW=c.measureText(incLabel).width;
+    c.restore();
+    hit(K,{x:incX-4,y:incY-14,w:incW+12,h:28},'incense');
+    var tx=L.port?(L.small?156:174):(incX+incW+22), hx=tx+(L.small?36:52), hw=L.small?54:78;
+
     var ix=L.small?231:362,hpText=Math.ceil(t.hp)+'/'+t.maxHp,hpSize=L.small?11:14,hpGap=L.small?6:9;
     // Reserve the actual number width before drawing the blood stroke; anchors/hitboxes stay fixed.
     c.save();c.font='bold '+hpSize+'px '+K.fam(hpSize,true);hw=Math.max(14,Math.min(hw,ix-5-hx-hpGap-c.measureText(hpText).width));c.restore();
     var invText=t.inv>0?'护身 '+Math.ceil(t.inv)+'秒':t.down?'阵亡':'护送中';
     if(L.port){
-      c.save(); c.font=sz+'px "Ma Shan Zheng","KaiTi",serif'; c.fillStyle=G.breach||G.tdanger?RED:INK; c.textAlign='left'; c.textBaseline='middle'; c.fillText('唐僧', 96, yy); c.restore();
-      var bx0=138,bw0=52;
+      c.save(); c.font=sz+'px "Ma Shan Zheng","KaiTi",serif'; c.fillStyle=G.breach||G.tdanger?RED:INK; c.textAlign='left'; c.textBaseline='middle'; c.fillText('唐僧', 136, yy); c.restore();
+      var bx0=178,bw0=52;
       if(XY.INKP){ XY.INKP.stroke(c,bx0,yy,bx0+bw0,yy,1.4,'83,61,34',0.3,3,0.01); if(!t.down && t.maxHp) XY.INKP.stroke(c,bx0,yy,bx0+bw0*(t.hp/t.maxHp),yy,2.8,'168,50,36',0.92,5,0.02); }
       K.t(t.down?'尽':(t.hp>t.maxHp*0.66?'满':t.hp>t.maxHp*0.33?'半':'危'), bx0+bw0+8, yy, 14, INK, 'left', true);
       if(t.inv>0) K.t('护'+Math.ceil(t.inv), bx0+bw0+30, yy, 13, SOFT, 'left', false);
