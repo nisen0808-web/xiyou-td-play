@@ -126,6 +126,19 @@
     var cw = clip.cell[0], ch = clip.cell[1], col = index % clip.cols, row = (index / clip.cols) | 0;
     c.drawImage(im, col * cw, row * ch, cw, ch, dx, dy, dw, dh);
   };
+  var BOSS_CLIPS = ['bossIdle', 'bossAttack', 'bossHit'];
+  function enqueueClips(data, names, jobs) {
+    var ids = Object.keys(data.ids), i, n;
+    for (i = 0; i < ids.length; i++) {
+      for (n = 0; n < names.length; n++) {
+        (function (id, name) {
+          var clip = data.ids[id][name];
+          if (!clip || !clip.file || W.imgs[id + '/' + name]) return;
+          jobs.push(loadImg(W.base + clip.file).then(function (im) { W.imgs[id + '/' + name] = im; bakeFrames(im, clip); }, function () { }));
+        })(ids[i], names[n]);
+      }
+    }
+  }
   function loadImg(url) {
     return new Promise(function (resolve, reject) {
       var im = new Image();
@@ -134,7 +147,7 @@
       im.src = url;
     });
   }
-  /* 只在进入战斗时调用。菜单页不取图集。 */
+  /* 取经主线只取原来的小图集，而且战斗绘制不再把它们画上屏。 */
   W.arm = function () {
     if (W.promise) return W.promise;
     if (typeof fetch !== 'function' || typeof Image !== 'function') return Promise.reject(new Error('no image loader'));
@@ -148,20 +161,22 @@
         return r.json().then(function (extra) { return mergePending(data, extra); }, function () { return data; });
       }, function () { return data; });
     }).then(function (data) {
-      var ids = ingest(data), jobs = [], i, names, n;
-      for (i = 0; i < ids.length; i++) {
-        names = ['idle', 'attack', 'hit'];
-        for (n = 0; n < names.length; n++) {
-          (function (id, name) {
-            var clip = data.ids[id][name];
-            if (!clip || !clip.file) return;
-            jobs.push(loadImg(W.base + clip.file).then(function (im) { W.imgs[id + '/' + name] = im; bakeFrames(im, clip); }, function () { }));
-          })(ids[i], names[n]);
-        }
-      }
+      ingest(data); var jobs = [];
+      enqueueClips(data, ['idle', 'attack', 'hit'].concat(W.wantBoss ? BOSS_CLIPS : []), jobs);
       return Promise.all(jobs);
     }).then(function () { W.status = 'ready'; return W; }, function (e) { W.status = 'fail'; W.promise = null; throw e; });
     return W.promise;
+  };
+  /* Boss 战大图只在 Boss 战里取。取经主线的 arm() 不下载这三套。 */
+  W.armBoss = function () {
+    W.wantBoss = true;
+    function more() {
+      var jobs = [];
+      if (W.data) enqueueClips(W.data, BOSS_CLIPS, jobs);
+      return Promise.all(jobs);
+    }
+    if (W.data) return more();
+    return W.arm().then(more);
   };
   root.XY = root.XY || {};
   root.XY.wildAnim = W;

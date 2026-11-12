@@ -44,10 +44,11 @@
       jobs.push(loadImg('assets/mink-elite.webp').then(function (i) { MINK = i; }),
         Promise.resolve().then(function () { MINK_META = window.BF_MINK_META; }),
         (document.fonts && document.fonts.load ? document.fonts.load('40px "Ma Shan Zheng"', '胜败破招暴击0123456789') : Promise.resolve()));
-      if (window.XY && XY.wildAnim && XY.wildAnim.arm) {
+      if (window.XY && XY.wildAnim && (XY.wildAnim.armBoss || XY.wildAnim.arm)) {
         XY.wildAnim.base = '../assets/wild/';
-        jobs.push(XY.wildAnim.arm().catch(function () { return null; }));
+        jobs.push((XY.wildAnim.armBoss ? XY.wildAnim.armBoss() : XY.wildAnim.arm()).catch(function () { return null; }));
       }
+      jobs.push(preloadWu());
       return Promise.all(jobs);
     });
     if (window.BFUI) window.BFUI.ready = ready; return ready;
@@ -115,12 +116,12 @@
   function softclamp(s) { var W = G.W, lo = W * .09, hi = W * .91, m = W * .05; return s < lo ? lo - m * (1 - Math.exp(-(lo - s) / m)) : (s > hi ? hi + m * (1 - Math.exp(-(s - hi) / m)) : s); }
   function placeAll() {   // 世界 → 屏幕：每个绘制帧算一次；heroVis / bossVis 读缓存
     var V = vcalc(), F = G.F, W = G.W, a = ACC(), k = V.k, cw = V.cw + V.cv * a, bo = vo('boss', F.boss.x), bxw = bo.x + bo.v * a, bxs = W * .5 + (bxw - cw) * k;
-    var A = W * .075, L = 110, pos = { boss: 0, h: {}, fs: { boss: bo.fs } }, hs = [];
+    var A = W * (G.land ? .12 : .2), L = 110, pos = { boss: 0, h: {}, fs: { boss: bo.fs } }, hs = [];
     F.heroes.forEach(function (h) {
       var o = vo('h' + h.id, h.x), d = o.x + o.v * a - bxw, s = bxs + d * k + (d < 0 ? -1 : 1) * A * (1 - Math.exp(-Math.abs(d) / L));   // 靠近 Boss 时屏幕上略拉开，不叠成一团
       hs.push({ h: h, s: s, r: s - bxs }); pos.fs[h.id] = o.fs; });
     if (hs.length === 2) {   // 两个英雄屏幕距离太近：把离 Boss 远的那位往外推（按远近差平滑分摊，不会跳）
-      var ms = W * (G.land ? .105 : .19), dd = Math.abs(hs[1].s - hs[0].s);
+      var ms = W * (G.land ? .24 : .36), dd = Math.abs(hs[1].s - hs[0].s);
       if (dd < ms) { var def = ms - dd, u = clamp((Math.abs(hs[1].r) - Math.abs(hs[0].r)) / ms, -1, 1);
         hs[1].s += (hs[1].r < 0 ? -1 : 1) * def * (.5 + .5 * u); hs[0].s += (hs[0].r < 0 ? -1 : 1) * def * (.5 - .5 * u); } }
     hs.forEach(function (e) { pos.h[e.h.id] = softclamp(e.s); }); pos.boss = softclamp(bxs); G.pos = pos; return pos;
@@ -226,7 +227,7 @@
       case 'flames': dust(bv.x - 60 * S, gy, 8, 46 * S, '42,34,24'); stain(bv.x - 60 * S, gy, 110 * S, .2); wkick('boss', 'land', 1); ring(bv.x - 60 * S, gy, 150 * S, '#2a2218', .5, 6 * S); inkBurst(bv.x - 60 * S, gy - 20 * S, 50 * S, '#2a2218', 8, .4); G.shake = Math.max(G.shake, 6 * S); break;
       case 'dodge': h = heroById(e.id); if (h) { hv = heroVis(h); text(hv.x, bodyY(hv.sc) - 60 * S, '闪', '#5c4034', 34, .7); } break;
       case 'trait': h = heroById(e.id); if (h) { hv = heroVis(h); if (!G.F.over) text(hv.x, bodyY(hv.sc) - 90 * S, e.name, '#b8863b', 22, 1.3); ring(hv.x, bodyY(hv.sc), 110 * S, h.color, .6); } break;
-      case 'wuult': G.wuUlt = .9; hv = heroVis(F.heroes[0]); text(hv.x, bodyY(hv.sc) - 100 * S, '如意金箍棒', '#c8341f', 26, 1.2); break;
+      case 'wuult': G.wuUlt = .9; G.wuCut = 2.4; G.wuCutOff = false; break;
       case 'heal': h = heroById(e.id); if (h) { hv = heroVis(h); text(hv.x, bodyY(hv.sc) - 50 * S, '+' + e.amt, '#5c4034', 22, .9); } break;
       case 'shot': { hv = null; var hh = heroById(e.id); if (hh) { hv = heroVis(hh); fxAdd({ k: 'shot', x0: hv.x + 40 * S, y0: bodyY(hv.sc) + hv.dy, x1: bv.x - 30 * S, y1: bodyY(bv.sc), col: e.color, max: Math.max(.1, e.t) }); } break; }
       case 'summon': G.sumShake = 0; break;
@@ -266,7 +267,7 @@
     G.lane.partner += ((wantFront === 'partner' ? 0 : 1) - G.lane.partner) * Math.min(1, dt * 3.2);
     F.heroes.forEach(function (h) { if (h.flash > 0) h.flash -= dt; });
     updateView(dt);
-    if (G.bossHit > 0) G.bossHit -= dt; if (G.bossBig > 0) G.bossBig -= dt; if (G.wuUlt > 0) G.wuUlt -= dt;
+    if (G.bossHit > 0) G.bossHit -= dt; if (G.bossBig > 0) G.bossBig -= dt; if (G.wuUlt > 0) G.wuUlt -= dt; if (G.wuCut > 0 && !G.wuCutOff) G.wuCut -= dt;
     G.shake *= Math.pow(0.002, dt); G.flash = Math.max(0, G.flash - dt * 1.6);
     G.fx = G.fx.filter(function (f) { f.age += dt; return f.age < f.max; });
     G.calls = G.calls.filter(function (c) { c.age += dt; return c.age < c.max; });
@@ -318,7 +319,7 @@
     if (Math.abs(fl) < .05) return true;
     var face = (fl < 0 ? -1 : 1), ref = p.fitH || fh;
     var tx = cx + (p.dx || 0), ty = gyy + (p.dy || 0) - (p.lift || 0) * fh, nudge = 0;
-    if (id === 'niumo') {
+    if (id === 'niumo' || cw >= 480) {
       var padX = G.W * 0.02, padTop = G.H * 0.07;
       var sprW = cw * k, sprH = chh * k, maxW = G.W - padX * 2, maxH = Math.max(80, gyy - padTop);
       var shrink = Math.min(1, maxW / sprW, maxH / sprH);
@@ -328,8 +329,12 @@
       if (tx - left + nudge < padX) nudge = padX - (tx - left);
       tx += nudge;
     }
+    if (id !== 'niumo' && !G.land && G.pos && G.pos.boss != null) {
+      var back = (G._ly || 0) < -1, keep = G.W * (back ? .58 : .42), minX = G.W * 0.04;
+      if (tx > G.pos.boss - keep) tx = Math.max(minX, G.pos.boss - keep);
+    }
     if (!p.noShadow) drawShadow(c, cx + nudge, gyy, Math.min(body * .55, ref * .5), fh, p, al, face);
-    if (id !== 'niumo' && k > 2.2) k = 2.2;
+    if (id !== 'niumo' && !(clip.stand > 400) && k > 2.2) k = 2.2;
     c.save(); c.globalAlpha = al; c.imageSmoothingEnabled = true; c.imageSmoothingQuality = 'high';
     c.translate(tx, ty); c.rotate(p.rot || 0); c.transform(1, 0, (p.skew || 0) * fl, 1, 0, 0); c.scale(fl * (p.sx || 1), p.sy || 1);
     if (W.blit) W.blit(c, clip, im, fr.index, -ax * k, -ay * k, cw * k, chh * k);
@@ -337,31 +342,40 @@
     c.restore();
     return true;
   }
+  /* 只播验收过的 Boss 逐帧。旧 idle/attack/hit 灰粉图集一律不画，没有新图就回到彩色定妆。 */
+  function bossClipName(id, name) {
+    var W = window.XY && XY.wildAnim;
+    if (!W || !W.ready) return null;
+    var alt = name === 'idle' ? 'bossIdle' : name === 'attack' ? 'bossAttack' : name === 'hit' ? 'bossHit' : null;
+    if (!alt || !W.ready(id, alt)) return null;
+    return alt;
+  }
   function drawWildPose(c, id, pose, cx, gyy, fh, p) {
-    /* 灰粉破碎图集不再上屏。战斗回落到彩色定妆站姿。 */
-    return false;
     if (window.XY_NO_WILD) return false;
     var W = window.XY && XY.wildAnim;
     if (!W || !W.poseClip || !W.frameAt || !W.ready) return false;
-    var vt = VT(), want = W.poseClip(id, pose), atk = W.ready(id, 'attack') ? W.clip(id, 'attack') : null;
+    var vt = VT(), want = W.poseClip(id, pose);
+    var idleN = bossClipName(id, 'idle'), atkN = bossClipName(id, 'attack'), hitN = bossClipName(id, 'hit');
+    if (!idleN && !atkN && !hitN) return false;
+    var atk = atkN ? W.clip(id, atkN) : null;
     if (!p.key) {
-      if (want === 'attack' && atk) return paintWild(c, id, 'attack', 250, cx, gyy, fh, p);
-      if (want === 'hit' && W.ready(id, 'hit')) return paintWild(c, id, 'hit', (W.clip(id, 'hit').hit || {}).atMs || 167, cx, gyy, fh, p);
-      if (want === 'idle' && W.ready(id, 'idle')) return paintWild(c, id, 'idle', vt * 1000, cx, gyy, fh, p);
+      if (want === 'attack' && atk) return paintWild(c, id, atkN, (atk.hit && atk.hit.atMs) || 250, cx, gyy, fh, p);
+      if (want === 'hit' && hitN) return paintWild(c, id, hitN, (W.clip(id, hitN).hit || {}).atMs || 167, cx, gyy, fh, p);
+      if (want === 'idle' && idleN) return paintWild(c, id, idleN, vt * 1000, cx, gyy, fh, p);
       return false;
     }
     if (pose && !WHOLD[pose]) delete WLAT[p.key];
     var lat = WLAT[p.key];
     if (atk && want === 'attack') { if (!lat || vt < lat.t0 || (vt - lat.t0) * 1000 > atk.durationMs + 40) lat = WLAT[p.key] = { t0: vt }; }
-    if (lat && atk && WHOLD[pose] && (vt - lat.t0) * 1000 < atk.durationMs) return paintWild(c, id, 'attack', (vt - lat.t0) * 1000, cx, gyy, fh, p);
-    if (want === 'hit' && W.ready(id, 'hit')) {
-      var hc = W.clip(id, 'hit'), hk = p.key, hlat = HLAT[hk];
+    if (lat && atk && WHOLD[pose] && (vt - lat.t0) * 1000 < atk.durationMs) return paintWild(c, id, atkN, (vt - lat.t0) * 1000, cx, gyy, fh, p);
+    if (want === 'hit' && hitN) {
+      var hc = W.clip(id, hitN), hk = p.key, hlat = HLAT[hk];
       if (!hlat || vt < hlat.t0 || (vt - hlat.t0) * 1000 > hc.durationMs + 40) hlat = HLAT[hk] = { t0: vt };
-      return paintWild(c, id, 'hit', Math.min(hc.durationMs, (vt - hlat.t0) * 1000), cx, gyy, fh, p);
+      return paintWild(c, id, hitN, Math.min(hc.durationMs, (vt - hlat.t0) * 1000), cx, gyy, fh, p);
     }
-    if (want === 'idle' && W.ready(id, 'idle')) {
+    if (want === 'idle' && idleN) {
       var off = 0, i; for (i = 0; i < id.length; i++) off = (off + id.charCodeAt(i) * 97) % 5000;
-      return paintWild(c, id, 'idle', vt * 1000 + off, cx, gyy, fh, p);
+      return paintWild(c, id, idleN, vt * 1000 + off, cx, gyy, fh, p);
     }
     return false;
   }
@@ -395,7 +409,15 @@
     return IDLEP[b] ? .14 : .11;                                // 没有中间帧的大跳：80–140ms 交叉淡入淡出
   }
   function drawSpr(c, id, pose, cx, gyy, fh, p) {
-    p = p || {}; if (!p.key) return drawSpr1(c, id, pose, cx, gyy, fh, p);
+    p = p || {};
+    /* Boss 战大图不再叠姿势淡出和冲刺残影，避免出招身上留下一块灰影。旧灰图集仍然不画。 */
+    if (p.key && bossClipName(id, 'idle')) {
+      var plate = {}; for (var pk in p) plate[pk] = p[pk];
+      if (plate.fs != null) plate.fs = plate.fs < 0 ? -1 : 1;
+      plate.gh = 0;
+      return drawSpr1(c, id, pose, cx, gyy, fh, plate);
+    }
+    if (!p.key) return drawSpr1(c, id, pose, cx, gyy, fh, p);
     var vt = VT(), T = TR[p.key];
     { var q0 = {}, kq; for (kq in p) q0[kq] = p[kq]; p = q0;
       if (p.fs != null && Math.abs(p.fs) < .995) { var tn = 1 - Math.abs(p.fs); p.air = (p.air || 0) + Math.sin(tn * 3.1416 * .5) * fh * .012; p.sy = (p.sy || 1) * (1 - .035 * tn); }   // 转身：身子微微提起一点再落下
@@ -470,7 +492,7 @@
     if (st === 'atk') {
       var q = Math.sin(clamp(k / .3, 0, 1) * Math.PI), melee = !h.atk.ranged, cb = u.combo;
       if (k < .3) P.pose = chain(h.id, melee ? COMBO[cb] : (cb === 1 ? 'atk2' : 'attack'), k); if (melee && k > .05 && k < .27) P.gh = 3;
-      P.dx = q * (melee ? 70 + 22 * cb : 12) * S; P.rot = q * (.04 + .02 * cb); P.skew = 0; P.sx = 1 + q * .03;
+      P.dx = q * (melee ? 70 + 22 * cb : 12) * S * (G.land ? 1 : .45); P.rot = q * (.04 + .02 * cb); P.skew = 0; P.sx = 1 + q * .03;
       if (melee && cb === 2) { P.lift = .018 * q; }
     }
     if (st === 'hurt') {
@@ -745,6 +767,31 @@
   }
 
   /* ---------- 总绘制 ---------- */
+  var WUCLOSE = [];
+  function preloadWu() {
+    if (WUCLOSE._p) return WUCLOSE._p;
+    WUCLOSE._p = Promise.all([1, 2, 3, 4, 5].map(function (i) {
+      return loadImg('../assets/ult/wukong-close-' + i + '.webp').then(function (im) { WUCLOSE[i - 1] = im; }, function () { return null; });
+    }));
+    return WUCLOSE._p;
+  }
+  function ensureWuClose() { if (!WUCLOSE._p) preloadWu(); }
+  /* 悟空大招特写：浅色宣纸上的五帧。只盖画面，不改出手和伤害。点击关掉。 */
+  function drawWuClose(c) {
+    if (!(G.wuCut > 0) || G.wuCutOff) return;
+    ensureWuClose();
+    var total = 2.4, t = total - G.wuCut, idx = Math.max(0, Math.min(4, Math.floor(t / total * 5))), im = WUCLOSE[idx];
+    c.save();
+    c.fillStyle = '#f3ecdc';
+    c.fillRect(0, 0, G.W, G.H);
+    if (im && im.naturalWidth) {
+      var s = Math.min(G.W / im.naturalWidth, G.H / im.naturalHeight), dw = im.naturalWidth * s, dh = im.naturalHeight * s;
+      c.drawImage(im, (G.W - dw) / 2, (G.H - dh) / 2, dw, dh);
+    }
+    c.fillStyle = '#2a2218'; c.font = Math.round(15 * G.S) + 'px "Ma Shan Zheng","KaiTi",serif'; c.textAlign = 'right'; c.textBaseline = 'bottom';
+    c.fillText('点击跳过', G.W - 16, G.H - 12);
+    c.restore();
+  }
   function draw() {
     if (G.mode === 'pick') return;
     var F = G.F; if (!F) return; var W = G.W, H = G.H, S = G.S, c = ctx; c.setTransform(G.dpr, 0, 0, G.dpr, 0, 0); c.clearRect(0, 0, W, H);
@@ -762,6 +809,7 @@
     drawMinions(c); drawFx(c, false);
     c.restore();
     if (G.flash > 0) { c.save(); c.globalAlpha = Math.min(.55, G.flash); c.fillStyle = G.flashC; c.fillRect(0, 0, W, H); c.restore(); }
+    drawWuClose(c);
     var cutin = F.sm && F.sm.t < BF.SM.CUT; $('spd').style.visibility = cutin || G.introT > 0 ? 'hidden' : 'visible'; drawSummon(c); if (!cutin) { drawHUD(c); drawCalls(c); }
     if (G.introT > 0) drawIntro(c);
     if (F.over && F.over.win) { var u = clamp(G.endT / .5, 0, 1); if (G.endT < 2.6) { c.save(); c.globalAlpha = .9 * ease(u) * (G.endT > 2.2 ? 1 - (G.endT - 2.2) / .4 : 1); label(c, '击败牛魔王', W * .27, H * .22, Math.min(W * .068, 42 * S), '#c8341f', 'center', '#fffaf0'); c.restore(); } }
@@ -1035,6 +1083,7 @@
   /* ---------- 交互 ---------- */
   function doSummon(force) { var F = G.F; if (!F || F.sumUsed || F.over || F.sm || G.introT > 0) return; if (force) { F.sumId = force; F.sumLv = 5; } BF.pressSummon(F); if (F.sumId) loadChar(F.sumId); F.ev.forEach(onEvent); F.ev.length = 0; }
   cv.addEventListener('pointerdown', function (e) {
+    if (G.mode === 'fight' && G.wuCut > 0 && !G.wuCutOff) { G.wuCutOff = true; G.wuCut = 0; return; }
     if (G.mode !== 'fight') return; var r = cv.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top, R = G.sumRect;
     if (R && x >= R.x && x <= R.x + R.w && y >= R.y && y <= R.y + R.h) doSummon();
   });

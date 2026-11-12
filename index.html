@@ -2179,6 +2179,9 @@ XY.TRAITS = {
       gachaView.focus = Math.max(0, Math.min(n - 1, cur + dir));
       gachaView.hold = true;
     },
+    pick: function (id) {
+      if (gachaView) gachaView.lit = id;
+    },
     key: function () {
       var pack = XY.gacha10.ensure();
       if (!pack.show) return;
@@ -14565,6 +14568,7 @@ XY.ICONINK_DATA={"金箍棒":{"src":"data:image/webp;base64,UklGRjINAABXRUJQVlA4
   }
   U.portraitReady = function (id) { return !!portrait(id); };
   U.sprite = function (c, S, t) {
+    if (S.visualOff || (S.def && S.def.mainHero)) return false;
     if (t >= U.T) return false;
     var im = portrait(S.id); if (!im) return false;
     var h = S.h, fa = U.frameAt(t, S.def.hit), i = fa.i;
@@ -14595,6 +14599,7 @@ XY.ICONINK_DATA={"金箍棒":{"src":"data:image/webp;base64,UklGRjINAABXRUJQVlA4
   /* ---------- 三层 ---------- */
   U.ground = function (c, S, t, G) {
     var d = S.def, hit = d.hit, x = S.x, y = S.y + 14, acc = d.acc, i;
+    if (d.mainHero || S.visualOff) return;
     if (t < hit) {                                              // 前摇：脚下两道旋转的墨笔 + 一点点点缀色
       var k = eo(t / hit); c.fillStyle = 'rgba(' + acc + ',' + (0.10 * k) + ')'; c.beginPath(); c.ellipse(x, y, 40 + 90 * k, 16 + 36 * k, 0, 0, PI2); c.fill();
       for (i = 0; i < 4; i++) { var an = t * (4 + 6 * k) + i * PI / 2, r = 50 + 50 * k; stroke(c, x + cos(an) * r, y + sin(an) * r * 0.45, x + cos(an + 0.9) * r, y + sin(an + 0.9) * r * 0.45, 5 + 4 * k, INK, 0.5 * k, i * 3); }
@@ -14607,6 +14612,7 @@ XY.ICONINK_DATA={"金箍棒":{"src":"data:image/webp;base64,UklGRjINAABXRUJQVlA4
   };
   U.air = function (c, S, t, G) {
     var d = S.def, hit = d.hit, x = S.x, y = S.y, h = S.h, acc = d.acc, i, tt = t - hit;
+    if (d.mainHero || S.visualOff) return;
     if (h && !h.dead) { x = h.x; y = h.y; }
     U.sprite(c, S, t);
     if (tt >= 0) {
@@ -14640,7 +14646,24 @@ XY.ICONINK_DATA={"金箍棒":{"src":"data:image/webp;base64,UklGRjINAABXRUJQVlA4
       blot(c, p.x, p.y, 14 + 18 * eo(kk), INK, 0.6 * (1 - kk), 70 + i); stroke(c, p.x - 30, p.y - 26, p.x + 30, p.y + 26, 6, acc, 0.8 * (1 - kk), 90 + i); stroke(c, p.x + 30, p.y - 26, p.x - 30, p.y + 26, 6, acc, 0.8 * (1 - kk), 95 + i);
     }
   };
+  U.closeup = function (c, t, dur, W, H) {
+    var imgs = U._close; if (!imgs) {
+      imgs = U._close = [];
+      for (var i = 1; i <= 5; i++) { var im = new Image(); im.src = 'assets/ult/wukong-close-' + i + '.webp'; imgs.push(im); }
+    }
+    var idx = Math.max(0, Math.min(4, Math.floor(Math.max(0, t) / Math.max(0.001, dur) * 5))), plate = imgs[idx];
+    c.save(); c.fillStyle = '#f3ecdc'; c.fillRect(0, 0, W, H);
+    if (plate && plate.complete && plate.naturalWidth) {
+      var s = Math.min(W / plate.naturalWidth, H / plate.naturalHeight), dw = plate.naturalWidth * s, dh = plate.naturalHeight * s;
+      c.drawImage(plate, (W - dw) / 2, (H - dh) / 2, dw, dh);
+    }
+    c.fillStyle = '#2a2218'; c.font = '16px "Ma Shan Zheng","KaiTi",serif'; c.textAlign = 'right'; c.textBaseline = 'bottom';
+    c.fillText('点击跳过', W - 18, H - 12);
+    c.restore();
+  };
   U.screen = function (c, S, t, W, H) {
+    if (S.visualOff) return;
+    if (S.def && S.def.mainHero) { U.closeup(c, t, S.def.dur, W, H); return; }
     var d = S.def, tt = t - d.hit; if (tt < 0) return;
     var f = 1 - seg(tt, 0, 0.18); if (f > 0) { c.fillStyle = 'rgba(255,251,238,' + 0.16 * f + ')'; c.fillRect(0, 0, W, H); }
   };
@@ -14708,13 +14731,39 @@ XY.ICONINK_DATA={"金箍棒":{"src":"data:image/webp;base64,UklGRjINAABXRUJQVlA4
     var v = viewR(G), S = { id: (h.def && h.def.xid) || h.id, def: d, h: h, t: 0, x: h.x, y: h.y, vw: v.x1 - v.x0, vh: v.y1 - v.y0, pts: [], beatsDone: 0, echoHit: 0, nextBeat: 0, born: G.t };
     G.us = (G.us || []).filter(function (o) { return o.t < o.def.dur; }); G.us.push(S);
     var st = G.stats.ultScenes || (G.stats.ultScenes = {}); st[h.id] = (st[h.id] || 0) + 1; G.usLast = S;
+    US.live = G;
     return S;
   };
+  US.skipCloseup = function (G) {
+    var L = G && G.us, i, hit = false;
+    if (!L) return false;
+    for (i = 0; i < L.length; i++) {
+      if (L[i].def && L[i].def.mainHero && !L[i].visualOff && L[i].t < L[i].def.dur) { L[i].visualOff = true; if (L[i].h) L[i].h.ultInk = false; hit = true; }
+    }
+    return hit;
+  };
+  /* 关掉特写的这一下不能再落到战场上：否则会放塔、召唤，或把队伍领到被画面挡住的地方。 */
+  US.eatGesture = function () {
+    var now = Date.now();
+    if (US._eatUntil && now < US._eatUntil) return true;
+    if (US.skipCloseup(US.live)) { US._eatUntil = now + 800; return true; }
+    return false;
+  };
+  if (typeof window !== 'undefined' && window.addEventListener && !US._skipBound) {
+    US._skipBound = true;
+    function eatPointer(e) {
+      if (!US.eatGesture()) return;
+      if (e.preventDefault) e.preventDefault();
+      if (e.stopPropagation) e.stopPropagation();
+    }
+    window.addEventListener('pointerdown', eatPointer, true);
+    window.addEventListener('pointerup', eatPointer, true);
+  }
   US.tick = function (G, dt) {
     var L = G.us; if (!L || !L.length) return;
     for (var i = L.length - 1; i >= 0; i--) {
       var S = L[i], d = S.def, h = S.h; S.t += dt;
-      if (h && !h.down && !h.dead) { h.moving = false; h.ultPose = S.t < d.hit ? 6 : (S.t < d.hit + 0.5 ? 7 : 0); h.ultInk = !!(XY.ULTINK && XY.ULTINK.portraitReady && XY.ULTINK.portraitReady(S.id)) && S.t >= 0.1 && S.t < XY.ULTINK.T - 0.25; }      // 水墨精灵在场时不画 Q 版小人      // Q 版动作帧：抬手 → 出招 → 回待机（只改画面，不碰攻击冷却）
+      if (h && !h.down && !h.dead) { h.moving = false; h.ultPose = S.t < d.hit ? 6 : (S.t < d.hit + 0.5 ? 7 : 0); h.ultInk = !S.visualOff && !!(XY.ULTINK && XY.ULTINK.portraitReady && XY.ULTINK.portraitReady(S.id)) && S.t >= 0.1 && S.t < XY.ULTINK.T - 0.25; }      // 水墨精灵在场时不画 Q 版小人      // Q 版动作帧：抬手 → 出招 → 回待机（只改画面，不碰攻击冷却）
       while (S.nextBeat < d.beats.length && S.t >= d.beats[S.nextBeat].t) { var b = d.beats[S.nextBeat++]; if (G.mode === 'play' && h) echo(G, S, h, b.mul); }
       if (S.t >= d.dur) { if (h) { h.ultPose = 0; h.ultInk = false; } L.splice(i, 1); }
     }
@@ -23748,136 +23797,563 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
       if (XY.gacha10.nudge) XY.gacha10.nudge(dx < 0 ? 1 : -1);
     }, true);
   }
+  /* 立绘自带一圈底纹墨漩涡。纸色已经抠掉之后，再把连到画布边缘、又不挨着人物的灰墨去掉，留下身体、火焰和近身的一点墨边。 */
+  /* 外轮廓跟着墨走：纸色从边缘淹进来，靠近人物留一圈不规则的纸边，再按距离羽化，避免矩形直边。 */
+  function gachaSoften(d, w, h, pr, pg, pb) {
+    var N = w * h, i, x, y, r, gv, b, mx, mn, sat, lum, dr, dg, db, ds, p, xx, yy, step;
+    var paper = new Uint8Array(N), anchor = new Uint8Array(N);
+    for (i = 0; i < N; i++) {
+      if (d[i * 4 + 3] < 16) { paper[i] = 1; continue; }
+      r = d[i * 4]; gv = d[i * 4 + 1]; b = d[i * 4 + 2];
+      mx = r > gv ? r : gv; if (b > mx) mx = b;
+      mn = r < gv ? r : gv; if (b < mn) mn = b;
+      sat = mx - mn;
+      lum = (r * 3 + gv * 6 + b) / 10;
+      dr = r - pr; dg = gv - pg; db = b - pb;
+      ds = Math.sqrt(dr * dr + dg * dg + db * db);
+      if (sat > 40 || lum < 96) anchor[i] = 1;
+      else if (ds < 86 && sat < 46 && lum > 138) paper[i] = 1;
+    }
+    var guard = new Uint8Array(N), q = new Int32Array(N), qh = 0, qt = 0;
+    for (i = 0; i < N; i++) if (anchor[i]) { guard[i] = 1; q[qt++] = i; }
+    while (qh < qt) {
+      p = q[qh++];
+      if (guard[p] > 22) continue;
+      yy = (p / w) | 0; xx = p - yy * w; step = guard[p] + 1;
+      if (yy > 0 && !guard[p - w]) { guard[p - w] = step; q[qt++] = p - w; }
+      if (yy + 1 < h && !guard[p + w]) { guard[p + w] = step; q[qt++] = p + w; }
+      if (xx > 0 && !guard[p - 1]) { guard[p - 1] = step; q[qt++] = p - 1; }
+      if (xx + 1 < w && !guard[p + 1]) { guard[p + 1] = step; q[qt++] = p + 1; }
+    }
+    var kill = new Uint8Array(N);
+    qh = 0; qt = 0;
+    function pushK(idx) {
+      if (kill[idx] || anchor[idx] || guard[idx]) return;
+      if (!paper[idx] && d[idx * 4 + 3] >= 16) return;
+      kill[idx] = 1; q[qt++] = idx;
+    }
+    for (x = 0; x < w; x++) { pushK(x); pushK((h - 1) * w + x); }
+    for (y = 0; y < h; y++) { pushK(y * w); pushK(y * w + w - 1); }
+    while (qh < qt) {
+      p = q[qh++];
+      yy = (p / w) | 0; xx = p - yy * w;
+      if (yy > 0) pushK(p - w);
+      if (yy + 1 < h) pushK(p + w);
+      if (xx > 0) pushK(p - 1);
+      if (xx + 1 < w) pushK(p + 1);
+    }
+    for (i = 0; i < N; i++) if (kill[i]) d[i * 4 + 3] = 0;
+    var dist = new Uint16Array(N);
+    for (i = 0; i < N; i++) dist[i] = 65535;
+    qh = 0; qt = 0;
+    for (i = 0; i < N; i++) if (d[i * 4 + 3] < 12) { dist[i] = 0; q[qt++] = i; }
+    while (qh < qt) {
+      p = q[qh++];
+      if (dist[p] >= 56) continue;
+      yy = (p / w) | 0; xx = p - yy * w; step = dist[p] + 1;
+      if (yy > 0 && dist[p - w] > step) { dist[p - w] = step; q[qt++] = p - w; }
+      if (yy + 1 < h && dist[p + w] > step) { dist[p + w] = step; q[qt++] = p + w; }
+      if (xx > 0 && dist[p - 1] > step) { dist[p - 1] = step; q[qt++] = p - 1; }
+      if (xx + 1 < w && dist[p + 1] > step) { dist[p + 1] = step; q[qt++] = p + 1; }
+    }
+    for (y = 0; y < h; y++) {
+      for (x = 0; x < w; x++) {
+        i = y * w + x;
+        if (d[i * 4 + 3] < 8) continue;
+        var n = Math.sin(x * 0.17 + y * 0.11) * 43758.5453;
+        n = n - Math.floor(n);
+        var reach = 10 + n * 46;
+        var edge = Math.min(x, y, w - 1 - x, h - 1 - y);
+        var dd = dist[i] < edge ? dist[i] : edge;
+        if (dd >= reach) continue;
+        var t = dd / reach;
+        t = t * t * (3 - 2 * t);
+        d[i * 4 + 3] = Math.max(0, Math.round(d[i * 4 + 3] * t));
+      }
+    }
+    /* 画布边是直的。灰墨沿顶边、左边走一条慢浪，彩焰和衣服只轻轻收一点，避免齐切。 */
+    for (y = 0; y < h; y++) {
+      for (x = 0; x < w; x++) {
+        i = y * w + x;
+        if (d[i * 4 + 3] < 8) continue;
+        var rr = d[i * 4], gg = d[i * 4 + 1], bb = d[i * 4 + 2];
+        var mx = rr > gg ? rr : gg; if (bb > mx) mx = bb;
+        var mn = rr < gg ? rr : gg; if (bb < mn) mn = bb;
+        var sat = mx - mn;
+        var deep = sat > 46 ? 0.24 : 1;
+        var topW = (0.5 + 0.5 * Math.sin(x * 0.014 + 0.5)) * 0.55 + (0.5 + 0.5 * Math.sin(x * 0.041 + 0.7)) * 0.45;
+        var leftW = (0.5 + 0.5 * Math.sin(y * 0.017 + 0.8)) * 0.55 + (0.5 + 0.5 * Math.sin(y * 0.046 + 1.1)) * 0.45;
+        var nick = 0.5 + 0.5 * Math.sin(x * 0.08 + y * 0.063);
+        var topR = 16 + topW * 230 * deep + nick * 22 * deep;
+        var leftR = 12 + leftW * 210 * deep + nick * 18 * deep;
+        var rightR = 12 + (0.5 + 0.5 * Math.sin(y * 0.02 + 2.4)) * 56 * deep;
+        var botR = 10 + (0.5 + 0.5 * Math.sin(x * 0.018 + 1.2)) * 36 * deep;
+        var inset = Math.min(x / leftR, y / topR, (w - 1 - x) / rightR, (h - 1 - y) / botR);
+        if (inset >= 1) continue;
+        var t2 = inset < 0 ? 0 : inset;
+        t2 = t2 * t2 * (3 - 2 * t2);
+        d[i * 4 + 3] = Math.max(0, Math.round(d[i * 4 + 3] * t2));
+      }
+    }
+  }
+  function gachaCutout(im) {
+    if (!im || !(im.naturalWidth || im.width)) return null;
+    if (im._gachaCut) return im._gachaCut;
+    var w = im.naturalWidth || im.width, h = im.naturalHeight || im.height;
+    var cnv = document.createElement('canvas');
+    cnv.width = w; cnv.height = h;
+    var g = cnv.getContext('2d', { willReadFrequently: true });
+    g.drawImage(im, 0, 0);
+    var img = g.getImageData(0, 0, w, h), d = img.data, N = w * h;
+    function at(x, y) { var i = (y * w + x) * 4; return [d[i], d[i + 1], d[i + 2]]; }
+    var cs = [at(2, 2), at(w - 3, 2), at(2, h - 3), at(w - 3, h - 3)];
+    var pr = 0, pg = 0, pb = 0, k;
+    for (k = 0; k < 4; k++) { pr += cs[k][0]; pg += cs[k][1]; pb += cs[k][2]; }
+    pr /= 4; pg /= 4; pb /= 4;
+    var cand = new Uint8Array(N), dist = new Float32Array(N);
+    var i, r, gv, b, dr, dg, db, ds, mx, mn;
+    for (i = 0; i < N; i++) {
+      r = d[i * 4]; gv = d[i * 4 + 1]; b = d[i * 4 + 2];
+      dr = r - pr; dg = gv - pg; db = b - pb;
+      ds = Math.sqrt(dr * dr + dg * dg + db * db);
+      dist[i] = ds;
+      mx = r > gv ? r : gv; if (b > mx) mx = b;
+      mn = r < gv ? r : gv; if (b < mn) mn = b;
+      if (ds < 50 && (mx - mn) < 66) cand[i] = 1;
+    }
+    var bg = new Uint8Array(N), q = new Int32Array(N), qh = 0, qt = 0;
+    function push(p) { if (!bg[p] && cand[p]) { bg[p] = 1; q[qt++] = p; } }
+    var x, y;
+    for (x = 0; x < w; x++) { push(x); push((h - 1) * w + x); }
+    for (y = 0; y < h; y++) { push(y * w); push(y * w + w - 1); }
+    var p, yy, xx;
+    while (qh < qt) {
+      p = q[qh++];
+      yy = (p / w) | 0; xx = p - yy * w;
+      if (yy > 0) push(p - w);
+      if (yy + 1 < h) push(p + w);
+      if (xx > 0) push(p - 1);
+      if (xx + 1 < w) push(p + 1);
+    }
+    for (i = 0; i < N; i++) if (bg[i]) d[i * 4 + 3] = 0;
+    for (y = 1; y < h - 1; y++) {
+      for (x = 1; x < w - 1; x++) {
+        i = y * w + x;
+        if (bg[i] || dist[i] > 34) continue;
+        if (bg[i - 1] || bg[i + 1] || bg[i - w] || bg[i + w]) d[i * 4 + 3] = 0;
+      }
+    }
+    gachaSoften(d, w, h, pr, pg, pb);
+    var bx0 = w, by0 = h, bx1 = 0, by1 = 0, seenPx = 0;
+    for (i = 0; i < N; i++) {
+      if (d[i * 4 + 3] < 28) continue;
+      y = (i / w) | 0; x = i - y * w;
+      if (x < bx0) bx0 = x;
+      if (y < by0) by0 = y;
+      if (x > bx1) bx1 = x;
+      if (y > by1) by1 = y;
+      seenPx = 1;
+    }
+    im._gachaBox = seenPx ? { x: bx0, y: by0, w: bx1 - bx0 + 1, h: by1 - by0 + 1 } : { x: 0, y: 0, w: w, h: h };
+    g.putImageData(img, 0, 0);
+    im._gachaCut = cnv;
+    return cnv;
+  }
+  /* 1–10 人各一套站位。x/y 是身位中心（0–1），s 是高低，z 0 后 / 1 中 / 2 前，ns -1 左 / 0 上 / 1 右。后层更小更靠上，前层更大更靠下。 */
+  var GACHA_LAND = {
+    1: [[0.62, 0.62, 1.05, 2, 1]],
+    2: [[0.34, 0.36, 0.64, 0, -1], [0.66, 0.78, 1.04, 2, 1]],
+    3: [[0.18, 0.36, 0.62, 0, -1], [0.46, 0.56, 0.76, 1, 0], [0.76, 0.80, 1.04, 2, 1]],
+    4: [[0.14, 0.34, 0.60, 0, -1], [0.40, 0.58, 0.74, 1, -1], [0.66, 0.36, 0.60, 0, 1], [0.84, 0.80, 1.02, 2, 1]],
+    5: [[0.10, 0.35, 0.58, 0, -1], [0.30, 0.80, 1.00, 2, -1], [0.50, 0.56, 0.74, 1, 0], [0.70, 0.36, 0.60, 0, 1], [0.88, 0.78, 1.02, 2, 1]],
+    6: [[0.08, 0.34, 0.58, 0, -1], [0.26, 0.58, 0.74, 1, -1], [0.46, 0.82, 1.02, 2, -1], [0.62, 0.36, 0.58, 0, 1], [0.78, 0.58, 0.76, 1, 1], [0.92, 0.80, 1.00, 2, 1]],
+    7: [[0.08, 0.34, 0.58, 0, -1], [0.24, 0.57, 0.72, 1, -1], [0.40, 0.82, 1.00, 2, -1], [0.56, 0.36, 0.58, 0, 0], [0.70, 0.58, 0.74, 1, 1], [0.84, 0.80, 1.02, 2, 1], [0.94, 0.38, 0.56, 0, 1]],
+    8: [[0.07, 0.34, 0.56, 0, -1], [0.20, 0.58, 0.72, 1, -1], [0.36, 0.82, 1.00, 2, -1], [0.50, 0.35, 0.56, 0, 0], [0.64, 0.58, 0.72, 1, 1], [0.78, 0.80, 1.00, 2, 1], [0.90, 0.36, 0.56, 0, 1], [0.96, 0.62, 0.70, 1, 1]],
+    9: [[0.18, 0.42, 0.82, 0, -1], [0.30, 0.58, 0.86, 1, -1], [0.40, 0.80, 0.98, 2, -1], [0.48, 0.40, 0.82, 0, 0], [0.56, 0.56, 0.86, 1, 1], [0.64, 0.80, 1.00, 2, 1], [0.82, 0.38, 0.82, 0, 1], [0.70, 0.52, 0.90, 1, -1], [0.90, 0.82, 0.96, 2, 1]],
+    10: [[0.06, 0.34, 0.56, 0, -1], [0.18, 0.56, 0.70, 1, -1], [0.30, 0.82, 0.98, 2, -1], [0.42, 0.33, 0.54, 0, 0], [0.52, 0.58, 0.72, 1, 1], [0.64, 0.80, 1.00, 2, 1], [0.74, 0.36, 0.56, 0, 1], [0.84, 0.60, 0.70, 1, 1], [0.92, 0.82, 0.96, 2, 1], [0.98, 0.40, 0.54, 0, 1]]
+  };
+  /* 竖屏按行排：后排靠上、中排居中、前排靠下。每行左中右分开，只在脚下留一点空给名字。 */
+  var GACHA_PORT = {
+    1: [[0.50, 0.56, 1.50, 2, 0]],
+    2: [[0.28, 0.28, 1.05, 0, -1], [0.72, 0.70, 1.28, 2, 1]],
+    3: [[0.22, 0.16, 0.96, 0, -1], [0.74, 0.44, 1.12, 1, 1], [0.40, 0.76, 1.24, 2, -1]],
+    4: [[0.22, 0.15, 0.92, 0, -1], [0.76, 0.17, 0.92, 0, 1], [0.30, 0.46, 1.08, 1, -1], [0.70, 0.76, 1.20, 2, 1]],
+    5: [[0.20, 0.15, 0.90, 0, -1], [0.78, 0.17, 0.90, 0, 1], [0.28, 0.44, 1.04, 1, -1], [0.74, 0.46, 1.04, 1, 1], [0.48, 0.76, 1.18, 2, 0]],
+    6: [[0.22, 0.15, 0.90, 0, -1], [0.78, 0.17, 0.90, 0, 1], [0.24, 0.44, 1.02, 1, -1], [0.74, 0.46, 1.02, 1, 1], [0.22, 0.76, 1.14, 2, -1], [0.74, 0.78, 1.16, 2, 1]],
+    7: [[0.18, 0.14, 0.86, 0, -1], [0.50, 0.16, 0.84, 0, 0], [0.82, 0.14, 0.86, 0, 1], [0.28, 0.44, 1.04, 1, -1], [0.72, 0.46, 1.04, 1, 1], [0.26, 0.76, 1.14, 2, -1], [0.72, 0.78, 1.16, 2, 1]],
+    8: [[0.18, 0.14, 0.86, 0, -1], [0.50, 0.16, 0.84, 0, 0], [0.82, 0.14, 0.86, 0, 1], [0.20, 0.43, 1.02, 1, -1], [0.50, 0.46, 1.06, 1, 0], [0.80, 0.43, 1.02, 1, 1], [0.28, 0.76, 1.14, 2, -1], [0.72, 0.78, 1.16, 2, 1]],
+    9: [[0.17, 0.13, 0.88, 0, -1], [0.50, 0.155, 0.86, 0, 0], [0.83, 0.13, 0.88, 0, 1], [0.18, 0.42, 1.06, 1, -1], [0.50, 0.45, 1.10, 1, 0], [0.82, 0.42, 1.06, 1, 1], [0.16, 0.76, 1.16, 2, -1], [0.50, 0.80, 1.20, 2, 0], [0.84, 0.76, 1.16, 2, 1]],
+    10: [[0.14, 0.13, 0.74, 0, -1], [0.38, 0.15, 0.74, 0, 0], [0.62, 0.13, 0.74, 0, 1], [0.86, 0.15, 0.74, 0, 1], [0.20, 0.42, 1.02, 1, -1], [0.50, 0.45, 1.06, 1, 0], [0.80, 0.42, 1.02, 1, 1], [0.17, 0.76, 1.12, 2, -1], [0.50, 0.80, 1.16, 2, 0], [0.83, 0.76, 1.12, 2, 1]]
+  };
+  XY.gacha10.rosterSlots = function (n, land) {
+    var key = n < 1 ? 1 : (n > 10 ? 10 : n | 0);
+    var src = (land ? GACHA_LAND : GACHA_PORT)[key], out = [], i, s;
+    for (i = 0; i < src.length && i < Math.max(n, 1); i++) {
+      s = src[i];
+      out.push({ x: s[0], y: s[1], s: s[2], z: s[3], ns: s[4] });
+    }
+    return out;
+  };
   XY.gacha10.paint = function (c, st, a) {
     var v = XY.gacha10.view(a); if (!v || !v.rec) return;
-    var cw = st.cw, ch = st.ch, land = cw >= 780 && cw > ch && ch >= 520, rec = v.rec, rows = rec.rows || [];
+    var cw = st.cw, ch = st.ch, land = cw > ch * 1.05, short = land && ch < 420, rec = v.rec, rows = rec.rows || [];
     var elapsed = typeof XY.gacha10.freeze === 'number' ? XY.gacha10.freeze : Math.max(0, (a.rt || 0) - (v.t0 || 0));
-    var nu = 0, nd = 0, i;
-    rows.forEach(function (r) { if (XY.bgArt) { try { XY.bgArt(r.id); } catch (e) {} } xAv(r.id); if (r.kind === 'unlock') nu++; else nd++; });
+    if (!document.getElementById('gachaBrush')) {
+      var face = document.createElement('style');
+      face.id = 'gachaBrush';
+      face.textContent = '@font-face{font-family:GachaBrush;src:url("assets/fonts/MaShanZheng-Regular.ttf") format("truetype");font-display:swap}';
+      document.head.appendChild(face);
+    }
+    rows.forEach(function (r) {
+      if (XY.isHidden && XY.isHidden(r.id) && !(XY.save.spRealOwned && XY.save.spRealOwned(r.id))) return;
+      gachaHd(r.id);
+      if (XY.bgArt) { try { XY.bgArt(r.id); } catch (e) {} }
+    });
+    gachaHd('yuanzhang');
+    if (XY.bgArt) { try { XY.bgArt('yuanzhang'); } catch (e) {} }
     if (v.phase !== 'result' && !v.hold && XY.gacha10.freeze == null && elapsed >= XY.gacha10.timing.total) v.phase = 'result';
-    if (VU.paperBg) VU.paperBg(c, { cw: cw, ch: ch }, { rgb: '201,162,74', rgb2: '184,50,42', seed: 21 });
-    else { c.fillStyle = '#f6efe0'; c.fillRect(0, 0, cw, ch); }
-    VU.seal(c, 14, 10, land ? 46 : 40, land ? 46 : 40, '抽', RED, land ? 24 : 20);
     var stage = v.phase !== 'result' && XY.gacha10.forceResult !== true;
     var focus = v.hold && v.focus != null ? v.focus : XY.gacha10.focusOf(elapsed);
     if (!v.hold) v.focus = focus;
-    kt(c, stage ? '天机十连' : '十连结果', 70, land ? 26 : 24, land ? 30 : 24, '#2b1c08', 'left', cw - 160);
-    kt(c, stage ? ('第 ' + (focus + 1) + ' / ' + rows.length + ' 张 · 已写入存档') : ('解锁 ' + nu + ' 人 · 重复 ' + nd + ' 张 · 只此一次'), 70, land ? 52 : 46, land ? 14 : 12, SOFT, 'left', cw - 90, false);
-    st.hit(0, 0, cw, ch, 'gachaHold');
-    function skipBtn(x, y, w, label) { st.btn(x, y, w, 48, label, 'gachaSkip', { sz: land ? 20 : 18, rgb: '58,50,38' }); }
-    function ackBtn(x, y, w) { st.btn(x, y, w, 48, '收下', 'gachaAck', { pri: true, col: RED, sz: land ? 22 : 18 }); }
-    function arrow(x, y, label, dir, off) { st.btn(x, y, 52, 48, label, dir < 0 ? 'gachaPrev' : 'gachaNext', { off: off, sz: 26 }); }
-    function layCard(x, y, cw0, ch0) {
-      var b = XY.gacha10.cardSize(cw0, ch0);
-      return { x: Math.round(x + (cw0 - b.w) / 2), y: Math.round(y + (ch0 - b.h) / 2), w: b.w, h: b.h };
+    if (VU.paperBg) VU.paperBg(c, { cw: cw, ch: ch }, { rgb: '92,74,52', rgb2: '70,56,42', seed: 21 });
+    else { c.fillStyle = '#f6efe0'; c.fillRect(0, 0, cw, ch); }
+    function shown(id) {
+      if (!id) return false;
+      if (XY.isHidden && XY.isHidden(id) && !(XY.save.spRealOwned && XY.save.spRealOwned(id))) return false;
+      return true;
     }
-    if (!land && stage) {
-      var maxW = Math.min(cw - 96, 440), maxH = Math.max(180, ch - 188);
-      var b = XY.gacha10.cardSize(maxW, maxH), by = 72;
-      if (by + b.h > ch - 78) b = XY.gacha10.cardSize(maxW, Math.max(140, ch - 78 - by));
-      var bx = Math.round((cw - b.w) / 2);
-      var p = v.hold ? 1 : XY.gacha10.cardAt(elapsed, focus);
-      var row = rows[focus] || rows[0];
-      if (row) flipCard(c, row, bx, by, b.w, b.h, 11 + focus * 17, p);
-      var dotsY = by + b.h + 16;
-      for (i = 0; i < rows.length; i++) {
-        c.beginPath();
-        c.arc(cw / 2 + (i - (rows.length - 1) / 2) * 16, dotsY, i === focus ? 4.5 : 3, 0, Math.PI * 2);
-        c.fillStyle = i === focus ? RED : 'rgba(58,50,38,0.35)';
-        c.fill();
+    function gachaHd(id) {
+      XY._gachaHd = XY._gachaHd || {};
+      var im = XY._gachaHd[id];
+      if (!im) { im = XY._gachaHd[id] = new Image(); im.src = 'assets/art/battle-hd/' + id + '.webp'; }
+      return (im.complete && im.naturalWidth) ? im : null;
+    }
+    function alphaBox(im) {
+      if (im._gachaBox) return im._gachaBox;
+      var w = im.naturalWidth || im.width, h = im.naturalHeight || im.height;
+      var cnv = document.createElement('canvas');
+      cnv.width = w; cnv.height = h;
+      var g = cnv.getContext('2d', { willReadFrequently: true });
+      g.drawImage(im, 0, 0);
+      var d = g.getImageData(0, 0, w, h).data, i, x, y, bx0 = w, by0 = h, bx1 = 0, by1 = 0, seen = 0;
+      for (i = 0; i < w * h; i++) {
+        if (d[i * 4 + 3] < 28) continue;
+        y = (i / w) | 0; x = i - y * w;
+        if (x < bx0) bx0 = x; if (y < by0) by0 = y; if (x > bx1) bx1 = x; if (y > by1) by1 = y;
+        seen = 1;
       }
-      var foot = ch - 16 - 48;
-      arrow(10, foot, '‹', -1, focus <= 0);
-      arrow(cw - 62, foot, '›', 1, focus >= rows.length - 1);
-      skipBtn((cw - Math.min(168, cw - 150)) / 2, foot, Math.min(168, cw - 150), v.hold ? '看总览' : '跳过');
-      return;
+      im._gachaBox = seen ? { x: bx0, y: by0, w: bx1 - bx0 + 1, h: by1 - by0 + 1 } : { x: 0, y: 0, w: w, h: h };
+      return im._gachaBox;
     }
-    if (!land && !stage && cw > ch * 1.35 && ch < 520) {
-      var perS = 2, pagesS = Math.max(1, Math.ceil(rows.length / perS));
-      v.pages = pagesS;
-      var pageS = Math.max(0, Math.min(pagesS - 1, v.page || 0));
-      v.page = pageS;
-      var sliceS = rows.slice(pageS * perS, pageS * perS + perS);
-      var footS = ch - 6 - 44, headS = 8, gapS = 14;
-      var availW = cw - 140, cardW = Math.floor((availW - gapS) / 2);
-      var cardH = Math.max(120, footS - headS - 6);
-      var gridW = sliceS.length * cardW + gapS * Math.max(0, sliceS.length - 1);
-      var x0s = Math.round((cw - gridW) / 2);
-      sliceS.forEach(function (r, k) {
-        var x = x0s + k * (cardW + gapS);
-        var laid = layCard(x, headS, cardW, cardH);
-        flipCard(c, r, laid.x, laid.y, laid.w, laid.h, 40 + (pageS * perS + k) * 11, 1);
-      });
-      function inkArrow(x, y, label, dir, off) {
-        c.save(); c.globalAlpha = off ? 0.35 : 1; c.fillStyle = '#2b1c08';
-        c.beginPath(); c.moveTo(x + 4, y + 8); c.lineTo(x + 46, y + 6); c.lineTo(x + 42, y + 40); c.lineTo(x + 2, y + 38); c.closePath(); c.fill();
-        c.fillStyle = '#f6efe2'; c.font = '26px "Ma Shan Zheng","KaiTi",serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
-        c.fillText(label, x + 24, y + 24); c.restore();
-        if (!off) st.hit(x, y, 52, 48, dir < 0 ? 'gachaPrev' : 'gachaNext');
-      }
-      var ay = headS + Math.max(0, cardH / 2 - 24);
-      inkArrow(16, ay, '‹', -1, pageS <= 0);
-      inkArrow(cw - 68, ay, '›', 1, pageS >= pagesS - 1);
-      kt(c, (pageS + 1) + '/' + pagesS, cw - 78, 22, 16, '#2b1c08', 'right', 70, false);
-      ackBtn((cw - Math.min(150, cw - 180)) / 2, footS, Math.min(150, cw - 180));
-      return;
+    function packArt(id, x, y, w, h) {
+      if (!shown(id)) { XY.gacha10.lastPortrait = null; return null; }
+      var hd = gachaHd(id);
+      var im = hd || (XY.bgArt && XY.bgArt(id));
+      if (!im || !(im.naturalWidth || im.width)) { XY.gacha10.lastPortrait = null; return null; }
+      var iw = im.naturalWidth || im.width, ih = im.naturalHeight || im.height;
+      var box = XY.gacha10.portraitBox(iw, ih, x, y, w, h);
+      XY.gacha10.lastPortrait = { id: id, iw: iw, ih: ih, dw: box.dw, dh: box.dh };
+      if (hd) { alphaBox(hd); return { im: hd, cut: hd, iw: iw, ih: ih }; }
+      return { im: im, cut: gachaCutout(im), iw: iw, ih: ih };
     }
-    if (!land && !stage) {
-      var gap = 10, pad = 12, foot = ch - 12 - 48;
-      var hintLines = ch < 480 ? 1 : 2, hintLh = 15;
-      var hintBase = foot - 10 - hintLines * hintLh;
-      var header = 64, cardLimit = hintBase - 26;
-      var availH = Math.max(72, cardLimit - header);
-      var nRows = (availH - gap) / 2 >= 168 ? 2 : 1;
-      var per = nRows * 2, pages = Math.max(1, Math.ceil(rows.length / per));
-      v.pages = pages;
-      var page = Math.max(0, Math.min(pages - 1, v.page || 0));
-      v.page = page;
-      var slice = rows.slice(page * per, page * per + per);
-      var shown = Math.max(1, Math.ceil(slice.length / 2));
-      var cardW = Math.floor((cw - pad * 2 - gap) / 2);
-      var cardH = Math.min(Math.floor((availH - gap * (shown - 1)) / shown), Math.floor(cardW * 1.55));
-      var gridW = 2 * cardW + gap, gridH = shown * cardH + gap * (shown - 1);
-      var x0 = Math.round((cw - gridW) / 2);
-      var y0 = header + Math.max(0, Math.floor((cardLimit - header - gridH) / 2));
-      slice.forEach(function (r, k) {
-        var col = k % 2, rr = Math.floor(k / 2);
-        var x = x0 + col * (cardW + gap), y = y0 + rr * (cardH + gap);
-        if (slice.length % 2 === 1 && k === slice.length - 1) x = Math.round((cw - cardW) / 2);
-        var laid = layCard(x, y, cardW, cardH);
-        flipCard(c, r, laid.x, laid.y, laid.w, laid.h, 30 + (page * per + k) * 13, 1);
-      });
+    function inkName(c, text, x, y, size, maxW, col) {
+      if (!text) return;
       c.save();
-      c.fillStyle = '#f6efe0';
-      c.fillRect(0, hintBase - 14, cw, ch - (hintBase - 14));
+      c.textAlign = 'center'; c.textBaseline = 'middle';
+      c.font = size + 'px GachaBrush, KaiTi, STKaiti, serif';
+      while (size > 14 && c.measureText(text).width > maxW) { size -= 1; c.font = size + 'px GachaBrush, KaiTi, STKaiti, serif'; }
+      c.lineWidth = Math.max(3, size * 0.12);
+      c.strokeStyle = 'rgba(252,246,232,0.88)';
+      c.strokeText(text, x, y);
+      c.fillStyle = col || '#1a120c';
+      c.fillText(text, x, y);
       c.restore();
-      if (VU.wrap) VU.wrap(c, '重复卡计入角色卡，凑够 2 / 5 / 10 / 20 / 40 张升级。没出现的仍然锁定。左右滑看其余。', pad, hintBase, cw - pad * 2, hintLh, 13, SOFT, false, hintLines);
-      kt(c, (page + 1) + ' / ' + pages, cw - 18, 28, 13, SOFT, 'right', 70, false);
-      arrow(10, foot, '‹', -1, page <= 0);
-      arrow(cw - 62, foot, '›', 1, page >= pages - 1);
-      ackBtn((cw - Math.min(180, cw - 150)) / 2, foot, Math.min(180, cw - 150));
-      return;
     }
-    var headerD = 74, footD = ch - 12 - 48, gapD = 12, padD = 28;
-    var colsD = 5, rowsD = 2;
-    var availW = cw - padD * 2, availH = Math.max(120, footD - 78 - headerD);
-    var cardWd = Math.floor((availW - gapD * (colsD - 1)) / colsD);
-    var cardHd = Math.floor((availH - gapD) / rowsD);
-    var gridWd = colsD * cardWd + gapD * (colsD - 1);
-    var x0d = Math.round((cw - gridWd) / 2), y0d = headerD;
-    rows.forEach(function (r, idx) {
-      var col = idx % colsD, rr = Math.floor(idx / colsD);
-      var x = x0d + col * (cardWd + gapD), y = y0d + rr * (cardHd + gapD);
-      var laidD = layCard(x, y, cardWd, cardHd);
-      var p = stage ? XY.gacha10.cardAt(elapsed, idx) : 1;
-      flipCard(c, r, laidD.x, laidD.y, laidD.w, laidD.h, 21 + idx * 13, p);
-    });
-    var hint = stage ? '依次翻开。跳过直接看总览，不会重抽。' : ('重复卡计入角色卡，凑够 2 / 5 / 10 / 20 / 40 张升到 Lv1~5。没出现的仍然锁定。');
-    if (VU.wrap) VU.wrap(c, hint, padD, footD - 32, cw - padD * 2, 16, 13, SOFT, false, 1);
-    var bwd = Math.min(240, cw * 0.2);
-    if (stage) skipBtn((cw - bwd) / 2, footD, bwd, '跳过');
-    else ackBtn((cw - bwd) / 2, footD, bwd);
+    function drawCut(c, art, x, y, w, h) {
+      var s = Math.min(w / art.iw, h / art.ih);
+      var dw = art.iw * s, dh = art.ih * s;
+      c.drawImage(art.cut, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
+    }
+    function leaf(c, x, y, len, rot, rgb, a) {
+      c.save();
+      c.translate(x, y);
+      c.rotate(rot);
+      c.fillStyle = 'rgba(' + rgb + ',' + a + ')';
+      c.beginPath();
+      c.moveTo(0, 0);
+      c.quadraticCurveTo(len * 0.48, -len * 0.28, len, 0);
+      c.quadraticCurveTo(len * 0.42, len * 0.22, 0, 0);
+      c.fill();
+      c.restore();
+    }
+    /* 左侧竹林：秆、节、叶都画出纸边，旁边用墨团洇开，不铺方板。 */
+    function grove(c, x, y, bw, bh) {
+      var IP = XY.INKP, scale = Math.max(0.7, Math.min(1.3, bw / 180));
+      if (IP) {
+        IP.blot(c, x + bw * 0.16, y + bh * 0.8, bw * 0.58, '28,24,18', 0.5, 2, 14, 0.5);
+        IP.blot(c, x + bw * 0.02, y + bh * 0.46, bw * 0.36, '34,28,22', 0.38, 8, 8, 0.66);
+        IP.blot(c, x + bw * 0.48, y + bh * 0.18, bw * 0.32, '26,22,18', 0.3, 5, 7, 0.8);
+        IP.stroke(c, x + bw * 0.08, y + bh * 0.28, x + bw * 1.05, y + bh * 0.2, 6, '30,26,20', 0.32, 21, 0.06);
+        IP.stroke(c, x + bw * 0.04, y + bh * 0.72, x + bw * 0.85, y + bh * 0.8, 8, '24,20,16', 0.36, 24, -0.04);
+        IP.dots(c, x + bw * 0.28, y + bh * 0.4, bw * 0.08, bw * 1.35, 20, 1.4, 3.6, '24,20,16', 0.55, 16, 0.72);
+        IP.splash(c, x + bw * 0.18, y + bh * 0.66, bw * 0.04, bw * 0.85, 7, 4.5 * scale, null, 0.38, 19, 0.75);
+      }
+      if (VU.washE) VU.washE(c, x + bw * 0.35, y + bh * 0.78, bw * 0.42, bw * 0.28, '28,24,18', 0.16);
+      var stalks = [[0.05, 0.0, 1, 8.2], [0.2, 0.02, 0.94, 10], [0.36, 0.08, 0.8, 6.4], [0.52, 0.0, 1, 9], [0.7, 0.05, 0.86, 7.2], [0.86, 0.1, 0.74, 6]];
+      var rgb = '32,54,32';
+      stalks.forEach(function (s, i) {
+        var x0 = x + s[0] * bw, y0 = y + s[1] * bh, y1 = y + bh * s[2] + bh * 0.02;
+        var lean = (i % 2 ? 0.07 : -0.06) * bw;
+        var thick = s[3] * scale;
+        if (IP) IP.stroke(c, x0 + lean, y1, x0, y0, thick, rgb, 0.88, 30 + i * 3, (i - 2.5) * 0.035);
+        var j, t, jx, jy, ang, len;
+        for (j = 1; j <= 5; j++) {
+          t = j / 6;
+          jx = x0 + lean * (1 - t);
+          jy = y1 + (y0 - y1) * t;
+          if (IP) IP.stroke(c, jx - thick, jy, jx + thick * 1.05, jy + 1.2, 1.5, '18,34,20', 0.85, 50 + i * 7 + j, 0.01);
+          if (j >= 2) {
+            ang = (i % 2 ? 0.55 : -0.5) + (j - 3) * 0.18;
+            len = Math.min(bw, bh) * (0.075 + (j % 3) * 0.012);
+            leaf(c, jx, jy, len, ang, rgb, 0.8);
+            leaf(c, jx, jy, len * 0.82, ang + 0.75, '28,50,30', 0.72);
+            leaf(c, jx, jy, len * 0.7, ang - 0.85, '24,42,28', 0.66);
+          }
+        }
+      });
+    }
+    function crowdInk(cx, cy, rad) {
+      var IP = XY.INKP;
+      if (!IP) return;
+      IP.stroke(c, cx - rad * 0.9, cy - rad * 0.08, cx + rad * 0.85, cy + rad * 0.12, Math.max(6, rad * 0.07), '36,28,20', 0.34, 4, 0.16);
+      IP.stroke(c, cx - rad * 0.55, cy + rad * 0.22, cx + rad * 0.7, cy - rad * 0.18, Math.max(4, rad * 0.045), '24,18,14', 0.28, 9, -0.1);
+      IP.stroke(c, cx - rad * 0.2, cy - rad * 0.35, cx + rad * 0.35, cy + rad * 0.4, Math.max(3, rad * 0.03), '48,38,28', 0.22, 15, 0.22);
+      IP.blot(c, cx - rad * 0.12, cy + rad * 0.02, rad * 0.55, '32,26,18', 0.22, 6, 8, 0.48);
+      IP.blot(c, cx + rad * 0.38, cy - rad * 0.08, rad * 0.32, '22,18,14', 0.16, 12, 5, 0.7);
+      IP.splash(c, cx, cy, rad * 0.2, rad * 1.15, 8, Math.max(3, rad * 0.04), null, 0.26, 21, 0.5);
+      IP.dots(c, cx, cy, rad * 0.3, rad * 1.4, 14, 1.2, 3.2, '28,22,16', 0.35, 27, 0.62);
+    }
+    function seal(c, x, y, s) {
+      c.save();
+      c.translate(x, y);
+      c.rotate(-0.08);
+      c.fillStyle = '#9d2b22';
+      c.fillRect(-s / 2, -s / 2, s, s);
+      c.fillStyle = '#f6efe2';
+      c.font = Math.round(s * 0.62) + 'px GachaBrush, KaiTi, serif';
+      c.textAlign = 'center'; c.textBaseline = 'middle';
+      c.fillText('印', 0, 1);
+      c.restore();
+    }
+    function placeFigures(list, box) {
+      var unit = short ? Math.min(box.h * 0.46, box.w * 0.16) : (land ? box.h * 0.5 : Math.min(box.w * 0.46, box.h * 0.26));
+      var slots = XY.gacha10.rosterSlots(list.length, land);
+      var placed = [];
+      list.forEach(function (g, idx) {
+        var sl = slots[Math.min(idx, slots.length - 1)];
+        var fh = unit * sl.s, fw = fh * 0.75;
+        var cx = box.x + sl.x * box.w, cy = box.y + sl.y * box.h;
+        var x = cx - fw / 2, y = cy - fh / 2;
+        var padX = land ? 48 : 4, padTop = land ? 28 : 8, bottom = box.y + box.h - 2;
+        if (!land && fw > (cw - padX * 2) * 0.42) {
+          var ks0 = ((cw - padX * 2) * 0.42) / fw;
+          fw *= ks0; fh *= ks0; x = cx - fw / 2; y = cy - fh / 2;
+        }
+        if (fw > cw - padX * 2) { var ks = (cw - padX * 2) / fw; fw *= ks; fh *= ks; x = cx - fw / 2; y = cy - fh / 2; }
+        if (fh > bottom - padTop) { var ks2 = (bottom - padTop) / fh; fw *= ks2; fh *= ks2; x = cx - fw / 2; y = cy - fh / 2; }
+        if (x < padX) x = padX;
+        if (y < padTop) y = padTop;
+        if (x + fw > cw - padX) x = cw - padX - fw;
+        if (y + fh > bottom) y = bottom - fh;
+        placed.push({ id: g.id, n: g.n, unlock: g.unlock, label: g.label, x: x, y: y, w: fw, h: fh, z: sl.z, ns: sl.ns });
+      });
+      return placed;
+    }
+    function layoutNames(placed, box) {
+      function bodyOf(it) { return it.body || it; }
+      function onBody(x, y, w, h) {
+        var a0 = x - w / 2, a1 = x + w / 2, b0 = y - h / 2, b1 = y + h / 2, i, r, ox, oy, hit = 0;
+        for (i = 0; i < placed.length; i++) {
+          r = bodyOf(placed[i]);
+          ox = Math.min(a1, r.x + r.w * 0.7) - Math.max(a0, r.x + r.w * 0.3);
+          oy = Math.min(b1, r.y + r.h * 0.78) - Math.max(b0, r.y + r.h * 0.08);
+          if (ox > 1 && oy > 1) hit += ox * oy;
+        }
+        return hit;
+      }
+      var taken = [];
+      function onName(x, y, w, h) {
+        var a0 = x - w / 2, a1 = x + w / 2, b0 = y - h / 2, b1 = y + h / 2, i, r, ox, oy, hit = 0;
+        for (i = 0; i < taken.length; i++) {
+          r = taken[i];
+          ox = Math.min(a1, r.x + r.w / 2) - Math.max(a0, r.x - r.w / 2);
+          oy = Math.min(b1, r.y + r.h / 2) - Math.max(b0, r.y - r.h / 2);
+          if (ox > 0 && oy > 0) hit += ox * oy;
+        }
+        return hit;
+      }
+      var order = placed.slice().sort(function (a, b) { return a.z - b.z || a.x - b.x; });
+      var names = order.map(function (it) {
+        var size = Math.max(short ? 11 : 13, Math.min(short ? 15 : (land ? 26 : 15), box.h * (short ? 0.07 : (land ? 0.042 : 0.03))));
+        var text = it.label, maxW = short ? Math.min(box.w * 0.12, 92) : (land ? Math.min(box.w * 0.16, 150) : Math.min(102, cw * 0.28));
+        c.font = size + 'px GachaBrush, KaiTi, STKaiti, serif';
+        while (size > 12 && c.measureText(text).width > maxW) { size -= 1; c.font = size + 'px GachaBrush, KaiTi, STKaiti, serif'; }
+        var tw = Math.ceil(c.measureText(text).width), th = Math.ceil(size * 1.2);
+        var bd = bodyOf(it);
+        var left = bd.x > cw - (bd.x + bd.w);
+        var cands = [], home;
+        if (land) {
+          var inward = bd.x < cw * 0.22 ? 0.62 : (bd.x + bd.w > cw * 0.82 ? 0.38 : (it.ns > 0 ? 0.62 : 0.4));
+          if (it.z !== 2) cands.push([bd.x + bd.w * inward, bd.y - th * 0.75]);
+          if (it.z === 2) cands.push([bd.x + bd.w * (it.ns < 0 ? 0.38 : 0.62), bd.y + bd.h + th * 0.75]);
+          cands.push([left ? bd.x - tw * 0.55 - 4 : bd.x + bd.w + tw * 0.55 + 4, bd.y + th * 0.15]);
+          cands.push([left ? bd.x + bd.w + tw * 0.55 + 4 : bd.x - tw * 0.55 - 4, bd.y + bd.h * 0.15]);
+          cands.push([bd.x + bd.w * 0.5, bd.y - th * 0.65]);
+          cands.push([bd.x + bd.w * 0.5, bd.y + bd.h + th * 0.7]);
+        } else {
+          var footX = bd.x + bd.w * 0.5, footY = bd.y + bd.h + th * 0.58;
+          var col = footX < cw * 0.36 ? -1 : (footX > cw * 0.64 ? 1 : 0);
+          cands.push([footX, footY]);
+          cands.push([footX + col * 12, footY]);
+          if (col < 0) cands.push([bd.x + Math.min(tw * 0.35, bd.w * 0.2), bd.y + bd.h * 0.84]);
+          else if (col > 0) cands.push([bd.x + bd.w - Math.min(tw * 0.35, bd.w * 0.2), bd.y + bd.h * 0.84]);
+          else cands.push([footX, bd.y + bd.h + th]);
+          cands.push([footX, bd.y - th * 0.7]);
+        }
+        home = cands[0];
+        var best = null, bi, x, y, sc;
+        for (bi = 0; bi < cands.length; bi++) {
+          var inset = land ? 36 : 8;
+          x = Math.max(inset + tw / 2, Math.min(cw - inset - tw / 2, cands[bi][0]));
+          y = Math.max(8 + th / 2, Math.min(box.y + box.h - 4 - th / 2, cands[bi][1]));
+          var drift = Math.abs(x - home[0]) + Math.abs(y - home[1]);
+          sc = onBody(x, y, tw, th) * 24 + onName(x, y, tw, th) * 14 + bi * 20 + (land ? 0 : drift * 0.45);
+          if (!best || sc < best.sc) best = { x: x, y: y, sc: sc };
+        }
+        taken.push({ x: best.x, y: best.y, w: tw, h: th });
+        return { id: it.id, text: text, size: size, x: best.x, y: best.y, w: tw, h: th, unlock: it.unlock, ns: it.ns, homeX: best.x, homeY: best.y };
+      });
+      var iter, i, k, a, b, ox, oy, push;
+      for (iter = 0; iter < 10; iter++) {
+        for (i = 0; i < names.length; i++) {
+          a = names[i];
+          for (k = i + 1; k < names.length; k++) {
+            b = names[k];
+            var gapX = Math.abs(a.x - b.x) - (a.w + b.w) / 2;
+            var gapY = Math.abs(a.y - b.y) - (a.h + b.h) / 2;
+            if (gapX < 8 && gapY < 10) {
+              push = (10 - gapY) / 2 + 4;
+              if (a.y <= b.y) { a.y -= push; b.y += push; }
+              else { a.y += push; b.y -= push; }
+            }
+          }
+          if (!land && a.homeX != null) {
+            if (a.x > a.homeX + 26) a.x = a.homeX + 26;
+            if (a.x < a.homeX - 26) a.x = a.homeX - 26;
+            if (a.y > a.homeY + 22) a.y = a.homeY + 22;
+            if (a.y < a.homeY - 22) a.y = a.homeY - 22;
+          }
+          var edge = land ? 36 : 8;
+          a.x = Math.max(edge + a.w / 2, Math.min(cw - edge - a.w / 2, a.x));
+          a.y = Math.max(8 + a.h / 2, Math.min(box.y + box.h - 4 - a.h / 2, a.y));
+        }
+      }
+      return names;
+    }
+
+    /* 整页先挡住出发页。名字和「收下」后登记，点名字不会穿透到后面。 */
+    st.hit(0, 0, cw, ch, stage ? 'gachaSkip' : 'gachaHold');
+    if (stage && elapsed < XY.gacha10.timing.intro) {
+      if (VU.hills) {
+        c.save();
+        VU.hills(c, land ? cw * 0.3 : 0, land ? ch * 0.4 : ch * 0.34, land ? cw * 0.7 : cw, land ? ch * 0.6 : ch * 0.48, '110,98,80', 0.14, 8);
+        c.restore();
+      }
+      if (land) grove(c, -cw * 0.01, short ? 0 : -ch * 0.04, short ? cw * 0.16 : cw * 0.22, short ? ch * 0.92 : ch * 1.06);
+      else grove(c, -cw * 0.02, -ch * 0.02, cw * 0.36, ch * 0.42);
+      inkName(c, '画十张', land ? cw * 0.32 : cw * 0.66, short ? ch * 0.28 : (land ? ch * 0.34 : ch * 0.1), short ? Math.min(36, ch * 0.16) : (land ? Math.min(92, cw * 0.07) : Math.min(46, cw * 0.13)), land ? cw * 0.28 : cw * 0.5);
+      inkName(c, '画一张', land ? cw * 0.35 : cw * 0.6, short ? ch * 0.52 : (land ? ch * 0.54 : ch * 0.18), short ? Math.min(28, ch * 0.13) : (land ? Math.min(78, cw * 0.06) : Math.min(40, cw * 0.11)), land ? cw * 0.26 : cw * 0.46);
+      seal(c, land ? cw * 0.44 : cw * 0.88, land ? ch * 0.42 : ch * 0.12, land ? 48 : 34);
+      var host = shown('yuanzhang') ? 'yuanzhang' : (rows[0] && rows[0].id);
+      var hx = land ? cw * 0.46 : cw * 0.04, hy = land ? ch * 0.02 : ch * 0.3;
+      var hw = land ? cw * 0.52 : cw * 0.92, hh = land ? ch * 0.92 : ch * 0.62;
+      var art = host && packArt(host, hx, hy, hw, hh);
+      if (art) drawCut(c, art, hx, hy, hw, hh);
+      if (host) inkName(c, gachaName(host), land ? cw * 0.4 : cw * 0.72, land ? ch * 0.72 : ch * 0.92, land ? 32 : 20, land ? cw * 0.14 : cw * 0.26);
+    } else if (stage) {
+      var row = rows[focus] || rows[0];
+      var p = v.hold ? 1 : XY.gacha10.cardAt(elapsed, focus);
+      var fh = short ? ch * 0.62 : (land ? ch * 0.78 : ch * 0.58);
+      var fw = Math.min(land ? cw * 0.4 : cw * 0.84, fh * 0.75);
+      var fx = (cw - fw) / 2, fy = land ? ch * 0.02 : ch * 0.05;
+      crowdInk(cw * 0.5, fy + fh * 0.46, Math.min(fw, fh) * 0.46);
+      if (row && shown(row.id)) {
+        var art2 = packArt(row.id, fx, fy, fw, fh);
+        c.save();
+        c.globalAlpha = 0.2 + 0.8 * Math.max(0, Math.min(1, p));
+        if (art2) drawCut(c, art2, fx, fy, fw, fh);
+        c.restore();
+        var nameY = Math.min(ch - 48, fy + fh + 16);
+        inkName(c, gachaName(row.id), cw * 0.5, nameY, Math.min(land ? 40 : 28, fh * 0.08), fw);
+        if (row.kind === 'unlock') inkName(c, '新', fx + fw * 0.08, fy + fh * 0.12, Math.min(36, fh * 0.07), fw * 0.25, '#9d2b22');
+      }
+      inkName(c, '点按跳过', cw * 0.5, ch - 20, land ? 20 : 16, cw * 0.46);
+    } else {
+      var grouped = [], seen = {}, gi;
+      rows.forEach(function (r) {
+        if (!shown(r.id)) return;
+        gi = seen[r.id];
+        if (!gi) {
+          gi = { id: r.id, n: 0, unlock: false, label: '' };
+          seen[r.id] = gi;
+          grouped.push(gi);
+        }
+        gi.n++;
+        if (r.kind === 'unlock') gi.unlock = true;
+        gi.label = gachaName(r.id) + (gi.n > 1 ? '×' + gi.n : '');
+      });
+      var box = short ? { x: 4, y: 2, w: cw - 8, h: ch - 50 } : { x: land ? 10 : 4, y: land ? 6 : 4, w: cw - (land ? 20 : 8), h: (land ? ch - 70 : ch - 62) - (land ? 6 : 4) };
+      if (grouped.length) {
+        var placed = placeFigures(grouped, box);
+        XY.gacha10.lastCrowd = placed;
+        if (!land) crowdInk(box.x + box.w * 0.5, box.y + box.h * 0.52, Math.min(box.w, box.h) * 0.2);
+        var order = placed.slice().sort(function (a, b) { return a.z - b.z || a.y - b.y || a.x - b.x; });
+        order.forEach(function (it) {
+          var art3 = packArt(it.id, it.x, it.y, it.w, it.h);
+          if (art3 && art3.im && art3.im._gachaBox) {
+            var b = art3.im._gachaBox, sc = Math.min(it.w / art3.iw, it.h / art3.ih);
+            var dw = art3.iw * sc, dh = art3.ih * sc, ox = it.x + (it.w - dw) / 2, oy = it.y + (it.h - dh) / 2;
+            it.body = { x: ox + b.x * sc, y: oy + b.y * sc, w: b.w * sc, h: b.h * sc };
+          }
+          if (art3) drawCut(c, art3, it.x, it.y, it.w, it.h);
+        });
+        var names = layoutNames(placed, box);
+        XY.gacha10.lastNames = names;
+        names.forEach(function (nm) {
+          var hx = nm.x - nm.w / 2 - 8, hy = nm.y - nm.h / 2 - 6, hw = nm.w + 16, hh = Math.max(32, nm.h + 12);
+          var hot = v.lit === nm.id || st.over(hx, hy, hw, hh);
+          if (hot && XY.INKP) {
+            XY.INKP.blot(c, nm.x, nm.y, Math.max(nm.w, 28) * 0.72, '168,42,32', 0.45, 3, 8, 0.4);
+            c.save();
+            c.strokeStyle = '#9d2b22';
+            c.lineWidth = Math.max(3.2, nm.size * 0.16);
+            c.lineCap = 'round';
+            c.beginPath();
+            c.moveTo(nm.x - nm.w * 0.52, nm.y + nm.h * 0.46);
+            c.quadraticCurveTo(nm.x, nm.y + nm.h * 0.7, nm.x + nm.w * 0.52, nm.y + nm.h * 0.4);
+            c.stroke();
+            c.restore();
+          }
+          inkName(c, nm.text, nm.x, nm.y, nm.size, nm.w + 8, hot ? '#7a261c' : '#1a120c');
+          var xinX = nm.x - nm.w * 0.5 - nm.size * 0.7;
+          if (nm.unlock && xinX > 6 && xinX < cw - 18 && nm.y > 14 && nm.y < ch - 20) inkName(c, '新', xinX, nm.y, Math.max(12, nm.size * 0.62), nm.size * 2, '#9d2b22');
+          st.hit(hx, hy, hw, hh, 'gachaPick', { id: nm.id });
+        });
+      }
+      st.btn(cw * 0.5 - 70, ch - 52, 140, 44, '收下', 'gachaAck', { pri: true, col: '#9d2b22', sz: 20 });
+    }
   };
+
 
 
   DP.draw = function (c, G, a) {
@@ -25100,6 +25576,7 @@ X.step=function(g,dt){if(!g._simRandom)return step.apply(this,arguments);var sel
         case 'gachaNext': if (XY.gacha10 && XY.gacha10.nudge) XY.gacha10.nudge(1); break;
         case 'gachaSkip': if (XY.gacha10) XY.gacha10.key(); break;
         case 'gachaAck': if (XY.gacha10) XY.gacha10.ack(); break;
+        case 'gachaPick': if (XY.gacha10 && XY.gacha10.pick) XY.gacha10.pick(h.id); break;
         case 'carryPick': var cp = XY.save.setCarry(h.id); msg(cp.reason, !cp.ok); break;
       }
       return;
