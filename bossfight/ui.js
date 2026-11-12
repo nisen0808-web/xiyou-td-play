@@ -70,7 +70,7 @@
   function ease(t) { t = clamp(t, 0, 1); return 1 - Math.pow(1 - t, 3); }
 
   function layout() {
-    var W = innerWidth, H = innerHeight, dpr = Math.min(window.devicePixelRatio || 1, 2);
+    var W = innerWidth, H = innerHeight, dpr = Math.min(window.devicePixelRatio || 1, 4);
     if (Q.get('w')) { W = +Q.get('w'); H = +Q.get('h'); }
     G.W = W; G.H = H; G.land = W > H; G.dpr = dpr; G.S = G.land ? H / 390 : W / 390;
     cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
@@ -783,14 +783,11 @@
   /* ---------- 选人界面 ---------- */
   /* ---------- 选人界面：只选搭档（圆形 X 头像） ---------- */
   function avatarURL(id) {
-    if (id === 'wukong') return '../assets/art/menu-v5/fig_wukong.webp';
-    if (id === 'niumo') return '../assets/wild/niumo-idle.webp';
-    return '../assets/art/bg/' + id + '.webp';
+    return '../assets/art/battle-hd/' + id + '.webp';
   }
   function avaEl(id, o) {
     o = o || {}; var d = BF.SP[id], el = document.createElement('div'); el.className = 'ava' + (o.on ? ' on' : '') + (o.off ? ' off' : '') + (o.sel ? ' sel' : ''); el.dataset.id = id;
-    var col = id === 'wukong' ? ELC.fire : ELC[d.elem];
-    el.innerHTML = '<div class="ring" style="--el:' + col + '"><div class="face" style="background-image:url(' + avatarURL(id) + ')"></div>' + (o.badge ? '<span class="bd">' + o.badge + '</span>' : '') + '<span class="tag" style="background:' + col + '"></span></div><b>' + NAMES[id] + '</b><i>' + (o.sub || '') + '</i>';
+    el.innerHTML = '<div class="ring"><div class="face" style="background-image:url(' + avatarURL(id) + ')"></div></div><b>' + NAMES[id] + (o.badge ? '<span class="bd">' + o.badge + '</span>' : '') + '</b>';
     return el;
   }
   function buildPick() {
@@ -807,15 +804,9 @@
   function stillNode(id) {
     if (STILL[id]) return STILL[id].ok ? STILL[id].im : null;
     var rec = STILL[id] = { ok: false, im: null };
-    if (id === 'niumo') {
-      var src = new Image();
-      src.onload = function () { if (src.naturalWidth) { rec.im = src; rec.ok = true; } };
-      src.src = '../assets/art/battle-hd/niumo.webp';
-      return null;
-    }
     var im = new Image();
     im.onload = function () { if (im.naturalWidth) { rec.im = im; rec.ok = true; } };
-    im.src = id === 'wukong' ? '../assets/art/menu-v5/fig_wukong.webp' : '../assets/art/bg/' + id + '.webp';
+    im.src = '../assets/art/battle-hd/' + id + '.webp';
     return null;
   }
   function drawStill(c, id, cx, foot, h) {
@@ -837,28 +828,83 @@
     c.restore();
   }
   function drawPick() {
-    var st = pcv.parentNode.getBoundingClientRect(), W = st.width, H = st.height, dpr = G.dpr, c = pctx; if (W < 4) return;
-    c.setTransform(dpr, 0, 0, dpr, 0, 0); c.clearRect(0, 0, W, H);
-    c.fillStyle = '#f4ead4'; c.fillRect(0, 0, W, H);
-    var tall = H >= 340;
-    var foot = H * (tall ? 0.94 : 0.98);
-    var fh = H * (tall ? 0.74 : 0.88);
-    var top = foot - fh;
-    if (top < H * 0.08) { fh = foot - H * 0.08; top = foot - fh; }
-    drawStill(c, G.partner, W * (tall ? 0.22 : 0.2), foot, fh * 0.9);
-    drawStill(c, 'wukong', W * 0.48, foot, fh);
-    drawStill(c, 'niumo', W * (tall ? 0.76 : 0.8), foot, fh * 0.96);
-    if (tall) {
-      brushName(c, NAMES[G.partner] || '', W * 0.08, top + fh * 0.28, Math.min(32, W * 0.06), '#24180f');
-      brushName(c, '孙悟空', W * 0.36, top + fh * 0.16, Math.min(36, W * 0.07), '#24180f');
-      brushName(c, '牛魔王', W * 0.94, top + fh * 0.22, Math.min(36, W * 0.07), '#24180f');
-      brushName(c, '战', W * 0.58, top + fh * 0.22, Math.min(44, W * 0.07), '#a83224');
-    } else {
-      brushName(c, NAMES[G.partner] || '', W * 0.08, H * 0.2, Math.min(34, W * 0.07), '#24180f');
-      brushName(c, '孙悟空', W * 0.38, H * 0.12, Math.min(38, W * 0.08), '#24180f');
-      brushName(c, '牛魔王', W * 0.9, H * 0.16, Math.min(38, W * 0.08), '#24180f');
-      brushName(c, '战', W * 0.63, H * 0.36, Math.min(52, W * 0.1), '#a83224');
+    var st = pcv.parentNode.getBoundingClientRect(), W = st.width, H = st.height, dpr = G.dpr || 1, c = pctx;
+    if (W < 4 || H < 4) return;
+    c.setTransform(dpr, 0, 0, dpr, 0, 0);
+    c.clearRect(0, 0, W, H);
+    c.fillStyle = '#f3ead6';
+    c.fillRect(0, 0, W, H);
+    var mist = c.createRadialGradient(W * 0.5, H * 0.82, 6, W * 0.5, H * 0.7, Math.max(W, H) * 0.8);
+    mist.addColorStop(0, 'rgba(78,58,38,0.13)');
+    mist.addColorStop(0.5, 'rgba(78,58,38,0.05)');
+    mist.addColorStop(1, 'rgba(78,58,38,0)');
+    c.fillStyle = mist;
+    c.fillRect(0, 0, W, H);
+    var ids = [G.partner || 'heyuxi', 'wukong', 'niumo'];
+    var labels = [NAMES[ids[0]] || '', '孙悟空', '牛魔王'];
+    var asps = ids.map(function (id) {
+      var im = stillNode(id);
+      return im && im.naturalHeight ? im.naturalWidth / im.naturalHeight : 0.8;
+    });
+    var sumA = asps[0] + asps[1] + asps[2];
+    var nameH = Math.max(16, Math.min(32, H * 0.07));
+    var margin = 6, foot = H - Math.max(3, H * 0.01);
+    var maxH = foot - 2;
+    var avail = W - margin * 2;
+    var h = Math.min(maxH, (avail - nameH * 2.2) / sumA);
+    var overlap = 0;
+    if (h < maxH * 0.9) {
+      overlap = Math.min(0.26, (sumA * maxH * 0.92 - avail) / (sumA * maxH * 0.92));
+      if (overlap > 0) h = Math.min(maxH, avail / (sumA * (1 - overlap * 0.55)));
     }
+    var ws = asps.map(function (a) { return a * h; });
+    var gaps = (avail - (ws[0] + ws[1] + ws[2])) / 2;
+    var x0 = margin + ws[0] / 2;
+    var xs = [x0, x0 + ws[0] / 2 + gaps + ws[1] / 2, x0 + ws[0] / 2 + ws[1] + gaps * 2 + ws[2] / 2];
+    var top = foot - h;
+    c.save();
+    c.fillStyle = 'rgba(42,32,22,0.15)';
+    c.beginPath();
+    c.ellipse(W / 2, foot - 1, Math.max(ws[0], W * 0.42), Math.max(7, h * 0.03), 0, 0, Math.PI * 2);
+    c.fill();
+    c.restore();
+    drawStill(c, 'wukong', xs[1], foot, h);
+    drawStill(c, 'niumo', xs[2], foot, h);
+    drawStill(c, ids[0], xs[0], foot, h);
+    var rects = xs.map(function (x, i) { return { x: x - ws[i] / 2, y: top, w: ws[i], h: h }; });
+    function hit(x, y, tw, th) {
+      var a = x - tw / 2, b = y - th / 2;
+      if (a < 1 || b < 1 || a + tw > W - 1 || b + th > H - 1) return true;
+      for (var i = 0; i < rects.length; i++) {
+        var r = rects[i];
+        if (a + tw > r.x + 2 && a < r.x + r.w - 2 && b + th > r.y + 2 && b < r.y + r.h - 2) return true;
+      }
+      return false;
+    }
+    labels.forEach(function (text, i) {
+      c.font = nameH + 'px "Ma Shan Zheng","KaiTi",serif';
+      var tw = c.measureText(text).width + 2, r = rects[i];
+      var cands = [
+        [r.x - tw / 2 - 4, top + nameH * 0.7],
+        [r.x + r.w + tw / 2 + 4, top + nameH * 0.7],
+        [xs[i], Math.max(nameH * 0.55, top - nameH * 0.15)],
+        [i === 0 ? margin + tw / 2 + 2 : (i === 2 ? W - margin - tw / 2 - 2 : xs[i]), nameH * 0.6]
+      ];
+      var spot = cands[cands.length - 1], k;
+      for (k = 0; k < cands.length; k++) if (!hit(cands[k][0], cands[k][1], tw, nameH)) { spot = cands[k]; break; }
+      brushName(c, text, spot[0], spot[1], nameH, '#24180f');
+    });
+    var zSize = Math.max(18, Math.min(42, H * 0.09));
+    c.font = zSize + 'px "Ma Shan Zheng","KaiTi",serif';
+    var zw = c.measureText('战').width + 2;
+    var zc = [
+      [(rects[1].x + rects[1].w + rects[2].x) / 2, top + h * 0.16],
+      [(rects[0].x + rects[0].w + rects[1].x) / 2, top + h * 0.16],
+      [W / 2, Math.max(zSize * 0.55, 4)]
+    ];
+    var zs = zc[zc.length - 1], zi;
+    for (zi = 0; zi < zc.length; zi++) if (!hit(zc[zi][0], zc[zi][1], zw, zSize)) { zs = zc[zi]; break; }
+    brushName(c, '战', zs[0], zs[1], zSize, '#a83224');
   }
 
   /* ---------- 结算 ---------- */

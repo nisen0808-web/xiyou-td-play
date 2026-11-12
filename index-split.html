@@ -4181,7 +4181,7 @@ XY.TRAITS = {
   /* ================= 主循环：推进一步 ================= */
   XY.step = function (G, dt) {
     if (G.mode !== 'play') return;
-    if (G._quietShot) return;
+    if (G._quietShot || G._holdParty) return;
     if (G.cut) dt = XY.cutin.tick(G, dt);                 // 召唤特殊人物的“定妆图施法”过场：世界慢放（过场时钟走真实时间）
     // v0.5 顿帧：暂停战斗模拟（画面 / 输入照常），恢复时不补跑；预算每秒回复 HITSTOP_BUDGET
     G.hsBud = Math.min(C.HITSTOP_BUDGET, (G.hsBud === undefined ? C.HITSTOP_BUDGET : G.hsBud) + C.HITSTOP_BUDGET * dt);
@@ -4237,6 +4237,22 @@ XY.TRAITS = {
     G.station = !G.heroes[0].down && G.tang.phase === 'rest'; G.camp.active = G.station;   // 休息阶段 = 营地规则生效（同一帧内与状态机对齐）
     cam.x += (h.x - cam.x) * k; cam.y += (h.y - cam.y) * k;
     var vw = G.view.w, vh = G.view.h;                 // 镜头不要拍到地图外面
+    if (G.heroes.length >= 9) {
+      var b0 = 1e9, b1 = -1e9, b2 = 1e9, b3 = -1e9, hi, hb, top, half;
+      for (hi = 0; hi < G.heroes.length; hi++) {
+        hb = G.heroes[hi]; if (!hb || hb.down || hb.ridden) continue;
+        top = (hb._drawBox ? hb._drawBox.y : hb.y - hb.def.r * 2.7) - 28;
+        half = hb._drawBox ? hb._drawBox.w / 2 : hb.def.r * 1.7;
+        if (hb.x - half < b0) b0 = hb.x - half;
+        if (hb.x + half > b1) b1 = hb.x + half;
+        if (top < b2) b2 = top;
+        if (hb.y + hb.def.r * 1.15 > b3) b3 = hb.y + hb.def.r * 1.15;
+      }
+      var pad = 18, minCx = b1 - vw / 2 + pad, maxCx = b0 + vw / 2 - pad;
+      if (minCx <= maxCx) cam.x = clamp(cam.x, minCx, maxCx); else cam.x = (b0 + b1) / 2;
+      var minCy = b3 - vh / 2 + pad, maxCy = b2 + vh / 2 - pad;
+      if (minCy <= maxCy) cam.y = clamp(cam.y, minCy, maxCy); else cam.y = (b2 + b3) / 2;
+    }
     if (vw < C.WORLD_W) cam.x = clamp(cam.x, vw / 2, C.WORLD_W - vw / 2);
     if (vh < C.WORLD_H) cam.y = clamp(cam.y, vh / 2, C.WORLD_H - vh / 2);
 
@@ -4270,6 +4286,23 @@ XY.TRAITS = {
   }
 
   /* ================= 英雄 ================= */
+  function partyRing(G) {
+    var n = 0, i, hh, vw, vh;
+    for (i = 1; i < G.heroes.length; i++) { hh = G.heroes[i]; if (hh && !hh.down && !hh.ridden) n++; }
+    n = Math.max(1, n);
+    vw = (G.view && G.view.w) || 1280; vh = (G.view && G.view.h) || 720;
+    return Math.max(64, Math.min((vw - 150) / 2, (vh - 190) / 2)) * 0.92;
+  }
+  function partySlots(G) {
+    var list = [], i, hh, tang = G.heroes[0], R = partyRing(G), a;
+    for (i = 1; i < G.heroes.length; i++) { hh = G.heroes[i]; if (hh && !hh.down && !hh.ridden) list.push(hh); }
+    return list.map(function (hh, k) {
+      a = (k / Math.max(1, list.length)) * Math.PI * 2 + 0.4;
+      return { h: hh, x: tang.x + Math.cos(a) * R, y: tang.y + Math.sin(a) * R };
+    });
+  }
+  XY.partyRing = partyRing;
+  XY.partySlots = partySlots;
   var SLOT_R = 88;
   var STAND = { tang: 190, wukong: 50, bajie: 55, wujing: 40, horse: 175 };   // 自动出击/守护时离敌人站多远
 
@@ -4297,6 +4330,11 @@ XY.TRAITS = {
     }
 
     if (order === 'guard') {                                    // —— 守护师傅 ——（v0.5 第 4 批：多个守护者按“守护序号”扇形散开，不再叠成一个点）
+      if (G.heroes.length >= 9) {
+        var big = partySlots(G), bi, bslot = null;
+        for (bi = 0; bi < big.length; bi++) if (big[bi].h === h) bslot = big[bi];
+        if (bslot) return { x: bslot.x, y: bslot.y, run: XY.dist(h.x, h.y, tang.x, tang.y) > 520 };
+      }
       var gn = 0, gr = 0, gi;
       for (gi = 1; gi < G.heroes.length; gi++) { var gh = G.heroes[gi]; if (gh.down || gi === G.ctrl || gh.order !== 'guard') continue; if (gi === h.i) gr = gn; gn++; }
       var gk = gr - (gn - 1) / 2;                               // −(n−1)/2 … +(n−1)/2：在“师父—怪”这条线两侧对称排开
@@ -4338,7 +4376,8 @@ XY.TRAITS = {
     // —— 跟随（默认）：站到操控英雄身边的队形位置，有怪就稍微往前顶 ——
     var fa = fslot / Math.max(1, fcount) * PI2 + Math.PI / 4;
     if (h.id !== 'tang' && !tang.down && tang.order === 'follow' && G.ctrl !== 0 && XY.dist(tang.x, tang.y, ctrl.x, ctrl.y) > 200) ctrl = tang;   // 师父走得慢：随从以师父为锚点护送他
-    var fx = ctrl.x + cos(fa) * SLOT_R, fy = ctrl.y + sin(fa) * SLOT_R;
+    var ringR = G.heroes.length >= 9 ? partyRing(G) : SLOT_R;
+    var fx = ctrl.x + cos(fa) * ringR, fy = ctrl.y + sin(fa) * ringR;
     near = G.grid.nearest(h.x, h.y, 230);
     if (near && !ctrl.down) {
       var melee = h.id === 'wukong' || h.id === 'bajie' || h.id === 'wujing';
@@ -4452,6 +4491,14 @@ XY.TRAITS = {
       } else if (i === 0) { if (tangWalk) h.moving = true; }
       else if (i === G.ctrl) {                      // 玩家操控（手动）
         if (il > 0.01) { vx = inp.mx / il * sp; vy = inp.my / il * sp; h.moving = true; h.face = atan2(vy, vx); }
+        else if (G.heroes.length >= 9) {
+          var idleSlots = partySlots(G), idleSlot = null, isi;
+          for (isi = 0; isi < idleSlots.length; isi++) if (idleSlots[isi].h === h) idleSlot = idleSlots[isi];
+          if (idleSlot) {
+            var idx = idleSlot.x - h.x, idy = idleSlot.y - h.y, idd = sqrt(idx * idx + idy * idy);
+            if (idd > 6) { vx = idx / idd * sp; vy = idy / idd * sp; h.moving = true; h.face = atan2(vy, vx); }
+          }
+        }
       } else {                                        // 自动：按命令走
         var gl = orderGoal(G, h, ctrl, fslot, fcount);
         if (gl.follow) {
@@ -9222,7 +9269,7 @@ XY.TRAITS = {
     var cl = cloudNow, lift = 0;                                                      // 腾云：整个人抬高 9~12px 并轻轻上下浮（只改画的位置，不改 h.x / h.y）
     if (cl) { lift = 10 + 2.5 * Math.sin(rt * 2.2 + (h.bob || 0)); y -= lift; }
     // 唐僧佛光
-    if (h.id === 'tang' && !h.down) {
+    if (h.id === 'tang' && !h.down && !G._quietShot) {
       var ar = h.auraR || 125, qAura = G.td && G.td.quiet > G.td.clock;
       if (qAura) { c.strokeStyle = 'rgba(42,32,22,0.32)'; c.lineWidth = 1.3; c.beginPath(); c.arc(x, y, ar * 0.62, 0.5, 2.4); c.stroke(); c.beginPath(); c.arc(x, y, ar, 3.6, 5.8); c.stroke(); }
       else if (XY.INKP) { XY.INKP.ring(c, x, y, ar, 2.1, XY.INKP.INK, 0.22 + 0.06 * Math.sin(rt * 2), 9, 6, 1, rt * 0.35); XY.INKP.ring(c, x, y, ar * 0.97, 1, XY.INKP.INK, 0.14, 4, 4, 1, -rt * 0.2); }
@@ -9256,7 +9303,7 @@ XY.TRAITS = {
       else if (!horsePose && !(XY.CHIBI_INK && XY.CHIBI_INK.horse) && !(XY.CHIBI && XY.CHIBI.horse) && !(XY.MINK && XY.MINK.poseOwns && XY.MINK.poseOwns(mnt))) drawHeroShape(c, mnt.def, x, my, mr);
     }
     var rr = r * (h.xf > 0 ? 1.25 : 1);
-    if (h.id === 'phyrex') { if (!(G.td && G.td.quiet > G.td.clock)) XY.phDrawHeroUnder(c, G, h, x, y + bob, r, rt); XY.R4.xfDraw = h.xf > 0; }
+    if (h.id === 'phyrex') { if (!(G.td && G.td.quiet > G.td.clock) && !G._quietShot) XY.phDrawHeroUnder(c, G, h, x, y + bob, r, rt); XY.R4.xfDraw = h.xf > 0; }
     if (h._lx != null && Math.abs(h.x - h._lx) + Math.abs(h.y - h._ly) > 0.35 && !(XY.cloud && XY.cloud.on && XY.cloud.on(G, h))) h.moving = true;
     h._lx = h.x; h._ly = h.y;
     var posed = !!(XY.MINK && XY.MINK.poseHero && XY.MINK.poseHero(c, h, rt, x, y + bob + ry, rr));
@@ -9271,7 +9318,7 @@ XY.TRAITS = {
       drawHeroShape(c, d, x, y + bob + ry, rr);
       if (sq) c.restore();
     }
-    if (h.id === 'phyrex') { XY.R4.xfDraw = false; if (!(G.td && G.td.quiet > G.td.clock)) XY.phDrawHeroOver(c, G, h, x, y + bob - (useCb ? r * 0.5 : 0), r, rt); }
+    if (h.id === 'phyrex') { XY.R4.xfDraw = false; if (!(G.td && G.td.quiet > G.td.clock) && !G._quietShot) XY.phDrawHeroOver(c, G, h, x, y + bob - (useCb ? r * 0.5 : 0), r, rt); }
     if (h.hurtT > 0 && !useCb && !posed) { c.fillStyle = 'rgba(255,60,40,' + (h.hurtT * 2) + ')'; c.beginPath(); c.arc(x, y + bob, r, 0, PI2); c.fill(); }
     if (h.inv > 0) { c.strokeStyle = 'rgba(42,32,22,0.28)'; c.lineWidth = 1.3; c.beginPath(); c.ellipse(x, y + r * 0.85, r + 8, r * 0.38, 0, 0, PI2); c.stroke(); }
     if (G._quietShot) return;
@@ -9281,7 +9328,7 @@ XY.TRAITS = {
     else bar(c, x - bw / 2, y + r + 5, bw, 6, f, hpColor(f), 'rgba(255,255,255,0.85)');
     // 命令标签：手动 / 自动命令（唐僧驻守生效时写明“只回血”）
     var lab = isC ? '手动' : (h.id === 'tang' && G.station ? '驻守中·只回血' : (XY.ORDER_SHORT[h.order] || ''));
-    if (lab && !(G.td && G.td.quiet > G.td.clock)) inkTag(c, lab, x, XY.R4.placeLabel(c, lab, x, y + r + 20, 15, 1), 15, isC ? '#a42d19' : '#24180f');
+    if (lab && G.heroes.length < 9 && !(G.td && G.td.quiet > G.td.clock)) inkTag(c, lab, x, XY.R4.placeLabel(c, lab, x, y + r + 20, 15, 1), 15, isC ? '#a42d19' : '#24180f');
     var clash = XY.R4.labelClash(G, x - 50, y + lift - tr - 54, 100, 52);          // v0.7：头顶标签碰到 BOSS 的名牌 / 血条区域 → 名字等挪到脚下
     // 唐僧血量低：红圈 + 感叹号
     if (h.id === 'tang' && (G.tdanger || G.breach) && !(G.td && G.td.quiet > G.td.clock)) {
@@ -9308,21 +9355,28 @@ XY.TRAITS = {
       pile.push(n0);
     }
     heroNames = pile;
+    var narrow = false, appN = XY.app;
+    if (appN) { var cssW = appN.lw * (appN.zoom || 1), cssH = appN.lh * (appN.zoom || 1); narrow = Math.min(cssW, cssH) < 520 || cssH < 420; }
+    if (narrow) heroNames = heroNames.filter(function (n) { return n.h && (n.h.i === ctrl || n.h.id === 'tang'); });
+    var placed = [];
     for (j = 0; j < heroBodies.length; j++) { var o = heroBodies[j]; B.push({ h: o.h, x0: m.e + o.x0 * sc, x1: m.e + o.x1 * sc, y0: m.f + o.y0 * sc, y1: m.f + o.y1 * sc }); }
     function ov(r, list, skipH) { var a = 0; for (var q = 0; q < list.length; q++) { var t = list[q]; if (skipH && t.h === skipH) continue; var w = Math.min(r.x1, t.x1) - Math.max(r.x0, t.x0), h = Math.min(r.y1, t.y1) - Math.max(r.y0, t.y0); if (w > 0 && h > 0) a += w * h; } return a; }
     for (i = 0; i < heroNames.length; i++) {
       var n = heroNames[i], fs = n.sz; c.font = fs + 'px "Ma Shan Zheng","KaiTi","STKaiti",serif';
-      var tw = c.measureText(XY.fmtStr(n.s)).width + 6, th = fs + 3, best = null, sg = n.dir < 0 ? -1 : 1, dx = 52, cand = [[0, 0], [-dx, 0], [dx, 0], [0, sg * th], [-dx, sg * th], [dx, sg * th], [0, sg * th * 2.2], [-dx, sg * th * 2.2], [dx, sg * th * 2.2]];
+      var tw = c.measureText(XY.fmtStr(n.s)).width + 6, th = fs + 3, best = null, sg = n.dir < 0 ? -1 : 1, dx = 64, cand = [[0, 0], [-dx, 0], [dx, 0], [0, sg * th], [-dx, sg * th], [dx, sg * th], [0, sg * th * 2.2], [-dx * 1.8, 0], [dx * 1.8, 0], [-dx, sg * th * 2.2], [dx, sg * th * 2.2]];
       for (k = 0; k < cand.length; k++) {
         var cy = n.y + cand[k][1], cx = n.x + cand[k][0], r = { x0: m.e + (cx - tw / 2) * sc, x1: m.e + (cx + tw / 2) * sc, y0: m.f + (cy - fs / 2 - 1.5) * sc, y1: m.f + (cy - fs / 2 - 1.5 + th) * sc };
         var sc0 = ov(r, L, null) * 4 + ov(r, B, n.h) * 0.12 + (Math.abs(cand[k][0]) * 0.6 + Math.abs(cand[k][1])) * 0.05 * sc;   // 名牌 / 标签重叠重罚；身体只轻罚；离头顶越远略扣分
         if (!best || sc0 < best.s) best = { s: sc0, x: cx, y: cy, r: r };
       }
+      if (ov(best.r, placed, null) > 0 && !(n.h && (n.h.i === ctrl || n.h.id === 'tang'))) continue;
+      placed.push(best.r);
       L.push(best.r);
       c.save(); c.globalAlpha = n.a; inkTag(c, n.s, best.x, best.y, n.sz, n.col);
       if (n.mark && best.x === n.x && Math.abs(best.y - n.y) < th * 1.5) { var ty = best.y - 19; c.fillStyle = '#e0533d'; c.beginPath(); c.moveTo(best.x - 6, ty + n.tri); c.lineTo(best.x + 6, ty + n.tri); c.lineTo(best.x, ty + 8 + n.tri); c.fill(); }
       c.restore();
     }
+    XY.R4.nameRects = placed;
     heroBodies.length = 0; heroNames.length = 0;
   }
 
@@ -9705,10 +9759,12 @@ XY.TRAITS = {
     ui.hits.push({ x: sb.x, y: sb.y, w: sb.w, h: sb.h, act: 'skills' });
     if (hasPts) txt(c, '有 ' + G.points + ' 点技能点没用！', rx, 94, 12, '#b8300f', 'right', true);
     var dy0 = hasPts ? 112 : 96;
-    if (app.debugOn) { txt(c, '调试键：已开（Shift+F9 关）', rx, dy0, 12, '#c0392b', 'right', true); dy0 += 18; }
-    if (G.speed !== 1 && !(G.speed === 2 && XY.sweep09 && XY.sweep09.spdOk(G))) { txt(c, '调试：速度 ×' + G.speed, rx, dy0, 13, '#c0392b', 'right', true); dy0 += 18; }
-    if (G.godMode) { txt(c, '调试：无敌', rx, dy0, 13, '#c0392b', 'right', true); dy0 += 18; }
-    if (app.showFps) txt(c, Math.round(app.fps) + ' FPS · 敌人 ' + G.enemies.length, rx, dy0, 12, T.inkSoft, 'right', false);
+    if (app.debugOn) {
+      txt(c, '调试键：已开（Shift+F9 关）', rx, dy0, 12, '#c0392b', 'right', true); dy0 += 18;
+      if (G.speed !== 1) { txt(c, '调试：速度 ×' + G.speed, rx, dy0, 13, '#c0392b', 'right', true); dy0 += 18; }
+      if (G.godMode) { txt(c, '调试：无敌', rx, dy0, 13, '#c0392b', 'right', true); dy0 += 18; }
+      txt(c, Math.round(app.fps) + ' FPS · 敌人 ' + G.enemies.length, rx, dy0, 12, T.inkSoft, 'right', false);
+    }
 
     ui.banner = null;
     drawCardsHUD(c, G, app, Math.max(150, dy0 + 22));
@@ -11411,10 +11467,12 @@ XY.TRAITS = {
     }
     var mmB = drawMini(c, G, app, sb.y + sb.h + 8);                              // v0.8.0：小地图在菜单按钮下面
     var dy0 = mmB + 8;
-    if (app.debugOn) { T.txt(c, '调试键：已开（Shift+F9 关）', rx, dy0, 12, '#c0392b', 'right', true); dy0 += 18; }
-    if (G.speed !== 1 && !(G.speed === 2 && XY.sweep09 && XY.sweep09.spdOk(G))) { T.txt(c, '调试：速度 ×' + G.speed, rx, dy0, 13, '#c0392b', 'right', true); dy0 += 18; }
-    if (G.godMode && !G.tut) { T.txt(c, '调试：无敌', rx, dy0, 13, '#c0392b', 'right', true); dy0 += 18; }
-    if (app.showFps) T.txt(c, Math.round(app.fps) + ' FPS · 敌人 ' + G.enemies.length, rx, dy0, 12, T.T.inkSoft, 'right', false);
+    if (app.debugOn) {
+      T.txt(c, '调试键：已开（Shift+F9 关）', rx, dy0, 12, '#c0392b', 'right', true); dy0 += 18;
+      if (G.speed !== 1) { T.txt(c, '调试：速度 ×' + G.speed, rx, dy0, 13, '#c0392b', 'right', true); dy0 += 18; }
+      if (G.godMode) { T.txt(c, '调试：无敌', rx, dy0, 13, '#c0392b', 'right', true); dy0 += 18; }
+      T.txt(c, Math.round(app.fps) + ' FPS · 敌人 ' + G.enemies.length, rx, dy0, 12, T.T.inkSoft, 'right', false);
+    }
     XY.ui.banner = null;
     T.drawCardsHUD(c, G, app, dy0 + 14);
     if (XY.ui.cardPanel) rec('fabao', XY.ui.cardPanel.x, XY.ui.cardPanel.y, XY.ui.cardPanel.w, XY.ui.cardPanel.h);
@@ -11928,6 +11986,7 @@ XY.TRAITS = {
   M.poseOwns = function (h) { return !!(h && POSE[h.id] && !(h.def && h.def.xid)); };
   M.poseFolder = function (h) { return (h.id === 'horse' && h.def && h.def.form === 'human') ? 'dragon' : h.id; };
   M.poseHero = function (c, h, rt, x, y, r) {
+    if (XY.chibi && XY.chibi.hdRoster && h && (XY.chibi.hdRoster(h.id) || (XY.chibiKey && XY.chibi.hdRoster(XY.chibiKey(h))))) return false;
     if (!M.poseOwns(h)) return false;
     // 倒地仍用旧 ko。新图集就绪后，待机 / 出招交给 chibi 多帧；走路和蓄力也回到 chibi 的旧帧。
     if (!h.down && ((XY.chibi && XY.chibi.useWild && XY.chibi.useWild(h)) || (XY.wildAnim && XY.wildAnim.ready && XY.wildAnim.ready(h.id, 'idle')))) return false;
@@ -12148,7 +12207,8 @@ XY.TRAITS = {
     return { anim: 'idle', i: 0, mix: 0.5 + 0.5 * Math.sin(rt * 2.4 + (h.bob || 0)) };
   };
 
-  var HD = {};
+  var HD = {}, HDSET = { tang: 1, wukong: 1, bajie: 1, wujing: 1, horse: 1, phyrex: 1, phyrex_x: 1, sisi: 1, laosiji: 1, kuanggong: 1, haiteng: 1, yuanzhang: 1, heyuxi: 1, diaoyulao: 1, martin: 1 };
+  S.hdRoster = function (id) { return !!(id && HDSET[id]); };
   S.hd = function (id) {
     if (!id) return null;
     var e = HD[id];
@@ -12175,8 +12235,11 @@ XY.TRAITS = {
   };
   S.draw = function (c, G, h, rt, x, y, r) {
     var key = XY.chibiKey(h);
-    if (!(XY.wildAnim && XY.wildAnim.ready && XY.wildAnim.ready(key, 'idle')) && XY.wildAnim && XY.wildAnim.ready && XY.wildAnim.ready(h.id, 'idle')) key = h.id;
+    var roster = S.hdRoster(key) || S.hdRoster(h.id);
+    if (roster) key = S.hdRoster(key) ? key : h.id;
+    else if (!(XY.wildAnim && XY.wildAnim.ready && XY.wildAnim.ready(key, 'idle')) && XY.wildAnim && XY.wildAnim.ready && XY.wildAnim.ready(h.id, 'idle')) key = h.id;
     var e = load(key), oldOk = ok(e);
+    if (roster && !S.hd(key)) return true;
     if (!oldOk && !S.useWild(h) && !S.hd(key)) return false;
     if (h.ultInk) { h._wildTop = null; return true; }            // 大招水墨精灵（ultink.js）在场：本体由它画，这里不重复画
     var d = e && e.d, sz = (d && d.sz) || 1;
@@ -12192,6 +12255,7 @@ XY.TRAITS = {
     var attacking = !!(st && st.mode === 'attack');
     var wildKind = null;
     if (!acting && st && S.useWild(h)) wildKind = attacking ? 'attack' : 'idle';
+    if (!h.ultInk && (S.hd(key) || roster)) wildKind = roster ? 'idle' : wildKind;
     if (!h.ultInk && S.hd(key)) wildKind = 'idle';
     var wantWalk = !!(wildKind === 'idle' && (h.moving || tangStep));
     if (!wildKind && (h.moving || tangStep) && !acting) a = { anim: 'walk', i: 2 + (Math.floor(rt * 10 + (h.bob || 0)) & 3), mix: 0 };
@@ -12212,6 +12276,7 @@ XY.TRAITS = {
       if (hdIm && wildKind === 'idle') {
         var dh = r * 3.4 * ((G && G._shotScale) || 1), dw = hdIm.naturalWidth * dh / hdIm.naturalHeight;
         c.drawImage(hdIm, -dw / 2, -dh, dw, dh);
+        h._drawBox = { x: x + hitX + (step ? step.sway : 0) - dw / 2, y: foot + bobY - dh, w: dw, h: dh };
         h._wildTop = foot + bobY - dh;
         c.restore(); c.globalAlpha = 1;
         S.drawn++; S.last = { id: key, anim: wantWalk ? 'hd-walk' : 'hd-idle', frame: 0, left: !!fl, hero: h.i, t: rt, ink: true, wild: false, hd: true };
@@ -24043,8 +24108,8 @@ I.vendorKey=function(G,a,k){var n=X.vendor.stock(G).length;if(k==='ArrowLeft'||k
     paper(c,qb.x-4,qb.y,qb.w+4,qb.h,.86,37);X.INKP.stroke(c,qb.x+2,qb.y+7,qb.x+5,qb.y+qb.h-6,2.8,'167,52,35',.9,91,.02);
     var qt=K.fit('当前目标 · '+goal,qb.w-16,L.small?11.5:16,true,L.small?11.5:16);kai(K,qt.s,qb.x+10,qb.y+qb.h/2,qt.size,INK);
     hit(K,{x:qb.x,y:qb.y+(L.port?2:0),w:qb.w,h:44},'battleGoal',{label:'查看任务、营地、路程与战况'});rec(a,'quest',qb);
-    if(a.debugOn||a.showFps||G.godMode){
-      var dbg=(G.godMode?'无敌 · ':'')+((a.debugOn||a.showFps)?Math.round(a.fps)+' FPS · 敌'+G.enemies.length+' · ':'')+'×'+G.speed;
+    if(a.debugOn){
+      var dbg=(G.godMode?'无敌 · ':'')+Math.round(a.fps)+' FPS · 敌'+G.enemies.length+' · ×'+G.speed;
       K.tf('调试 '+dbg,qb.x+10,qb.y+qb.h+12,qb.w-10,10.5,RED,'left',false,10.5);
     }
     ctx.denBottom=XY.kToLog(a,qb.y+qb.h);ctx.topCount=1;
@@ -24184,7 +24249,7 @@ X.step=function(g,dt){if(!g._simRandom)return step.apply(this,arguments);var sel
     return v * s / z;
   };
   function resize() {
-    var w = window.innerWidth, h = window.innerHeight, dpr = Math.min(window.devicePixelRatio || 1, 2);
+    var w = window.innerWidth, h = window.innerHeight, dpr = Math.min(window.devicePixelRatio || 1, 4);
     app.dpr = dpr;
     var fit = Math.min(w / 1280, h / 720);
     app.zoom = Math.max(0.5, Math.min(fit, 3.5));      // 下限 0.5 保住手机横屏；大屏按 1280×720 设计放大，不再卡在 1.4 让字缩在角落
