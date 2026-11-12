@@ -804,6 +804,14 @@
     $('pinfo').innerHTML = '选一位搭档（悟空固定出战）。<b>' + d.name + '</b> ' + ELN[d.elem] + ' · 生命 ' + hpv + ' · 必杀「' + d.ult.name + '」。战中点“召唤援军”随机来一位，每局一次。';
   }
   var STILL = {};
+  var LAND = null;
+  function landNode() {
+    if (LAND) return LAND.ok ? LAND.im : null;
+    LAND = { ok: false, im: new Image() };
+    LAND.im.onload = function () { if (LAND.im.naturalWidth) LAND.ok = true; };
+    LAND.im.src = 'assets/bg-land.webp';
+    return null;
+  }
   function stillNode(id) {
     if (STILL[id]) return STILL[id].ok ? STILL[id].im : null;
     var rec = STILL[id] = { ok: false, im: null };
@@ -822,41 +830,139 @@
     c.drawImage(im, cx - dw / 2, foot - dh, dw, dh);
     c.restore();
   }
+  var pickLay = { key: '' };
+  function brushFont(size) { return size + 'px "Great Vibes","Ma Shan Zheng","KaiTi",serif'; }
   function brushName(c, text, x, y, size, col, align) {
     c.save();
-    c.font = size + 'px "Ma Shan Zheng","KaiTi",serif';
+    c.font = brushFont(size);
     c.textAlign = align || 'center'; c.textBaseline = 'middle';
     c.fillStyle = col || '#24180f';
     var w = c.measureText(text).width;
     var left = c.textAlign === 'left' ? x : c.textAlign === 'right' ? x - w : x - w / 2;
-    if (left < 8) x += 8 - left;
-    if (left + w > c.canvas.width / (G.dpr || 1) - 8) x -= left + w - (c.canvas.width / (G.dpr || 1) - 8);
+    var viewW = c.canvas.width / (G.dpr || 1);
+    if (left < 6) x += 6 - left;
+    if (left + w > viewW - 6) x -= left + w - (viewW - 6);
     c.fillText(text, x, y);
     c.restore();
+  }
+  function labelWidth(c, text, size) {
+    c.save(); c.font = brushFont(size); var w = c.measureText(text).width; c.restore(); return w;
+  }
+  function spotLight(c, x, y, tw, th) {
+    var dpr = G.dpr || 1;
+    var x0 = Math.max(0, Math.floor((x - tw / 2) * dpr));
+    var y0 = Math.max(0, Math.floor((y - th / 2) * dpr));
+    var x1 = Math.min(c.canvas.width, Math.ceil((x + tw / 2) * dpr));
+    var y1 = Math.min(c.canvas.height, Math.ceil((y + th / 2) * dpr));
+    var sw = x1 - x0, sh = y1 - y0;
+    if (sw < 2 || sh < 2) return 0;
+    var data;
+    try { data = c.getImageData(x0, y0, sw, sh).data; } catch (e) { return 1; }
+    var light = 0, n = 0, step = Math.max(16, (((sw * sh) / 36) | 0) * 4);
+    step -= step % 4;
+    for (var i = 0; i < data.length; i += step) {
+      n++;
+      if (data[i] * 0.3 + data[i + 1] * 0.59 + data[i + 2] * 0.11 > 186) light++;
+    }
+    return n ? light / n : 0;
   }
   function drawPick() {
     var st = pcv.parentNode.getBoundingClientRect(), W = st.width, H = st.height, dpr = G.dpr, c = pctx; if (W < 4) return;
     c.setTransform(dpr, 0, 0, dpr, 0, 0); c.clearRect(0, 0, W, H);
-    c.fillStyle = '#f4ead4'; c.fillRect(0, 0, W, H);
-    c.fillStyle = '#f6efe2'; c.fillRect(0, 0, W, H);
-    var wash = c.createLinearGradient(0, H * 0.45, 0, H);
+    var land = landNode();
+    if (land) {
+      var lw = land.naturalWidth, lh = land.naturalHeight, sc = Math.max(W / lw, H / lh);
+      var dw = lw * sc, dh = lh * sc;
+      c.drawImage(land, (W - dw) / 2, H - dh, dw, dh);
+      c.fillStyle = 'rgba(246,239,226,0.42)'; c.fillRect(0, 0, W, H);
+    } else {
+      c.fillStyle = '#f6efe2'; c.fillRect(0, 0, W, H);
+    }
+    var wash = c.createLinearGradient(0, H * 0.55, 0, H);
     wash.addColorStop(0, 'rgba(90,78,58,0)');
-    wash.addColorStop(1, 'rgba(90,78,58,0.16)');
-    c.fillStyle = wash; c.fillRect(0, H * 0.42, W, H * 0.58);
-    c.fillStyle = 'rgba(42,32,22,0.14)';
-    c.beginPath(); c.ellipse(W * 0.5, H * 0.9, W * 0.46, Math.max(10, H * 0.045), 0, 0, Math.PI * 2); c.fill();
-    c.strokeStyle = 'rgba(42,32,22,0.28)'; c.lineWidth = 1.4;
-    c.beginPath(); c.moveTo(W * 0.04, H * 0.9); c.quadraticCurveTo(W * 0.5, H * 0.84, W * 0.96, H * 0.9); c.stroke();
-    var foot = H * 0.9, fh = H * 0.78;
-    if (foot - fh < H * 0.04) fh = foot - H * 0.04;
-    drawStill(c, G.partner, W * 0.2, foot, fh * 0.92);
-    drawStill(c, 'wukong', W * 0.48, foot, fh);
-    drawStill(c, 'niumo', W * 0.76, foot, fh * 0.96);
-    var ns = Math.min(34, Math.max(18, W * 0.055));
-    brushName(c, NAMES[G.partner] || '', W * 0.05, H * 0.34, ns, '#24180f', 'left');
-    brushName(c, '孙悟空', W * 0.34, H * 0.16, ns + 2, '#24180f', 'left');
-    brushName(c, '牛魔王', W - 10, H * 0.22, ns + 2, '#24180f', 'right');
-    brushName(c, '战', W * 0.6, H * 0.4, Math.min(42, W * 0.07), '#a83224', 'center');
+    wash.addColorStop(1, 'rgba(90,78,58,0.12)');
+    c.fillStyle = wash; c.fillRect(0, H * 0.5, W, H * 0.5);
+    var pw = stillNode(G.partner), wk = stillNode('wukong'), nm = stillNode('niumo');
+    var key = [(W * dpr) | 0, (H * dpr) | 0, G.partner, pw && pw.naturalWidth, wk && wk.naturalWidth, nm && nm.naturalWidth, land && land.naturalWidth].join(':');
+    if (pickLay.key !== key) {
+      var band = Math.max(28, Math.min(52, H * 0.07));
+      var foot = H * 0.93;
+      var specs = [
+        { id: G.partner, k: 0.92, name: NAMES[G.partner] || '' },
+        { id: 'wukong', k: 1, name: '孙悟空' },
+        { id: 'niumo', k: 0.96, name: '牛魔王' }
+      ];
+      function aspect(s) {
+        var im = stillNode(s.id);
+        var aw = (im && im.naturalWidth) ? im.naturalWidth / im.naturalHeight : 0.86;
+        return aw * s.k;
+      }
+      var aspects = specs.map(aspect);
+      var overlap = H < 340 ? 0.2 : 0.38;
+      var pairCut = overlap * ((aspects[0] + aspects[1]) / 2 + (aspects[1] + aspects[2]) / 2);
+      var need = Math.max(0.2, aspects[0] + aspects[1] + aspects[2] - pairCut);
+      var base = Math.min(foot - band, (W * 0.98) / need);
+      var widths = aspects.map(function (a) { return a * base; });
+      var gap01 = -overlap * Math.min(widths[0], widths[1]);
+      var gap12 = -overlap * Math.min(widths[1], widths[2]);
+      var total = widths[0] + gap01 + widths[1] + gap12 + widths[2];
+      var cursor = (W - total) / 2;
+      var boxes = [];
+      for (var i = 0; i < 3; i++) {
+        var cx = cursor + widths[i] / 2;
+        var hh = base * specs[i].k;
+        boxes.push({ id: specs[i].id, name: specs[i].name, cx: cx, h: hh, w: widths[i], top: foot - hh });
+        cursor += widths[i] + (i === 0 ? gap01 : gap12);
+      }
+      pickLay = { key: key, foot: foot, band: band, base: base, total: total, boxes: boxes, labels: null };
+    }
+    var L = pickLay;
+    c.fillStyle = 'rgba(42,32,22,0.13)';
+    c.beginPath(); c.ellipse(W * 0.5, L.foot, Math.min(W * 0.46, L.total * 0.5), Math.max(8, H * 0.032), 0, 0, Math.PI * 2); c.fill();
+    c.strokeStyle = 'rgba(42,32,22,0.3)'; c.lineWidth = 1.5;
+    c.beginPath();
+    c.moveTo(Math.max(8, L.boxes[0].cx - L.boxes[0].w * 0.42), L.foot);
+    c.quadraticCurveTo(W * 0.5, L.foot - Math.max(8, H * 0.045), Math.min(W - 8, L.boxes[2].cx + L.boxes[2].w * 0.42), L.foot);
+    c.stroke();
+    L.boxes.forEach(function (b) { drawStill(c, b.id, b.cx, L.foot, b.h); });
+    if (!L.labels && wk && nm && pw) {
+      var ns = Math.min(28, Math.max(H < 340 ? 15 : 18, Math.min(W, H) * 0.04));
+      var placed = [];
+      function park(text, size, px, py, yMax) {
+        var tw = labelWidth(c, text, size) + 8, th = size + 6;
+        var best = null, ys, xs, pi;
+        var yFrom = Math.max(th / 2 + 2, py - L.band);
+        var yTo = Math.min(yMax, Math.max(yFrom, py + size));
+        var xFrom = Math.max(tw / 2 + 2, px - W * 0.22);
+        var xTo = Math.min(W - tw / 2 - 2, px + W * 0.22);
+        for (ys = yFrom; ys <= yTo + 0.1; ys += Math.max(6, L.band / 3)) {
+          for (xs = xFrom; xs <= xTo + 0.1; xs += Math.max(8, W * 0.03)) {
+            var blocked = false;
+            for (pi = 0; pi < placed.length; pi++) {
+              var p = placed[pi];
+              if (Math.abs(p.x - xs) < (p.tw + tw) / 2 - 1 && Math.abs(p.y - ys) < (p.th + th) / 2 - 1) { blocked = true; break; }
+            }
+            if (blocked) continue;
+            var light = spotLight(c, xs, ys, tw, th);
+            var dist = Math.abs(xs - px) / W + Math.abs(ys - py) / H * 1.6;
+            var score = light * 5 - dist;
+            if (!best || score > best.score) best = { x: xs, y: ys, tw: tw, th: th, score: score, light: light, size: size, text: text };
+          }
+        }
+        if (!best) best = { x: Math.min(W - tw / 2 - 2, Math.max(tw / 2 + 2, px)), y: Math.max(th / 2 + 2, Math.min(py, yMax)), tw: tw, th: th, light: 1, size: size, text: text };
+        placed.push(best);
+        return best;
+      }
+      L.labels = [
+        park(L.boxes[0].name, ns, L.boxes[0].cx, Math.max(ns, L.boxes[0].top - ns * 0.2), L.boxes[0].top - 2),
+        park(L.boxes[1].name, ns + 1, L.boxes[1].cx, Math.max(ns, L.boxes[1].top - ns * 0.2), L.boxes[1].top - 2),
+        park(L.boxes[2].name, ns + 1, L.boxes[2].cx, Math.max(ns, L.boxes[2].top - ns * 0.2), L.boxes[2].top - 2),
+        park('战', Math.min(36, ns + 6), (L.boxes[1].cx + L.boxes[2].cx) / 2, Math.min(L.boxes[1].top, L.boxes[2].top) - ns * 0.3, Math.min(L.boxes[1].top, L.boxes[2].top) - 2)
+      ];
+    }
+    (L.labels || []).forEach(function (lb) {
+      brushName(c, lb.text, lb.x, lb.y, lb.size, lb.text === '战' ? '#a83224' : '#24180f', 'center');
+    });
   }
 
   /* ---------- 结算 ---------- */

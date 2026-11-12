@@ -9716,7 +9716,7 @@ XY.TRAITS = {
     if (app.debugOn) { txt(c, '调试键：已开（Shift+F9 关）', rx, dy0, 12, '#c0392b', 'right', true); dy0 += 18; }
     if (app.debugOn && G.speed !== 1 && !(G.speed === 2 && XY.sweep09 && XY.sweep09.spdOk(G))) { txt(c, '调试：速度 ×' + G.speed, rx, dy0, 13, '#c0392b', 'right', true); dy0 += 18; }
     if (app.debugOn && G.godMode) { txt(c, '调试：无敌', rx, dy0, 13, '#c0392b', 'right', true); dy0 += 18; }
-    if (app.showFps) txt(c, Math.round(app.fps) + ' FPS · 敌人 ' + G.enemies.length, rx, dy0, 12, T.inkSoft, 'right', false);
+    if (app.debugOn && app.showFps) txt(c, Math.round(app.fps) + ' FPS · 敌人 ' + G.enemies.length, rx, dy0, 12, T.inkSoft, 'right', false);
 
     ui.banner = null;
     drawCardsHUD(c, G, app, Math.max(150, dy0 + 22));
@@ -11422,7 +11422,7 @@ XY.TRAITS = {
     if (app.debugOn) { T.txt(c, '调试键：已开（Shift+F9 关）', rx, dy0, 12, '#c0392b', 'right', true); dy0 += 18; }
     if (app.debugOn && G.speed !== 1 && !(G.speed === 2 && XY.sweep09 && XY.sweep09.spdOk(G))) { T.txt(c, '调试：速度 ×' + G.speed, rx, dy0, 13, '#c0392b', 'right', true); dy0 += 18; }
     if (app.debugOn && G.godMode && !G.tut) { T.txt(c, '调试：无敌', rx, dy0, 13, '#c0392b', 'right', true); dy0 += 18; }
-    if (app.showFps) T.txt(c, Math.round(app.fps) + ' FPS · 敌人 ' + G.enemies.length, rx, dy0, 12, T.T.inkSoft, 'right', false);
+    if (app.debugOn && app.showFps) T.txt(c, Math.round(app.fps) + ' FPS · 敌人 ' + G.enemies.length, rx, dy0, 12, T.T.inkSoft, 'right', false);
     XY.ui.banner = null;
     T.drawCardsHUD(c, G, app, dy0 + 14);
     if (XY.ui.cardPanel) rec('fabao', XY.ui.cardPanel.x, XY.ui.cardPanel.y, XY.ui.cardPanel.w, XY.ui.cardPanel.h);
