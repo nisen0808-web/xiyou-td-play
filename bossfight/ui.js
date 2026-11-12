@@ -849,13 +849,14 @@
     var sumA = asps[0] + asps[1] + asps[2];
     var nameH = Math.max(16, Math.min(32, H * 0.07));
     var margin = 6, foot = H - Math.max(3, H * 0.01);
-    var maxH = foot - 2;
+    var nameBand = nameH + 10;
+    var maxH = Math.max(40, foot - nameBand);
     var avail = W - margin * 2;
-    var h = Math.min(maxH, (avail - nameH * 2.2) / sumA);
-    var overlap = 0;
-    if (h < maxH * 0.9) {
-      overlap = Math.min(0.26, (sumA * maxH * 0.92 - avail) / (sumA * maxH * 0.92));
-      if (overlap > 0) h = Math.min(maxH, avail / (sumA * (1 - overlap * 0.55)));
+    var h = Math.min(maxH, avail / sumA);
+    if (h < maxH * 0.92) {
+      var cap = H < 360 ? 0.16 : 0.22;
+      var overlap = Math.min(cap, Math.max(0, (sumA * maxH * 0.94 - avail) / (sumA * maxH * 0.94)));
+      if (overlap > 0) h = Math.min(maxH, avail / (sumA * (1 - overlap * 0.5)));
     }
     var ws = asps.map(function (a) { return a * h; });
     var gaps = (avail - (ws[0] + ws[1] + ws[2])) / 2;
@@ -881,30 +882,33 @@
       }
       return false;
     }
+    var names = [];
     labels.forEach(function (text, i) {
       c.font = nameH + 'px "Ma Shan Zheng","KaiTi",serif';
-      var tw = c.measureText(text).width + 2, r = rects[i];
-      var cands = [
-        [r.x - tw / 2 - 4, top + nameH * 0.7],
-        [r.x + r.w + tw / 2 + 4, top + nameH * 0.7],
-        [xs[i], Math.max(nameH * 0.55, top - nameH * 0.15)],
-        [i === 0 ? margin + tw / 2 + 2 : (i === 2 ? W - margin - tw / 2 - 2 : xs[i]), nameH * 0.6]
-      ];
-      var spot = cands[cands.length - 1], k;
-      for (k = 0; k < cands.length; k++) if (!hit(cands[k][0], cands[k][1], tw, nameH)) { spot = cands[k]; break; }
+      var tw = c.measureText(text).width + 2;
+      var spot = [Math.max(margin + tw / 2, Math.min(W - margin - tw / 2, xs[i])), nameH * 0.62];
       brushName(c, text, spot[0], spot[1], nameH, '#24180f');
+      names.push({ x: spot[0] - tw / 2, y: spot[1] - nameH / 2, w: tw, h: nameH });
     });
-    var zSize = Math.max(18, Math.min(42, H * 0.09));
+    function hitName(x, y, tw, th) {
+      var a = x - tw / 2, b = y - th / 2;
+      for (var i = 0; i < names.length; i++) {
+        var r = names[i];
+        if (a + tw > r.x && a < r.x + r.w && b + th > r.y && b < r.y + r.h) return true;
+      }
+      return false;
+    }
+    var zSize = Math.max(18, Math.min(40, H * 0.08));
     c.font = zSize + 'px "Ma Shan Zheng","KaiTi",serif';
-    var zw = c.measureText('战').width + 2;
+    var zw = c.measureText('战').width + 4;
     var zc = [
-      [(rects[1].x + rects[1].w + rects[2].x) / 2, top + h * 0.16],
-      [(rects[0].x + rects[0].w + rects[1].x) / 2, top + h * 0.16],
-      [W / 2, Math.max(zSize * 0.55, 4)]
+      [(rects[1].x + rects[1].w + rects[2].x) / 2, top + Math.min(h * 0.18, nameH + zSize)],
+      [(rects[0].x + rects[0].w + rects[1].x) / 2, top + Math.min(h * 0.18, nameH + zSize)],
+      [(xs[1] + xs[2]) / 2, nameH * 0.62]
     ];
-    var zs = zc[zc.length - 1], zi;
-    for (zi = 0; zi < zc.length; zi++) if (!hit(zc[zi][0], zc[zi][1], zw, zSize)) { zs = zc[zi]; break; }
-    brushName(c, '战', zs[0], zs[1], zSize, '#a83224');
+    var zs = null, zi;
+    for (zi = 0; zi < zc.length; zi++) if (!hit(zc[zi][0], zc[zi][1], zw, zSize) && !hitName(zc[zi][0], zc[zi][1], zw, zSize)) { zs = zc[zi]; break; }
+    if (zs) brushName(c, '战', zs[0], zs[1], zSize, '#a83224');
   }
 
   /* ---------- 结算 ---------- */

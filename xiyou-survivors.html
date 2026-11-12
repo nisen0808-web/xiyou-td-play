@@ -4255,10 +4255,17 @@ XY.TRAITS = {
         if (top < b2) b2 = top;
         if (hb.y + hb.def.r * 1.15 > b3) b3 = hb.y + hb.def.r * 1.15;
       }
-      var pad = 18, minCx = b1 - vw / 2 + pad, maxCx = b0 + vw / 2 - pad;
-      if (minCx <= maxCx) cam.x = clamp(cam.x, minCx, maxCx); else cam.x = (b0 + b1) / 2;
-      var minCy = b3 - vh / 2 + pad, maxCy = b2 + vh / 2 - pad;
-      if (minCy <= maxCy) cam.y = clamp(cam.y, minCy, maxCy); else cam.y = (b2 + b3) / 2;
+      var pad = 22;
+      if (b1 - b0 < vw - pad * 2 && b3 - b2 < vh - pad * 2) {
+        cam.x = (b0 + b1) / 2; cam.y = (b2 + b3) / 2;
+        if (b3 - b2 < vh * 0.35 && vh < vw * 0.55) cam.y += vh * 0.12;
+      }
+      else {
+        var minCx = b1 - vw / 2 + pad, maxCx = b0 + vw / 2 - pad;
+        if (minCx <= maxCx) cam.x = clamp(cam.x, minCx, maxCx); else cam.x = (b0 + b1) / 2;
+        var minCy = b3 - vh / 2 + pad, maxCy = b2 + vh / 2 - pad;
+        if (minCy <= maxCy) cam.y = clamp(cam.y, minCy, maxCy); else cam.y = (b2 + b3) / 2;
+      }
     }
     if (vw < C.WORLD_W) cam.x = clamp(cam.x, vw / 2, C.WORLD_W - vw / 2);
     if (vh < C.WORLD_H) cam.y = clamp(cam.y, vh / 2, C.WORLD_H - vh / 2);
@@ -4301,8 +4308,15 @@ XY.TRAITS = {
     return Math.max(64, Math.min((vw - 150) / 2, (vh - 190) / 2)) * 0.92;
   }
   function partySlots(G) {
-    var list = [], i, hh, tang = G.heroes[0], R = partyRing(G), a;
+    var list = [], i, hh, tang = G.heroes[0], R = partyRing(G), a, vw, vh, gap;
     for (i = 1; i < G.heroes.length; i++) { hh = G.heroes[i]; if (hh && !hh.down && !hh.ridden) list.push(hh); }
+    vw = (G.view && G.view.w) || 1280; vh = (G.view && G.view.h) || 720;
+    if (vh < vw * 0.45 && list.length >= 8) {
+      var gap = Math.min(100, (vw * 0.72) / Math.max(1, list.length - 1));
+      return list.map(function (hh, k) {
+        return { h: hh, x: tang.x + (k - (list.length - 1) / 2) * gap, y: tang.y };
+      });
+    }
     return list.map(function (hh, k) {
       a = (k / Math.max(1, list.length)) * Math.PI * 2 + 0.4;
       return { h: hh, x: tang.x + Math.cos(a) * R, y: tang.y + Math.sin(a) * R };
@@ -9268,7 +9282,7 @@ XY.BGS1={"src": "data:image/webp;base64,UklGRtT1GgBXRUJQVlA4IMj1GgCQwWGdASoAEAAK
   }
 
   function drawHero(c, G, h, rt) {                                  // v0.8.0 腾云：不在路上的角色脚踏水墨云、不迈步（js/cloudride.js）；只在路上才播走路动画
-    if (h.ridden || h.down || !(XY.cloud && XY.cloud.on(G, h))) return drawHero0(c, G, h, rt);
+    if (h.ridden || h.down || G._quietShot || !(XY.cloud && XY.cloud.on(G, h))) return drawHero0(c, G, h, rt);
     var mv = h.moving; cloudNow = true; h.moving = false;
     try { drawHero0(c, G, h, rt, mv); } finally { h.moving = mv; cloudNow = false; }
   }
