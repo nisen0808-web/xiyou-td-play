@@ -617,8 +617,7 @@
       return { x: W - 156, y: 14, w: 136, h: 56 };
     }
     if (port) return { x: 12, y: H - 64, w: 112, h: 52 };
-    if (app.screen === 'levels') return { x: W - 300, y: 8, w: 120, h: 44 };
-    return { x: 22, y: Math.max(250, H - 250), w: 132, h: 56 };
+    return { x: 360, y: Math.max(508, H - 210), w: 120, h: 44 };
   }
   function gearBox(app, btn) {
     var port = app.lh > app.lw * 1.05;
@@ -630,13 +629,16 @@
   function paintButton(c, app) {
     var b = buttonBox(app);
     boxes.event = b;
-    redSeal(c, b.x, b.y, b.w, b.h, '活动', API.NAME);
+    brush(c, '活动', b.x + 34, b.y + b.h * 0.55, 22, '#24180f', 'left');
+    c.save(); c.fillStyle = '#a83224'; c.fillRect(b.x + 4, b.y + 8, 24, 24);
+    c.fillStyle = '#f6efe2'; c.font = '14px "Ma Shan Zheng","KaiTi",serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.fillText('印', b.x + 16, b.y + 21); c.restore();
     if (!API.gachaClaimed(XY.save.data)) dot(c, b.x + b.w - 8, b.y + 8);
     hit(b.x, b.y, b.w, b.h, 'dkOpen');
     if (app.screen === 'levels') {
       var g = gearBox(app, b);
       boxes.gear = g;
-      redSeal(c, g.x, g.y, g.w, g.h, '专属');
+      brush(c, '专属', g.x + 8, g.y + g.h * 0.55, 22, '#24180f', 'left');
       hit(g.x, g.y, g.w, g.h, 'dkGear');
     }
   }
@@ -1110,9 +1112,18 @@
     c.restore();
     boxes.popup = { x: x, y: y, w: w, h: h };
   }
-  function paintIntro(c, app, run) {
-    var scene = art.introScene ? img('introScene', art.introScene) : null;
-    if (false && scene) {
+  function paintIntro(c, app) {
+    var W = app.lw, H = app.lh;
+    var w = Math.min(260, W * 0.34), h = Math.min(108, H * 0.2);
+    var x = 18, y = Math.max(72, H - h - 24);
+    c.save();
+    paper(c, x, y, w, h);
+    brush(c, '猫叔登场', x + 18, y + h * 0.42, 26, '#24180f', 'left');
+    brush(c, '点一下就过去', x + 18, y + h * 0.74, 14, '#5c4a38', 'left');
+    c.restore();
+    hit(0, 0, W, H, 'dkSkip');
+    return;
+    if (false) {
       var W0 = app.lw, H0 = app.lh, port = H0 > W0 * 1.05;
       var ir = scene.naturalWidth / scene.naturalHeight;
       var dw, dh, dx, dy, u = 0;
@@ -1530,6 +1541,16 @@
     if (floatCache[key]) return floatCache[key];
     var iw = im.naturalWidth || im.width, ih = im.naturalHeight || im.height;
     if (!iw || !ih) return null;
+    try {
+      var probe = document.createElement('canvas');
+      var pw = Math.min(48, iw), ph = Math.min(48, ih);
+      probe.width = pw; probe.height = ph;
+      var pg = probe.getContext('2d');
+      pg.drawImage(im, 0, 0, pw, ph);
+      var pd = pg.getImageData(0, 0, pw, ph).data, clear = 0, pi;
+      for (pi = 3; pi < pd.length; pi += 16) if (pd[pi] < 16) clear++;
+      if (clear > pd.length / 64) { floatCache[key] = im; return im; }
+    } catch (e) {}
     var sc0 = Math.min(1, 560 / Math.max(iw, ih));
     var w = Math.max(1, Math.round(iw * sc0)), h = Math.max(1, Math.round(ih * sc0));
     var cnv = document.createElement('canvas');
@@ -1559,8 +1580,9 @@
     var tol = (pr + pg + pb) / 3 < 215 ? 40 : 32;
     function isPaper(r, g0, b, a) {
       if (a < 12) return true;
-      if (Math.max(r, g0, b) - Math.min(r, g0, b) > 58) return false;
-      return Math.abs(r - pr) <= tol && Math.abs(g0 - pg) <= tol && Math.abs(b - pb) <= tol;
+      var lum = (r + g0 + b) / 3;
+      var chroma = Math.max(r, g0, b) - Math.min(r, g0, b);
+      return lum > 188 && chroma < 42;
     }
     var seen = new Uint8Array(n), qx = new Int16Array(n), qy = new Int16Array(n), qh = 0, qt = 0;
     function push(x0, y0) {
@@ -1764,7 +1786,7 @@
     c.save();
     deskWash(c, W, H);
     brush(c, '专属器物', port ? 22 : 28, port ? 40 : 46, port ? 32 : 40, '#120c0a', 'left');
-    brush(c, '只给当前这位用。点已有的就装上。', port ? 22 : 28, port ? 72 : 78, port ? 16 : 18, '#5c4a36', 'left');
+    brush(c, '只给当前这位用。点已有的就装上。怎么获得：活动抽卡和战斗掉落。', port ? 22 : 28, port ? 72 : 78, port ? 15 : 17, '#5c4a36', 'left');
     var backW = 128, backH = 50;
     redSeal(c, W - backW - 12, 12, backW, backH, '返回');
     hit(W - backW - 12, 12, backW, backH, 'dkGearClose');
@@ -1814,6 +1836,10 @@
     var heroIm = heroPlate || spArt(sel);
     var heroCut = heroPlate || (heroIm && cutout('hero-' + sel, heroIm));
     if (heroCut) paintCut(c, heroCut, heroX, heroY, heroW, heroH, true);
+    if (XY.xAvIcon && XY.xAvIcon.isSpecial && XY.xAvIcon.isSpecial(sel)) {
+      var av = port ? 56 : 64;
+      XY.xAvIcon.draw(c, sel, heroX + 8, heroY + 8, av, av);
+    }
     var hd = heroDef(sel);
     var heroName = (hd && hd.name) || sel;
     inkName(c, heroName, heroX + heroW * 0.82, heroY + heroH * 0.16, heroW * 0.4, Math.round(heroW / 6), '#120c0a');
@@ -1883,20 +1909,13 @@
     if (!run) return;
     if (run.rageOn) {
       var list = G.enemies || [], n = 0, i;
-      for (i = 0; i < list.length && n < 28; i++) {
+      for (i = 0; i < list.length && n < 5; i++) {
         var e = list[i];
         if (!e || e.dead || e.dk) continue;
         if (!e._dkRage && !e.enraged) continue;
         var p = w2s(G, app, e.x, e.y - (e.r || 16) - 18);
         if (p.x < -20 || p.y < -20 || p.x > app.lw + 20 || p.y > app.lh + 20) continue;
         if (e.def && (e.def.denBoss || e.def.boss)) continue;
-        c.beginPath();
-        c.arc(p.x, p.y, 11, 0, Math.PI * 2);
-        c.fillStyle = 'rgba(247,241,228,0.94)';
-        c.fill();
-        c.lineWidth = 1.4;
-        c.strokeStyle = '#2a2118';
-        c.stroke();
         cursive(c, '狂', p.x, p.y, 13, '#8d1f18', 'center');
         n++;
       }

@@ -167,25 +167,25 @@
     var touch = !!(a.touchUI || port);
     var short = H < 420;
     var pw = Math.max(280, Math.min(W - 16, short ? W - 12 : (port ? W - 20 : 560)));
-    var head = short ? 36 : 52;
-    var btnH = short ? 36 : 46;
-    var rowH = short ? 40 : (port ? 58 : 52);
-    var autoH = 22 + 4 * rowH;
-    var ph = Math.min(H - 12, head + btnH + 8 + (short ? 36 : 44) + autoH + (short ? 8 : 16));
+    var head = short ? 28 : 52;
+    var btnH = short ? 32 : 46;
+    var rowH = short ? 34 : (port ? 58 : 52);
+    var autoH = short ? 16 + 2 * rowH : 22 + 4 * rowH;
+    var ph = Math.min(H * 0.9, head + btnH + 8 + (short ? 28 : 44) + autoH + (short ? 6 : 16));
     var px = Math.round((W - pw) / 2), py = Math.round((H - ph) / 2);
     inkSheet(c, px, py, pw, ph);
     var x = px + 16, w = pw - 32, y = py + (short ? 18 : 26);
     kai(c, '暂驻', x, y, short ? 22 : 28, '#a42d19', 'left', w * 0.45);
-    kai(c, '已坚持 ' + XY.fmtTime(G.t) + ' · Lv' + G.level + ' · 击杀 ' + XY.fmtNum(G.kills), x + (short ? 78 : 96), y, short ? 13 : 15, '#5c4a38', 'left', w - (short ? 84 : 110));
+    kai(c, '已坚持 ' + XY.fmtTime(G.t) + ' · ' + G.level + ' 级 · 击杀 ' + XY.fmtNum(G.kills), x + (short ? 78 : 96), y, short ? 13 : 15, '#5c4a38', 'left', w - (short ? 84 : 110));
     y += short ? 22 : 30;
     var seal = short ? 64 : 78;
     inkBar(c, x, y, seal, btnH, '继续', true);
     K.hit(x, y, seal, btnH, 'resume', null);
     var gap = 8, rest = w - seal - gap * 2;
     var bw = (rest - gap) / 2;
-    inkBar(c, x + seal + gap, y, bw, btnH, '重来', false);
+    paleBar(c, x + seal + gap, y, bw, btnH, '重来');
     K.hit(x + seal + gap, y, bw, btnH, 'restart', null);
-    inkBar(c, x + seal + gap * 2 + bw, y, bw, btnH, '回首页', false);
+    paleBar(c, x + seal + gap * 2 + bw, y, bw, btnH, '回首页');
     K.hit(x + seal + gap * 2 + bw, y, bw, btnH, 'home', null);
     y += btnH + (short ? 6 : 8);
     var muted = !!(XY.audio && XY.audio.mute);
@@ -196,17 +196,20 @@
     if (!touch) kai(c, '开是红印，关是淡墨', x + 56, y, 12, 'rgba(90,70,48,0.7)', 'left', w - 60);
     y += short ? 16 : 20;
     if (XY.auto) {
-      ['points', 'treat', 'guest', 'pick'].forEach(function (key) {
+      var keys = ['points', 'treat', 'guest', 'pick'];
+      var cols = short ? 2 : 1;
+      keys.forEach(function (key, i) {
         var on = !!XY.auto.get(key), meta = AUTO_META[key], rh = rowH - 4;
-        inkMark(c, key, x + 14, y + rh * 0.38, short ? 22 : 28);
-        if (on) inkBar(c, x + 32, y + 2, short ? 36 : 42, rh - 8, '开', true);
-        else paleBar(c, x + 32, y + 2, short ? 36 : 42, rh - 8, '关');
-        var tx = x + (short ? 76 : 86);
-        kai(c, meta.name, tx, y + (short ? 12 : 16), short ? 14 : 16, '#24180f', 'left', w * 0.42);
-        kai(c, meta.desc, tx, y + (short ? 28 : 36), short ? 12 : 14, '#5c4a38', 'left', touch ? w - (tx - x) - 4 : w * 0.48);
-        if (!touch && meta.hint) kai(c, meta.hint, x + w - 4, y + rh * 0.45, 12, 'rgba(90,70,48,0.65)', 'right', 92);
-        K.hit(x, y, w, rh, 'autoTog', { key: key });
-        y += rowH;
+        var col = cols === 1 ? 0 : i % 2, row = cols === 1 ? i : (i / 2) | 0;
+        var cw = cols === 1 ? w : (w - 8) / 2;
+        var bx = x + col * (cw + 8), by = y + row * rowH;
+        inkMark(c, key, bx + 14, by + rh * 0.38, short ? 18 : 28);
+        if (on) inkBar(c, bx + 32, by + 2, short ? 32 : 42, rh - 8, '开', true);
+        else paleBar(c, bx + 32, by + 2, short ? 32 : 42, rh - 8, '关');
+        var tx = bx + (short ? 70 : 86);
+        kai(c, meta.name, tx, by + (short ? 10 : 16), short ? 13 : 16, '#24180f', 'left', cw * 0.55);
+        if (!short) kai(c, meta.desc, tx, by + 36, 14, '#5c4a38', 'left', cw - (tx - bx) - 4);
+        K.hit(bx, by, cw, rh, 'autoTog', { key: key });
       });
     }
     close(c);
@@ -239,7 +242,7 @@
       if (!q) return;
       var rw = q.def.reward || {};
       var r = q.done ? [(rw.lingshi ? '灵石 +' + rw.lingshi : ''), (rw.card ? '法宝' : ''), (rw.shard ? '碎片 +' + rw.shard : '')].filter(Boolean).join(' ') : '未完成';
-      lines.push({ t: (i ? '支线' : '主线') + ' · ' + q.def.short + '  ' + (q.done ? '成' : '未') + '  ' + r, c: q.done ? '#a42d19' : '#2b1c08' });
+      lines.push({ t: (i ? '支线' : '主线') + ' · ' + q.def.short + '  ' + (q.done ? ('成' + (r ? ' · ' + r : '')) : '未完成'), c: q.done ? '#a42d19' : '#2b1c08' });
     });
     if (!short) lines.push({ t: '一星 通关本关    二星 至少一条支线    三星 无人阵亡', c: '#5c4034' });
     var y = contentTop, size = short ? 15 : (port ? 16 : 18), lh = size + (short ? 8 : 12);
@@ -257,12 +260,14 @@
     var bw = (w - (A.length - 1) * 8) / A.length;
     A.forEach(function (b, i) {
       var bx = x + i * (bw + 8);
-      inkBar(c, bx, btnY, bw, btnH, b[0], !!b[2]);
+      if (b[2]) inkBar(c, bx, btnY, bw, btnH, b[0], true);
+      else paleBar(c, bx, btnY, bw, btnH, b[0]);
       K.hit(bx, btnY, bw, btnH, b[1]);
     });
     close(c);
   };
 
+  var faceBag = null;
   var U = XY.fabaoui;
   if (U && U.scrolls) {
     var oldScroll = U.scrolls;
@@ -304,22 +309,30 @@
         c.restore();
         if (VU && VU.washE) VU.washE(c, x + w * 0.28, y + h * 0.62, w * 0.55, h * 0.28, '90,78,58', 0.14);
         kai(c, it.name || '', x + 12, y + Math.max(18, h * 0.09), Math.max(16, Math.min(30, w * 0.11)), '#2b1c08', 'left', w * 0.62);
-        var rank = String(it.lv || it.tag || '印').replace(/\s/g, '').charAt(0) || '印';
-        if (VU && VU.drawSeal) VU.drawSeal(c, x + w - Math.min(48, w * 0.18) - 8, y + 6, Math.min(44, w * 0.16), Math.min(44, h * 0.16), rank, { style: 'solid', col: '#b8322a', sz: Math.round(Math.min(22, w * 0.08)), stack: false, rot: -0.06 });
-        var art = Math.max(h * 0.58, 48);
-        var ax = x + w * 0.42, ay = y + h * 0.5;
-        var drew = XY.ICONINK && XY.ICONINK.draw(c, it.name, ax, ay, art);
-        if (!drew && P.object) P.object(c, it.name, ax, ay, art * 0.72, false);
-        if (G.special && XY.xAvIcon) {
-          var av = Math.min(72, Math.max(36, w * 0.22), h * 0.28);
-          XY.xAvIcon.draw(c, G.special, x + w - av - 8, y + h * 0.38, av, av);
+        var rankRaw = String(it.lv || it.r || '');
+        var rankMap = { L: '传说', SSR: '传说', SR: '传说', R: '稀有', N: '普通', '神品': '传说', '仙品': '传说', '灵品': '稀有', '凡品': '普通', '传说': '传说', '稀有': '稀有', '普通': '普通' };
+        var rank = rankMap[rankRaw] || (rankRaw.length > 1 ? rankRaw : '普通');
+        kai(c, rank, x + w - 14, y + Math.max(36, h * 0.16), 15, '#a42d19', 'right', 72);
+        var sid = G.special || (XY.save && XY.save.carryId && XY.save.carryId()) || 'phyrex';
+        var face = null;
+        if (!faceBag) faceBag = {};
+        face = faceBag[sid];
+        if (!face) { face = faceBag[sid] = new Image(); face.src = 'assets/art/battle-hd/' + sid + '.webp'; }
+        var cr = Math.min(34, w * 0.16, h * 0.22), cx = x + 18 + cr, cy = y + h * 0.42;
+        c.save();
+        c.beginPath(); c.arc(cx, cy, cr, 0, 6.2832); c.clip();
+        if (face.complete && face.naturalWidth) {
+          var sc = Math.max(cr * 2 / face.naturalWidth, cr * 2 / face.naturalHeight);
+          c.drawImage(face, cx - face.naturalWidth * sc / 2, cy - face.naturalHeight * sc / 2, face.naturalWidth * sc, face.naturalHeight * sc);
         }
+        c.restore();
+        c.save(); c.strokeStyle = '#24180f'; c.lineWidth = 2; c.beginPath(); c.arc(cx, cy, cr, 0.4, 5.4); c.stroke(); c.restore();
         var eff = it.eff || '';
-        kai(c, eff, x + w / 2, y + h - Math.max(16, h * 0.1), Math.max(14, Math.min(18, h * 0.09)), '#24180f', 'center', w - 20);
+        kai(c, eff, x + 12, y + h - Math.max(18, h * 0.12), Math.max(13, Math.min(16, h * 0.08)), '#24180f', 'left', w - 24);
         K.hit(x, y, w, h - 4, 'offerPick', { k: i });
       });
       var bw = (pw - 36) / 2;
-      inkBar(c, px + 12, btnY, bw, btnH, op.skipLabel || '都不要，换金币', false);
+      paleBar(c, px + 12, btnY, bw, btnH, op.skipLabel || '都不要，换金币');
       K.hit(px + 12, btnY, bw, btnH, 'offerPick', { k: -1 });
       inkBar(c, px + 24 + bw, btnY, bw, btnH, op.rrLabel || '重抽', !op.rrDis);
       if (!op.rrDis) K.hit(px + 24 + bw, btnY, bw, btnH, 'offerReroll');

@@ -63,14 +63,16 @@
         }
       }
       var q = XY.introQ;
-      if (!q || !q.length || !app) return;
+      if (!q || !q.length || !app) { if (XY.gacha10) XY.gacha10.forceHold = false; return; }
       var id = q[0], sp = XY.SP_BY && XY.SP_BY[id];
       if (!sp) { q.shift(); return; }
       ctx.save();
       ctx.setTransform(app.zoom * app.dpr, 0, 0, app.zoom * app.dpr, 0, 0);
-      var W = app.lw, H = app.lh, pw = Math.min(420, W - 24), ph = Math.min(220, H * 0.42);
-      var x = (W - pw) / 2, y = H * 0.28;
-      ctx.fillStyle = 'rgba(246,239,226,0.94)';
+      if (!(XY.gacha10 && XY.gacha10.overlay && XY.gacha10.overlay())) { q.length = 0; ctx.restore(); return; }
+      if (XY.gacha10) XY.gacha10.forceHold = true;
+      var W = app.lw, H = app.lh, pw = Math.min(560, W - 24), ph = Math.min(280, H * 0.46);
+      var x = (W - pw) / 2, y = (H - ph) / 2;
+      ctx.fillStyle = '#f6efe2';
       ctx.beginPath();
       ctx.moveTo(x + 16, y + 6);
       ctx.quadraticCurveTo(x + pw * 0.5, y - 8, x + pw - 12, y + 8);
@@ -78,10 +80,17 @@
       ctx.quadraticCurveTo(x + pw * 0.4, y + ph + 6, x + 14, y + ph - 6);
       ctx.quadraticCurveTo(x - 6, y + ph * 0.4, x + 16, y + 6);
       ctx.fill();
+      var bag = render._introArt || (render._introArt = {});
+      var im = bag[id];
+      if (!im) { im = bag[id] = new Image(); im.src = 'assets/art/battle-hd/' + id + '.webp'; }
+      if (im.complete && im.naturalWidth) {
+        var ih = ph - 36, iw = ih * im.naturalWidth / im.naturalHeight;
+        ctx.drawImage(im, x + 12, y + 18, Math.min(iw, pw * 0.38), ih);
+      }
       ctx.fillStyle = '#a42d19';
-      ctx.font = '26px "Ma Shan Zheng","KaiTi",serif';
+      ctx.font = '28px "Ma Shan Zheng","KaiTi",serif';
       ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-      ctx.fillText(sp.name, x + 24, y + 36);
+      ctx.fillText(sp.name, x + pw * 0.46, y + 48);
       ctx.fillStyle = '#24180f';
       ctx.font = '15px "Ma Shan Zheng","KaiTi",serif';
       ctx.fillText(sp.role || '', x + 24, y + 68);
