@@ -611,6 +611,54 @@
     if (now - fpsT >= 500) { fpsV = fpsN * 1000 / (now - fpsT); fpsN = 0; fpsT = now; }
   }
 
+  function boxHit(a, b) {
+    return !!(a && b && a.w && b.w && a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y);
+  }
+  /* 出发页的框记在屏幕像素上，这层字是按战场坐标画的，先换算再比。 */
+  function worldBox(box, u) {
+    if (!box || !box.w) return null;
+    return { x: box.x * u, y: box.y * u, w: box.w * u, h: box.h * u };
+  }
+  function departBlocked(box, u) {
+    var geo = XY.depart && XY.depart.geo, lists = [], i, j, list;
+    if (box.y < 56 * u) return true;
+    if (geo) {
+      if (geo.cards) lists.push(geo.cards);
+      if (geo.btns) lists.push(geo.btns);
+      if (geo.go) lists.push([geo.go]);
+      if (geo.more) lists.push([geo.more]);
+    }
+    if (XY.departCards) lists.push(XY.departCards);
+    for (i = 0; i < lists.length; i++) {
+      list = lists[i];
+      for (j = 0; j < list.length; j++) if (boxHit(box, worldBox(list[j], u))) return true;
+    }
+    return false;
+  }
+  function departPair(app) {
+    var W = app.lw, H = app.lh, z = app.zoom || 1, u = 1 / z, geo = XY.depart && XY.depart.geo;
+    var bw = 72, bh = 40, gap = 8, i;
+    var go = geo && geo.go ? worldBox(geo.go, u) : null;
+    var strip = geo && geo.strip ? worldBox({ x: 0, y: geo.strip.y, w: 1, h: geo.strip.h }, u) : null;
+    var cands = [];
+    if (go) {
+      cands.push({ x: go.x - bw * 2 - gap - 12, y: go.y + (go.h - bh) / 2 });
+      cands.push({ x: go.x, y: go.y - bh - 10 });
+    }
+    if (strip) cands.push({ x: 16, y: strip.y - bh - 10 });
+    if (strip && go) cands.push({ x: Math.max(16, go.x - bw * 2 - gap - 12), y: strip.y - bh - 10 });
+    cands.push({ x: W - bw * 2 - gap - 16, y: 72 * u });
+    cands.push({ x: 16, y: 72 * u });
+    for (i = 0; i < cands.length; i++) {
+      var x = Math.max(8, Math.min(W - bw * 2 - gap - 8, cands[i].x));
+      var y = Math.max(8, Math.min(H - bh - 8, cands[i].y));
+      var a = { x: x, y: y, w: bw, h: bh };
+      var b = { x: x + bw + gap, y: y, w: bw, h: bh };
+      if (!departBlocked(a, u) && !departBlocked(b, u)) return [a, b];
+    }
+    var y2 = strip ? Math.max(8, strip.y - bh - 10) : 72 * u;
+    return [{ x: 16, y: y2, w: bw, h: bh }, { x: 16 + bw + gap, y: y2, w: bw, h: bh }];
+  }
   function buttonBox(app) {
     var W = app.lw, H = app.lh, port = H > W * 1.05;
     if (app.screen === 'start') {
@@ -618,34 +666,38 @@
       return { x: W - 156, y: 14, w: 136, h: 56 };
     }
     if (port) return { x: 12, y: H - 64, w: 112, h: 52 };
-    var geo = XY.depart && XY.depart.geo;
-    var bw = 78, bh = 36, right = 0, i, card;
-    if (geo && geo.cards) for (i = 0; i < geo.cards.length; i++) { card = geo.cards[i]; if (card) right = Math.max(right, card.x + card.w); }
-    if (geo && geo.go && right) {
-      return { x: right + 10, y: geo.go.y + Math.max(0, (geo.go.h - bh) / 2), w: bw, h: bh };
-    }
-    var y = geo && geo.strip ? geo.strip.y - bh - 8 : H - 210;
-    return { x: 16, y: Math.max(8, y), w: bw, h: bh };
+    if (app.screen === 'levels') return departPair(app)[0];
+    return { x: 16, y: Math.max(8, H - 210), w: 72, h: 40 };
   }
   function gearBox(app, btn) {
     var port = app.lh > app.lw * 1.05;
     if (app.screen !== 'levels') return null;
     if (port) return { x: 132, y: app.lh - 64, w: 112, h: 52 };
-    return { x: btn.x + btn.w + 8, y: btn.y, w: btn.w, h: btn.h };
+    return departPair(app)[1];
   }
 
+  function textBox(c, s, x, y, size) {
+    c.save();
+    c.font = size + 'px "Ma Shan Zheng","KaiTi",serif';
+    var w = c.measureText(s).width;
+    c.restore();
+    return { x: x, y: y - size * 0.55, w: w, h: size * 1.15, text: s };
+  }
   function paintButton(c, app) {
     var b = buttonBox(app);
     boxes.event = b;
     brush(c, '活动', b.x + 8, b.y + b.h * 0.55, 22, '#24180f', 'left');
     if (!API.gachaClaimed(XY.save.data)) dot(c, b.x + b.w - 8, b.y + 8);
     hit(b.x, b.y, b.w, b.h, 'dkOpen');
+    var marks = [{ act: 'dkOpen', box: b, text: textBox(c, '活动', b.x + 8, b.y + b.h * 0.55, 22) }];
     if (app.screen === 'levels') {
       var g = gearBox(app, b);
       boxes.gear = g;
       brush(c, '专属', g.x + 8, g.y + g.h * 0.55, 22, '#24180f', 'left');
       hit(g.x, g.y, g.w, g.h, 'dkGear');
+      marks.push({ act: 'dkGear', box: g, text: textBox(c, '专属', g.x + 8, g.y + g.h * 0.55, 22) });
     }
+    XY.departTags = marks;
   }
   function spArt(id) {
     if (!revealed(id)) return null;
@@ -1588,7 +1640,8 @@
       var chroma = Math.max(r, g0, b) - Math.min(r, g0, b);
       var dr = r - pr, dg = g0 - pg, db = b - pb;
       var dist = Math.sqrt(dr * dr + dg * dg + db * db);
-      return lum > 165 && chroma < 70 && dist < 55;
+      if (lum > 204 && chroma < 46) return false;
+      return lum > 132 && chroma < 92 && dist < 88 && r + 10 > g0 && g0 + 20 > b;
     }
     var seen = new Uint8Array(n), qx = new Int16Array(n), qy = new Int16Array(n), qh = 0, qt = 0;
     function push(x0, y0) {
@@ -1616,9 +1669,9 @@
           if (d[p + 3] < 12) continue;
           lum = (d[p] + d[p + 1] + d[p + 2]) / 3;
           chroma = Math.max(d[p], d[p + 1], d[p + 2]) - Math.min(d[p], d[p + 1], d[p + 2]);
-          if (lum < 155 || chroma > 72) continue;
+          if (lum < 128 || chroma > 96 || (lum > 204 && chroma < 46)) continue;
           var fdr = d[p] - pr, fdg = d[p + 1] - pg, fdb = d[p + 2] - pb;
-          if (Math.sqrt(fdr * fdr + fdg * fdg + fdb * fdb) > 60) continue;
+          if (Math.sqrt(fdr * fdr + fdg * fdg + fdb * fdb) > 96) continue;
           t = 0;
           for (yy = y - 1; yy <= y + 1; yy++) for (xx = x - 1; xx <= x + 1; xx++) {
             if (d[(yy * w + xx) * 4 + 3] < 12) t++;
@@ -1627,6 +1680,92 @@
         }
       }
       for (i = 0; i < kill.length; i++) d[kill[i] + 3] = 0;
+    }
+    /* 整张还是方纸时，只留下暖色的那一件（晨帖），山竹和方底都去掉。 */
+    function liftObject() {
+      g.drawImage(im, 0, 0, w, h);
+      imgd = g.getImageData(0, 0, w, h);
+      d = imgd.data;
+      seen = new Uint8Array(n);
+      qh = 0; qt = 0;
+      for (x = 0; x < w; x++) { push(x, 0); push(x, h - 1); }
+      for (y = 0; y < h; y++) { push(0, y); push(w - 1, y); }
+      while (qh < qt) {
+        x = qx[qh]; y = qy[qh]; qh++;
+        p = (y * w + x) * 4;
+        var lr = d[p], lg = d[p + 1], lb = d[p + 2], la = d[p + 3];
+        var llum = (lr + lg + lb) / 3;
+        var lch = Math.max(lr, lg, lb) - Math.min(lr, lg, lb);
+        var ldx = lr - pr, ldy = lg - pg, ldz = lb - pb;
+        var ldist = Math.sqrt(ldx * ldx + ldy * ldy + ldz * ldz);
+        if (!(la < 12 || (llum > 150 && lch < 40 && ldist < 34))) continue;
+        d[p + 3] = 0;
+        push(x + 1, y); push(x - 1, y); push(x, y + 1); push(x, y - 1);
+      }
+      var warm = new Uint8Array(n), wq = [], wi, k, xx, yy, idx, ch2;
+      for (y = 0; y < h; y++) for (x = 0; x < w; x++) {
+        p = (y * w + x) * 4;
+        if (d[p + 3] < 16) continue;
+        if (Math.max(d[p], d[p + 1], d[p + 2]) - Math.min(d[p], d[p + 1], d[p + 2]) < 48) continue;
+        warm[y * w + x] = 1;
+        wq.push(x, y);
+      }
+      wi = 0;
+      while (wi < wq.length) {
+        x = wq[wi]; y = wq[wi + 1]; wi += 2;
+        var near = [x + 1, y, x - 1, y, x, y + 1, x, y - 1];
+        for (k = 0; k < 8; k += 2) {
+          xx = near[k]; yy = near[k + 1];
+          if (xx < 0 || yy < 0 || xx >= w || yy >= h) continue;
+          idx = yy * w + xx;
+          if (warm[idx]) continue;
+          p = idx * 4;
+          if (d[p + 3] < 16) continue;
+          ch2 = Math.max(d[p], d[p + 1], d[p + 2]) - Math.min(d[p], d[p + 1], d[p + 2]);
+          if (ch2 < 34) continue;
+          warm[idx] = 1;
+          wq.push(xx, yy);
+        }
+      }
+      var vis = new Uint8Array(n), best = null, bestN = 0, comp, ci, id, cx, cy;
+      for (i = 0; i < n; i++) {
+        if (!warm[i] || vis[i]) continue;
+        comp = [i]; vis[i] = 1; ci = 0;
+        while (ci < comp.length) {
+          id = comp[ci++]; cx = id % w; cy = (id / w) | 0;
+          if (cx + 1 < w && warm[id + 1] && !vis[id + 1]) { vis[id + 1] = 1; comp.push(id + 1); }
+          if (cx > 0 && warm[id - 1] && !vis[id - 1]) { vis[id - 1] = 1; comp.push(id - 1); }
+          if (cy + 1 < h && warm[id + w] && !vis[id + w]) { vis[id + w] = 1; comp.push(id + w); }
+          if (cy > 0 && warm[id - w] && !vis[id - w]) { vis[id - w] = 1; comp.push(id - w); }
+        }
+        if (comp.length > bestN) { best = comp; bestN = comp.length; }
+      }
+      if (!best || bestN < 800 || bestN > n * 0.45) return false;
+      var keep = new Uint8Array(n);
+      var bx0 = w, by0 = h, bx1 = 0, by1 = 0;
+      for (i = 0; i < best.length; i++) {
+        id = best[i]; keep[id] = 1;
+        cx = id % w; cy = (id / w) | 0;
+        if (cx < bx0) bx0 = cx; if (cy < by0) by0 = cy;
+        if (cx > bx1) bx1 = cx; if (cy > by1) by1 = cy;
+      }
+      var pad = 28;
+      bx0 = Math.max(0, bx0 - pad); by0 = Math.max(0, by0 - pad);
+      bx1 = Math.min(w - 1, bx1 + pad); by1 = Math.min(h - 1, by1 + pad);
+      for (y = by0; y <= by1; y++) for (x = bx0; x <= bx1; x++) {
+        p = (y * w + x) * 4;
+        if (d[p + 3] < 16) continue;
+        if ((d[p] + d[p + 1] + d[p + 2]) / 3 < 105) keep[y * w + x] = 1;
+      }
+      for (i = 0; i < n; i++) if (!keep[i]) d[i * 4 + 3] = 0;
+      g.putImageData(imgd, 0, 0);
+      return true;
+    }
+    var opaque = 0;
+    for (i = 3; i < d.length; i += 4) if (d[i] >= 16) opaque++;
+    if (opaque > n * 0.9) {
+      var snap = g.getImageData(0, 0, w, h);
+      if (!liftObject()) { g.putImageData(snap, 0, 0); imgd = g.getImageData(0, 0, w, h); d = imgd.data; }
     }
     var minX = w, minY = h, maxX = 0, maxY = 0, found = false;
     for (y = 0; y < h; y++) for (x = 0; x < w; x++) {
@@ -1844,7 +1983,7 @@
       sideY = heroY + heroH * 0.16;
       rosterTop = feet - figH;
     }
-    var avS = Math.min(heroW, heroH, port ? 280 : 320);
+    var avS = Math.min(heroW, heroH, port ? 300 : 360);
     if (XY.xAvIcon && XY.xAvIcon.isSpecial && XY.xAvIcon.isSpecial(sel)) {
       XY.xAvIcon.draw(c, sel, heroX + (heroW - avS) / 2, heroY + (heroH - avS) * 0.2, avS, avS);
     }

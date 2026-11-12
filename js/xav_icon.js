@@ -24,7 +24,7 @@
     return e.ok ? e.im : null;
   }
   function bake(im, w, h) {
-    var cap = 192;
+    var cap = 280;
     var cw = Math.max(2, Math.min(cap, Math.round(w))), ch = Math.max(2, Math.min(cap, Math.round(h)));
     var cv = document.createElement('canvas'); cv.width = cw; cv.height = ch;
     var g = cv.getContext('2d');
@@ -106,7 +106,7 @@
   }
   function featherImage(c, im, x, y, w, h) {
     if (!im || !(im.naturalWidth || im.width) || w < 2 || h < 2) return false;
-    var dw = Math.min(w, 192), dh = Math.min(h, 192);
+    var dw = Math.min(w, 280), dh = Math.min(h, 280);
     var dx = x + (w - dw) / 2, dy = y + (h - dh) / 2;
     var key = (im.src || '') + '|' + Math.round(dw) + 'x' + Math.round(dh);
     var cv = feather[key];
