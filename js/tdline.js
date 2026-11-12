@@ -1560,7 +1560,7 @@
       ctx.restore();
       if (f.state === 'draft' && i != null) {
         var s = w2s(G, w.x, w.y);
-        var hitR = Math.max(22, 22 / z);
+        var hitR = Math.max(36, 48 / z);
         hit(s.x - hitR, s.y - hitR, hitR * 2, hitR * 2, 'tdLineSeat', { i: i });
       }
     }
@@ -1580,6 +1580,17 @@
       ctx.fillText('攻+' + Math.round(bns.atk * 100) + '%', xb, yb);
       ctx.fillText('防+' + Math.round(bns.dr * 100) + '%', xb, yb + line + 2);
     }
+  }
+  function reseatHits(G) {
+    var f = G.td && G.td.form && G.td.form.line;
+    if (!f || f.state !== 'draft') return;
+    var def = R.formById(f.id);
+    if (!def || !def.slots) return;
+    var z = (app() && app().zoom) || 1;
+    def.slots.forEach(function (slot, i) {
+      var w = slotWorld(f, slot), s = w2s(G, w.x, w.y), hitR = Math.max(36, 48 / z);
+      hit(s.x - hitR, s.y - hitR, hitR * 2, hitR * 2, 'tdLineSeat', { i: i });
+    });
   }
   function previewSlots(ctx, G) {
     ['tower', 'hero'].forEach(function (k) {
@@ -2327,6 +2338,7 @@
       drawFx(ctx, G);
       ctx.restore();
       drawHud(ctx, G, a);
+      reseatHits(G);
       if (G.td.guide && G.td.deploy) drawGuide(ctx, G);
       if (a.tdFormShop) drawFormShop(ctx, G, a);
     } catch (err) { if (window.console) console.warn('tdline', err); }
