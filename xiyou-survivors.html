@@ -127,7 +127,7 @@ XY.C = {
   RAID_RATE_UP: 0.2,      // 每出征一次，该洞府的出怪速率再 +18%（洞府越拖越兴旺）
   DEN_SWARM_EVERY: 50,     // 洞府倾巢而出的间隔（秒）（v0.5：75→50）
   DEN_RATE_MUL: 2.4, SWARM_MUL: 1.6,       // v0.5 爽快样板：洞府稳定出怪速率 ×2.4、倾巢规模 ×1.6，同时单个小妖更脆（见 small.hp / xp）
-  FLOW_WALK: 55, FLOW_REST: 100, FLOW_XP: 0.1, FLOW_COIN: 0.2, FLOW_R: 760, FLOW_BATCH: 9, SURGE_FIRST: 25, SURGE_EVERY: 45, SURGE_K0: 1.5, SURGE_K1: 2.0,   // v0.5 密度控制器：行军目标同屏 ~42、守营 ~95；每 ~45 秒一波浪潮（峰值 ×1.6–2.4）
+  FLOW_WALK: 55, FLOW_REST: 100, FLOW_XP: 0.1, FLOW_COIN: 0.2, FLOW_R: 760, FLOW_BATCH: 9, SURGE_FIRST: 40, SURGE_EVERY: 45, SURGE_K0: 1.5, SURGE_K1: 2.0,   // v0.5 密度控制器：行军目标同屏 ~42、守营 ~95；每 ~45 秒一波浪潮（峰值 ×1.6–2.4）
   WAVE_PLAN: true, WAVE_LEAD: 20, WAVE_BIG_EVERY: 4, WAVE_BIG_K: 1.5, WAVE_BIG_ELITE: 3, WAVE_REST_K: 1.3,   // v0.7 妖潮预告：提前 20 秒预告；行军每 4 波一个大潮；大潮数量 ×1.5 + 3 只牛头卫；休息点的潮 ×1.3
   REST_SEG: 100, REST_PREP: 20, REST_WRAP: 20, REST_WAVES: [22, 55], REST_MUL_PREP: 0.5, REST_MUL_TIDE: 1.15, REST_MUL_WRAP: 0.55,   // 休息点 300 秒 = 3 个夜潮 × 100 秒（备战 20 + 来潮 60 + 收尾 20）；每夜潮 2 波，分别在 22 秒 / 55 秒；平时刷怪密度倍率：备战 ×0.5 / 来潮 ×1.15 / 收尾 ×0.55
   ROAD_EVERY: 15, ROAD_N0: 8, ROAD_N1: 14, ROAD_AHEAD0: 600, ROAD_AHEAD1: 900,   // 路边刷怪点：唐僧前方 600–900 路程处，每 ~15 秒 8–14 只（洞府离路远，光靠洞府怪太少）
@@ -496,7 +496,7 @@ XY.TRAITS = {
   /* v0.9 本地排行榜存档块（js/board.js 读写；以后整块随云存档上传）：
    *  profile = 榜上的「我」{ handle, name, avatar?, updated, mode:'auto'|'xchar'|'none' }；me = 我在各榜的成绩；ref = 引路（拉新）名单；others = 其他玩家的成绩（本地登记 / 以后云端缓存）；ui = 榜页设置。 */
   function boardsDefault() {
-    return { v: 1, profile: { handle: '', name: '', avatar: '', updated: 0, mode: 'auto' }, me: {}, ref: { list: [] }, others: {}, ui: { samples: true, tab: 'lair' } };
+    return { v: 1, profile: { handle: '', name: '', avatar: '', updated: 0, mode: 'auto' }, me: {}, ref: { list: [] }, others: {}, ui: { samples: false, tab: 'lair' } };
   }
   function boardsFix(b) {
     var base = boardsDefault(), k;
@@ -2281,7 +2281,7 @@ XY.TRAITS = {
       if (!sl) return { ok: false, reason: '没有这个货位' };
       if (sl.kind === 'reroll') return SH.reroll();
       if (st.sold[i]) return { ok: false, reason: '这件已经买过了，下一局结束后补货' };
-      if (d.lingshi < sl.price) return { ok: false, reason: '灵石不够：要 ' + sl.price + '，现在 ' + d.lingshi };
+      if (d.lingshi < sl.price) return { ok: false, reason: '灵石不够：要 ' + sl.price + '，现在只有 ' + d.lingshi + '。通关一关就会得到灵石' };
       if (sl.kind === 'sp' && !XY.save.spRealOwned('phyrex')) sl.id = 'phyrex';   // 保险：第一个永远是 Phyrex
       d.lingshi -= sl.price; st.sold[i] = 1;
       var msg;
@@ -6124,7 +6124,10 @@ XY.TRAITS = {
   XY.densityTarget = function (G) {
     var min = G.t / 60, rest = G.tang.phase === 'rest', lm = G.lv.mul;
     var base = rest ? C.FLOW_REST : C.FLOW_WALK;
-    return Math.round(base * Math.min(1.0 + 0.06 * min, 1.45) * (0.9 + 0.1 * lm) * (G.t < 60 ? 1.1 : 1) * (G.villain ? XY.VD.STAGE.cntK : 1));
+    var n = Math.round(base * Math.min(1.0 + 0.06 * min, 1.45) * (0.9 + 0.1 * lm) * (G.villain ? XY.VD.STAGE.cntK : 1));
+    if (!rest && G.t < 22) n = Math.min(n, 8);
+    else if (!rest && G.t < 45) n = Math.min(n, 18);
+    return n;
   };
   function updateFlow(G, dt) {
     if (G.tang.phase === 'arrived' || G.ending) return;
@@ -6143,6 +6146,7 @@ XY.TRAITS = {
     }
     var st = G.stats; st.visSum = (st.visSum || 0) + vis; st.visCnt = (st.visCnt || 0) + 1; if (vis > (st.visMax || 0)) st.visMax = vis;
     if (G.noSpawn) return;
+    if (!G._roadWarn && G.t > 7 && !G.tut) { G._roadWarn = 1; XY.banner(G, '妖怪就要从前方涌来，先守在路上', 3.4); }
     var wantBase = XY.densityTarget(G), em = XY.enrageSpawnMul(G), sg = XY.waveSeg(G), surge = false, WV = null;
     var want = Math.round(wantBase * em * (sg ? sg.mul : 1));       // v0.7：休息点备战 / 收尾时怪少，来潮时多一点
     var fp = XY.routeAt(G.rt, Math.min(G.rt.total, G.tang.s + 500)), fa = Math.atan2(fp.y - tg.y, fp.x - tg.x);
@@ -8432,7 +8436,7 @@ XY.TRAITS = {
   XY.tutSteps = function (G) { return steps(G && G.tut); };
   XY.TUT_STEPS = [
     { id: 'welcome', title: '欢迎取经！',
-      text: function () { return '这位白衣和尚是唐僧师傅。他会自己一路向西走，你指挥不了他。他只有 1 点血，被妖怪一碰就输——你和徒弟们要一路护着他。\n（教程里时间是停的，也不会来怪，放心慢慢点。）'; },
+      text: function () { return '这位红袍和尚是唐僧师傅。他会自己一路向西走，你指挥不了他。他只有 1 点血，被妖怪一碰就输——你和徒弟们要一路护着他。\n（教程里时间是停的，也不会来怪，放心慢慢点。）'; },
       target: function (G) { var t = G.heroes[0]; if (!t) return null; var x = t.x - G.cam.x + G.view.w / 2, y = t.y - G.cam.y + G.view.h / 2; return { x: x - 40, y: y - 52, w: 80, h: 92 }; } },   // 唐僧不进队伍面板：直接圈战场上的唐僧
     { id: 'choose', title: '第一步：选角色',
       text: function (G, a, tt) { var i = pickIdx(G, tt); return '点左下的队伍签打开手卷，再点「' + nm(G, i) + '」的头像，就能亲自操控他，并收起手卷继续战斗。' + (touchUI() ? '' : '\n键盘：数字键 1~6 会依次切换可指挥角色，唐僧不在名单中。'); },
@@ -8592,7 +8596,7 @@ XY.TRAITS = {
     var z=app.zoom||1, s=XY.uiScale?XY.uiScale(W*z,H*z):1, u=s/z, cw=Math.min(W-16*u,280*u),tsz=12*u,lines=wrapLines(c,st.text(G,app,tt),tsz,cw-28*u);
     var ch = (50 + lines.length*16 + 54)*u;
     var pos = 'corner';
-    var y = Math.round(8 * u);
+    var y = Math.round((H > W * 1.05 ? 78 : 8) * u);
     tt.lay = { x: Math.round(8 * u), y: y, w: cw, h: ch, lines: lines, tsz: tsz, pos: pos };
     ctx.tutBottom = ctx.denBottom + 6;
   };
@@ -9863,8 +9867,11 @@ XY.BGS1={"src": "data:image/webp;base64,UklGRtT1GgBXRUJQVlA4IMj1GgCQwWGdASoAEAAK
     drawFx(c, G); if (XY.ultscene) XY.ultscene.draw(c, G, 'air'); if (G.fb && XY.fabao.draw) XY.fabao.draw(c, G); if (XY.animItems) XY.animItems(c, G);
     XY.R4.over(c, G, XY.app || {}, rt);
     // 飘字
-    for (i = 0; i < G.texts.length; i++) {
+    var hideFloat = G.mode === 'cards' || G.mode === 'skills' || G.mode === 'vendor';
+    for (i = 0; i < G.texts.length && !hideFloat; i++) {
       var t = G.texts[i], a = 1 - Math.pow(t.t / t.max, 3);
+      var sy = t.y - G.cam.y + G.view.h / 2;
+      if (sy < 74 || sy > G.view.h - 112) continue;
       c.globalAlpha = Math.max(0, a);
       var col = t.color ? t.color : t.kind === 'crit' ? '#6e342c' : (t.kind === 'hurt' ? '#6e342c' : (t.kind === 'heal' ? '#6e342c' : (t.kind === 'coin' ? '#5c4632' : '#3a3226')));
       c.save(); c.font = Math.max(11, Math.min(16, t.size)) + 'px "Ma Shan Zheng","KaiTi",serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.lineWidth = 2; c.strokeStyle = 'rgba(255,250,240,0.88)'; c.strokeText(t.s, t.x, t.y); c.fillStyle = col; c.fillText(t.s, t.x, t.y); c.restore();
@@ -10438,6 +10445,8 @@ XY.BGS1={"src": "data:image/webp;base64,UklGRtT1GgBXRUJQVlA4IMj1GgCQwWGdASoAEAAK
     ctx.save();
     var v = G.view, camx = G.cam.x, camy = G.cam.y;
     var sh = G.shake > 0 ? G.shake : 0, shx = (Math.random() - 0.5) * sh, shy = (Math.random() - 0.5) * sh;
+    var worldZoom = (app.lh > app.lw * 1.05 && (s === 'play' || s === 'pause')) ? 1.65 : 1;
+    if (worldZoom > 1) { ctx.translate(v.w / 2, v.h / 2); ctx.scale(worldZoom, worldZoom); ctx.translate(-v.w / 2, -v.h / 2); }
     ctx.translate(v.w / 2 - camx + shx, v.h / 2 - camy + shy);
     if (XY.ui2) XY.ui2.world = true;
     try { drawWorld(ctx, G, app.rt); } finally { if (XY.ui2) XY.ui2.world = false; }
@@ -18719,7 +18728,7 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
     R.rrect(c, bx, by + (ph ? -2 : 0), bw, stbh, 15); c.fillStyle = bg; c.fill(); c.restore();
     c.lineWidth = 1.6; c.strokeStyle = 'rgba(255,214,150,0.8)'; R.rrect(c, bx + 3, by + 3 + (ph ? -2 : 0), bw - 6, stbh - 6, 12); c.stroke();
     text(c, '开始取经', cx, by + stbh * 0.39 + (ph ? -2 : 0), 24, '#fff8e8', 'center', true, KAI, 8);
-    text(c, '任务模式 · Enter', cx, by + stbh * 0.80 + (ph ? -2 : 0), 11.5, 'rgba(255,240,215,0.92)', 'center', false);
+    text(c, '护送唐僧走到关口', cx, by + stbh * 0.80 + (ph ? -2 : 0), 11.5, 'rgba(255,240,215,0.92)', 'center', false);
     hit(bx, by, bw, stbh, 'menuLevels'); geom.btn = { x: bx, y: by, w: bw, h: stbh };
     // ---- 小水墨按钮 ----
     var ry = by + stbh + 10;
@@ -18893,7 +18902,7 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
     R.rrect(c, x, y + oy, w, h, 15 * Math.max(1, h / 56)); c.fillStyle = g; c.fill(); c.restore();
     c.lineWidth = 1.6; c.strokeStyle = 'rgba(255,214,150,0.8)'; R.rrect(c, x + 3, y + 3 + oy, w - 6, h - 6, 12 * Math.max(1, h / 56)); c.stroke();
     U.text(c, '开始取经', x + w / 2, y + h * 0.4 + oy, sz || 24, '#fff8e8', 'center', true, KAI, 8);
-    U.text(c, '任务模式 · Enter', x + w / 2, y + h * 0.8 + oy, 11.5 * Math.max(1, h / 56), 'rgba(255,240,215,0.92)', 'center', false);
+    U.text(c, '护送唐僧走到关口', x + w / 2, y + h * 0.8 + oy, 11.5 * Math.max(1, h / 56), 'rgba(255,240,215,0.92)', 'center', false);
     (function () { var mh = Math.max(h, Math.ceil(44 / ((st.k || 1) * ((st.app && st.app.zoom) || 1)))); hit(x, y - (mh - h) / 2, w, mh, 'menuLevels'); })(); st.geom.btn = { x: x, y: y, w: w, h: h };
   }
   function saveLine(st, x, y, align, sz, short) {
@@ -19822,7 +19831,7 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
         items.push(r);
       });
     }
-    var note = tab === 'shelf' ? '角色卡和法宝用灵石买。抽一张法宝也会出现在下面。' : (tab === 'fb' ? '买下就永久解锁，开局可以带。洞主专属的不在这里卖。' : '天兵卡：1 张是 Lv1，3 张 Lv2，6 张 Lv3。每次买 1 张。');
+    var note = tab === 'shelf' ? '角色卡和法宝用灵石买。灵石靠通关获得。点一张就买，不够会告诉你。' : (tab === 'fb' ? '买下就永久解锁，开局可以带。洞主专属的不在这里卖。' : '天兵卡：1 张是 Lv1，3 张 Lv2，6 张 Lv3。每次买 1 张。');
     if (tab === 'shelf') {
       var VU0 = XY.villainUI;
       var cards = [], reroll = null, ri;
@@ -19882,7 +19891,13 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
       cards.forEach(function (r, k) {
         var col = k % cols, row = (k / cols) | 0, x = x0s + col * step, y = y0s + row * (cardH + gapS), im = r.spId && XY.bgArt ? XY.bgArt(r.spId) : null;
         if (im && (im.naturalWidth || im.width)) c.drawImage(shelfMask(im, cardW, cardH), x, y, cardW, cardH);
-        else {
+        else if (r.kind === 'shard' || r.kind === 'reroll') {
+          c.save(); c.translate(x + cardW / 2, y + cardH * 0.38); c.rotate(r.kind === 'shard' ? -0.18 : 0.08);
+          c.fillStyle = r.kind === 'shard' ? '#a02820' : '#3a2a1c';
+          c.beginPath(); c.moveTo(0, -Math.min(36, cardH * 0.16)); c.lineTo(Math.min(26, cardW * 0.16), 0); c.lineTo(0, Math.min(36, cardH * 0.16)); c.lineTo(-Math.min(26, cardW * 0.16), 0); c.closePath(); c.fill();
+          c.fillStyle = '#f6efe2'; c.font = '22px "Ma Shan Zheng","KaiTi",serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
+          c.fillText(r.kind === 'shard' ? '碎' : '换', 0, 1); c.restore();
+        } else {
           c.save(); c.fillStyle = 'rgba(90,70,48,0.08)'; c.fillRect(x, y, cardW, cardH); c.restore();
           c.save(); c.font = Math.min(42, cardW * 0.4) + 'px "Ma Shan Zheng","KaiTi",serif'; c.fillStyle = '#24180f'; c.textAlign = 'center'; c.fillText(String(r.title || '宝').replace(/^.*· /, '').charAt(0), x + cardW / 2, y + cardH * 0.42); c.restore();
         }
@@ -19891,20 +19906,21 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
         c.font = Math.max(14, Math.min(26, cardW * 0.16)) + 'px "Ma Shan Zheng","KaiTi",serif';
         c.textAlign = 'center'; c.textBaseline = 'middle'; c.lineJoin = 'round';
         c.lineWidth = 4; c.strokeStyle = 'rgba(246,239,226,0.92)';
-        c.strokeText(nm, x + cardW / 2, y + cardH * 0.9);
-        c.fillStyle = '#24180f'; c.fillText(nm, x + cardW / 2, y + cardH * 0.9);
+        c.strokeText(nm, x + cardW / 2, y + cardH * 0.78);
+        c.fillStyle = '#24180f'; c.fillText(nm, x + cardW / 2, y + cardH * 0.78);
         c.restore();
+        if (r.sub) { c.save(); c.font = Math.max(12, Math.min(16, cardW * 0.09)) + 'px "Ma Shan Zheng","KaiTi",serif'; c.fillStyle = '#5c4a38'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(r.sub, x + cardW / 2, y + cardH * 0.9); c.restore(); }
         var seal = r.full ? '满' : (r.sold ? '售' : String(r.price == null ? '' : r.price));
         var ss = Math.max(28, Math.min(40, cardW * 0.28));
         if (VU0 && VU0.drawSeal) VU0.drawSeal(c, x + cardW - ss * 0.72, y + 4, ss, ss, seal, { style: 'solid', col: '#b8322a', sz: Math.round(ss * 0.42), stack: false, rot: -0.05 });
-        if (r.btn && !r.btn.off && r.btn.act) K.hit(x, y, cardW, cardH, r.btn.act, r.btn.ex);
+        if (r.btn && r.btn.act) K.hit(x, y, cardW, cardH, r.btn.act, r.btn.ex);
       });
       if (reroll && VU0 && VU0.drawSeal) {
         var orphan = narrow && (nCard % cols) === 1;
         var rx = orphan ? (x0s + step + (cardW - sealW) / 2) : (f.x + f.w - sealW - 2);
         var ry = orphan ? (y0s + (rows - 1) * (cardH + gapS) + (cardH - sealW) / 2) : (y0s + Math.max(0, (cardH - sealW) / 2));
         VU0.drawSeal(c, rx, ry, sealW, sealW, '换', { style: 'solid', sz: Math.round(sealW * 0.46), stack: false, rot: -0.05 });
-        if (reroll.btn && !reroll.btn.off) K.hit(rx, ry, sealW, sealW, 'shopBuy', reroll.btn.ex);
+        if (reroll.btn && reroll.btn.act) K.hit(rx, ry, sealW, sealW, 'shopBuy', reroll.btn.ex);
       }
       if (VU0 && VU0.drawBrush) VU0.drawBrush(c, f.x, f.y + f.h - 42, Math.max(80, f.w - sealW - 24), 34, note, { sz: 14, vh: 26 });
       P.end(c);
@@ -23054,7 +23070,7 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
     var tw = cw - x0 - 12;
     VU.txt(c, '排行榜', x0, narrow ? 28 : 24, narrow ? 24 : 26, INK, 'left', true, tw);
     VU.brush(c, x0, narrow ? 42 : 36, Math.min(tw, 100), 4, 0.26, 7);
-    if (!narrow) VU.txt(c, '本机榜 · 成绩存在存档里，以后随云存档上传 · 样例行是占位', x0, 48, 12.5, SOFT, 'left', false, tw);
+    if (!narrow) VU.txt(c, '本机榜 · 成绩存在这台设备上。还没有别人的成绩时这里是空的', x0, 48, 12.5, SOFT, 'left', false, tw);
     var top = 58, G2 = BU.geo = { land: land, tabs: [] }, i, cardX, cardY, cardW, cardH;
     var tabs = B.BOARDS, ctrlH = 0;
     if (land) {
@@ -24631,7 +24647,6 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
       var foot = 58;
       scroll = { x: cw * 0.015, y: 4, w: cw * 0.97, h: ch - foot - 6 };
       drawScroll(c, scroll.x, scroll.y, scroll.w, scroll.h, !land);
-      inkBurst(c, scroll.x + scroll.w * 0.5, scroll.y + scroll.h * 0.48, Math.min(scroll.w, scroll.h) * (land ? 0.42 : 0.28));
       var grouped = [], seenG = {}, gi;
       rows.forEach(function (r) {
         if (!shown(r.id)) return;
@@ -25152,6 +25167,8 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
     if (r.by) { go.disabled = true; go.style.opacity = 0.5; }
     btn(row2, '关闭', function () { el.remove(); }, false);
     el.onclick = function (e) { if (e.target === el) el.remove(); };
+    function onEsc(e) { if (e.key === 'Escape') { el.remove(); document.removeEventListener('keydown', onEsc, true); e.preventDefault(); } }
+    document.addEventListener('keydown', onEsc, true);
     var nodes=Array.prototype.slice.call(card.children),origin=document.createElement('section'),arrival=document.createElement('section');origin.className='inkOrigin';arrival.className='inkArrival';nodes.forEach(function(n,i){(i<6?origin:arrival).appendChild(n);});card.appendChild(origin);card.appendChild(arrival);el.appendChild(card); document.body.appendChild(el);if(XY.pv2.dialogKeys)XY.pv2.dialogKeys(el,function(){el.remove();},inp.disabled?row2.lastChild:inp);return el;
   };
 
@@ -25188,8 +25205,8 @@ var si=XY.sweep09&&XY.sweep09.resultStars(G,win);if(si)K.tf(si.show?si.text+(si.
 inkCutout(c,G,port?W*.27:W*.21,port?365:H-72,Math.min(port?216:H-220,440));
 ['战报','任务','收获','足迹'].forEach(function(s,i){K.btn(x+i*w/4,top,w/4-4,44,s,'folio',{key:'endLeaf',i:i},{on:leaf===i,size:16});});var y=top+65,dead=G.heroes.filter(function(h){return h.down;}).map(function(h){return h.def.name;});
 function para(s,col){y=K.lines(s,x+5,y,w-10,13,18,col||T.ink,16,false)+12;}
-if(leaf===0){K.t(XY.fmtTime(G.t),x+4,y+9,32,T.ink,'left',true);y+=47;para('等级 '+G.level+' 级 · 击杀 '+G.kills+' 只 · 镇灭洞府 '+G.dens.filter(function(d){return !d.alive;}).length+'/'+G.dens.length);para('阵亡英雄：'+(dead.join('、')||'无'));para('本局战绩','#8a5a12');[G.quests.main].concat(G.quests.sides||[]).forEach(function(q,i){var rw=q.def.reward||{},r=q.done?[(rw.lingshi?'灵石 +'+rw.lingshi:''),(rw.card?'法宝':''),(rw.shard?'碎片 +'+rw.shard:'')].filter(Boolean).join(' · '):'未完成';para((i?'支线':'主线')+' · '+q.def.short+'　'+(q.done?'✔ ':'✘ ')+r,q.done?'#2f663a':T.ink);});para('奖励 · 灵石 +'+XY.fmtNum((G.run&&G.run.clearGain)||0)+' · 法宝 '+((G.cardLog||[]).length)+' 张','#8a5a12');if(!win&&G.ending&&(G.ending.why||G.ending.reason))para('死因：'+(G.ending.why||G.ending.reason),'#a42d19');if(si&&si.tip)para(si.tip,'#8a5a12');var rest=H-96-y;if(!port){[{t:'一星',s:'通关本关'},{t:'二星',s:'至少完成 1 条支线'},{t:'三星',s:'无人阵亡'}].forEach(function(row,i){var yy=y+22+i*34;K.t(row.t,x+6,yy,22,'#8a5a12','left',true);K.t(row.s,x+78,yy,18,'#24180f','left',true);});}}
-else if(leaf===1){[G.quests.main].concat(G.quests.sides).forEach(function(q,i){var rw=q.def.reward||{},r=q.done?[(rw.card?'法宝':''),(rw.lingshi?'灵石 +'+rw.lingshi:''),(rw.shard?'碎片 +'+rw.shard:'')].filter(Boolean).join(' · '):'未完成';para((i?'支线':'主线')+' · '+q.def.short+'　'+(q.done?'✔ ':'✘ ')+r,q.done?'#2f663a':T.inkSoft);});}
+if(leaf===0){K.t(XY.fmtTime(G.t),x+4,y+9,32,T.ink,'left',true);y+=47;para('等级 '+G.level+' 级 · 击杀 '+G.kills+' 只 · 镇灭洞府 '+G.dens.filter(function(d){return !d.alive;}).length+'/'+G.dens.length);para('阵亡英雄：'+(dead.join('、')||'无'));para('本局战绩','#8a5a12');[G.quests.main].concat(G.quests.sides||[]).forEach(function(q,i){var rw=q.def.reward||{},r=q.done?[(rw.lingshi?'灵石 +'+rw.lingshi:''),(rw.card?'法宝':''),(rw.shard?'碎片 +'+rw.shard:'')].filter(Boolean).join(' · '):'未完成';para((i?'支线':'主线')+' · '+q.def.short+'　'+(q.done?'已完成'+(r?' · '+r:''):'还没完成'),q.done?'#2f663a':T.ink);});para('奖励 · 灵石 +'+XY.fmtNum((G.run&&G.run.clearGain)||0)+' · 法宝 '+((G.cardLog||[]).length)+' 张','#8a5a12');if(!win&&G.ending&&(G.ending.why||G.ending.reason))para('死因：'+(G.ending.why||G.ending.reason),'#a42d19');if(si&&si.tip)para(si.tip,'#8a5a12');var rest=H-96-y;if(!port){[{t:'一星',s:'通关本关'},{t:'二星',s:'至少完成 1 条支线'},{t:'三星',s:'无人阵亡'}].forEach(function(row,i){var yy=y+22+i*34;K.t(row.t,x+6,yy,22,'#8a5a12','left',true);K.t(row.s,x+78,yy,18,'#24180f','left',true);});}}
+else if(leaf===1){[G.quests.main].concat(G.quests.sides).forEach(function(q,i){var rw=q.def.reward||{},r=q.done?[(rw.card?'法宝':''),(rw.lingshi?'灵石 +'+rw.lingshi:''),(rw.shard?'碎片 +'+rw.shard:'')].filter(Boolean).join(' · '):'未完成';para((i?'支线':'主线')+' · '+q.def.short+'　'+(q.done?'已完成'+(r?' · '+r:''):'还没完成'),q.done?'#2f663a':T.inkSoft);});}
 else if(leaf===2){para('法宝 '+(G.cardLog||[]).length+' 张 · 灵石 +'+XY.fmtNum((G.run&&G.run.clearGain)||0),'#8a5a12');var sp=G.spGot||[];if(sp.length){var per=(!port&&H<450)?2:4,from=P.pager(sp.length,per,'end-drops',x,H-174,w),rh=(!port&&H<450)?36:46;sp.slice(from,from+per).forEach(function(g,i){var d=XY.SP_BY[g.id],cy=y+i*rh+15;XY.hud2.face(c,{id:g.id,def:d},x+20,cy,15,a.rt);K.tf(d.name+' ×1',x+47,cy,w-52,14,T.ink,'left',true,11);});}}else{var nu=(rep.newUnlocks||[]).map(function(id){return XY.UNLOCK_BY[id].name;});para(nu.length?'新解锁：'+nu.join('、'):'本局没有新解锁');}
 var jn=G.mod?'非官方玩法包：不发奖励，不记通关，不影响存档':G.dungeon?(win?'洞府副本不计入取经之旅（首通奖励已发）':'副本失败不扣任何东西'):win?(G.levelId<XY.LEVEL_COUNT?'全队成长已存档，第 '+(G.levelId+1)+' 关已解锁':'取经之旅：三关全部走完！成长已存档'):'之前积累保留，再来回到本关开始状态（'+XY.journey.status(G.levelId).text+'）';K.lines(jn,x,H-125,w,12,17,win?'#2f663a':T.inkSoft,3,false);
 var hasNext=win&&!G.dungeon&&!G.mod&&G.levelId<XY.LEVEL_COUNT,A=hasNext?[['下一关','nextLevel',true],['再来 · R','restart'],['首页','home']]:!win?[['再来 · R','restart',true],['换角色','repick'],['首页','home']]:[['再来 · R','restart',true],['首页','home']];if(win&&G.bossOffer&&XY.bossfight&&XY.bossfight.launch)A.splice(hasNext?1:0,0,['Boss 战','bossGo']);var bw=(w-12)/A.length;A.forEach(function(b,i){K.btn(x+i*bw,H-65+[0,4,1,3][i],bw-5,44,b[0],b[1],null,{primary:!!b[2],size:14});});K.msg(x+w,H-9,'right',w);if(XY.version&&XY.version.showToggle&&XY.version.showToggle())K.btn(port?W-180:24,port?144:H-55,156,44,'切到标准版','toggleVer',null,{size:12});P.end(c);};
@@ -25267,7 +25284,7 @@ var ab=/[ab]$/.test(n.id)&&n.tier>=3?(/a$/.test(n.id)?'A路 · ':'B路 · '):'';
 var effect=lv?X.nodeText(n,lv):n.desc?n.desc[0]:n.eff?n.eff(1):'',sz=small?16:18,lh=small?22:26,textKey='skillText'+tab+'-'+sub+'-'+n.id,allLines=[],text='',units=String(effect).match(/[+-]?\d[\d,]*(?:\.\d+)?(?:%|\/\d+|秒|级|点|倍)?|[A-Za-z][A-Za-z0-9_.-]*|[\s\S]/g)||[];c.font=sz+'px '+X.C.FONT;units.forEach(function(ch){if(c.measureText(text+ch).width>dw&&text){allLines.push(text);text=ch;}else text+=ch;});if(text)allLines.push(text);var per=port?8:small?4:6,pages=Math.max(1,Math.ceil(allLines.length/per)),tp=(P.folio[textKey]||0)%pages,shown=allLines.slice(tp*per,tp*per+per);shown.forEach(function(t,i){K.t(t,dx,y+64+i*lh,sz,T.ink,'left',false);});var sy=y+64+shown.length*lh;if(pages>1)K.btn(dx+dw-92,y+8,92,40,'说明 '+(tp+1)+'/'+pages,'folio',{key:textKey,i:(tp+1)%pages},{size:13,minS:12});var reason=st.st==='max'?'已圆满 · 等级 '+lv+'/'+max:can?'费用 '+st.cost+' 点 · 等级 '+lv+'/'+max:st.reason||(st.st==='nopts'?'还差 '+(st.cost-G.points)+' 点 · 要 '+st.cost+' 点':''),by=Math.min(b.y+b.h-48,Math.max(b.y+(port?250:small?120:175),sy+16)),bw=Math.min(168,dw*.48);
 K.lines(reason,dx,by+18,dw-bw-12,port?15:16,20,can?'#795714':T.inkSoft,3,true);K.btn(dx+dw-bw,by,bw,48,lv>=max?'已圆满':'点墨修习','node',{hero:hi,id:n.id},{primary:can,size:16});
 var ny=b.y+b.h+1,step=b.w/Math.max(1,ids.length);ids.forEach(function(nd,i){var letter=/[ab]$/.test(nd.id)&&nd.tier>=3?(/a$/.test(nd.id)?'A':'B'):'';K.btn(b.x+i*step,ny,step-2,44,(nd.tier||i+1)+letter,'folio',{key:leafKey,i:i},{on:i===sel,size:12,minS:10});});a.__inkSkillSpec={key:leafKey,n:ids.length,hi:hi,id:n.id,tab:tab,sub:sub,textKey:textKey,textPages:pages};};
-I.tutorialCard=function(c,G,a,tt,st,L){var K=P.begin(c,a),z=a.zoom,s=K.s||1,x=L.x*z/s,y=L.y*z/s,w=L.w*z/s,h=L.h*z/s,wait=!!st.wait,VU=X.villainUI;c.save();c.fillStyle='#f6edd8';c.beginPath();c.moveTo(x+3,y+1);c.lineTo(x+w-4,y);c.lineTo(x+w-1,y+h-3);c.lineTo(x+2,y+h);c.closePath();c.fill();c.strokeStyle='#2a2118';c.lineWidth=1.6;c.stroke();c.restore();if(VU&&VU.drawSeal)VU.drawSeal(c,x+6,y+6,32,32,'引',{sz:14,stack:false,rot:-0.05});c.save();c.font='18px "Ma Shan Zheng","KaiTi",serif';c.fillStyle='#3a2416';c.textAlign='left';c.textBaseline='middle';var title=String(st.title||'');if(c.measureText(title).width>w-52)c.font=Math.max(13,Math.floor(18*(w-52)/c.measureText(title).width))+'px "Ma Shan Zheng","KaiTi",serif';c.fillText(title,x+42,y+22);c.restore();L.lines.forEach(function(v,i){K.t(v,x+12,y+46+i*16,12,T.ink,'left',false);});K.hit(x,y,w,h,'ui');if(VU&&VU.drawBrush)VU.drawBrush(c,x+8,y+h-46,w*0.38,40,'跳过',{sz:13,vh:26});else K.btn(x+8,y+h-46,w*0.38,40,'跳过教程','tutSkip',null,{size:13});K.hit(x+8,y+h-46,w*0.38,40,'tutSkip');if(VU&&VU.drawSeal)VU.drawSeal(c,x+w*0.46,y+h-46,w*0.5,40,st.last?'开始':wait?'略过':'下一步',{style:wait?'line':'solid',sz:14,stack:false});else K.btn(x+w*0.46,y+h-46,w*0.5,40,'下一步','tutNext',null,{primary:!wait,size:14});K.hit(x+w*0.46,y+h-46,w*0.5,40,'tutNext');P.end(c);};
+I.tutorialCard=function(c,G,a,tt,st,L){var K=P.begin(c,a),z=a.zoom,s=K.s||1,x=L.x*z/s,y=L.y*z/s,w=L.w*z/s,h=L.h*z/s,wait=!!st.wait,VU=X.villainUI;c.save();c.fillStyle='#f6edd8';c.beginPath();c.moveTo(x+3,y+1);c.lineTo(x+w-4,y);c.lineTo(x+w-1,y+h-3);c.lineTo(x+2,y+h);c.closePath();c.fill();c.strokeStyle='#2a2118';c.lineWidth=1.6;c.stroke();c.restore();if(VU&&VU.drawSeal)VU.drawSeal(c,x+6,y+6,32,32,'引',{sz:14,stack:false,rot:-0.05});c.save();c.font='18px "Ma Shan Zheng","KaiTi",serif';c.fillStyle='#3a2416';c.textAlign='left';c.textBaseline='middle';var title=String(st.title||'');if(c.measureText(title).width>w-52)c.font=Math.max(13,Math.floor(18*(w-52)/c.measureText(title).width))+'px "Ma Shan Zheng","KaiTi",serif';c.fillText(title,x+42,y+22);c.restore();L.lines.forEach(function(v,i){K.t(v,x+12,y+46+i*16,12,T.ink,'left',false);});K.hit(x,y,w,h,'ui');if(VU&&VU.drawBrush)VU.drawBrush(c,x+8,y+h-46,w*0.38,40,'跳过',{sz:13,vh:26});else K.btn(x+8,y+h-46,w*0.38,40,'跳过教程','tutSkip',null,{size:13});K.hit(x+8,y+h-46,w*0.38,40,'tutSkip');if(VU&&VU.drawSeal)VU.drawSeal(c,x+w*0.46,y+h-46,w*0.5,40,st.last?'开始':wait?'继续':'下一步',{style:wait?'line':'solid',sz:14,stack:false});else K.btn(x+w*0.46,y+h-46,w*0.5,40,'下一步','tutNext',null,{primary:!wait,size:14});K.hit(x+w*0.46,y+h-46,w*0.5,40,'tutNext');P.end(c);};
 I.tip=function(c,a,tip){if(!tip)return;var K=P.begin(c,a),sz=K.W<900?10.5:12,w=Math.min(320,K.W-24),lines=[];c.font=sz+'px '+X.C.FONT;(tip.lines||[tip.text]).forEach(function(txt){var v='';String(txt).split('').forEach(function(ch){if(c.measureText(v+ch).width>w-28&&v){lines.push(v);v=ch;}else v+=ch;});if(v)lines.push(v);});var s=K.s||1,tx=tip.x*a.zoom/s,ty=tip.y*a.zoom/s,h=18+lines.length*17,x=Math.max(8,Math.min(K.W-w-8,tx-w/2)),y=Math.max(8,Math.min(K.H-h-8,tip.below?ty:ty-h));wash(c,x,y,w,h);K.ink(x+10,y+7,Math.min(46,w-20),.5,91);lines.forEach(function(v,i){K.t(v,x+13,y+18+i*17,sz,i?T.inkSoft:T.ink,'left',i===0);});P.end(c);};
 I.vendor=function(c,G,a){X.ui.hits.length=0;var K=P.begin(c,a),W=K.W,H=K.H,port=K.port,V=X.vendor,items=V.stock(G),sel=(P.folio.vendorItem||0)%items.length,it=items[sel],d=V.DEFS[it.id],why=V.why(G,it),dx=port?24:W*.43,dy=port?H*.44:W>=900?H*.24:82,dw=port?W-48:W-dx-26;P.paper(c,W,H);K.t('货郎的担子',20,32,24,T.ink,'left',true);K.btn(W-178,9,164,44,'收摊（N / Esc）','vendorClose',null,{size:13});K.t('金币 '+Math.floor(G.coins),22,65,14,'#8a5a19','left',true);P.object(c,d.name,port?W*.5:W*.23,port?H*.26:H*.47,port?150:Math.min(W>=900?280:184,H*.49),it.sold);K.tf(d.name,dx,dy,dw,27,T.ink,'left',true,20);K.lines(d.d,dx,dy+37,dw,13,20,T.inkSoft,port?5:3,false);var by=Math.min(H-183,dy+(port?119:92));K.btn(dx,by,Math.min(196,dw),44,it.sold?'此处已买':X.C.VENDOR.price[it.id]+' 金币 · 换取','vendorBuy',{i:sel},{primary:!why,size:15});K.tf(why||'每件每个休息点限买一次',dx,by+61,dw,11,why?'#a42d19':T.inkSoft,'left',true,10);if(G.vendorMsg&&G.vendorMsg.t>0){K.tf(G.vendorMsg.text,dx,by+81,dw,11,G.vendorMsg.bad?'#a42d19':'#37643d','left',true,10);G.vendorMsg.t-=1/60;}var step=(W-32)/items.length;items.forEach(function(q,i){var cx=16+step*(i+.5),yy=H-94+[3,0,7,2][i];P.object(c,V.DEFS[q.id].name,cx,yy+20,45,q.sold);K.tf(V.DEFS[q.id].name,cx,yy+56,step-8,11,i===sel?'#a42d19':T.ink,'center',true,10);if(i===sel)K.ink(cx-18,yy+68,36,.6,i+7);K.hit(cx-step/2+2,H-101,step-4,94,'folio',{key:'vendorItem',i:i});});P.end(c);};
 I.skillKey=function(G,a,k){var s=a.__inkSkillSpec;if(!s||s.tab!==a.skillTab||s.sub!==((a._pvSub||{})[a.skillTab]||0))return false;if(k==='ArrowLeft'||k==='ArrowRight'){P.folio[s.key]=((P.folio[s.key]||0)+s.n+(k==='ArrowRight'?1:-1))%s.n;return true;}if(k==='PageDown'||k==='PageUp'){P.folio[s.textKey]=((P.folio[s.textKey]||0)+s.textPages+(k==='PageDown'?1:-1))%s.textPages;return true;}if(k==='Enter'){if(G.tut)return true;var r=X.learn(G,s.hi,s.id);a.skillMsg={text:r.reason,bad:!r.ok,until:a.rt+2.2};return true;}return false;};
@@ -25644,6 +25661,7 @@ X.step=function(g,dt){if(!g._simRandom)return step.apply(this,arguments);var sel
   // 中途放弃（回首页 / 重开）也记一局：时间和击杀照算
   function abandon() { if (G && !G.committed && G.t > 3 && (app.screen === 'play' || app.screen === 'pause')) XY.save.commitRun(G, 'abandon'); }
   function startGame(levelId, dungeonId) {
+    var dlg = document.getElementById('refDlg'); if (dlg) dlg.remove();
     if (XY.wildAnim && XY.wildAnim.arm) XY.wildAnim.arm();
     abandon(); app.retStack = [];
     if (typeof levelId === 'number') { app.levelId = levelId; app.dungeonId = null; app.modId = null; app.villain = false; app.lair = null; }      // 点选关出发 = 普通关；副本入口传 dungeonId；R / 再来一局 保持上一次的选择

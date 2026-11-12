@@ -935,11 +935,11 @@
   function storyLines() {
     return [
       '休息约 20 秒后，猫叔在主线登场。',
-      '登场后狂暴 45 秒。小怪移速和伤害 ×1.5，洞主仍是狂暴 ×2。',
+      '登场后狂暴四十五秒。小怪跑得更快、打得更疼，大约加半；洞主仍是狂暴加倍。',
       '第一次倒下不掉东西，化成九尾，成为猫叔 · 魔化。',
-      '魔化后生命 ×1.6，伤害 ×1.4，攻速 ×1.2。',
-      '只有打败魔化之身才掉落：必得一张角色卡，另有 55% 再得一件专属。',
-      '没打败也不算输。副本和 Boss 战不会遇见他。'
+      '魔化后生命加六成，伤害加四成，出招更快。',
+      '只有打败魔化之身才掉落：必得一张角色卡，另有过半机会再得一件专属。',
+      '没打败也不算输。副本和洞主战不会遇见他。'
     ];
   }
   function paintLines(c, lines, x, y, maxW, maxH) {
@@ -1084,7 +1084,7 @@
     c.rect(x + 6, y + 6, w - 12, h - 12);
     c.clip();
     brush(c, '特别活动', x + (port ? 16 : 24), y + (port ? 28 : 36), port ? 26 : 32, '#3a2a1c', 'left');
-    latin(c, API.NAME, x + (port ? 150 : 180), y + (port ? 28 : 36), port ? 28 : 36, '#7d1c14', 'left');
+    brush(c, '猫叔', x + (port ? 150 : 180), y + (port ? 28 : 36), port ? 28 : 36, '#7d1c14', 'left');
     var closeX = x + w - (port ? 72 : 84), closeY = y + 12, closeW = port ? 56 : 66, closeH = 44;
     redSeal(c, closeX, closeY, closeW, closeH, '关');
     hit(0, 0, W, H, 'dkClose');
@@ -1111,7 +1111,7 @@
   }
   function paintIntro(c, app, run) {
     var scene = art.introScene ? img('introScene', art.introScene) : null;
-    if (scene) {
+    if (false && scene) {
       var W0 = app.lw, H0 = app.lh, port = H0 > W0 * 1.05;
       var ir = scene.naturalWidth / scene.naturalHeight;
       var dw, dh, dx, dy, u = 0;
@@ -1178,13 +1178,13 @@
     if (port) {
       var each = Math.floor((availH - gap) / 2);
       inkWash(c, stage, x + 8, top, w - 16, each, '猫');
-      captionOn(c, x + 8, top, w - 16, each, API.HERO, API.HANDLE);
+      captionOn(c, x + 8, top, w - 16, each, API.HERO, '');
       inkWash(c, form, x + 8, top + each + gap, w - 16, each, '化');
       captionOn(c, x + 8, top + each + gap, w - 16, each, API.HERO2, '');
     } else {
       var cw = Math.floor((w - 24 - gap) / 2);
       inkWash(c, stage, x + 10, top, cw, availH, '猫');
-      captionOn(c, x + 10, top, cw, availH, API.HERO, API.HANDLE);
+      captionOn(c, x + 10, top, cw, availH, API.HERO, '');
       inkWash(c, form, x + 10 + cw + gap, top, cw, availH, '化');
       captionOn(c, x + 10 + cw + gap, top, cw, availH, API.HERO2, '');
     }
@@ -1763,6 +1763,7 @@
     c.save();
     deskWash(c, W, H);
     brush(c, '专属器物', port ? 22 : 28, port ? 40 : 46, port ? 32 : 40, '#120c0a', 'left');
+    brush(c, '只给当前这位用。点已有的就装上。', port ? 22 : 28, port ? 72 : 78, port ? 16 : 18, '#5c4a36', 'left');
     var backW = 128, backH = 50;
     redSeal(c, W - backW - 12, 12, backW, backH, '返回');
     hit(W - backW - 12, 12, backW, backH, 'dkGearClose');
@@ -1814,13 +1815,17 @@
     if (heroCut) paintCut(c, heroCut, heroX, heroY, heroW, heroH, true);
     var hd = heroDef(sel);
     var heroName = (hd && hd.name) || sel;
-    inkName(c, heroName, heroX + heroW / 2, heroY + heroH * 0.62, heroW * 0.96, Math.round(heroW / 3), '#120c0a');
+    inkName(c, heroName, heroX + heroW * 0.82, heroY + heroH * 0.16, heroW * 0.4, Math.round(heroW / 6), '#120c0a');
     function sidePiece(piece, x, y, w, h) {
       if (!piece) return;
       var art = gearArt(piece.id);
       var cut = art && cutout('gear-' + piece.id, art);
       if (cut) paintCut(c, cut, x, y, w, h, false);
-      inkName(c, piece.name, x + w / 2, y + h + (port ? 22 : 18), w + 36, port ? 36 : 30, '#120c0a');
+      inkName(c, piece.name, x + w / 2, y + h + (port ? 18 : 16), w + 20, port ? 26 : 22, '#120c0a');
+      var brief = String(piece.desc || '');
+      var colon = brief.indexOf('：');
+      if (colon >= 0) brief = brief.slice(colon + 1);
+      brush(c, brief, x + w / 2, y + h + (port ? 40 : 38), port ? 14 : 16, '#5c4a36', 'center');
       var bagN = (gdoc.bag && gdoc.bag[piece.id]) || 0;
       var equipped = (piece.slot === 'weapon' ? eq.weapon : eq.item) === piece.id;
       if (bagN > 0 && !equipped) hit(x, y, Math.max(88, w), Math.max(88, h), 'dkEquip', { id: piece.id, hero: sel });
@@ -2212,6 +2217,9 @@
       if (API.gachaClaimed(XY.save.data)) return true;
       XY.gacha10._showFlip = true;
       app.dkOpen = false;
+      app.dkGear = false;
+      app.screen = 'levels';
+      if (!app.levelId) app.levelId = 1;
       XY.gacha10.ensure();
       return true;
     }
