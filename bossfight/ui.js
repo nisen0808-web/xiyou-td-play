@@ -809,13 +809,8 @@
     var rec = STILL[id] = { ok: false, im: null };
     if (id === 'niumo') {
       var src = new Image();
-      src.onload = function () {
-        var cv = document.createElement('canvas');
-        cv.width = 384; cv.height = 378;
-        cv.getContext('2d').drawImage(src, 0, 0, 384, 378, 0, 0, 384, 378);
-        rec.im = cv; rec.ok = true;
-      };
-      src.src = '../assets/wild/niumo-idle.webp';
+      src.onload = function () { if (src.naturalWidth) { rec.im = src; rec.ok = true; } };
+      src.src = '../assets/art/battle-hd/niumo.webp';
       return null;
     }
     var im = new Image();

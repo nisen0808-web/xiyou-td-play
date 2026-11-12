@@ -2055,9 +2055,10 @@
   function drawFormShop(ctx, G, a) {
     var art = shopArt();
     var W = G.view.w, H = G.view.h;
-    var narrow = phone() || W < 900;
+    var shortWide = W > H * 1.5 && H < 800;
+    var narrow = !shortWide && (phone() || W < 900);
     var z = (a && a.zoom) || 1;
-    var S = W / (narrow ? 390 : 1920);
+    var S = shortWide ? Math.min(W / 1920, H / 1080) : (W / (narrow ? 390 : 1920));
     var pages = ["四人", "五人", "六人", "七人", "八人"];
     var page = Math.max(0, Math.min(4, G.td.shopPage || 0));
     G.td.shopPage = page;
@@ -2281,7 +2282,7 @@
     if (keptFx) G.fx = keptFx;
     if (!a) return;
     if (a.tdChooser) { try { drawChooser(ctx, a); } catch (e) {} }
-    if (!G || !G.td || !G.td.on || a.screen !== 'play') return;
+    if (!G || !G.td || !G.td.on || a.screen !== 'play' || G.mode !== 'play') return;
     try {
       var z = (a.zoom || 1) * (a.dpr || 1);
       ctx.setTransform(z, 0, 0, z, 0, 0);
