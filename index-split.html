@@ -3925,7 +3925,7 @@ XY.TRAITS = {
   /* ================= 伤害结算 ================= */
   // 英雄的最终伤害 = 基础 × 个人 × 全队，并掷暴击
   function heroDmg(G, h, base) {
-    var d = base * h.dmgMul * G.P.dmg;
+    var d = base * h.dmgMul * G.P.dmg * ((G._incenseAtk > G.t) ? 1.3 : 1);
     G._crit = false;
     if (h.crit > 0 && Math.random() < h.crit) { d *= 2; G._crit = true; }
     if (XY.spsupDmg && h.def && h.def.special) d = XY.spsupDmg(G, h, d);
@@ -25323,7 +25323,7 @@ I.line=line;I.wash=wash;
 function qReward(q){var r=q.def.reward||{};return (r.card?'卡 ':'')+(r.lingshi?'灵石 '+r.lingshi:'')+(q.failed?' · 未成':'');}
 function rec(a,id,x,y,w,h){X.ui.hud.push({id:id,x:XY.kToLog(a,x),y:XY.kToLog(a,y),w:XY.kToLog(a,w),h:XY.kToLog(a,h)});}
 I.left=function(c,G,a,ctx){var K=P.begin(c,a),small=K.W<900,w=small?(K.port?124:132):214,x=8,y=24,sz=small?10:13,lh=small?14:20,t=G.heroes[0],progress=X.clamp(G.tang.s/G.rt.total,0,1),danger=G.breach||G.tdanger,col=danger?'#a52c1d':T.ink;
-wash(c,x-3,y-8,w+6,small?170:286);K.t('金 '+Math.floor(G.coins),x+4,y+3,small?14:20,'#946213','left',true);K.t('杀 '+G.kills,x+w-3,y+3,sz,T.inkSoft,'right',true);K.t('经书营 '+Math.ceil(G.camp.hp)+'/'+G.camp.maxHp,x+4,y+19,sz,T.inkSoft,'left',false);line(c,x+4,y+26,w-8,G.camp.hp/G.camp.maxHp,'#64543d');rec(a,'gold',x,y-8,w,35);
+wash(c,x-3,y-8,w+6,small?170:286);K.t('金 '+Math.floor(G.coins),x+4,y+3,small?14:20,'#946213','left',true);var incenseCost=160+(G._incense||0)*80;K.t('香火 '+incenseCost,x+4,y+(small?20:28),small?13:16,G.coins>=incenseCost?'#a42d19':'#8a7a68','left',true);K.hit(x,y+(small?10:16),Math.min(w-8,110),24,'incense');K.t('杀 '+G.kills,x+w-3,y+3,sz,T.inkSoft,'right',true);K.t('经书营 '+Math.ceil(G.camp.hp)+'/'+G.camp.maxHp,x+4,y+19,sz,T.inkSoft,'left',false);line(c,x+4,y+26,w-8,G.camp.hp/G.camp.maxHp,'#64543d');rec(a,'gold',x,y-8,w,35);
 y+=small?33:46;K.t('唐僧',x+4,y,sz,col,'left',true);K.t(Math.ceil(t.hp)+'/'+t.maxHp,x+w-3,y,sz,col,'right',true);line(c,x+4,y+9,w-8,t.hp/t.maxHp,col);rec(a,'tang',x,y-6,w,18);if(t.inv>0)K.t('护身 '+t.inv.toFixed(0)+'秒',x+w-3,y-12,9,'#a52c1d','right',true);
 y+=small?25:35;var rest=G.tang.phase==='rest'?'歇脚 '+X.fmtTime(Math.max(0,G.tang.restMax-G.tang.restT)):Math.round(progress*100)+'%';K.t('取经路',x+4,y,sz,T.ink,'left',true);K.t(rest,x+w-3,y,sz,T.inkSoft,'right',true);line(c,x+4,y+9,w-8,progress,'#725b36');rec(a,'path',x,y-9,w,22);
 var q=G.quests;if(q){var qs=[q.main].concat(q.sides||[]).filter(Boolean),sides=(q.sides||[]).filter(function(v){return v.done;}).length;var yy=y+22;K.tf('主线 '+(q.main.done?'成':'行')+' · 支线 '+sides+'/'+(q.sides||[]).length,x+4,yy,w-8,sz,T.inkSoft,'left',true,9);if(small){qs.push({def:{short:G.gate.sealed?'关口 · 封印':'西行关口',reward:{}},prog:G.gate.sealed?'先完成主线':'距 '+Math.round(X.dist(t.x,t.y,G.gate.x,G.gate.y))+' · 护送唐僧'});var k=(P.folio.hudQuest||0)%qs.length,qq=qs[k];K.btn(x,yy+4,36,36,'‹','folio',{key:'hudQuest',i:(k+qs.length-1)%qs.length},{size:17});K.t((k+1)+' / '+qs.length,x+w/2,yy+23,10,T.inkSoft,'center',false);K.btn(x+w-36,yy+4,36,36,'›','folio',{key:'hudQuest',i:(k+1)%qs.length},{size:17});K.tf((qq.done?'✓ ':qq.failed?'✗ ':'')+qq.def.short,x+4,yy+47,w-8,11,qq.done?'#37643d':T.ink,'left',true,9.5);K.tf(qq.prog||'',x+4,yy+62,w-8,10,T.inkSoft,'left',false,9);K.tf(qReward(qq),x+4,yy+77,w-8,9.5,'#946213','left',false,9);rec(a,'quest',x,yy-8,w,92);y=yy+87;}else{qs.forEach(function(qq,i){var qy=yy+21+i*37;K.tf((qq.done?'✓ ':qq.failed?'✗ ':'')+qq.def.short,x+4,qy,w-8,13,qq.done?'#37643d':T.ink,'left',true,11);K.tf(qq.prog||''+' · '+qReward(qq),x+4,qy+16,w-8,11,T.inkSoft,'left',false,10);});rec(a,'quest',x,yy-8,w,qs.length*37+28);y=yy+qs.length*37+32;}}
@@ -25436,7 +25436,10 @@ I.vendorKey=function(G,a,k){var n=X.vendor.stock(G).length;if(k==='ArrowLeft'||k
     var need=X.xpNeed(G.level),xf=X.clamp(G.xp/need,0,1);
     rec(a,'xp',{x:0,y:L.head+1,w:W,h:3});
     c.save();c.translate(L.small?14:18,yy);c.fillStyle='#9d8144';c.beginPath();for(var ci=0;ci<6;ci++){var ca=ci*PI/3;c.lineTo(Math.cos(ca)*(L.small?4.7:6),Math.sin(ca)*(L.small?4.7:6));}c.closePath();c.fill();c.fillStyle='#f4efdf';c.fillRect(-1.5,-1.5,3,3);c.restore();
-    K.tf(X.fmtNum(Math.floor(G.coins)),L.small?25:36,yy,L.small?71:120,L.small?13:18,INK,'left',true,11);
+    K.tf(X.fmtNum(Math.floor(G.coins)),L.small?25:36,yy,L.small?52:70,L.small?13:18,INK,'left',true,11);
+    var icCost=160+(G._incense||0)*80, icx=L.small?72:112;
+    K.t('香火'+icCost, icx, yy, L.small?12:15, G.coins>=icCost?'#a42d19':'#8a7a68', 'left', true);
+    hit(K,{x:icx-4,y:yy-14,w:L.small?70:88,h:28},'incense');
     var tx=L.small?108:174,hx=L.small?140:221,hw=L.small?54:78;
     var ix=L.small?231:362,hpText=Math.ceil(t.hp)+'/'+t.maxHp,hpSize=L.small?11:14,hpGap=L.small?6:9;
     // Reserve the actual number width before drawing the blood stroke; anchors/hitboxes stay fixed.
@@ -26005,6 +26008,14 @@ X.step=function(g,dt){if(!g._simRandom)return step.apply(this,arguments);var sel
           var lr = XY.learn(G, h.hero, h.id);
           app.skillMsg = { text: lr.reason, bad: !lr.ok, until: app.rt + 2.2 };
           break;
+        case 'incense': {
+          var ic = 160 + (G._incense || 0) * 80;
+          if (G.coins < ic) { XY.toast(G, '香火要 ' + ic + ' 金币'); break; }
+          G.coins -= ic; G._incense = (G._incense || 0) + 1; G._incenseAtk = G.t + 16;
+          G.heroes.forEach(function (hh) { if (hh && !hh.down) hh.hp = Math.min(hh.maxHp, hh.hp + hh.maxHp * 0.3); });
+          XY.toast(G, '香火：全队回了些血，攻势更盛');
+          break;
+        }
         case 'autopts': G.autoPoints = !G.autoPoints; if (XY.auto) XY.auto.set('points', G.autoPoints); if (G.autoPoints) XY.autoSpend(G); break;
         case 'autoTog': if (XY.auto) { var av = XY.auto.toggle(h.key); if (h.key === 'points') { G.autoPoints = av; if (av) XY.autoSpend(G); } } break;
         case 'tower':
