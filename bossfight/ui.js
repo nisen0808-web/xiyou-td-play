@@ -157,13 +157,16 @@
   function wideBox(id, fh) {
     return screenBox(id, 0, 0, fh, 'bossIdle', 0);
   }
+  function partnerId() { return (G && G.partner) || 'phyrex'; }
   function fitOpening(W, H, land) {
-    var ids = ['phyrex', 'wukong', 'niumo'];
-    if (!cellOpaque('niumo') || !cellOpaque('wukong') || !cellOpaque('phyrex')) return null;
+    var pid = partnerId();
+    var ids = [pid, 'wukong', 'niumo'];
+    if (!cellOpaque('niumo') || !cellOpaque('wukong') || !cellOpaque(pid)) return null;
     function trial(fh, feet) {
-      var names = ['phyrex', 'wukong', 'niumo'], i, j, a, b, boxes = {};
+      var names = ids, i, j, a, b, boxes = {};
       for (i = 0; i < names.length; i++) {
         a = wideBox(names[i], fh);
+        if (!a || !feet[names[i]]) return { boxes: boxes, hit: true };
         boxes[names[i]] = { x0: feet[names[i]].x + a.x0, x1: feet[names[i]].x + a.x1, y0: feet[names[i]].y + a.y0, y1: feet[names[i]].y + a.y1, h: a.h };
       }
       for (i = 0; i < names.length; i++) for (j = i + 1; j < names.length; j++) {
@@ -175,7 +178,8 @@
     if (!land) {
       for (var f = 0.40; f >= 0.16; f -= 0.01) {
         fh = f / 0.62 * H;
-        var bP = wideBox('phyrex', fh), bW = wideBox('wukong', fh), bN = wideBox('niumo', fh);
+        var bP = wideBox(pid, fh), bW = wideBox('wukong', fh), bN = wideBox('niumo', fh);
+        if (!bP || !bW || !bN) continue;
         var gap = 18;
         var xP = 6 - bP.x0;
         var xW = xP + bP.x1 + gap - bW.x0;
@@ -187,7 +191,8 @@
         if (yBoss + bN.y0 < band.topH + 8) continue;
         var xN = Math.min(W - 8 - bN.x1, Math.max(-bN.x0 + 8, W * 0.62 - bN.x0 * 0));
         xN = Math.min(W - 8 - bN.x1, Math.max(8 - bN.x0, W * 0.7));
-        feet = { phyrex: { x: xP, y: yHero }, wukong: { x: xW, y: yHero }, niumo: { x: xN, y: yBoss } };
+        feet = { wukong: { x: xW, y: yHero }, niumo: { x: xN, y: yBoss } };
+        feet[pid] = { x: xP, y: yHero };
         t = trial(fh, feet);
         if (!t.hit) { best = { fh: fh, feet: feet, boxes: t.boxes, frac: f }; break; }
       }
@@ -195,11 +200,14 @@
       var scales = [0.58, 0.5, 0.44, 0.38], si, guard;
       for (si = 0; si < scales.length && !best; si++) {
         fh = H * scales[si];
+        var bP2 = wideBox(pid, fh), bW2 = wideBox('wukong', fh), bN2 = wideBox('niumo', fh);
+        if (!bP2 || !bW2 || !bN2) continue;
         for (guard = 0; guard < 16; guard++) {
           var xP2 = W * (0.1 + guard * 0.004);
           var xW2 = W * (0.32 + guard * 0.02);
           var xN2 = W * (0.78 + guard * 0.012);
-          feet = { phyrex: { x: xP2, y: H * 0.845 }, wukong: { x: xW2, y: H * 0.845 }, niumo: { x: Math.min(W * 0.92, xN2), y: H * 0.845 } };
+          feet = { wukong: { x: xW2, y: H * 0.845 }, niumo: { x: Math.min(W * 0.92, xN2), y: H * 0.845 } };
+          feet[pid] = { x: xP2, y: H * 0.845 };
           t = trial(fh, feet);
           if (!t.hit) { best = { fh: fh, feet: feet, boxes: t.boxes, frac: 0 }; break; }
         }
@@ -222,25 +230,29 @@
       var ms = W * (G.land ? .32 : .28), dd = Math.abs(hs[1].s - hs[0].s);
       if (dd < ms) { var def = ms - dd, u = clamp((Math.abs(hs[1].r) - Math.abs(hs[0].r)) / ms, -1, 1);
         hs[1].s += (hs[1].r < 0 ? -1 : 1) * def * (.5 + .5 * u); hs[0].s += (hs[0].r < 0 ? -1 : 1) * def * (.5 - .5 * u); } }
+    function feetOk(fit) {
+      if (!fit || !fit.feet || !fit.feet.niumo || !fit.feet.wukong) return false;
+      var i; for (i = 0; i < hs.length; i++) if (!fit.feet[hs[i].h.id]) return false;
+      return true;
+    }
+    function applyFeet(fit) {
+      var gy = { niumo: fit.feet.niumo.y, wukong: fit.feet.wukong.y }, i, id;
+      for (i = 0; i < hs.length; i++) { id = hs[i].h.id; pos.h[id] = fit.feet[id].x; if (fit.feet[id].y != null) gy[id] = fit.feet[id].y; }
+      pos.boss = fit.feet.niumo.x; pos.gy = gy;
+    }
+    var pid = partnerId();
     if (!G.land) {
-      var fit = (G._fit && G._fit.w === W && G._fit.h === G.H) ? G._fit : fitOpening(W, G.H, false);
-      if (fit) { G._fit = fit; G._fit.w = W; G._fit.h = G.H; G.fh = fit.fh; }
-      if (fit && fit.feet) {
-        hs.forEach(function (e) { pos.h[e.h.id] = fit.feet[e.h.id].x; });
-        pos.boss = fit.feet.niumo.x;
-        pos.gy = { phyrex: fit.feet.phyrex.y, wukong: fit.feet.wukong.y, niumo: fit.feet.niumo.y };
-      } else {
+      var fit = (G._fit && G._fit.w === W && G._fit.h === G.H && G._fit.pid === pid) ? G._fit : fitOpening(W, G.H, false);
+      if (feetOk(fit)) { G._fit = fit; G._fit.w = W; G._fit.h = G.H; G._fit.pid = pid; G.fh = fit.fh; applyFeet(fit); }
+      else {
         hs.forEach(function (e) { pos.h[e.h.id] = e.h.w ? W * 0.62 : W * 0.22; });
         pos.boss = W * 0.72;
         pos.gy = null;
       }
     } else if (hs.length >= 2) {
-      var fitL = (G._fit && G._fit.w === W && G._fit.h === G.H) ? G._fit : fitOpening(W, G.H, true);
-      if (fitL && fitL.feet) {
-        G._fit = fitL; G._fit.w = W; G._fit.h = G.H;
-        hs.forEach(function (e) { pos.h[e.h.id] = fitL.feet[e.h.id].x; });
-        pos.boss = fitL.feet.niumo.x;
-      } else {
+      var fitL = (G._fit && G._fit.w === W && G._fit.h === G.H && G._fit.pid === pid) ? G._fit : fitOpening(W, G.H, true);
+      if (feetOk(fitL)) { G._fit = fitL; G._fit.w = W; G._fit.h = G.H; G._fit.pid = pid; applyFeet(fitL); }
+      else {
         hs.forEach(function (e) { pos.h[e.h.id] = e.h.w ? W * 0.36 : W * 0.12; });
         pos.boss = W * 0.8;
       }
@@ -371,7 +383,7 @@
   function startFight(o) {
     o = o || {}; G.runId = ++runSerial; var partner = o.partner || G.partner; G.partner = partner;
     G.F = BF.newFight({ partner: partner, summon: o.summon || null, seed: o.seed || (Math.random() * 99999 | 0) + 1 });
-    G.fx = []; G.calls = []; G.shake = 0; G.stop = 0; G.slow = 0; G.endT = 0; G.introT = o.skipIntro ? 0 : 1.7; G.lane = { wukong: 0, partner: 1 }; G.t = 0; G.mode = 'fight'; G.vt = G.vt || 0; TR = {}; HST = {}; WT = {}; VP = {}; G.V = null; G.pos = null; G.shown = false; G.flash = 0; G.wuUlt = 0; G.bossBig = 0; G.bossHit = 0; G.hp = null; G.dmgAgg = {};
+    G.fx = []; G.calls = []; G.shake = 0; G.stop = 0; G.slow = 0; G.endT = 0; G.introT = o.skipIntro ? 0 : 1.7; G.lane = { wukong: 0, partner: 1 }; G.t = 0; G.mode = 'fight'; G.vt = G.vt || 0; TR = {}; HST = {}; WT = {}; VP = {}; G.V = null; G.pos = null; G._fit = null; G.shown = false; G.flash = 0; G.wuUlt = 0; G.bossBig = 0; G.bossHit = 0; G.hp = null; G.dmgAgg = {};
     $('pick').classList.remove('on'); $('res').classList.remove('on'); WLAT = {}; HLAT = {};
     setTimeout(function () { loadMids('wukong'); loadMids('niumo'); loadMids(partner); }, 700);   // 中间帧：开战后台再载，不占首屏体积
   }

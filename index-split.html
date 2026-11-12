@@ -9846,7 +9846,10 @@ XY.TRAITS = {
       if (sy < 74 || sy > G.view.h - 112) continue;
       c.globalAlpha = Math.max(0, a);
       var col = t.color ? t.color : t.kind === 'crit' ? '#6e342c' : (t.kind === 'hurt' ? '#6e342c' : (t.kind === 'heal' ? '#6e342c' : (t.kind === 'coin' ? '#5c4632' : '#3a3226')));
-      c.save(); c.font = Math.max(11, Math.min(16, t.size)) + 'px "Ma Shan Zheng","KaiTi",serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.lineWidth = 2; c.strokeStyle = 'rgba(255,250,240,0.88)'; c.strokeText(t.s, t.x, t.y); c.fillStyle = col; c.fillText(t.s, t.x, t.y); c.restore();
+      var label = t.s, dn = +t.s, dx = t.x, dy = t.y;
+      if ((t.kind === 'dmg' || t.kind === 'crit' || t.kind === 'weak' || t.kind === 'hurt') && isFinite(dn) && Math.abs(dn) >= 10000) { var wan = dn / 10000; label = (Math.abs(wan) >= 100 ? Math.round(wan) : Math.round(wan * 10) / 10) + '万'; }
+      if (G.view && G.view.w < 520 && G.enemies) { var bi, be; for (bi = 0; bi < G.enemies.length; bi++) { be = G.enemies[bi]; if (be && be.def && be.def.denBoss && !be.dead && Math.abs(be.x - t.x) < 90 && Math.abs(be.y - t.y) < 110) { dx = t.x + ((bi + i) % 2 ? 48 : -48); dy = t.y - 28; break; } } }
+      c.save(); c.font = Math.max(11, Math.min(16, t.size)) + 'px "Ma Shan Zheng","KaiTi",serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.lineWidth = 2; c.strokeStyle = 'rgba(255,250,240,0.88)'; c.strokeText(label, dx, dy); c.fillStyle = col; c.fillText(label, dx, dy); c.restore();
     }
     c.globalAlpha = 1;
   }
@@ -10922,14 +10925,18 @@ XY.TRAITS = {
         eg.addColorStop(0, 'rgba(28,22,16,' + (0.14 + 0.08 * ep) + ')'); eg.addColorStop(1, 'rgba(28,22,16,0)');
         c.fillStyle = eg; c.fillRect(x - tp * 1.15, y - tp * 1.35, tp * 2.3, tp * 2.05);
       }
-      var tagW = 150, tagY = y - tp - 38;
-      c.globalAlpha = 0.92; T.rrect(c, x - tagW / 2, tagY, tagW, 20, 10); c.fillStyle = '#f7f1e4'; c.fill(); c.lineWidth = 2.5; c.strokeStyle = e.enraged ? '#2a2118' : d.color; c.stroke(); c.globalAlpha = 1;
-      T.otxt(c, (e.enraged ? '狂 · ' : '') + d.name + ' ' + ELN(e.elem) + ' +' + Math.round((mult - 1) * 100) + '%', x, tagY + 10, 13, e.enraged ? '#24180f' : '#5b2d91', 'center', true);
-      T.bar(c, x - bw / 2, y - tp - 14, bw, 9, e.hp / e.maxHp, e.enraged ? '#5c4030' : '#9b59d0', 'rgba(255,255,255,0.85)');
-      if (e.enrageT !== undefined && !e.enraged) {    // 狂暴倒计时：名牌上方一个小胶囊，30 秒变黄、10 秒变红并脉动
-        var ew = enrageLook(e.enrageT, rt), ey = tagY - 16;
-        c.globalAlpha = 0.95; T.rrect(c, x - 52, ey - 10, 104, 20, 10); c.fillStyle = ew.fill; c.fill(); c.lineWidth = 2; c.strokeStyle = ew.line; c.stroke(); c.globalAlpha = 1;
-        T.txt(c, '狂暴 ' + XY.fmtTime(Math.max(0, e.enrageT)), x, ey + 1, 13, ew.ink, 'center', true);
+      var narrowBoss = G.view && G.view.w < 520;
+      var tagW = narrowBoss ? 108 : 150, tagY = y - tp - (narrowBoss ? 70 : 38);
+      var tagText = (e.enraged ? '狂 · ' : '') + d.name + (narrowBoss ? '' : (' ' + ELN(e.elem) + ' +' + Math.round((mult - 1) * 100) + '%'));
+      c.globalAlpha = 0.92; T.rrect(c, x - tagW / 2, tagY, tagW, narrowBoss ? 18 : 20, 8); c.fillStyle = '#f7f1e4'; c.fill(); c.lineWidth = 1.4; c.strokeStyle = e.enraged ? '#2a2118' : '#5c4034'; c.stroke(); c.globalAlpha = 1;
+      T.otxt(c, tagText, x, tagY + (narrowBoss ? 9 : 10), narrowBoss ? 12 : 13, '#24180f', 'center', true);
+      var barW = narrowBoss ? 84 : bw, barY = narrowBoss ? (tagY + 24) : (y - tp - 14);
+      T.bar(c, x - barW / 2, barY, barW, narrowBoss ? 6 : 9, e.hp / e.maxHp, e.enraged ? '#5c4030' : '#6b5344', 'rgba(255,255,255,0.85)');
+      if (e.enrageT !== undefined && !e.enraged) {
+        var ew = enrageLook(e.enrageT, rt), ey = narrowBoss ? (barY + 16) : (tagY - 16);
+        var timer = '狂暴 ' + XY.fmtTime(Math.max(0, e.enrageT));
+        if (narrowBoss) T.otxt(c, timer, x, ey, 11, '#24180f', 'center', true);
+        else { c.globalAlpha = 0.95; T.rrect(c, x - 52, ey - 10, 104, 20, 10); c.fillStyle = ew.fill; c.fill(); c.lineWidth = 2; c.strokeStyle = ew.line; c.stroke(); c.globalAlpha = 1; T.txt(c, timer, x, ey + 1, 13, ew.ink, 'center', true); }
       }
       if (e.bstate === 'tele') {                      // 冲锋预警线
         c.strokeStyle = 'rgba(224,83,61,' + (0.3 + 0.3 * Math.sin(rt * 20)) + ')'; c.lineWidth = r * 1.5; c.lineCap = 'butt';
@@ -21010,6 +21017,18 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
       for (k in { charge: 1, fan: 1, summon: 1 }) if (rdy(k) && v.sk[k].idle >= A.idle) { cast(G, v, h, k, ta, 'idle'); return; }
     }
   }
+  V.castByPlayer = function (G, id) {
+    var v = G.villain, h = G.heroes && G.heroes[1];
+    if (!v || !h || h.down || G.mode !== 'play' || G.ending) return { ok: false, reason: '现在不能放' };
+    if (!v.sk || !v.sk[id] || !VD.SK[id]) return { ok: false, reason: '没有这招' };
+    if (v.sk[id].cd > 0) return { ok: false, reason: VD.SK[id].name + ' 还要 ' + Math.ceil(v.sk[id].cd) + ' 秒' };
+    var ang = h.face || 0, tgt = null, bd = 1e9;
+    if (G.grid) G.grid.query(h.x, h.y, 420, function (e) { if (!e || e.dead) return; var d = dist(e.x, e.y, h.x, h.y); if (d < bd) { bd = d; tgt = e; } });
+    if (tgt) ang = atan2(tgt.y - h.y, tgt.x - h.x);
+    cast(G, v, h, id, ang, 'hand');
+    v.manual = (v.manual || 0) + 1;
+    return { ok: true };
+  };
 
   /* ---------- 每帧 ---------- */
   V.update = function (G, dt) {
@@ -21143,8 +21162,8 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
     if (kind === 'key') { if (/^(Arrow(Up|Down|Left|Right)|Key[WASD])$/.test(code)) i.keys++; else if (code !== 'Escape' && code !== 'KeyP') i.other++; }
     else if (kind === 'mouse') i.mouse++; else i.ui++;
   };
-  V.swallowKey = function (G, k) {                                       // 反派关里除了方向键 / 暂停以外，所有「指令键」都不起作用
-    return !/^(Arrow(Up|Down|Left|Right)|Key[WASD]|Escape|KeyP|Digit0|F9)$/.test(k) && !(window.XY.app && XY.app.debugOn);
+  V.swallowKey = function (G, k) {                                       // 走位、暂停，以及三招（1 2 3 / J K L）
+    return !/^(Arrow(Up|Down|Left|Right)|Key[WASD]|Escape|KeyP|Digit[123]|Numpad[123]|Key[JKL]|Digit0|F9)$/.test(k) && !(window.XY.app && XY.app.debugOn);
   };
 
   V.start = function (opts) { var w = window.__xy; if (w && w.startVillain) { w.startVillain(opts); return true; } return false; };
@@ -21828,6 +21847,7 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
     else { c.strokeStyle = '#6fbf73'; c.lineWidth = 3; c.beginPath(); c.arc(x, y, r + 1, 0, PI2); c.stroke(); }
     if(XY.inkHud)XY.inkHud.wash(c,x-30,y+r+3,60,18);
     txt(c, S0.name, x, y + r + 12, 11.5, INK, 'center', true);
+    st.hit(x - 32, y - 32, 64, 64, 'vCast', { id: id });
   }
   VU.hud = function (c, G, a) {
     var v = G.villain, st = begin(c, a), cw = st.cw, ch = st.ch, h = G.heroes[1], cp = G.camp, ser0 = ser(), narrow = cw < 520;
@@ -22166,6 +22186,7 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
       case 'vHome2': w.toMenu && w.toMenu(); VU.open({ page: 'home' }); return true;
       case 'vLairOpen': if (XY.lairUI) { VU.page = 'lair'; XY.lairUI.enter(); } else say('洞府设计还没开放', true); return true;
       case 'vSpeed': if (G && G.villain) G.speed = G.speed === 2 ? 1 : 2; return true;
+      case 'vCast': if (G && G.villain && XY.villain.castByPlayer) { var vc = XY.villain.castByPlayer(G, h.id); if (vc && !vc.ok) say(vc.reason, true); } return true;
       case 'vTipOk': if (G && G.mode === 'tip') { G.mode = 'play'; VU.tip = null; } return true;
     }
     if (XY.lairUI && XY.lairUI.act && XY.lairUI.act(h, p, a)) return true;
@@ -25355,16 +25376,24 @@ I.vendorKey=function(G,a,k){var n=X.vendor.stock(G).length;if(k==='ArrowLeft'||k
     var ix=L.small?231:362,hpText=Math.ceil(t.hp)+'/'+t.maxHp,hpSize=L.small?11:14,hpGap=L.small?6:9;
     // Reserve the actual number width before drawing the blood stroke; anchors/hitboxes stay fixed.
     c.save();c.font='bold '+hpSize+'px '+K.fam(hpSize,true);hw=Math.max(14,Math.min(hw,ix-5-hx-hpGap-c.measureText(hpText).width));c.restore();
-    c.save(); c.font=sz+'px "Ma Shan Zheng","KaiTi",serif'; c.fillStyle=G.breach||G.tdanger?RED:INK; c.textAlign='left'; c.textBaseline='middle'; c.fillText('唐僧', tx, yy); c.restore();
-    c.save(); c.font=(L.small?11:12)+'px "Ma Shan Zheng","KaiTi",serif'; c.fillStyle='#5c4a38'; c.textAlign='right'; c.textBaseline='middle'; c.fillText('气血', hx-4, yy); c.restore();
-    if(XY.INKP){ XY.INKP.stroke(c,hx,yy,hx+hw,yy,1.4,'83,61,34',0.3,3,0.01); if(!t.down && t.maxHp) XY.INKP.stroke(c,hx,yy,hx+hw*(t.hp/t.maxHp),yy,2.8,'168,50,36',0.92,5,0.02); }
-    var hpX=hx+hw+hpGap;K.tf('气血'+(t.down?'尽':(t.hp>t.maxHp*0.66?'满':t.hp>t.maxHp*0.33?'半':'危')),hpX,yy,ix-5-hpX,hpSize,INK,'left',true,10.5);
-    var iw=L.port?44:L.time.x-(L.small?36:60)-ix-8,invText=t.inv>0?'护身'+(L.port?'':' ')+Math.ceil(t.inv)+'秒':t.down?'阵亡':'护送中';
-    // 360竖屏把护身置于时钟与倍速之间，避开第一行妖情；390+位置不变。
-    var iy=yy;if(L.port&&W<390){ix=L.time.x+29;iy=L.time.y;}
-    K.tf(X.fmtStr(invText),ix,iy,iw,L.small?10.5:13,t.inv>0?SOFT:RED,'left',false,L.small?10.5:13);
+    var invText=t.inv>0?'护身 '+Math.ceil(t.inv)+'秒':t.down?'阵亡':'护送中';
+    if(L.port){
+      c.save(); c.font=sz+'px "Ma Shan Zheng","KaiTi",serif'; c.fillStyle=G.breach||G.tdanger?RED:INK; c.textAlign='left'; c.textBaseline='middle'; c.fillText('唐僧', 96, yy); c.restore();
+      var bx0=138,bw0=52;
+      if(XY.INKP){ XY.INKP.stroke(c,bx0,yy,bx0+bw0,yy,1.4,'83,61,34',0.3,3,0.01); if(!t.down && t.maxHp) XY.INKP.stroke(c,bx0,yy,bx0+bw0*(t.hp/t.maxHp),yy,2.8,'168,50,36',0.92,5,0.02); }
+      K.t(t.down?'尽':(t.hp>t.maxHp*0.66?'满':t.hp>t.maxHp*0.33?'半':'危'), bx0+bw0+8, yy, 14, INK, 'left', true);
+      if(t.inv>0) K.t('护'+Math.ceil(t.inv), bx0+bw0+30, yy, 13, SOFT, 'left', false);
+    } else {
+      c.save(); c.font=sz+'px "Ma Shan Zheng","KaiTi",serif'; c.fillStyle=G.breach||G.tdanger?RED:INK; c.textAlign='left'; c.textBaseline='middle'; c.fillText('唐僧', tx, yy); c.restore();
+      c.save(); c.font=(L.small?11:12)+'px "Ma Shan Zheng","KaiTi",serif'; c.fillStyle='#5c4a38'; c.textAlign='right'; c.textBaseline='middle'; c.fillText('气血', hx-4, yy); c.restore();
+      if(XY.INKP){ XY.INKP.stroke(c,hx,yy,hx+hw,yy,1.4,'83,61,34',0.3,3,0.01); if(!t.down && t.maxHp) XY.INKP.stroke(c,hx,yy,hx+hw*(t.hp/t.maxHp),yy,2.8,'168,50,36',0.92,5,0.02); }
+      var hpX=hx+hw+hpGap;K.tf('气血'+(t.down?'尽':(t.hp>t.maxHp*0.66?'满':t.hp>t.maxHp*0.33?'半':'危')),hpX,yy,ix-5-hpX,hpSize,INK,'left',true,10.5);
+      var iw=L.time.x-(L.small?36:60)-ix-8;
+      K.tf(X.fmtStr(invText),ix,yy,iw,L.small?10.5:13,t.inv>0?SOFT:RED,'left',false,L.small?10.5:13);
+    }
     tooltip(a,K,{x:tx,y:0,w:(L.small?283:455)-tx,h:L.port?30:L.head},['唐僧气血 '+Math.ceil(t.hp)+' / '+t.maxHp,X.fmtStr(invText)]);
-    K.t(X.fmtTime(G.t),L.time.x,L.time.y,L.small?14:20,INK,'center',true);
+    if(L.port){var tmw=92,tmx=L.W-tmw-8,tmy=L.quest.y;paper(c,tmx,tmy,tmw,L.quest.h,.98,17);K.t(X.fmtTime(G.t),tmx+tmw/2,tmy+L.quest.h/2,16,INK,'center',true);L.quest={x:L.quest.x,y:L.quest.y,w:Math.max(120,tmx-L.quest.x-8),h:L.quest.h};}
+    else K.t(X.fmtTime(G.t),L.time.x,L.time.y,L.small?14:20,INK,'center',true);
     c.save(); c.font=(L.small?14:17)+'px "Ma Shan Zheng","KaiTi",serif'; c.fillStyle='#24180f'; c.textAlign='left'; c.textBaseline='middle'; c.fillText(G.level+'级', L.xp.x, L.xp.y); c.restore();
     var barX=L.xp.x+(L.small?34:42), barW=Math.max(36, L.xp.w-(L.small?88:110));
     if(XY.INKP){ XY.INKP.stroke(c,barX,L.xp.y+6,barX+barW,L.xp.y+6,1.3,'83,61,34',0.28,7,0.01); XY.INKP.stroke(c,barX,L.xp.y+6,barX+barW*xf,L.xp.y+6,2.6,'42,32,22',0.9,11,0.02); }
@@ -25707,7 +25736,12 @@ X.step=function(g,dt){if(!g._simRandom)return step.apply(this,arguments);var sel
       return;
     }
     // —— 游戏中 ——
-    if (G.villain) { XY.villain.noteInput('key', k); if (XY.villain.swallowKey(G, k)) return; }          // v0.9 反派关：除方向键 / 暂停外的键都不起作用（整局只用方向键）
+    if (G.villain) {
+      XY.villain.noteInput('key', k);
+      var vsk = { Digit1: 'fan', Numpad1: 'fan', KeyJ: 'fan', Digit2: 'charge', Numpad2: 'charge', KeyK: 'charge', Digit3: 'summon', Numpad3: 'summon', KeyL: 'summon' }[k];
+      if (vsk && XY.villain.castByPlayer) { var vcr = XY.villain.castByPlayer(G, vsk); if (vcr && !vcr.ok) XY.toast(G, vcr.reason); return; }
+      if (XY.villain.swallowKey(G, k)) return;
+    }
     if (G.lair && app.screen === 'play' && !/^(Escape|KeyP|Period)$/.test(k) && !app.debugOn) return;          // v0.9 验关：玩家不操作，除暂停 / 变速外的键无效
     if (k === 'F9' && e.shiftKey) { app.debugOn = !app.debugOn; app.showFps = app.debugOn; XY.toast(G, app.debugOn ? '调试键：已打开' : '调试键：已关闭'); return; }
     if (G.mode === 'cards' && G.fb && XY.fabaoui) { XY.fabaoui.key(G, k, e.shiftKey); return; }

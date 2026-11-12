@@ -1061,8 +1061,8 @@
     c.save();
     c.fillStyle = 'rgba(246,239,224,0.55)';
     c.fillRect(0, 0, W, H);
-    var m = port ? 8 : 22;
-    var x = m, y = port ? 10 : 16, w = W - m * 2, h = H - y - (port ? 10 : 14);
+    var m = port ? 28 : 22;
+    var x = m, y = port ? 28 : 16, w = W - m * 2, h = H - y - (port ? 28 : 14);
     paper(c, x, y, w, h);
     c.save();
     c.beginPath();
@@ -1073,7 +1073,6 @@
     var closeX = x + w - (port ? 72 : 84), closeY = y + 12, closeW = port ? 56 : 66, closeH = 44;
     redSeal(c, closeX, closeY, closeW, closeH, '关');
     hit(0, 0, W, H, 'dkClose');
-    hit(x, y, w, h, 'dkNoop');
     var pack = gachaPack();
     pack.ids.forEach(function (id) { spArt(id); });
     var on = eventOn();
