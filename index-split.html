@@ -2166,6 +2166,11 @@ XY.TRAITS = {
       return !!(g && g.pulls && g.pulls.length === 10 && !g.acked);
     },
     nudge: function (dir) {
+      if (XY.introQ && XY.introQ.length > 1) {
+        if ((dir || 0) >= 0) XY.introQ.push(XY.introQ.shift());
+        else XY.introQ.unshift(XY.introQ.pop());
+        return;
+      }
       if (!gachaView || !gachaView.rec) return;
       var n = (gachaView.rec.rows && gachaView.rec.rows.length) || 10;
       if (gachaView.phase === 'result') {
@@ -24686,13 +24691,15 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
     } else if (stage) {
       drawScroll(c, scroll.x, scroll.y, scroll.w, scroll.h, !land);
       var row = rows[focus] || rows[0];
+      var introId = (XY.introQ && XY.introQ.length) ? XY.introQ[0] : null;
+      var showId = introId || (row && row.id);
       var pp = v.hold ? 1 : XY.gacha10.cardAt(elapsed, focus);
       var fh = scroll.h * (short ? 0.86 : (land ? 0.78 : 0.62));
       var fw = Math.min(scroll.w * (land ? 0.38 : 0.72), fh * 0.72);
       var fx = scroll.x + (scroll.w - fw) / 2, fy = scroll.y + scroll.h * 0.05;
       inkBurst(c, fx + fw * 0.5, fy + fh * 0.52, Math.min(fw, fh) * 0.58);
-      if (row && shown(row.id)) {
-        var art2 = packArt(row.id, fx, fy, fw, fh);
+      if (showId && shown(showId)) {
+        var art2 = packArt(showId, fx, fy, fw, fh);
         c.save();
         c.globalAlpha = 0.25 + 0.75 * Math.max(0, Math.min(1, pp));
         var drawn2 = art2 && drawCut(c, art2, fx, fy, fw, fh);
@@ -24705,9 +24712,9 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
           }
           var nmSize = Math.min(land ? 56 : 32, fh * 0.11);
           c.font = nmSize + 'px GachaBrush, KaiTi, STKaiti, serif';
-          var nmW = c.measureText(gachaName(row.id)).width;
-          var nmX = fx + fw * (row.id === 'yuanzhang' ? 0.64 : 0.5), nmY = fy + fh * (row.id === 'yuanzhang' ? 0.5 : 0.9);
-          inkName(c, gachaName(row.id), nmX, nmY, nmSize, fw, '#1a120c', true);
+          var nmW = c.measureText(gachaName(showId)).width;
+          var nmX = fx + fw * (showId === 'yuanzhang' ? 0.64 : 0.5), nmY = fy + fh * (showId === 'yuanzhang' ? 0.5 : 0.9);
+          if (!introId) inkName(c, gachaName(showId), nmX, nmY, nmSize, fw, '#1a120c', true);
           if (row.kind === 'unlock') cinSeal(c, nmX + nmW / 2 + nmSize * 0.7, nmY + nmSize * 0.45, Math.max(18, nmSize * 0.42), '新');
         }
       }
@@ -24820,7 +24827,9 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
           return Math.round(((hi + 0.05) / (lo + 0.05)) * 100) / 100;
         }
         var contrastRows = [];
+        var introOn = !!(XY.introQ && XY.introQ.length);
         names.forEach(function (nm) {
+          if (introOn) return;
           var lines = nm.lines || [nm.text], gap = nm.size * 1.15, y0 = nm.y - (lines.length - 1) * gap / 2, li;
           nameMist(nm.x, nm.y, nm.w, nm.h);
           for (li = 0; li < lines.length; li++) resultInk(lines[li], nm.x, y0 + li * gap, nm.size);

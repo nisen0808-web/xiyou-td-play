@@ -82,16 +82,16 @@
       ctx.fill();
       var av = Math.min(ph - 36, pw * 0.34);
       if (XY.xAvIcon && XY.xAvIcon.draw) XY.xAvIcon.draw(ctx, id, x + 16, y + 18, av, av);
-      ctx.fillStyle = '#a42d19';
-      ctx.font = '28px "Ma Shan Zheng","KaiTi",serif';
-      ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-      ctx.fillText(sp.name, x + pw * 0.46, y + 48);
       var tx = x + pw * 0.46;
+      ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
       ctx.fillStyle = '#24180f';
       ctx.font = '18px "Ma Shan Zheng","KaiTi",serif';
       ctx.fillText('身份  ' + (sp.role || sp.name), tx, y + 92);
       ctx.fillText('擅长  ' + (sp.weapon || sp.trait && sp.trait.name || ''), tx, y + 124);
       ctx.fillText('必杀  ' + (sp.ult || ''), tx, y + 156);
+      ctx.fillStyle = '#a42d19';
+      ctx.font = '32px "Ma Shan Zheng","KaiTi",serif';
+      ctx.fillText(sp.name, tx, y + ph - 64);
       ctx.fillStyle = '#5c4a38';
       ctx.font = '15px "Ma Shan Zheng","KaiTi",serif';
       ctx.fillText('点一下收下', tx, y + ph - 28);
@@ -119,6 +119,4 @@
     if (ev.preventDefault && ev.cancelable) ev.preventDefault();
   }
   window.addEventListener('pointerdown', eatIntro, true);
-  window.addEventListener('mousedown', eatIntro, true);
-  window.addEventListener('touchstart', eatIntro, true);
 })();
