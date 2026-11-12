@@ -20987,7 +20987,7 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
   V.init = function (G) {
     var n = G.heroes[1], eye = G.heroes[0], v = G.villain;
     v.t0 = Date.now(); v.sk = { fan: { cd: 6, idle: 0 }, charge: { cd: 0, idle: 0 }, summon: { cd: 10, idle: 0 } };    // 开局给点冷却，别一上来就乱放
-    v.last = -9; v.casts = { fan: 0, charge: 0, summon: 0 }; v.manual = 0; v.input = { keys: 0, other: 0, mouse: 0, ui: 0 };
+    v.last = -9; v.casts = { fan: 0, charge: 0, summon: 0 }; v.manual = 0; v.manualOnly = true; v.input = { keys: 0, other: 0, mouse: 0, ui: 0 };
     v.mats = {}; v.yaodan = 0; v.traps = []; v.chests = 0; v.hist = []; v.eyeHits = 0; v.eyeLost = 0; v.lastEyeHit = -9; v.gap = 0; v.restT = 0; v.caveMin = 1; v.growLv = 1; v.lvUps = 0;
     v.startedDay = VD.today(); v.sim = false;
     G.noSpecial = true; G.autoPoints = false; G.sky.left = 0; G.sky.cd = 1e9;
@@ -21972,6 +21972,8 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
     var ids = ['fan', 'charge', 'summon'], by = ch - 46, gap = narrow ? 64 : 78, x0 = mid - gap;
     if (G.touchLike === undefined) G.touchLike = a.touchUI;
     ids.forEach(function (id, i) { skillRing(c, st, x0 + i * gap, by - 8, id, v, G); });
+    txt(c, v.manualOnly ? '自动放招 关' : '自动放招 开', mid, by - 58, 14, v.manualOnly ? '#5c4a38' : '#a42d19', 'center', true);
+    st.hit(mid - 78, by - 74, 156, 32, 'vAuto');
     var mats = VD.MAT_ORDER.filter(function (m) { return v.mats[m] > 0; });
     if(mats.length||v.yaodan){var stack=cw<900,mx=stack?cw-53:cw-16-(mats.length+(v.yaodan?1:0))*56,my=stack?ch-94-(mats.length+(v.yaodan?1:0))*25:ch-29;
       if(stack)XY.inkHud.wash(c,mx-4,my-18,57,(mats.length+(v.yaodan?1:0))*25+2);else XY.inkHud.wash(c,mx-4,my-18,cw-mx,30);
@@ -22290,6 +22292,7 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
       case 'vLairOpen': if (XY.lairUI) { VU.page = 'lair'; XY.lairUI.enter(); } else say('洞府设计还没开放', true); return true;
       case 'vSpeed': if (G && G.villain) G.speed = G.speed === 2 ? 1 : 2; return true;
       case 'vCast': if (G && G.villain && XY.villain.castByPlayer) { var vc = XY.villain.castByPlayer(G, h.id); if (vc && !vc.ok) say(vc.reason, true); } return true;
+      case 'vAuto': if (G && G.villain) G.villain.manualOnly = !G.villain.manualOnly; return true;
       case 'vTipOk': if (G && G.mode === 'tip') { G.mode = 'play'; VU.tip = null; } return true;
     }
     if (XY.lairUI && XY.lairUI.act && XY.lairUI.act(h, p, a)) return true;
