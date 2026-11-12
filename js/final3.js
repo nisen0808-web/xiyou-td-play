@@ -296,8 +296,10 @@
       var px = Math.round((W - pw) / 2), py = Math.round((H - ph) / 2);
       inkSheet(c, px, py, pw, ph);
       var who = offerWho(G);
-      var av = Math.min(72, ph * 0.22);
+      var av = Math.max(72, Math.min(96, ph * 0.28));
+      var hero = G.heroes && G.heroes[G.ctrl || 1];
       if (who && XY.xAvIcon) XY.xAvIcon.draw(c, who, px + 14, py + 10, av, av);
+      else if (hero && XY.hud2 && XY.hud2.face) XY.hud2.face(c, hero, px + 14 + av / 2, py + 10 + av / 2, av * 0.42, a.rt || 0);
       kai(c, op.title || '选一件', px + 14 + av + 10, py + (short ? 22 : 28), short ? 18 : 26, '#a42d19', 'left', pw * 0.46);
       var n = Math.min(3, items.length), gap = port ? 8 : 12;
       var btnH = short ? 34 : 42;

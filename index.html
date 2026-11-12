@@ -13880,7 +13880,7 @@ XY.ICONINK_DATA={"金箍棒":{"src":"data:image/webp;base64,UklGRjINAABXRUJQVlA4
     if (X_IDS.indexOf(id) < 0) return null;
     var e = xav[id];
     if (!e) {
-      var inl = window.XY_X_AVATARS, src = (inl && inl[id]) || (inl ? null : 'assets/art/x-avatars/' + id + '.webp');
+      var src = 'assets/art/x-avatars/' + id + '.webp';
       e = xav[id] = { img: null };
       if (src) { var im = new Image(); im.src = src; e.img = im; }
     }
@@ -18311,7 +18311,7 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
   /* 每人一组裁剪（只改裁剪窗口，不改原图）：cx/cy 是裁剪中心（0–1），z 是放大倍数；让脸占圆的一半以上 */
   var CROP = { phyrex: [0.5, 0.3, 1.8], sisi: [0.5, 0.4, 1.3], laosiji: [0.5, 0.55, 1], kuanggong: [0.5, 0.5, 1], haiteng: [0.5, 0.5, 1.2], yuanzhang: [0.5, 0.45, 1.1],
     heyuxi: [0.36, 0.4, 2], diaoyulao: [0.5, 0.55, 1.15], martin: [0.42, 0.5, 1.8] };
-  function avSrc(id) { return (window.XY_X_AVATARS && window.XY_X_AVATARS[id]) || 'assets/art/x-avatars/' + id + '.webp'; }
+  function avSrc(id) { return 'assets/art/x-avatars/' + id + '.webp'; }
   function avImg(id) {
     var i = im(avSrc(id)), src2 = imgs[avSrc(id)];
     if (i) return i;
@@ -18880,7 +18880,7 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
 
   /* ---------- 九人头像：墨环 / 云雾 / 朱印 三种融合处理；悬停显示原色 ---------- */
   var AVK = { ink: 0.86, seal: 0.864, mist: 0.9 };
-  function origAv(id) { return im((window.XY_X_AVATARS && window.XY_X_AVATARS[id]) || 'assets/art/x-avatars/' + id + '.webp'); }
+  function origAv(id) { return im('assets/art/x-avatars/' + id + '.webp'); }
   function drawAv(st, id, variant, cx, cy, d, o) {
     if (XY.stage) XY.stage.stats.figs++;
     o = o || {}; var c = st.c, oi = origAv(id), hv = ov(st, cx - d / 2, cy - d / 2, d, d), sel = XY.stage && XY.stage.sel && XY.stage.sel.id === id && st.rt < XY.stage.sel.until;
@@ -19897,8 +19897,14 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
         bag[key] = cv; return cv;
       }
       cards.forEach(function (r, k) {
-        var col = k % cols, row = (k / cols) | 0, x = x0s + col * step, y = y0s + row * (cardH + gapS), im = r.spId && XY.bgArt ? XY.bgArt(r.spId) : null;
-        if (im && (im.naturalWidth || im.width)) c.drawImage(shelfMask(im, cardW, cardH), x, y, cardW, cardH);
+        var col = k % cols, row = (k / cols) | 0, x = x0s + col * step, y = y0s + row * (cardH + gapS);
+        var drewPerson = false;
+        if (r.spId && XY.xAvIcon && XY.xAvIcon.isSpecial && XY.xAvIcon.isSpecial(r.spId)) {
+          var side = Math.min(192, Math.min(cardW, cardH) * 0.62);
+          drewPerson = XY.xAvIcon.draw(c, r.spId, x + (cardW - side) / 2, y + cardH * 0.1, side, side);
+        }
+        var im = !drewPerson && r.spId && XY.bgArt ? XY.bgArt(r.spId) : null;
+        if (!drewPerson && im && (im.naturalWidth || im.width)) c.drawImage(shelfMask(im, cardW, cardH), x, y, cardW, cardH);
         else if (r.kind === 'card') {
           var drewCard = XY.ICONINK && r.inkName && XY.ICONINK.draw(c, r.inkName, x + cardW / 2, y + cardH * 0.36, Math.min(cardW, cardH) * 0.5);
           if (!drewCard) {
@@ -23473,7 +23479,7 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
     return i.complete && i.naturalWidth > 0 ? i : null;
   }
   /* 特殊角色的 X 头像：和主菜单（menu_v5 / menu_stage）同一套素材 —— dist 里是内联的 window.XY_X_AVATARS，源码版读 assets/art/x-avatars/<id>.webp；没有 / 没加载好就回退成原来的自绘头像 */
-  function xAv(id) { return pic('xav_' + id, 'assets/art/x-avatars/' + id + '.webp', (window.XY_X_AVATARS || {})[id]); }
+  function xAv(id) { return pic('xav_' + id, 'assets/art/x-avatars/' + id + '.webp'); }
   function xDisc(c, id, cx, cy, r, on) {
     var im = xAv(id); if (!im) return false;
     c.save(); c.fillStyle = 'rgba(58,50,38,0.12)'; c.beginPath(); c.arc(cx + 1, cy + 1.8, r + 1, 0, 6.2832); c.fill(); c.restore();
