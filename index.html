@@ -4312,9 +4312,12 @@ XY.TRAITS = {
     for (i = 1; i < G.heroes.length; i++) { hh = G.heroes[i]; if (hh && !hh.down && !hh.ridden) list.push(hh); }
     vw = (G.view && G.view.w) || 1280; vh = (G.view && G.view.h) || 720;
     if (vh < vw * 0.45 && list.length >= 8) {
-      var gap = Math.min(100, (vw * 0.72) / Math.max(1, list.length - 1));
+      var per = Math.ceil(list.length / 2);
+      var gapX = Math.min(168, Math.max(108, (vw * 0.7) / Math.max(1, per - 1)));
+      var gapY = Math.min(130, Math.max(96, vh * 0.22));
       return list.map(function (hh, k) {
-        return { h: hh, x: tang.x + (k - (list.length - 1) / 2) * gap, y: tang.y };
+        var row = k < per ? 0 : 1, col = row ? k - per : k, count = row ? list.length - per : per;
+        return { h: hh, x: tang.x + (col - (count - 1) / 2) * gapX + (row ? gapX * 0.45 : 0), y: tang.y + (row - 0.5) * gapY };
       });
     }
     return list.map(function (hh, k) {
@@ -10726,6 +10729,8 @@ XY.BGS1={"src": "data:image/webp;base64,UklGRtT1GgBXRUJQVlA4IMj1GgCQwWGdASoAEAAK
   }
   R4.planMapLabels = function (c, G, app) {
     if (!G || !app || !G.gate || !G.camp || !G.heroes || !G.heroes.length) return [];
+    var cssW = app.lw * (app.zoom || 1), cssH = app.lh * (app.zoom || 1);
+    if (cssW < 1100 || cssH < 420) return [];
     var W = app.lw, H = app.lh, z = (app.zoom || 1) * (app.dpr || 1);
     var pOpen = !!(app.partyPanel && XY.party && XY.party.visible(G, app));
     var quiet = !!(G.td && G.td.quiet > G.td.clock);
@@ -10740,7 +10745,7 @@ XY.BGS1={"src": "data:image/webp;base64,UklGRtT1GgBXRUJQVlA4IMj1GgCQwWGdASoAEAAK
       var kx = ca > 0 ? (x1 - W / 2) / ca : (ca < 0 ? (x0 - W / 2) / ca : 1e9);
       var ky = sa > 0 ? (y1 - H / 2) / sa : (sa < 0 ? (y0 - H / 2) / sa : 1e9);
       var span = Math.min(kx, ky), ax0 = W / 2 + ca * span, ay0 = H / 2 + sa * span;
-      var sz = 16, txa = -sa, tya = ca;
+      var sz = 22, txa = -sa, tya = ca;
       c.font = sz + 'px "Ma Shan Zheng","KaiTi","STKaiti",serif';
       var tw = c.measureText(label).width + 8, th = sz + 6;
       var shifts = [0, 70, -70, 140, -140, 220, -220, 320, -320, 440, -440, 580, -580, 760, -760];
@@ -10751,8 +10756,9 @@ XY.BGS1={"src": "data:image/webp;base64,UklGRtT1GgBXRUJQVlA4IMj1GgCQwWGdASoAEAAK
         ay = Math.max(y0, Math.min(y1, ay0 + tya * shifts[si]));
         lx = ax - ca * (34 + inns[ii]);
         ly = ay - sa * (34 + inns[ii]);
-        lx = Math.max(x0 + tw / 2, Math.min(x1 - tw / 2, lx));
-        ly = Math.max(y0 + th / 2, Math.min(y1 - th / 2, ly));
+        lx = Math.max(18 + tw / 2, Math.min(W - 18 - tw / 2, lx));
+        ly = Math.max(18 + th / 2, Math.min(H - 18 - th / 2, ly));
+        ax = Math.max(16, Math.min(W - 16, lx - tw / 2 - 20));
         ar = box(ax, ay, 36, 32);
         lr = box(lx, ly, tw, th);
         hit = areaOf(ar, bodies) + areaOf(lr, bodies);
@@ -10761,7 +10767,7 @@ XY.BGS1={"src": "data:image/webp;base64,UklGRtT1GgBXRUJQVlA4IMj1GgCQwWGdASoAEAAK
         if (!best || score < best.score) best = { score: score, hit: hit, ax: ax, ay: ay, lx: lx, ly: ly, ang: ang, label: label, alert: !!alert, ar: ar, lr: lr, sz: sz };
         if (hit === 0 && shifts[si] === 0 && inns[ii] === 0) break;
       }
-      if (best) marks.push(best);
+      if (best && !best.hit) marks.push(best);
     }
     if (!pOpen && (G.camp.active || (G.tang && G.tang.phase === 'walk')) && !quiet) consider(G.camp.x, G.camp.y, G.campAlert > 0 ? '营地被攻击！' : (G.camp.active ? '营地' : '休息点'), G.campAlert > 0);
     if (!pOpen && tg && !tg.down && !quiet) consider(tg.x, tg.y, (G.breach || G.tdanger) ? '师傅危险！' : '师傅', G.breach || G.tdanger);
