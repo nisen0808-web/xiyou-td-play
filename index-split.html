@@ -2023,7 +2023,7 @@ XY.TRAITS = {
     var e = bgImgs[id];
     if (!e) {
       e = bgImgs[id] = { img: null, ok: false };
-      var src = (window.XY_BG_DATA && window.XY_BG_DATA[id]) || (window.XY_BG_DATA ? null : 'assets/art/bg/' + id + '.webp');
+      var src = (id === 'yuanzhang') ? 'assets/art/battle-hd/yuanzhang.webp' : ((window.XY_BG_DATA && window.XY_BG_DATA[id]) || (window.XY_BG_DATA ? null : 'assets/art/bg/' + id + '.webp'));
       if (!src) return null;
       var im = new Image(); im.onload = function () { e.ok = true; }; im.src = src; e.img = im;
     }
@@ -24527,7 +24527,7 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
           hostBody = { x: drawn.x + hb.x * (hdw / art.iw), y: drawn.y + hb.y * (hdh / art.ih), w: hb.w * (hdw / art.iw), h: hb.h * (hdh / art.ih) };
         }
         var hnSize = land ? Math.min(64, hh * 0.13) : Math.min(34, hw * 0.1);
-        inkName(c, gachaName(host), hx + hw * 0.28, hy + hh * 0.74, hnSize, hw * 0.4, '#1a120c', true);
+        inkName(c, gachaName(host), hx + hw * 0.55, hy + hh * 0.48, hnSize, hw * 0.4, '#1a120c', true);
       }
     } else if (stage) {
       drawScroll(c, scroll.x, scroll.y, scroll.w, scroll.h, !land);
@@ -24552,7 +24552,7 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
           var nmSize = Math.min(land ? 56 : 32, fh * 0.11);
           c.font = nmSize + 'px GachaBrush, KaiTi, STKaiti, serif';
           var nmW = c.measureText(gachaName(row.id)).width;
-          var nmX = fx + fw * 0.5, nmY = fy + fh * 0.9;
+          var nmX = fx + fw * (row.id === 'yuanzhang' ? 0.64 : 0.5), nmY = fy + fh * (row.id === 'yuanzhang' ? 0.5 : 0.9);
           inkName(c, gachaName(row.id), nmX, nmY, nmSize, fw, '#1a120c', true);
           if (row.kind === 'unlock') cinSeal(c, nmX + nmW / 2 + nmSize * 0.7, nmY + nmSize * 0.45, Math.max(18, nmSize * 0.42), '新');
         }
