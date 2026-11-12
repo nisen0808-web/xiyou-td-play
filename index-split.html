@@ -20219,13 +20219,37 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
     return { st: st, sz: sz, names: names, effs: effs, costs: costs, yName: yName, yEff: yEff, yCost: yCost, nameLh: nameLh, effLh: effLh, costLh: costLh, h: h, pipW: pipW };
   }
   XY.skillBody = function (c, G, hi, n, w) { return skillBody(c, G, hi, n, w); };
+  function skillMark(c, n, x, y, sz) {
+    var name = (n && n.name) || '技', seed = 0, i;
+    for (i = 0; i < name.length; i++) seed = (seed + name.charCodeAt(i) * (i + 3)) % 360;
+    c.save();
+    c.translate(x, y);
+    var g = c.createRadialGradient(-sz * 0.08, -sz * 0.1, sz * 0.04, 0, 0, sz * 0.5);
+    g.addColorStop(0, 'hsla(' + seed + ',64%,58%,0.96)');
+    g.addColorStop(0.72, 'hsla(' + ((seed + 32) % 360) + ',46%,40%,0.9)');
+    g.addColorStop(1, 'hsla(' + seed + ',28%,24%,0)');
+    c.fillStyle = g;
+    c.beginPath(); c.arc(0, 0, sz * 0.46, 0, Math.PI * 2); c.fill();
+    c.strokeStyle = 'rgba(36,24,15,0.5)'; c.lineWidth = 1.2;
+    c.beginPath(); c.arc(0, 0, sz * 0.4, 0.3, 5.4); c.stroke();
+    if (!(XY.ICONINK && XY.ICONINK.has && XY.ICONINK.has(name) && XY.ICONINK.draw(c, name, 0, 0, sz * 0.7))) {
+      c.fillStyle = '#24180f';
+      c.font = Math.round(sz * 0.4) + 'px "Ma Shan Zheng","KaiTi",serif';
+      c.textAlign = 'center'; c.textBaseline = 'middle';
+      c.fillText(name.charAt(0), 0, 1);
+    }
+    c.restore();
+  }
   function nodeCard(c, G, app, hi, n, x, y, w, h, col, hov) {
-    var b = skillBody(c, G, hi, n, w), st = b.st, lv = st.lv, locked = st.st === 'locked', maxed = st.st === 'max', can = st.st === 'ok', ov = K.over(x, y, w, h);
+    var b = skillBody(c, G, hi, n, Math.max(48, w - 58)), st = b.st, lv = st.lv, locked = st.st === 'locked', maxed = st.st === 'max', can = st.st === 'ok', ov = K.over(x, y, w, h);
     XY.skillRead = { name: b.sz.name, effect: b.sz.eff, cost: b.sz.cost, level: b.sz.cost };
     if(ov){var wash=c.createLinearGradient(x,y,x+w,y+h);wash.addColorStop(0,'rgba(184,48,15,0.10)');wash.addColorStop(1,'rgba(184,48,15,0)');c.fillStyle=wash;c.fillRect(x,y,w,h);}
-    skillDraw(c, b.names, x + 14, y + b.yName, b.sz.name, true, locked && lv === 0 ? '#9a9486' : T.ink, b.nameLh);
-    skillDraw(c, b.effs, x + 14, y + b.yEff, b.sz.eff, false, locked && lv === 0 ? '#aaa598' : T.inkSoft, b.effLh);
-    skillDraw(c, b.costs, x + 14, y + b.yCost, b.sz.cost, true, maxed ? '#b8860b' : can ? '#2e7d32' : st.st === 'nopts' ? '#9a6a1a' : '#a0705a', b.costLh);
+    var icon = Math.min(48, Math.max(32, Math.min(h - 10, 48)));
+    skillMark(c, n, x + icon * 0.55 + 4, y + icon * 0.55 + 4, icon);
+    var tx = x + icon + 8;
+    skillDraw(c, b.names, tx, y + b.yName, b.sz.name, true, locked && lv === 0 ? '#9a9486' : T.ink, b.nameLh);
+    skillDraw(c, b.effs, tx, y + b.yEff, b.sz.eff, false, locked && lv === 0 ? '#aaa598' : T.inkSoft, b.effLh);
+    skillDraw(c, b.costs, tx, y + b.yCost, b.sz.cost, true, maxed ? '#b8860b' : can ? '#2e7d32' : st.st === 'nopts' ? '#9a6a1a' : '#a0705a', b.costLh);
     K.hit(x, y, w, h, 'node', { hero: hi, id: n.id });
     return { n: n, st: st, hov: ov };
   }
@@ -20240,9 +20264,26 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
     var msg = app.skillMsg && app.skillMsg.until > rt ? app.skillMsg : null;
     K.t('修行 · '+G.points+'点',x0+4,y+22,18,'#a42d19','left',true);K.ink(x0,y+43,106,.4,12);
     var cw = 96, aw = 132;
-    if (port) { K.btn(x0 + 126, y, aw, 44, '自动加点：' + (G.autoPoints ? '开' : '关'), 'autopts', null, { on: G.autoPoints, size: 14 }); K.btn(x0 + w0 - cw, y, cw, 44, '关闭', 'closeSkills', null, { primary: true, size: 16 }); }
+    function autoInk(ax, ay) {
+      c.save();
+      c.font = '16px "Ma Shan Zheng","KaiTi",serif';
+      c.fillStyle = '#5c4a38';
+      c.textAlign = 'left'; c.textBaseline = 'middle';
+      c.fillText('自动加点', ax + 4, ay + 22);
+      c.save();
+      c.translate(ax + 96, ay + 22); c.rotate(-0.08);
+      c.fillStyle = G.autoPoints ? '#a42d19' : 'rgba(164,45,25,0.28)';
+      c.fillRect(-15, -15, 30, 30);
+      c.fillStyle = '#f6efe2';
+      c.font = '14px "Ma Shan Zheng","KaiTi",serif';
+      c.textAlign = 'center';
+      c.fillText(G.autoPoints ? '开' : '关', 0, 1);
+      c.restore(); c.restore();
+      K.hit(ax, ay, aw, 44, 'autopts');
+    }
+    if (port) { autoInk(x0 + 126, y); K.btn(x0 + w0 - cw, y, cw, 44, '关闭', 'closeSkills', null, { primary: true, size: 16 }); }
     else {
-      K.btn(x0 + w0 - cw, y, cw, 44, '关闭', 'closeSkills', null, { primary: true, size: 16 }); K.btn(x0 + w0 - cw - 8 - aw, y, aw, 44, '自动加点：' + (G.autoPoints ? '开' : '关'), 'autopts', null, { on: G.autoPoints, size: 14 });
+      K.btn(x0 + w0 - cw, y, cw, 44, '关闭', 'closeSkills', null, { primary: true, size: 16 }); autoInk(x0 + w0 - cw - 8 - aw, y);
       var mx = x0 + 126, mw2 = w0 - 126 - cw - aw - 24;
       if (msg) K.tf(msg.text, mx + 10, y + 22, mw2, 13.5, msg.bad ? '#c0392b' : '#2e7d32', 'left', true, 11); else { var hint = ['技能点全队共用 · 每位角色 1 条根 + 3 条分支（后半段甲乙二选一）', '技能点全队共用 · 分支后半段甲乙二选一', '技能点全队共用'].filter(function (t, i, a) { return i === a.length - 1 || K.fit(t, mw2 - 10, 12.5, false, 10.5).s === t; })[0]; K.tf(hint, mx + 10, y + 22, mw2, 12.5, T.inkSoft, 'left', false, 10.5); }
     }
@@ -20316,10 +20357,11 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
       for (d0 = 0; d0 < rowsN; d0++) {
         var g0 = groups[d0] || [], nat = 72, gi;
         for (gi = 0; gi < g0.length; gi++) nat = Math.max(nat, g0[gi].h);
-        var nw0 = Math.min(w0 * (g0.length < 2 ? 0.42 : 0.34), (w0 - 16) / Math.max(1, g0.length) - 10);
+        var gap0 = g0.length > 2 ? 40 : 28;
+        var nw0 = g0.length < 2 ? Math.min(w0 * 0.46, 320) : (w0 - Math.max(0, g0.length - 1) * gap0) / g0.length;
         var nh0 = Math.max(nat, Math.min(148, Math.max(nat, band - 8)));
-        var total0 = g0.length * nw0 + Math.max(0, g0.length - 1) * 14, xs0 = x0 + (w0 - total0) / 2;
-        g0.forEach(function (p, k) { p.x = xs0 + k * (nw0 + 14); p.y = gy + d0 * band + Math.max(2, (band - nh0) / 2); p.w = nw0; p.h = nh0; });
+        var total0 = g0.length * nw0 + Math.max(0, g0.length - 1) * gap0, xs0 = x0 + (w0 - total0) / 2;
+        g0.forEach(function (p, k) { p.x = xs0 + k * (nw0 + gap0); p.y = gy + d0 * band + Math.max(2, (band - nh0) / 2); p.w = nw0; p.h = nh0; });
       }
     } else if (layout.length === 1) {
       layout[0].w = Math.min(layout[0].w, w0 * 0.72);
