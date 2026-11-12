@@ -23752,119 +23752,71 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
     return out;
   }
 
-  /* —— 携带常驻：狂野水墨立绘卡，书法名写在画上。未获得的隐藏人物不显示。 —— */
-  function tile(c, st, a, tl, x, y, w, h, d, cur, out) {
-    var pad = 3, bx = x + pad, by = y + pad, bw = Math.max(8, w - pad * 2), bh = Math.max(8, h - pad * 2);
-    (XY.departCards = XY.departCards || []).push({ id: tl.id, x: x, y: y, w: w, h: h });
-    var hv = st.over(x, y, w, h), id = tl.id, on = id === null ? !cur : cur === id;
-    var hit = function (act, ex) { st.hit(x, y, w, h, act, ex); };
-    function paper(lock) {
+  /* 携带：圆形彩色头像，书法名字紧贴在右侧，没有卡框和卡底。 */
+  function tile(c, st, a, tl, x, y, cellW, d, cur, out) {
+    var id = tl.id, on = id === null ? !cur : cur === id;
+    var cx = x + d / 2, cy = y + d / 2;
+    (XY.departCards = XY.departCards || []).push({ id: id, x: x, y: y, w: cellW, h: d });
+    function inkDisk(fill, ring) {
       c.save();
-      var x0=bx, y0=by, x1=bx+bw, y1=by+bh;
-      c.beginPath();
-      c.moveTo(x0+8, y0+2);
-      c.quadraticCurveTo((x0+x1)/2, y0-4, x1-6, y0+3);
-      c.quadraticCurveTo(x1+3, (y0+y1)/2, x1-4, y1-6);
-      c.quadraticCurveTo((x0+x1)/2, y1+4, x0+8, y1-3);
-      c.quadraticCurveTo(x0-3, (y0+y1)/2, x0+8, y0+2);
-      c.closePath();
-      c.fillStyle = lock ? 'rgba(90,78,58,0.16)' : (on ? 'rgba(168,50,36,0.10)' : 'rgba(244,236,214,0.72)');
-      c.fill();
-      c.lineWidth = on ? 3.2 : 2.4;
-      c.strokeStyle = 'rgba(42,32,22,0.82)';
-      c.stroke();
-      c.lineWidth = 1.1; c.strokeStyle = 'rgba(42,32,22,0.35)';
-      c.stroke();
+      c.beginPath(); c.arc(cx, cy, d * 0.48, 0, Math.PI * 2); c.closePath();
+      c.fillStyle = fill; c.fill();
+      if (ring) { c.lineWidth = 1.4; c.strokeStyle = ring; c.stroke(); }
       c.restore();
     }
-    function cover(im) {
-      if (!im) return;
-      var iw = im.naturalWidth || im.width, ih = im.naturalHeight || im.height;
-      if (!iw || !ih) return;
-      var ir = iw / ih, br = bw / bh, dw, dh, dx, dy;
-      var scFit = Math.min(bw / iw, bh / ih);
-      dw = iw * scFit; dh = ih * scFit; dx = bx + (bw - dw) / 2; dy = by + bh - dh;
+    function beside(text, y0, size, col) {
+      var face = '"Ma Shan Zheng","KaiTi",serif', sz = size, maxW = Math.max(8, cellW - d - 8);
       c.save();
-      c.beginPath();
-      c.moveTo(bx+8, by+2); c.quadraticCurveTo(bx+bw/2, by-3, bx+bw-6, by+3);
-      c.quadraticCurveTo(bx+bw+2, by+bh/2, bx+bw-4, by+bh-5);
-      c.quadraticCurveTo(bx+bw/2, by+bh+3, bx+6, by+bh-3);
-      c.quadraticCurveTo(bx-2, by+bh/2, bx+8, by+2);
-      c.clip();
-      c.drawImage(im, dx, dy, dw, dh);
-      var g = c.createLinearGradient(0, by + bh * 0.62, 0, by + bh);
-      g.addColorStop(0, 'rgba(244,234,212,0)');
-      g.addColorStop(1, 'rgba(244,234,212,0.82)');
-      c.fillStyle = g; c.fillRect(bx, by + bh * 0.62, bw, bh * 0.38);
+      c.beginPath(); c.rect(x + d + 4, y - 2, maxW + 2, d + 4); c.clip();
+      c.font = sz + 'px ' + face; c.textAlign = 'left'; c.textBaseline = 'middle';
+      while (sz > 10 && c.measureText(text).width > maxW) { sz -= 0.5; c.font = sz + 'px ' + face; }
+      c.fillStyle = col; c.fillText(text, x + d + 6, y0);
       c.restore();
     }
-    function nameOn(label, col) {
-      var nm = id && !tl.xc && stageName(id);
-      if (nm && nm.img) {
-        var nmH = Math.min(bh * 0.2, 22), nw = nm.w * nmH / nm.h, k2 = Math.min(1, (bw - 8) / nw);
-        var dx = bx + (bw - nw * k2) / 2, dy = by + bh - nmH * k2 - 6, dw = nw * k2, dh = nmH * k2;
-        c.drawImage(nm.img, dx, dy, dw, dh);
-        var m = c.getTransform(), sc = m.a || 1;
-        function dev(x, y, w, h) { return { x0: m.e + x * sc, y0: m.f + y * sc, x1: m.e + (x + w) * sc, y1: m.f + (y + h) * sc }; }
-        var sp = nm.img._split;
-        if (!sp) {
-          var cv = document.createElement('canvas'); cv.width = nm.img.naturalWidth; cv.height = nm.img.naturalHeight;
-          var g = cv.getContext('2d', { willReadFrequently: true }); g.drawImage(nm.img, 0, 0);
-          var sw = cv.width, sh = cv.height, data = g.getImageData(0, 0, sw, sh).data, anyL = sw, anyR = 0, sealL = sw, sealR = -1, yy, xx, ii;
-          for (yy = 0; yy < sh; yy++) for (xx = 0; xx < sw; xx++) {
-            ii = (yy * sw + xx) * 4; if (data[ii + 3] < 24) continue;
-            if (xx < anyL) anyL = xx; if (xx > anyR) anyR = xx;
-            if (data[ii] > 150 && data[ii] > data[ii + 1] + 35 && data[ii] > data[ii + 2] + 35) { if (xx < sealL) sealL = xx; if (xx > sealR) sealR = xx; }
-          }
-          sp = nm.img._split = { w: sw, anyL: anyL, anyR: anyR, sealL: sealR >= sealL ? sealL : null, sealR: sealR >= sealL ? sealR : null };
-        }
-        function part(x0, x1) { return dev(dx + x0 / sp.w * dw, dy, (x1 - x0) / sp.w * dw, dh); }
-        (XY.departPlates = XY.departPlates || []).push({
-          id: id, box: dev(dx, dy, dw, dh), cell: dev(bx, by, bw, bh),
-          glyph: part(sp.anyL, (sp.sealL == null ? sp.anyR + 1 : sp.sealL)),
-          seal: sp.sealL == null ? null : part(sp.sealL, sp.sealR + 1)
-        });
-        return;
+    function ring() {
+      if (!on) return;
+      c.save(); c.strokeStyle = '#a42d19'; c.lineWidth = Math.max(2, d * 0.055); c.lineJoin = 'round';
+      c.beginPath();
+      var i, ang, rr, px, py;
+      for (i = 0; i <= 40; i++) {
+        ang = i / 40 * Math.PI * 2;
+        rr = d * 0.46 + Math.sin(ang * 3 + 0.6) * d * 0.012;
+        px = cx + Math.cos(ang) * rr; py = cy + Math.sin(ang) * rr;
+        if (!i) c.moveTo(px, py); else c.lineTo(px, py);
       }
-      var nsz = Math.min(20, Math.max(11, bh * 0.2)), face = '"Ma Shan Zheng","KaiTi",serif';
-      c.save(); c.font = nsz + 'px ' + face; c.textAlign = 'center'; c.textBaseline = 'middle';
-      while (nsz > 9 && c.measureText(label).width > bw - 6) { nsz -= 0.5; c.font = nsz + 'px ' + face; }
-      c.fillStyle = col || '#24180f'; c.fillText(label, bx + bw / 2, by + bh - nsz * 0.65); c.restore();
+      c.closePath(); c.stroke(); c.restore();
     }
     if (id === null) {
-      kt(c, '不带·独行', bx + bw / 2, by + bh * 0.5, Math.min(18, bw * 0.22), '#5c4a38', 'center', bw - 8, false);
-      hit('carryPick', { id: null }); return;
+      inkDisk('rgba(92,74,56,0.2)', null);
+      beside('不带', cy, Math.min(18, d * 0.38), '#5c4a38');
+      if (on) ring();
+      st.hit(x, y, cellW, d, 'carryPick', { id: null });
+      return;
     }
     if (tl.xc && !tl.rec) {
       var createOpen = !S.xcharOpen || S.xcharOpen();
-      paper(!createOpen);
-      kt(c, createOpen ? '自建' : '锁', bx + bw / 2, by + bh * 0.46, Math.min(22, bw * 0.28), RED, 'center', bw - 8, true);
-      hit(createOpen ? 'xchar' : 'xcharLocked'); return;
+      inkDisk(createOpen ? 'rgba(168,50,36,0.12)' : 'rgba(92,74,56,0.12)', null);
+      beside(createOpen ? '自建' : '未得', cy, Math.min(18, d * 0.38), createOpen ? '#a42d19' : '#8a7a68');
+      st.hit(x, y, cellW, d, createOpen ? 'xchar' : 'xcharLocked');
+      return;
     }
-    var def = XY.SP_BY[id], xcLock = !!(tl.xc && tl.rec && S.xcharOpen && !S.xcharOpen()), owned = xcLock ? false : (tl.xc ? true : S.spOwned(id));
-    paper(!owned);
+    var def = XY.SP_BY[id], xcLock = !!(tl.xc && tl.rec && S.xcharOpen && !S.xcharOpen());
+    var owned = xcLock ? false : (tl.xc ? true : S.spOwned(id));
+    var name = tl.xc ? ((tl.rec && tl.rec.name) || '自建') : ((def && def.name) || '');
     c.save();
-    if (XY.xAvIcon && XY.xAvIcon.isSpecial && XY.xAvIcon.isSpecial(id)) {
-      var side = Math.min(bw, bh) * 0.72;
-      XY.xAvIcon.draw(c, id, bx + (bw - side) / 2, by + bh * 0.06, side, side);
-    } else cover(XY.bgArt && XY.bgArt(id));
+    if (!owned) c.globalAlpha = 0.4;
+    var drew = XY.xAvIcon && XY.xAvIcon.isSpecial && XY.xAvIcon.isSpecial(id) && XY.xAvIcon.draw(c, id, x, y, d, d);
+    if (!drew) inkDisk(owned ? 'rgba(92,74,56,0.16)' : 'rgba(92,74,56,0.1)', null);
     c.restore();
-    nameOn(tl.xc ? ((tl.rec && tl.rec.name) || '自建') : (def && def.name) || '', owned ? INK : SOFT);
-    if (!owned) {
-      var lk = Math.max(14, Math.round(Math.min(bw, bh) * 0.22));
-      lk = Math.min(lk, Math.max(12, bw - 6), Math.max(12, bh - 6));
-      var lx = bx + bw - lk - 3, ly = by + 3;
-      kt(c, '未得', lx + lk / 2, ly + lk / 2, Math.max(12, lk * 0.7), '#5c4a38', 'center', lk + 8, false);
-      (XY.departSeals = XY.departSeals || []).push({ id: id, x: lx, y: ly, w: lk, h: lk, card: { x: bx, y: by, w: bw, h: bh } });
+    ring();
+    if (owned) beside(name, cy, Math.min(18, d * 0.36), '#24180f');
+    else {
+      beside(name, cy - d * 0.16, Math.min(16, d * 0.32), '#8a7a68');
+      beside('未得', cy + d * 0.18, Math.min(13, d * 0.26), '#8a7a68');
     }
-    if (on && owned) {
-      var ss = Math.max(14, Math.round(Math.min(bw, bh) * 0.2));
-      ss = Math.min(ss, Math.max(12, bw - 6), Math.max(12, bh - 6));
-      VU.drawSeal(c, bx + bw - ss - 3, by + 3, ss, ss, '携', { style: 'solid', col: RED, sz: Math.round(ss * 0.66), rot: 0.04 });
-    }
-    if (!owned && tl.xc) { hit('xcharLocked'); return; }
-    hit('carryPick', { id: id });
-    if (hv) out.hover = id;
+    if (!owned && tl.xc) { st.hit(x, y, cellW, d, 'xcharLocked'); return; }
+    st.hit(x, y, cellW, d, 'carryPick', { id: id });
+    if (st.over(x, y, cellW, d)) out.hover = id;
   }
 
   /* —— 立绘：当前携带特殊角色的定妆大图（XY.bgArt = assets/art/bg/<id>.webp，与选关页 / cut-in 同套；自建走 XY.bgArt→xchar.portraitBare）
@@ -23947,7 +23899,7 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
     var cur = S.carryId(), out = { hover: null }, rows = Math.ceil(tl.length / cols), k;
     for (k = 0; k < tl.length; k++) {
       var row = Math.floor(k / cols), inRow = Math.min(cols, tl.length - row * cols), x0 = x + (w - inRow * cellW) / 2;
-      tile(c, st, a, tl[k], x0 + (k % cols) * cellW, y + row * (cellH + rowGap), cellW, cellH, d, cur, out);
+      tile(c, st, a, tl[k], x0 + (k % cols) * cellW, y + row * (cellH + rowGap), cellW, cellH, cur, out);
     }
     return out;
   }
@@ -25036,16 +24988,23 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
     if (land) {
       // —— 底：携带常驻一行
       tl = tiles(a, true); nt = tl.length;
-      cellW = Math.min(108, Math.max(72, (cw - 28) / nt));
-      cellH = Math.round(Math.min(150, Math.max(100, cellW / 0.72)));
-      if (ch < 640) cellH = Math.round(Math.min(cellH, Math.max(72, ch * 0.2)));
-      if (cellH > ch * 0.3) { cellH = Math.round(ch * 0.3); cellW = Math.min(cellW, cellH * 0.72); }
-      cellW = Math.min(cellW, Math.max(64, (cw - 28) / nt));
-      d = cellH; nameH = 0; cols = nt;
-      var labH = 18, stripY = ch - 4 - cellH - labH;
+      cellH = tiny ? 34 : Math.min(52, Math.max(34, Math.round(ch * 0.1)));
+      cellW = (cw - 28) / Math.max(1, nt);
+      cols = nt; rows = 1;
+      var rowGap = 0, labH = tiny ? 0 : 20;
+      if (cellW - cellH < 56) {
+        cols = Math.ceil(nt / 2); rows = Math.ceil(nt / cols);
+        cellW = (cw - 28) / cols;
+        rowGap = 4;
+        cellH = Math.max(30, Math.min(tiny ? 32 : 42, Math.floor((Math.min(ch * 0.22, 92) - rowGap) / rows)));
+      }
+      d = cellH; nameH = 0;
+      var stripBody = rows * cellH + (rows - 1) * rowGap;
+      var stripY = ch - (tiny ? 10 : 6) - stripBody - labH;
       if (stripY < top + 120) stripY = top + 120;
       d = cellH;
-      VU.washE(c, cw / 2, stripY + (labH + cellH) / 2 + 4, cw * 0.62, (labH + cellH) * 0.75, '250,244,228', 0.8);
+      c.save(); c.fillStyle = '#f7f1e4'; c.fillRect(0, stripY - 2, cw, ch - stripY + 4); c.restore();
+      VU.washE(c, cw / 2, stripY + (labH + stripBody) / 2 + 4, cw * 0.62, (labH + stripBody) * 0.75, '250,244,228', 0.8);
       taper(c, 24, stripY - 2, cw - 24, 2.2, 0.32);
       function noteBox(label, x, y, sz, al, maxW) {
         c.font = 'bold ' + sz + 'px ' + KAI;
@@ -25067,10 +25026,10 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
         kt(c, note, cw - 14, stripY + 9, 11.5, SOFT, 'right', cw * 0.3, false);
         noteBox(note, cw - 14, stripY + 9, 11.5, 'right', cw * 0.3);
       }
-      out = carryStrip(c, st, a, tl, 12, stripY + labH, cw - 24, cols, cellW, cellH, d, 0);
-      geo.tiles = nt; geo.strip = { y: stripY, h: labH + cellH };
+      out = carryStrip(c, st, a, tl, 12, stripY + labH, cw - 24, cols, cellW, cellH, d, rowGap);
+      geo.tiles = nt; geo.strip = { y: stripY, h: labH + stripBody };
       // —— 中：左 竖卡 + 说明；右 立绘 + 按钮
-      var y1 = stripY - 10, LW = Math.round(cw * (cw >= 1000 ? 0.58 : 0.6)), detMin = Math.round(Math.min(150, 84 * s));
+      var y1 = stripY - (tiny ? 22 : 10), LW = Math.round(cw * (cw >= 1000 ? 0.58 : 0.6)), detMin = Math.round(Math.min(150, 84 * s));
       // 说明行数（sweep09 已通关会多一行星级）：按最小 13px 行距给够，竖卡相应矮一点，免得「终点 / 最快用时」被挤掉
       var nDet = (cur0.k === 'boss' ? 3 : 4) + (cur0.k !== 'boss' && cur0.cleared && XY.sweep09 ? 1 : 0);
       detMin = Math.min(132, Math.max(96, Math.round(18 + nDet * 18)));
@@ -25097,12 +25056,6 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
         if (xL + rowW > cw - 10) xL = Math.max(8, cw - 10 - rowW);
         var zB = a.zoom || 1, sealR = (22 + 132 + 10 + 120) * zB + 10;
         if (xL < sealR) xL = sealR;
-        var yL = Math.max(gy + gh + 18, stripY + 9);
-        if (yL + 8 > stripY + labH) yL = stripY + 9;
-        kt(c, '携带常驻', xL, yL, 13, RED, 'left', wCarry + 4);
-        noteBox('携带常驻', xL, yL, 13, 'left', wCarry + 4);
-        kt(c, info0, xL + wCarry + gapL, yL, 12, INK, 'left', cw - (xL + wCarry + gapL) - 8, false);
-        noteBox(info0, xL + wCarry + gapL, yL, 12, 'left', cw - (xL + wCarry + gapL) - 8);
         var z2 = a.zoom || 1;
         XY.departDk = { top: Math.max(250, (a.lh || 0) - 250) * z2, bottom: Math.max(250, (a.lh || 0) - 250) * z2 + 56 * z2, right: sealR };
       }
@@ -25114,17 +25067,13 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
       VU.washE(c, cw / 2, linkY + 22, cw * 0.6, 34, '250,244,228', 0.8);
       lb.forEach(function (b, k) { weak(mg + k * (lw3 + 6), linkY, lw3, b[0], b[1]); });
       tl = tiles(a, true); nt = tl.length;
-      var reserve = 56 + 96 + 64 + 44 + 10 + 58 + 16;
-      var maxStrip = Math.max(108, linkY - 8 - reserve);
-      cols = Math.min(nt, Math.max(3, Math.floor((cw - 2 * mg) / 78)));
+      cols = Math.min(nt, cw < 460 ? 2 : 3);
       rows = Math.ceil(nt / cols);
-      var rg = 4, labHp = 36;
-      cellH = Math.floor((maxStrip - labHp - Math.max(0, rows - 1) * rg) / Math.max(1, rows));
-      if (cellH < 64 && cols < nt) { cols = Math.min(nt, cols + 2); rows = Math.ceil(nt / cols); cellH = Math.floor((maxStrip - labHp - Math.max(0, rows - 1) * rg) / rows); }
       cellW = (cw - 2 * mg) / cols;
-      cellH = Math.max(48, Math.min(118, cellH, Math.floor(cellW / 0.62)));
+      cellH = Math.min(52, Math.max(34, cellW * 0.42));
+      if (cellW - cellH < 34) cellH = Math.max(28, cellW - 36);
+      var rg = 8, labHp = 36;
       var stripH = labHp + rows * cellH + (rows - 1) * rg;
-      if (stripH > maxStrip) { cellH = Math.max(44, Math.floor((maxStrip - labHp - (rows - 1) * rg) / rows)); stripH = labHp + rows * cellH + (rows - 1) * rg; }
       d = cellH; nameH = 0;
       var stripYp = linkY - 8 - stripH;
       VU.washE(c, cw / 2, stripYp + stripH / 2, cw * 0.7, stripH * 0.7, '250,244,228', 0.8);
