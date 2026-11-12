@@ -17810,7 +17810,7 @@ XY.XC_TPL={"scholar":{"w":310,"h":520,"foot":[182,516],"head":[182,45,32],"kb":5
     if (tab === 'fb') {
       txt(c, '买下就永久解锁，之后开局可以带；击败洞主得到的专属法宝不在这里卖（留给你自己打）', 44, gy - 8, 13, T.inkSoft, 'left', false);
       if (!list.length) txt(c, '能买的法宝 / 灵物都已解锁。其余的要靠击败洞主得到。', W / 2, gy + 120, 20, T.inkSoft, 'center', true);
-    } else txt(c, '天兵卡：张数越多卡等级越高（1 张 Lv1，3 张 Lv2，6 张 Lv3）；每次买 1 张', 44, gy - 8, 13, T.inkSoft, 'left', false);
+    } else txt(c, '天兵卡：一张一级，三张二级，六张三级。每次买一张。', 44, gy - 8, 18, T.ink, 'left', true);
     gy += 8;
     for (i = 0; i < list.length; i++) {
       var r = list[i], x = gx + (i % cols) * (gw + 16), y = gy + Math.floor(i / cols) * (gh - 30 + 14), h = gh - 30, can = S.data.lingshi >= r.price && !r.full;
@@ -17827,7 +17827,7 @@ XY.XC_TPL={"scholar":{"w":310,"h":520,"foot":[182,516],"head":[182,45,32],"kb":5
         var td = XY.TOWERS[r.type];
         c.fillStyle = td.color; c.beginPath(); c.arc(x + 48, y + 58, 30, 0, PI2); c.fill(); if (!(XY.ICONINK && XY.ICONINK.sol(c, r.type, x + 48, y + 52, 64))) txt(c, td.name.charAt(0), x + 48, y + 59, 30, '#fff', 'center', true);
         txt(c, '天兵卡 · ' + td.name, x + 94, y + 34, 20, T.ink, 'left', true);
-        txt(c, '已有 ' + r.cards + ' 张' + (r.lv ? ' · Lv' + r.lv : ' · 还没解锁'), x + 94, y + 60, 13, '#a8700a', 'left', true);
+        txt(c, '已有 ' + r.cards + ' 张' + (r.lv ? ' · ' + (['','一','二','三'][r.lv] || r.lv) + '级' : ' · 还没解锁'), x + 94, y + 60, 16, '#24180f', 'left', true);
         txt(c, r.full ? '已满级' : '造价 ' + td.cost + ' 金币', x + 94, y + 84, 12, T.inkSoft, 'left', false);
         sbtn(c, app, x + 16, y + h - 50, gw - 32, 38, r.full ? '已满级' : '买 1 张 ' + r.price + ' 灵石' + (can ? '' : '（不够）'), 'shopBuySol', { t: r.type }, { primary: can, off: !can, size: 16 });
       }
@@ -19926,7 +19926,7 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
       if (VU0 && VU0.drawBrush) VU0.drawBrush(c, f.x, f.y + f.h - 42, Math.max(80, f.w - sealW - 24), 34, note, { sz: 14, vh: 26 });
       P.end(c);
     } else {
-    var cols = tab === 'sol' ? (port ? 2 : Math.min(5, Math.max(1, items.length))) : (tab === 'fb' ? (port ? 2 : 4) : (port ? 2 : 3));
+    var cols = tab === 'sol' ? (port ? 2 : Math.min(4, Math.max(2, Math.ceil(Math.max(1, items.length) / 2)))) : (tab === 'fb' ? (port ? 2 : 4) : (port ? 2 : 3));
     var rowsN = Math.max(1, Math.ceil(Math.max(1, Math.min(items.length || 1, (tab === 'sol' ? items.length : (port ? cols * 3 : cols * 2)))) / cols));
     if (!items.length) rowsN = 1;
     var per = cols * rowsN;
@@ -19935,7 +19935,7 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
     var ctrlY = f.y + f.h - 8 - 44;
     var noteY = (needPager || showBuy) ? ctrlY - 22 : f.y + f.h - 16;
     var gridTop = (port ? ty0 + 54 : f.y + 8) + 28;
-    c.save(); c.font = '16px "Ma Shan Zheng","KaiTi",serif'; c.fillStyle = '#24180f'; c.textAlign = 'left'; c.textBaseline = 'middle'; c.fillText(note, f.x + 8, gridTop - 16); c.restore();
+    c.save(); c.font = (tab === 'sol' ? 22 : 16) + 'px "Ma Shan Zheng","KaiTi",serif'; c.fillStyle = '#24180f'; c.textAlign = 'left'; c.textBaseline = 'middle'; c.fillText(note, f.x + 8, gridTop - 16); c.restore();
     var gridBot = noteY - 18;
     var gap = port ? 8 : 14;
     var from = P.pager(items.length, per, 'shop-' + tab, f.x, ctrlY, f.w, true);
@@ -19943,7 +19943,7 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
     var shownN = Math.max(1, Math.min(items.length || 1, cols * rowsN));
     var rowsUsed = Math.max(1, Math.ceil(shownN / cols));
     var cardW = Math.floor((availW - gap * (cols - 1)) / cols);
-    var cardH = Math.min(300, Math.floor((availH - gap * (rowsUsed - 1)) / rowsUsed));
+    var cardH = Math.floor((availH - gap * (rowsUsed - 1)) / rowsUsed); if (tab !== 'sol') cardH = Math.min(300, cardH);
     var gridW = cols * cardW + gap * (cols - 1);
     var x0 = f.x + Math.max(0, Math.round((f.w - gridW) / 2));
     function inkName(text, x, y, size, col, maxW) {
@@ -20008,9 +20008,15 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
     }
     function inkShard(x, y, w, h) { inkWord(x, y, w, h, '碎'); }
     function inkRefresh(x, y, w, h) { inkWord(x, y, w, h, '换'); }
-    items.slice(from, from + per).forEach(function (r, k) {
+    var shown = items.slice(from, from + per);
+    shown.forEach(function (r, k) {
       var col = k % cols, row = Math.floor(k / cols);
-      var x = x0 + col * (cardW + gap), y = gridTop + row * (cardH + gap), w = cardW, h = cardH;
+      var inRow = Math.min(cols, shown.length - row * cols);
+      var w = cardW, x = x0 + col * (cardW + gap), y = gridTop + row * (cardH + gap), h = cardH;
+      if (tab === 'sol' && inRow < cols) {
+        w = Math.floor((availW - gap * (inRow - 1)) / inRow);
+        x = f.x + col * (w + gap);
+      }
       var dim = r.sold || (r.btn && r.btn.off);
       torn(x, y, w, h, 20 + k * 3);
       c.save();
@@ -20041,8 +20047,10 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
       inkName(name, x + w / 2, nameY, nameSz, '#24180f', w - 16);
       if (r.kind === 'sol') {
         var td = XY.TOWERS[r.sol];
-        inkName(td ? td.desc : (r.sub || ''), x + w / 2, subY, h < 150 ? 11 : Math.max(13, Math.min(15, w * 0.065)), '#3a2a1c', w - 12);
-        inkName('持有 ' + (r.cards || 0) + ' 张' + (r.lv ? ' · Lv' + r.lv : ' · 还没解锁'), x + w / 2, ownY, h < 150 ? 12 : 15, '#24180f', w - 12);
+        var desc = String(td ? td.desc : (r.sub || '')).replace(/BOSS/g, '头目');
+        inkName(desc, x + w / 2, subY, h < 150 ? 15 : Math.max(18, Math.min(22, w * 0.1)), '#3a2a1c', w - 12);
+        var cnLv = ['', '一', '二', '三', '四', '五'];
+        inkName('持有 ' + (r.cards || 0) + ' 张' + (r.lv ? ' · ' + (cnLv[r.lv] || r.lv) + '级' : ' · 还没解锁'), x + w / 2, ownY, h < 150 ? 16 : 20, '#24180f', w - 12);
       } else {
         if (r.sub) inkName(String(r.sub), x + w / 2, subY, h < 150 ? 11 : Math.max(13, Math.min(16, w * 0.07)), '#3a2a1c', w - 12);
         inkName(r.full ? '已解锁' : '未解锁', x + w / 2, ownY, h < 150 ? 12 : 15, r.full ? '#2f7d3b' : '#a42d19', w - 12);
