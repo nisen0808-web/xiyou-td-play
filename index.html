@@ -23716,12 +23716,13 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
     VU.washE(c, x + w * 0.45, y + h * 0.5, w * 0.62, h * 0.7, '250,244,228', 0.75);
     kt(c, t, x + 2, y + ts * 0.6, ts, '#2b1c08', 'left', w - 4);
     taper(c, x, y + ts * 1.25, x + Math.min(w * 0.7, 260 * s), 2.6, 0.45);
-    yy = y + ts * 1.25 + 6 + lh * 0.5; budget = Math.max(budget, 1);
-    var drawn = 0;
+    yy = y + ts * 1.25 + 6 + lh * 0.5;
+    var bottom = y + h - fz * 0.55, drawn = 0;
     lines.forEach(function (l, i) {
-      var left = lines.length - i - 1, room = budget - left;                         // 给后面的每条至少留 1 行
-      if (room < 1) return;
-      var used = VU.wrap(c, l[0], x + 2, yy, w - 4, lh, fz, l[1], l[2], Math.min(room, rows(l, i, fz, cap))); yy += used; budget -= Math.max(1, Math.round(used / lh)); drawn++;
+      var n = rows(l, i, fz, cap), last = yy + (n - 1) * lh;
+      if (last > bottom) return;
+      var used = VU.wrap(c, l[0], x + 2, yy, w - 4, lh, fz, l[1], l[2], n);
+      yy += used; drawn++;
     });
     DP.detFit.drawn = drawn;
     return go;
@@ -25057,10 +25058,6 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
         if (xL < sealR) xL = sealR;
         var z2 = a.zoom || 1;
         XY.departDk = { top: Math.max(250, (a.lh || 0) - 250) * z2, bottom: Math.max(250, (a.lh || 0) - 250) * z2 + 56 * z2, right: sealR };
-      }
-      if (tiny) {
-        c.save(); c.fillStyle = '#f7f1e4'; c.fillRect(0, stripY - 16, cw, ch - stripY + 18); c.restore();
-        out = carryStrip(c, st, a, tl, 12, stripY + labH, cw - 24, cols, cellW, cellH, d, rowGap);
       }
       geo.go = { act: go.act, x: gx, y: gy, w: gw, h: gh }; geo.bottom = ch - 4;
     } else {
