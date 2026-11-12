@@ -834,81 +834,85 @@
     c.clearRect(0, 0, W, H);
     c.fillStyle = '#f3ead6';
     c.fillRect(0, 0, W, H);
-    var mist = c.createRadialGradient(W * 0.5, H * 0.82, 6, W * 0.5, H * 0.7, Math.max(W, H) * 0.8);
-    mist.addColorStop(0, 'rgba(78,58,38,0.13)');
-    mist.addColorStop(0.5, 'rgba(78,58,38,0.05)');
+    var mist = c.createRadialGradient(W * 0.42, H * 0.78, 8, W * 0.48, H * 0.62, Math.max(W, H) * 0.72);
+    mist.addColorStop(0, 'rgba(78,58,38,0.14)');
+    mist.addColorStop(0.55, 'rgba(78,58,38,0.05)');
     mist.addColorStop(1, 'rgba(78,58,38,0)');
     c.fillStyle = mist;
     c.fillRect(0, 0, W, H);
-    var ids = [G.partner || 'heyuxi', 'wukong', 'niumo'];
-    var labels = [NAMES[ids[0]] || '', '孙悟空', '牛魔王'];
-    var asps = ids.map(function (id) {
+    var leftId = G.partner || 'heyuxi';
+    var ids = [leftId, 'wukong', 'niumo'];
+    var labels = [NAMES[leftId] || '', '孙悟空', '牛魔王'];
+    function asp(id) {
       var im = stillNode(id);
       return im && im.naturalHeight ? im.naturalWidth / im.naturalHeight : 0.8;
-    });
-    var sumA = asps[0] + asps[1] + asps[2];
-    var nameH = Math.max(16, Math.min(32, H * 0.07));
-    var margin = 6, foot = H - Math.max(3, H * 0.01);
-    var nameBand = nameH + 10;
-    var maxH = Math.max(40, foot - nameBand);
-    var avail = W - margin * 2;
-    var h = Math.min(maxH, avail / sumA);
-    if (h < maxH * 0.92) {
-      var cap = H < 360 ? 0.16 : 0.22;
-      var overlap = Math.min(cap, Math.max(0, (sumA * maxH * 0.94 - avail) / (sumA * maxH * 0.94)));
-      if (overlap > 0) h = Math.min(maxH, avail / (sumA * (1 - overlap * 0.5)));
     }
-    var ws = asps.map(function (a) { return a * h; });
-    var gaps = (avail - (ws[0] + ws[1] + ws[2])) / 2;
-    var x0 = margin + ws[0] / 2;
-    var xs = [x0, x0 + ws[0] / 2 + gaps + ws[1] / 2, x0 + ws[0] / 2 + ws[1] + gaps * 2 + ws[2] / 2];
+    var aL = asp(leftId), aW = asp('wukong'), aN = asp('niumo');
+    var nameH = Math.max(15, Math.min(30, H * 0.085, W * 0.045));
+    var margin = 8, foot = H - Math.max(2, H * 0.012);
+    var maxH = Math.max(48, foot - nameH - 4);
+    var avail = W - margin * 2;
+    var pairOverlap = 0.14, duelGap = Math.max(nameH * 1.7, 28);
+    function pairWidth(h) { return h * (aL + aW * (1 - pairOverlap)); }
+    function totalWidth(h) { return pairWidth(h) + duelGap + h * aN; }
+    var h = maxH;
+    if (totalWidth(h) > avail) h = avail / (aL + aW * (1 - pairOverlap) + aN + duelGap / maxH);
+    h = Math.max(36, Math.min(maxH, h));
+    duelGap = Math.max(nameH * 1.6, Math.min(duelGap, avail - pairWidth(h) - h * aN));
+    if (duelGap < nameH) duelGap = nameH;
+    if (totalWidth(h) > avail) h = (avail - duelGap) / (aL + aW * (1 - pairOverlap) + aN);
+    var wL = h * aL, wW = h * aW, wN = h * aN;
+    var block = pairWidth(h) + duelGap + wN;
+    var xL = margin + Math.max(0, (avail - block) / 2) + wL / 2;
+    var xW = xL + wL / 2 + wW * (0.5 - pairOverlap);
+    var xN = xW + wW * (0.5 - pairOverlap * 0.15) + duelGap + wN / 2;
     var top = foot - h;
+    var groundL = xL - wL * 0.35, groundR = xN + wN * 0.35;
     c.save();
-    c.fillStyle = 'rgba(42,32,22,0.15)';
+    c.fillStyle = 'rgba(42,32,22,0.16)';
     c.beginPath();
-    c.ellipse(W / 2, foot - 1, Math.max(ws[0], W * 0.42), Math.max(7, h * 0.03), 0, 0, Math.PI * 2);
+    c.ellipse((groundL + groundR) / 2, foot - 1, (groundR - groundL) / 2, Math.max(7, h * 0.028), 0, 0, Math.PI * 2);
     c.fill();
     c.restore();
-    drawStill(c, 'wukong', xs[1], foot, h);
-    drawStill(c, 'niumo', xs[2], foot, h);
-    drawStill(c, ids[0], xs[0], foot, h);
-    var rects = xs.map(function (x, i) { return { x: x - ws[i] / 2, y: top, w: ws[i], h: h }; });
-    function hit(x, y, tw, th) {
+    drawStill(c, 'wukong', xW, foot, h);
+    drawStill(c, leftId, xL, foot, h * 0.98);
+    drawStill(c, 'niumo', xN, foot, h);
+    var rects = [
+      { x: xL - wL / 2, y: top, w: wL, h: h },
+      { x: xW - wW / 2, y: top, w: wW, h: h },
+      { x: xN - wN / 2, y: top, w: wN, h: h }
+    ];
+    var xs = [xL, xW, xN];
+    function outside(x, y, tw, th) {
       var a = x - tw / 2, b = y - th / 2;
       if (a < 1 || b < 1 || a + tw > W - 1 || b + th > H - 1) return true;
       for (var i = 0; i < rects.length; i++) {
         var r = rects[i];
-        if (a + tw > r.x + 2 && a < r.x + r.w - 2 && b + th > r.y + 2 && b < r.y + r.h - 2) return true;
+        if (a + tw > r.x + 3 && a < r.x + r.w - 3 && b + th > r.y + 3 && b < r.y + r.h * 0.92) return true;
       }
       return false;
     }
-    var names = [];
     labels.forEach(function (text, i) {
       c.font = nameH + 'px "Ma Shan Zheng","KaiTi",serif';
-      var tw = c.measureText(text).width + 2;
-      var spot = [Math.max(margin + tw / 2, Math.min(W - margin - tw / 2, xs[i])), nameH * 0.62];
-      brushName(c, text, spot[0], spot[1], nameH, '#24180f');
-      names.push({ x: spot[0] - tw / 2, y: spot[1] - nameH / 2, w: tw, h: nameH });
+      var tw = Math.min(c.measureText(text).width + 2, W * 0.28);
+      var r = rects[i];
+      var y = r.y - 2 - nameH * 0.15;
+      if (r.y - (y + nameH / 2) > nameH) y = r.y - nameH * 0.85;
+      var x = xs[i];
+      if (i === 0) x = Math.min(xs[i], r.x + tw * 0.2);
+      if (i === 2) x = Math.max(xs[i], r.x + r.w - tw * 0.2);
+      x = Math.max(margin + tw / 2, Math.min(W - margin - tw / 2, x));
+      y = Math.max(nameH * 0.55, y);
+      if (outside(x, y, tw, nameH)) y = Math.max(nameH * 0.55, r.y - nameH * 0.55);
+      brushName(c, text, x, y, nameH, '#24180f');
     });
-    function hitName(x, y, tw, th) {
-      var a = x - tw / 2, b = y - th / 2;
-      for (var i = 0; i < names.length; i++) {
-        var r = names[i];
-        if (a + tw > r.x && a < r.x + r.w && b + th > r.y && b < r.y + r.h) return true;
-      }
-      return false;
-    }
-    var zSize = Math.max(18, Math.min(40, H * 0.08));
+    var zSize = Math.max(nameH, Math.min(42, H * 0.11));
+    var gapMid = (rects[1].x + rects[1].w + rects[2].x) / 2;
+    var zy = top + h * 0.22;
     c.font = zSize + 'px "Ma Shan Zheng","KaiTi",serif';
     var zw = c.measureText('战').width + 4;
-    var zc = [
-      [(rects[1].x + rects[1].w + rects[2].x) / 2, top + Math.min(h * 0.18, nameH + zSize)],
-      [(rects[0].x + rects[0].w + rects[1].x) / 2, top + Math.min(h * 0.18, nameH + zSize)],
-      [(xs[1] + xs[2]) / 2, nameH * 0.62]
-    ];
-    var zs = null, zi;
-    for (zi = 0; zi < zc.length; zi++) if (!hit(zc[zi][0], zc[zi][1], zw, zSize) && !hitName(zc[zi][0], zc[zi][1], zw, zSize)) { zs = zc[zi]; break; }
-    if (zs) brushName(c, '战', zs[0], zs[1], zSize, '#a83224');
+    if (!outside(gapMid, zy, zw, zSize)) brushName(c, '战', gapMid, zy, zSize, '#a83224');
+    else if (!outside(gapMid, top + nameH, zw, zSize)) brushName(c, '战', gapMid, top + nameH, zSize, '#a83224');
   }
 
   /* ---------- 结算 ---------- */
