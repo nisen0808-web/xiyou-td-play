@@ -9379,7 +9379,7 @@ XY.TRAITS = {
     if (resting) y += r * 0.55;
     var bob = resting ? 0 : (h.moving ? Math.sin(rt * 14 + h.bob) * 2 : Math.sin(rt * 3 + h.bob) * 1);
     var cl = cloudNow, lift = 0;                                                      // 腾云：整个人抬高 9~12px 并轻轻上下浮（只改画的位置，不改 h.x / h.y）
-    if (false && cl) { lift = 10 + 2.5 * Math.sin(rt * 2.2 + (h.bob || 0)); y -= lift; }
+    if (cl) { lift = 10 + 2.5 * Math.sin(rt * 2.2 + (h.bob || 0)); y -= lift; }
     // 唐僧佛光
     if (h.id === 'tang' && !h.down && !G._quietShot && isC) {
       var ar = h.auraR || 125;
@@ -9391,8 +9391,8 @@ XY.TRAITS = {
     if (cl) {
       var mn0 = h.mounted ? G.heroes[4] : null, fo = mn0 ? r * 0.55 + mn0.def.r * 1.25 * 0.85 : r * 0.85;
       c.fillStyle = 'rgba(70,50,30,0.1)'; c.beginPath(); c.ellipse(x, y + lift + fo + 4, r * 1.3, r * 0.4, 0, 0, PI2); c.fill();   // 地面上一圈很淡的影
-      if (false) XY.cloud.draw(c, h, x, y + fo + 3, r * (mn0 ? 1.25 : 1), rt, cloudMv);
-    } else if (false) {}
+      XY.cloud.draw(c, h, x, y + fo + 3, r * (mn0 ? 1.25 : 1), rt, cloudMv);
+    } else if (!G._quietShot) { c.fillStyle = 'rgba(42,32,22,0.16)'; c.beginPath(); c.ellipse(x, y + r * 0.85, r * 0.95, r * 0.28, 0, 0, PI2); c.fill(); }
     if (false && isC) {}
     if (h.down && !(XY.MINK && XY.MINK.poseOwns && XY.MINK.poseOwns(h))) {                                            // 有倒地立绘的角色留在下面画 ko；其余仍是墓碑
       c.fillStyle = 'rgba(70,50,30,0.15)'; c.beginPath(); c.ellipse(x, y + 12, 18, 6, 0, 0, PI2); c.fill();
