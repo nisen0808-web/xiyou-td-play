@@ -1817,13 +1817,9 @@
       sideY = heroY + heroH * 0.16;
       rosterTop = feet - figH;
     }
-    var heroPlate = XY.clearPortraits && XY.clearPortraits.img && XY.clearPortraits.img(sel);
-    var heroIm = heroPlate || spArt(sel);
-    var heroCut = heroPlate || (heroIm && cutout('hero-' + sel, heroIm));
-    if (heroCut) paintCut(c, heroCut, heroX, heroY, heroW, heroH, true);
+    var avS = Math.min(heroW, heroH, port ? 280 : 320);
     if (XY.xAvIcon && XY.xAvIcon.isSpecial && XY.xAvIcon.isSpecial(sel)) {
-      var av = port ? 56 : 64;
-      XY.xAvIcon.draw(c, sel, heroX + 8, heroY + 8, av, av);
+      XY.xAvIcon.draw(c, sel, heroX + (heroW - avS) / 2, heroY + (heroH - avS) * 0.2, avS, avS);
     }
     var hd = heroDef(sel);
     var heroName = (hd && hd.name) || sel;
@@ -1868,10 +1864,10 @@
       var base = port ? rosterTop + row * (selH + nameH + 6) + selH : deskFeet;
       var tall = id === sel ? selH : figH;
       var y = base - tall;
-      var artPlate = XY.clearPortraits && XY.clearPortraits.img && XY.clearPortraits.img(id);
-      var artIm = artPlate || spArt(id);
-      var cut = artPlate || (artIm && cutout('hero-' + id, artIm));
-      if (cut) paintCut(c, cut, x, y, slot, tall, true);
+      var side = Math.min(slot, tall) * 0.86;
+      if (XY.xAvIcon && XY.xAvIcon.isSpecial && XY.xAvIcon.isSpecial(id)) {
+        XY.xAvIcon.draw(c, id, x + (slot - side) / 2, y + tall - side, side, side);
+      }
       var nm = heroDef(id);
       inkName(c, (nm && nm.name) || id, x + slot / 2, base + nameH * 0.48, slot + 20, port ? 26 : 24, id === sel ? '#8d1f18' : '#120c0a');
       if (id === sel) {

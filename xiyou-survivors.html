@@ -20022,7 +20022,8 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
       var artCy = artTop + artHgt * 0.62, artSz = Math.min(artHgt * 0.92, w * 0.7, 140);
       if (r.kind === 'sol' && XY.soldierInk) drew = XY.soldierInk.draw(c, r.sol, x + w / 2, artTop + artHgt - 2, artSz, Math.min(artSz, w * 0.7));
       if (!drew && r.inkName && XY.ICONINK) drew = XY.ICONINK.draw(c, r.inkName, x + w / 2, artCy, Math.min(artSz, 120));
-      if (!drew && r.spId && XY.bgArt) { try { XY.bgArt(r.spId); } catch (e) {} var sealRoom = Math.max(44, Math.min(56, w * 0.22)); drew = fitArt(XY.bgArt(r.spId), x + 8, y + 8, Math.max(48, w - 20 - sealRoom), h - 18); }
+      if (!drew && r.spId && XY.xAvIcon && XY.xAvIcon.isSpecial && XY.xAvIcon.isSpecial(r.spId)) drew = XY.xAvIcon.draw(c, r.spId, x + (w - artSz) / 2, artTop + 4, artSz, artSz);
+      if (!drew && r.spId && XY.bgArt) { try { XY.bgArt(r.spId); } catch (e2) {} }
       if (!drew && r.card) { inkWord(x, y, w, h, String(r.title || '宝').replace(/^.*· /, '').charAt(0) || '宝'); drew = true; }
       if (!drew && r.kind === 'shard') { inkShard(x, y, w, h); drew = true; }
       if (!drew && r.kind === 'reroll') { inkRefresh(x, y, w, h); drew = true; }
@@ -23654,10 +23655,11 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
     }
     var def = XY.SP_BY[id], xcLock = !!(tl.xc && tl.rec && S.xcharOpen && !S.xcharOpen()), owned = xcLock ? false : (tl.xc ? true : S.spOwned(id));
     paper(!owned);
-    var portrait = XY.bgArt && XY.bgArt(id);
     c.save();
-    if (!owned) c.globalAlpha = 1;
-    cover(portrait);
+    if (XY.xAvIcon && XY.xAvIcon.isSpecial && XY.xAvIcon.isSpecial(id)) {
+      var side = Math.min(bw, bh) * 0.72;
+      XY.xAvIcon.draw(c, id, bx + (bw - side) / 2, by + bh * 0.06, side, side);
+    } else cover(XY.bgArt && XY.bgArt(id));
     c.restore();
     nameOn(tl.xc ? ((tl.rec && tl.rec.name) || '自建') : (def && def.name) || '', owned ? INK : SOFT);
     if (!owned) {
@@ -23833,6 +23835,11 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
   };
   XY.gacha10.flipScale = function () { return 1; };
   function gachaPortraitFit(c, id, x, y, w, h) {
+    if (XY.xAvIcon && XY.xAvIcon.isSpecial && XY.xAvIcon.isSpecial(id)) {
+      var side = Math.min(w, h) * 0.92;
+      XY.xAvIcon.draw(c, id, x + (w - side) / 2, y + (h - side) / 2, side, side);
+      return;
+    }
     var im = (XY.bgArt && XY.bgArt(id)) || xAv(id);
     c.save();
     c.beginPath(); c.rect(x, y, w, h); c.clip();

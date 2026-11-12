@@ -80,13 +80,8 @@
       ctx.quadraticCurveTo(x + pw * 0.4, y + ph + 6, x + 14, y + ph - 6);
       ctx.quadraticCurveTo(x - 6, y + ph * 0.4, x + 16, y + 6);
       ctx.fill();
-      var bag = render._introArt || (render._introArt = {});
-      var im = bag[id];
-      if (!im) { im = bag[id] = new Image(); im.src = 'assets/art/battle-hd/' + id + '.webp'; }
-      if (im.complete && im.naturalWidth) {
-        var ih = ph - 36, iw = ih * im.naturalWidth / im.naturalHeight;
-        ctx.drawImage(im, x + 12, y + 18, Math.min(iw, pw * 0.38), ih);
-      }
+      var av = Math.min(ph - 36, pw * 0.34);
+      if (XY.xAvIcon && XY.xAvIcon.draw) XY.xAvIcon.draw(ctx, id, x + 16, y + 18, av, av);
       ctx.fillStyle = '#a42d19';
       ctx.font = '28px "Ma Shan Zheng","KaiTi",serif';
       ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
