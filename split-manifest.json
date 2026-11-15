@@ -1,13 +1,13 @@
 {
   "version": "0.8.8",
-  "default": "index.html (single-file compatible)",
-  "optional": "index-split.html (requires sibling assets/, chunks/, bossfight/, villain/)",
+  "default": "index.html (delayed art; requires sibling assets/, chunks/, bossfight/, villain/)",
+  "optional": "index-full.html (complete inline art; external runtime assets still required)",
   "chunks": [
     {
       "id": "ui",
-      "src": "chunks/ui-008ff700a700.js",
-      "bytes": 553547,
-      "token": "008ff700a700b1c89a73c056a45733acc2d7edea3743931487e19b401b6aa9c0",
+      "src": "chunks/ui-2a9eaa702de4.js",
+      "bytes": 557339,
+      "token": "2a9eaa702de44f4b47632e02dc7b8595070ecc464587a7a0739f97bb6d41b37b",
       "check": [
         "ICONINK_DATA",
         "ITEMINK_DATA",
@@ -15,20 +15,41 @@
       ]
     },
     {
-      "id": "hero",
-      "src": "chunks/hero-6940e3022967.js",
-      "bytes": 3086438,
-      "token": "6940e3022967d267a888e54f56cd797e7e2cf7f2405967a0f39f9a4f9ea666de",
+      "id": "core",
+      "src": "chunks/core-71f4c25bbfc6.js",
+      "bytes": 1724480,
+      "token": "71f4c25bbfc6a723a5a39fbced13bae45580ef408fb88451e2c1ef0ed980518b",
       "check": [
         "CHIBI",
-        "CHIBI_INK"
-      ]
+        "CHIBI_INK",
+        "ULTINK_DATA"
+      ],
+      "members": {
+        "CHIBI": [
+          "tang",
+          "wukong",
+          "bajie",
+          "wujing",
+          "horse"
+        ],
+        "CHIBI_INK": [
+          "tang",
+          "wukong",
+          "bajie",
+          "wujing",
+          "horse"
+        ],
+        "ULTINK_DATA": [
+          "wukong"
+        ]
+      },
+      "deps": []
     },
     {
       "id": "world",
-      "src": "chunks/world-46b19b26483d.js",
-      "bytes": 4241412,
-      "token": "46b19b26483da883740d1f3706d9f73e0a1d18b07a9d6780414f96278d4d347d",
+      "src": "chunks/world-2934ec371364.js",
+      "bytes": 1406284,
+      "token": "2934ec37136421c64b1fc75b84aadc4621a65f08630933917049287e33cc7720",
       "check": [
         "BGS1",
         "MINK_DATA",
@@ -36,22 +57,241 @@
       ]
     },
     {
-      "id": "ult",
-      "src": "chunks/ult-f47b82bd7bf4.js",
-      "bytes": 1613765,
-      "token": "f47b82bd7bf47ce93a140310fa47f5e17a87d52d6f3f046a71528b91184fc44d",
-      "check": [
-        "ULTINK_DATA"
-      ]
-    },
-    {
       "id": "xchar",
-      "src": "chunks/xchar-e220ea78d1a9.js",
-      "bytes": 585131,
-      "token": "e220ea78d1a9784dd61e4ea785e09f93f2ef26aae81dcac8f38ca15e88c6db72",
+      "src": "chunks/xchar-f8dda037eca2.js",
+      "bytes": 585309,
+      "token": "f8dda037eca2533e96d531998bdf0ab0092bbf134eb8198531be86ead9e9654e",
       "check": [
         "XC_TPL"
       ]
+    },
+    {
+      "id": "special_phyrex",
+      "src": "chunks/special_phyrex-371e2c428b5d.js",
+      "bytes": 1891675,
+      "token": "371e2c428b5d0fd4bc4913b93f1cb86de5b447d6de41ebb9d481b5eb0aa87ad6",
+      "check": [
+        "CHIBI",
+        "CHIBI_INK",
+        "ULTINK_DATA"
+      ],
+      "members": {
+        "CHIBI": [
+          "phyrex",
+          "phyrex_x"
+        ],
+        "CHIBI_INK": [
+          "phyrex",
+          "phyrex_x"
+        ],
+        "ULTINK_DATA": [
+          "phyrex"
+        ]
+      },
+      "deps": [
+        "core"
+      ]
+    },
+    {
+      "id": "special_sisi",
+      "src": "chunks/special_sisi-b3c84eb48975.js",
+      "bytes": 1392507,
+      "token": "b3c84eb489756e7eca147b9e8112d298e4b69dcf353576d7cfe17785735ad5d6",
+      "check": [
+        "CHIBI",
+        "CHIBI_INK",
+        "ULTINK_DATA"
+      ],
+      "members": {
+        "CHIBI": [
+          "sisi"
+        ],
+        "CHIBI_INK": [
+          "sisi"
+        ],
+        "ULTINK_DATA": [
+          "sisi"
+        ]
+      },
+      "deps": [
+        "core"
+      ]
+    },
+    {
+      "id": "special_laosiji",
+      "src": "chunks/special_laosiji-fb85f1044b74.js",
+      "bytes": 1062094,
+      "token": "fb85f1044b740f7c9f0db4a943fee699ee497e5eebe5802b3dc9a59462d6a756",
+      "check": [
+        "CHIBI",
+        "CHIBI_INK",
+        "ULTINK_DATA"
+      ],
+      "members": {
+        "CHIBI": [
+          "laosiji"
+        ],
+        "CHIBI_INK": [
+          "laosiji"
+        ],
+        "ULTINK_DATA": [
+          "laosiji"
+        ]
+      },
+      "deps": [
+        "core"
+      ]
+    },
+    {
+      "id": "special_kuanggong",
+      "src": "chunks/special_kuanggong-ed7e422919bb.js",
+      "bytes": 1125844,
+      "token": "ed7e422919bb1038170253b7bd26535e01192a0367ac9bebcb5bcddd242c1660",
+      "check": [
+        "CHIBI",
+        "CHIBI_INK",
+        "ULTINK_DATA"
+      ],
+      "members": {
+        "CHIBI": [
+          "kuanggong"
+        ],
+        "CHIBI_INK": [
+          "kuanggong"
+        ],
+        "ULTINK_DATA": [
+          "kuanggong"
+        ]
+      },
+      "deps": [
+        "core"
+      ]
+    },
+    {
+      "id": "special_haiteng",
+      "src": "chunks/special_haiteng-6f5d79accb17.js",
+      "bytes": 1030279,
+      "token": "6f5d79accb179a7b88f6f1866ee957d0fb50ca679deaed5491f1a08efc9d16a7",
+      "check": [
+        "CHIBI",
+        "CHIBI_INK",
+        "ULTINK_DATA"
+      ],
+      "members": {
+        "CHIBI": [
+          "haiteng"
+        ],
+        "CHIBI_INK": [
+          "haiteng"
+        ],
+        "ULTINK_DATA": [
+          "haiteng"
+        ]
+      },
+      "deps": [
+        "core"
+      ]
+    },
+    {
+      "id": "special_yuanzhang",
+      "src": "chunks/special_yuanzhang-fb41f6feeed4.js",
+      "bytes": 1555178,
+      "token": "fb41f6feeed45aca79384d83f17e19eaef3c4322483b1c5e06728c30cd040eb3",
+      "check": [
+        "CHIBI",
+        "CHIBI_INK",
+        "ULTINK_DATA"
+      ],
+      "members": {
+        "CHIBI": [
+          "yuanzhang"
+        ],
+        "CHIBI_INK": [
+          "yuanzhang"
+        ],
+        "ULTINK_DATA": [
+          "yuanzhang"
+        ]
+      },
+      "deps": [
+        "core"
+      ]
+    },
+    {
+      "id": "special_heyuxi",
+      "src": "chunks/special_heyuxi-2d57c8202cf1.js",
+      "bytes": 1798394,
+      "token": "2d57c8202cf1e3f492fa59b8449474803c98c4e80400148feb71a2652a85889b",
+      "check": [
+        "CHIBI",
+        "CHIBI_INK",
+        "ULTINK_DATA"
+      ],
+      "members": {
+        "CHIBI": [
+          "heyuxi"
+        ],
+        "CHIBI_INK": [
+          "heyuxi"
+        ],
+        "ULTINK_DATA": [
+          "heyuxi"
+        ]
+      },
+      "deps": [
+        "core"
+      ]
+    },
+    {
+      "id": "special_diaoyulao",
+      "src": "chunks/special_diaoyulao-8b9911a91fab.js",
+      "bytes": 859356,
+      "token": "8b9911a91fab27e6daf762b3115f67a8d85aab5ebbe2976f8c82af9c0ef5bfb6",
+      "check": [
+        "CHIBI",
+        "CHIBI_INK",
+        "ULTINK_DATA"
+      ],
+      "members": {
+        "CHIBI": [
+          "diaoyulao"
+        ],
+        "CHIBI_INK": [
+          "diaoyulao"
+        ],
+        "ULTINK_DATA": [
+          "diaoyulao"
+        ]
+      },
+      "deps": [
+        "core"
+      ]
+    },
+    {
+      "id": "special_martin",
+      "src": "chunks/special_martin-0e07bac92442.js",
+      "bytes": 1489250,
+      "token": "0e07bac9244245995f610a3c911f02fd0539b9c6fab8744eb107f05d094fe74e",
+      "check": [
+        "CHIBI",
+        "CHIBI_INK",
+        "ULTINK_DATA"
+      ],
+      "members": {
+        "CHIBI": [
+          "martin"
+        ],
+        "CHIBI_INK": [
+          "martin"
+        ],
+        "ULTINK_DATA": [
+          "martin"
+        ]
+      },
+      "deps": [
+        "core"
+      ]
     }
-  ]
+  ],
+  "alias": "xiyou-survivors.html (identical to index.html)"
 }

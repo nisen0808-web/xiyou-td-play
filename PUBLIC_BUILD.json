@@ -1,0 +1,3833 @@
+{
+  "schema": 1,
+  "profile": "production",
+  "version": "0.8.8",
+  "default_entry": "index.html (split)",
+  "full_entry": "index-full.html",
+  "aliases": [
+    "index-split.html",
+    "xiyou-survivors.html"
+  ],
+  "review_manifest_sha256": "eca97cad49fa178ccd93dd002b7e510f4493b2690866ea011074e2abf79f9a58",
+  "review_source_head": "22fda8085dfd668aaf289f9a3fa7e072ddf1e4d1",
+  "review_source_inputs_sha256": "aab32ef922470c83849ba6a2fa265ff4ddfb33d5ec7280d6fbfb4d665c3ea022",
+  "resource_baseline_commit": "75c4c78e8ebd2cf4101e477f3a5941d6fc484ff8",
+  "omitted_retired_intro_media": [
+    "assets/art/storyboard-v5/3d/r2/staff_flicker.mp4",
+    "assets/art/storyboard-v5/3d/r2b/staff_flicker.mp4",
+    "assets/art/storyboard-v5/3d/r2c/mp4/c1.mp4",
+    "assets/art/storyboard-v5/3d/r2c/mp4/c2.mp4",
+    "assets/art/storyboard-v5/3d/r2c/mp4/c3.mp4",
+    "assets/art/storyboard-v5/3d/r2c/mp4/c4.mp4",
+    "assets/art/storyboard-v5/3d/r2c/mp4/c5.mp4",
+    "assets/art/storyboard-v5/3d/r2d/mp4/c1.mp4",
+    "assets/art/storyboard-v5/3d/r2d/mp4/c2.mp4",
+    "assets/art/storyboard-v5/3d/r2d/mp4/c3.mp4",
+    "assets/art/storyboard-v5/3d/r2d/mp4/c4.mp4",
+    "assets/art/storyboard-v5/3d/r2d/mp4/c5.mp4",
+    "assets/art/storyboard-v5/3d/r2e/mp4/c1.mp4",
+    "assets/art/storyboard-v5/3d/r2e/mp4/c1_untrimmed.mp4",
+    "assets/art/storyboard-v5/3d/r2e/mp4/c2.mp4",
+    "assets/art/storyboard-v5/3d/r2e/mp4/c3.mp4",
+    "assets/art/storyboard-v5/3d/r2e/mp4/c4.mp4",
+    "assets/art/storyboard-v5/3d/r2e/mp4/c5.mp4",
+    "assets/art/storyboard-v5/3d/r2e/mp4/full_edit_r2e.mp4",
+    "assets/art/storyboard-v5/3d/r2f/mp4/c1.mp4",
+    "assets/art/storyboard-v5/3d/r2f/mp4/c1_untrimmed.mp4",
+    "assets/art/storyboard-v5/3d/r2f/mp4/c2.mp4",
+    "assets/art/storyboard-v5/3d/r2f/mp4/c3.mp4",
+    "assets/art/storyboard-v5/3d/r2f/mp4/c4.mp4",
+    "assets/art/storyboard-v5/3d/r2f/mp4/c5.mp4",
+    "assets/art/storyboard-v5/3d/r2f/mp4/full_edit_r2f.mp4",
+    "assets/art/storyboard-v5/3d/r2g/mp4/c1.mp4",
+    "assets/art/storyboard-v5/3d/r2g/mp4/c1_untrimmed.mp4",
+    "assets/art/storyboard-v5/3d/r2g/mp4/c2.mp4",
+    "assets/art/storyboard-v5/3d/r2g/mp4/c3.mp4",
+    "assets/art/storyboard-v5/3d/r2g/mp4/c4.mp4",
+    "assets/art/storyboard-v5/3d/r2g/mp4/c5.mp4",
+    "assets/art/storyboard-v5/3d/r2g/mp4/full_edit_r2g.mp4",
+    "assets/art/storyboard-v5/3d/r2h/mp4/c1.mp4",
+    "assets/art/storyboard-v5/3d/r2h/mp4/c1_untrimmed.mp4",
+    "assets/art/storyboard-v5/3d/r2h/mp4/c2.mp4",
+    "assets/art/storyboard-v5/3d/r2h/mp4/c3.mp4",
+    "assets/art/storyboard-v5/3d/r2h/mp4/c4.mp4",
+    "assets/art/storyboard-v5/3d/r2h/mp4/c5.mp4",
+    "assets/art/storyboard-v5/3d/r2h/mp4/c6.mp4",
+    "assets/art/storyboard-v5/3d/r2h/mp4/full_edit_r2h.mp4",
+    "assets/art/storyboard-v5/3d/r2i/mp4/c1.mp4",
+    "assets/art/storyboard-v5/3d/r2i/mp4/c1_clean.mp4",
+    "assets/art/storyboard-v5/3d/r2i/mp4/c1_untrimmed.mp4",
+    "assets/art/storyboard-v5/3d/r2i/mp4/c1_untrimmed_clean.mp4",
+    "assets/art/storyboard-v5/3d/r2i/mp4/c2.mp4",
+    "assets/art/storyboard-v5/3d/r2i/mp4/c2_clean.mp4",
+    "assets/art/storyboard-v5/3d/r2i/mp4/c3.mp4",
+    "assets/art/storyboard-v5/3d/r2i/mp4/c3_clean.mp4",
+    "assets/art/storyboard-v5/3d/r2i/mp4/c4.mp4",
+    "assets/art/storyboard-v5/3d/r2i/mp4/c4_clean.mp4",
+    "assets/art/storyboard-v5/3d/r2i/mp4/c5.mp4",
+    "assets/art/storyboard-v5/3d/r2i/mp4/c5_clean.mp4",
+    "assets/art/storyboard-v5/3d/r2i/mp4/c6.mp4",
+    "assets/art/storyboard-v5/3d/r2i/mp4/c6_clean.mp4",
+    "assets/art/storyboard-v5/3d/r2i/mp4/full_edit_r2i.mp4",
+    "assets/art/storyboard-v5/3d/r2i/mp4/full_edit_r2i_nosub.mp4",
+    "assets/art/storyboard-v5/anim/1.1A.mp4",
+    "assets/art/storyboard-v5/anim/1.1B.mp4",
+    "assets/art/storyboard-v5/anim/1.1C.mp4",
+    "assets/art/storyboard-v5/anim/1.2A.mp4",
+    "assets/art/storyboard-v5/anim/1.2B.mp4",
+    "assets/art/storyboard-v5/anim/1.2C.mp4",
+    "assets/art/storyboard-v5/anim/1.3A.mp4",
+    "assets/art/storyboard-v5/anim/1.3B.mp4",
+    "assets/art/storyboard-v5/anim/1.3C.mp4",
+    "assets/art/storyboard-v5/anim/1.4A.mp4",
+    "assets/art/storyboard-v5/anim/1.4B.mp4",
+    "assets/art/storyboard-v5/anim/1.5A.mp4",
+    "assets/art/storyboard-v5/anim/1.5B.mp4",
+    "assets/art/storyboard-v5/anim/1.5C.mp4",
+    "assets/art/storyboard-v5/anim/2.1A.mp4",
+    "assets/art/storyboard-v5/anim/2.1B.mp4",
+    "assets/art/storyboard-v5/anim/2.2A.mp4",
+    "assets/art/storyboard-v5/anim/2.2B.mp4",
+    "assets/art/storyboard-v5/anim/3.10A.mp4",
+    "assets/art/storyboard-v5/anim/3.10B.mp4",
+    "assets/art/storyboard-v5/anim/3.1A.mp4",
+    "assets/art/storyboard-v5/anim/3.1B.mp4",
+    "assets/art/storyboard-v5/anim/3.2A.mp4",
+    "assets/art/storyboard-v5/anim/3.2B.mp4",
+    "assets/art/storyboard-v5/anim/3.2C.mp4",
+    "assets/art/storyboard-v5/anim/3.3A.mp4",
+    "assets/art/storyboard-v5/anim/3.3B_0.mp4",
+    "assets/art/storyboard-v5/anim/3.3B_1.mp4",
+    "assets/art/storyboard-v5/anim/3.3B_2.mp4",
+    "assets/art/storyboard-v5/anim/3.3C.mp4",
+    "assets/art/storyboard-v5/anim/3.4A.mp4",
+    "assets/art/storyboard-v5/anim/3.4B.mp4",
+    "assets/art/storyboard-v5/anim/3.4C.mp4",
+    "assets/art/storyboard-v5/anim/3.5A.mp4",
+    "assets/art/storyboard-v5/anim/3.5B.mp4",
+    "assets/art/storyboard-v5/anim/3.5C.mp4",
+    "assets/art/storyboard-v5/anim/3.6A.mp4",
+    "assets/art/storyboard-v5/anim/3.6B.mp4",
+    "assets/art/storyboard-v5/anim/3.6C.mp4",
+    "assets/art/storyboard-v5/anim/3.7A.mp4",
+    "assets/art/storyboard-v5/anim/3.7B.mp4",
+    "assets/art/storyboard-v5/anim/3.8A.mp4",
+    "assets/art/storyboard-v5/anim/3.8B.mp4",
+    "assets/art/storyboard-v5/anim/3.9A.mp4",
+    "assets/art/storyboard-v5/anim/3.9B.mp4",
+    "assets/art/storyboard-v5/anim/3.9C.mp4",
+    "assets/art/storyboard-v5/anim/4.1A.mp4",
+    "assets/art/storyboard-v5/anim/4.1B.mp4",
+    "assets/art/storyboard-v5/anim/4.2A.mp4",
+    "assets/art/storyboard-v5/anim/4.2B.mp4",
+    "assets/art/storyboard-v5/anim/4.2C.mp4",
+    "assets/art/storyboard-v5/anim/4.3A.mp4",
+    "assets/art/storyboard-v5/anim/4.3B.mp4",
+    "assets/art/storyboard-v5/anim/4.3C.mp4",
+    "assets/art/storyboard-v5/anim/4.4A.mp4",
+    "assets/art/storyboard-v5/anim/4.4B.mp4",
+    "assets/art/storyboard-v5/anim/4.4C.mp4",
+    "assets/art/storyboard-v5/anim/5.1A.mp4",
+    "assets/art/storyboard-v5/anim/5.1B.mp4",
+    "assets/art/storyboard-v5/anim/5.2A.mp4",
+    "assets/art/storyboard-v5/anim/5.2B.mp4",
+    "assets/art/storyboard-v5/anim/5.2C.mp4",
+    "assets/art/storyboard-v5/anim/5.2D.mp4",
+    "assets/art/storyboard-v5/anim/5.3A.mp4",
+    "assets/art/storyboard-v5/anim/5.3B.mp4",
+    "assets/art/storyboard-v5/anim/5.3C.mp4",
+    "assets/art/storyboard-v5/anim/6.1A.mp4",
+    "assets/art/storyboard-v5/anim/6.1B.mp4",
+    "assets/art/storyboard-v5/anim/6.1C.mp4",
+    "assets/art/storyboard-v5/anim/6.2A.mp4",
+    "assets/art/storyboard-v5/anim/6.2B.mp4",
+    "assets/art/storyboard-v5/anim/6.3A.mp4",
+    "assets/art/storyboard-v5/anim/6.3B.mp4",
+    "assets/art/storyboard-v5/anim/6.3C.mp4",
+    "assets/art/storyboard-v5/anim/6.3D.mp4",
+    "assets/art/storyboard-v5/anim/7.1A.mp4",
+    "assets/art/storyboard-v5/anim/7.1B.mp4",
+    "assets/art/storyboard-v5/anim/7.1C.mp4",
+    "assets/art/storyboard-v5/anim/7.2A.mp4",
+    "assets/art/storyboard-v5/anim/7.2B.mp4",
+    "assets/art/storyboard-v5/anim/7.2C.mp4",
+    "assets/art/storyboard-v5/anim/7.3A.mp4",
+    "assets/art/storyboard-v5/anim/7.3B.mp4",
+    "assets/art/storyboard-v5/anim/7.3C.mp4",
+    "assets/art/storyboard-v5/anim/7.4A.mp4",
+    "assets/art/storyboard-v5/anim/7.4B.mp4",
+    "assets/art/storyboard-v5/anim/7.4C.mp4",
+    "assets/art/storyboard-v5/anim/7.4D.mp4",
+    "assets/art/storyboard-v5/anim/7.5A.mp4",
+    "assets/art/storyboard-v5/anim/7.5B.mp4",
+    "assets/art/storyboard-v5/anim/7.5C.mp4",
+    "assets/art/storyboard-v5/anim/8.1A.mp4",
+    "assets/art/storyboard-v5/anim/8.1B.mp4",
+    "assets/art/storyboard-v5/anim/8.1C.mp4",
+    "assets/art/storyboard-v5/anim/8.2A.mp4",
+    "assets/art/storyboard-v5/anim/8.2B.mp4",
+    "assets/art/storyboard-v5/anim/8.2C.mp4",
+    "assets/art/storyboard-v5/anim/8.2D.mp4",
+    "assets/art/storyboard-v5/anim/8.3A.mp4",
+    "assets/art/storyboard-v5/anim/8.3B.mp4",
+    "assets/art/storyboard-v5/anim/8.3C_0.mp4",
+    "assets/art/storyboard-v5/anim/8.3C_1.mp4",
+    "assets/art/storyboard-v5/anim/8.3C_2.mp4",
+    "assets/art/storyboard-v5/anim/8.4A.mp4",
+    "assets/art/storyboard-v5/anim/8.4B.mp4",
+    "assets/art/storyboard-v5/anim/8.4B_t.mp4",
+    "assets/art/storyboard-v5/anim/silent.mp4",
+    "assets/art/storyboard-v5/animatic.mp4",
+    "assets/intro-b1-boss-v3.mp4",
+    "assets/intro-b1-boss.mp4",
+    "assets/intro-b2-transform-v3.mp4",
+    "assets/intro-b2-transform-v4.mp4",
+    "assets/intro-b2-transform.mp4",
+    "assets/intro-b2x-transform-nohalo.mp4",
+    "assets/intro-b2y-takeoff-nohalo.mp4",
+    "assets/intro-b2z-bridge.mp4",
+    "assets/intro-b3-finale-cato.mp4",
+    "assets/intro-b3-finale-halo-old.mp4",
+    "assets/intro-b3-finale-nohalo.mp4",
+    "assets/intro-b3-finale-v3.mp4",
+    "assets/intro-b3-finale-v4.mp4",
+    "assets/intro-b3-finale.mp4",
+    "assets/intro-c1-charge-cato.mp4",
+    "assets/intro-c1-charge.mp4",
+    "assets/intro-k-cato.mp4",
+    "assets/intro-k-diaoyulao-prog.mp4",
+    "assets/intro-k-diaoyulao-v.mp4",
+    "assets/intro-k-diaoyulao.mp4",
+    "assets/intro-k-haiteng-prog.mp4",
+    "assets/intro-k-haiteng-v.mp4",
+    "assets/intro-k-haiteng.mp4",
+    "assets/intro-k-heyuxi-prog.mp4",
+    "assets/intro-k-heyuxi-v-sword.mp4",
+    "assets/intro-k-heyuxi-v.mp4",
+    "assets/intro-k-heyuxi-v2.mp4",
+    "assets/intro-k-heyuxi.mp4",
+    "assets/intro-k-kuanggong-prog.mp4",
+    "assets/intro-k-kuanggong-v.mp4",
+    "assets/intro-k-kuanggong.mp4",
+    "assets/intro-k-laosiji-prog.mp4",
+    "assets/intro-k-laosiji-v.mp4",
+    "assets/intro-k-laosiji.mp4",
+    "assets/intro-k-martin-prog.mp4",
+    "assets/intro-k-martin-v.mp4",
+    "assets/intro-k-martin.mp4",
+    "assets/intro-k-phyrex-bigbanner.mp4",
+    "assets/intro-k-phyrex-v.mp4",
+    "assets/intro-k-phyrex-v6.mp4",
+    "assets/intro-k-phyrex.mp4",
+    "assets/intro-k-sisi-prog.mp4",
+    "assets/intro-k-sisi-v.mp4",
+    "assets/intro-k-sisi.mp4",
+    "assets/intro-k-yuanzhang-prog.mp4",
+    "assets/intro-k-yuanzhang-v-full.mp4",
+    "assets/intro-k-yuanzhang-v.mp4",
+    "assets/intro-k-yuanzhang.mp4",
+    "assets/intro-new.mp4",
+    "assets/intro-p1.mp4",
+    "assets/intro-p2-v2.mp4",
+    "assets/intro-p2.mp4",
+    "assets/intro-raw.mp4",
+    "assets/intro-s1-lineup.mp4",
+    "assets/intro-s2-coinrain.mp4",
+    "assets/intro-s3-boss.mp4",
+    "assets/intro-s4-transform-crash.mp4",
+    "assets/intro-s5-finale.mp4",
+    "assets/intro-title.mp4",
+    "assets/intro-v1.mp4",
+    "assets/intro-v10.mp4",
+    "assets/intro-v2.mp4",
+    "assets/intro-v3.mp4",
+    "assets/intro-v4.mp4",
+    "assets/intro-v5-rough.mp4",
+    "assets/intro-v6-sword-heyuxi.mp4",
+    "assets/intro-v6b-before-review.mp4",
+    "assets/intro-v7-halo.mp4",
+    "assets/intro-v8.mp4",
+    "assets/intro-v9.mp4",
+    "assets/intro.mp4"
+  ],
+  "entry_changes": "Only the CSP meta tag changes from the reviewed package.",
+  "csp": "default-src 'self' data: blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; media-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://cdn.jsdelivr.net https://ftorjdmbbagzwojamtnj.supabase.co wss://ftorjdmbbagzwojamtnj.supabase.co; frame-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self' https://accounts.google.com https://ftorjdmbbagzwojamtnj.supabase.co",
+  "files": {
+    ".nojekyll": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "assets/art/bajie-ground/layers.webp": {
+      "sha256": "773e5768fabb93f62e7167f25d4784026e0c5438cdf5d8f71594bff0cd41b887",
+      "bytes": 191094
+    },
+    "assets/art/battle-hd/bajie.webp": {
+      "sha256": "5afe6722245ee1bfefa0861d2baca4c6190b403cde0f09f666f4c82c94295ef3",
+      "bytes": 33854
+    },
+    "assets/art/battle-hd/diaoyulao.webp": {
+      "sha256": "1e07646aa7646b00b11a272f53b486dcaefd156fa909baa0a9e70d2f7d46ccb9",
+      "bytes": 133228
+    },
+    "assets/art/battle-hd/haiteng.webp": {
+      "sha256": "f3783450a26356fac49bd34134c637af8988315f0a37dc19fbefd630fbddfb5e",
+      "bytes": 139298
+    },
+    "assets/art/battle-hd/heyuxi.webp": {
+      "sha256": "48555b66a63b891abb3fe5ce411708d9e2a89505088eb4b1d8b4a8451e4b87c7",
+      "bytes": 618888
+    },
+    "assets/art/battle-hd/horse.webp": {
+      "sha256": "9ed3441a7e2e2dac65d22a3c01970595bb15369b50c85ab77744de60a91a12ed",
+      "bytes": 26886
+    },
+    "assets/art/battle-hd/kuanggong.webp": {
+      "sha256": "b52f45c865b9e74d575ca0c79a1b5bfd29637238e65467c7f230e7a35573a9f7",
+      "bytes": 129504
+    },
+    "assets/art/battle-hd/laosiji.webp": {
+      "sha256": "30aa0a709dfbed54231c2923041ee8a75be331abf990bb46ac6c6f17b8c8c003",
+      "bytes": 130236
+    },
+    "assets/art/battle-hd/martin.webp": {
+      "sha256": "2be5a108d55dde18699546d3cd6094b4f0ea8a1e80853698e5b167c263980b76",
+      "bytes": 128022
+    },
+    "assets/art/battle-hd/mon-elite-portrait.webp": {
+      "sha256": "0ff413fc81723d99b52c5201842bc166a2728d2bf45d94edd0a49fc9e8591e90",
+      "bytes": 1033328
+    },
+    "assets/art/battle-hd/mon-etower-portrait.webp": {
+      "sha256": "54954b7881cfeae9f56fb159f058b5fd70860c6ebdb27d227f9f57b49e70c4ed",
+      "bytes": 1088654
+    },
+    "assets/art/battle-hd/mon-small-portrait.webp": {
+      "sha256": "56582e1ddd8666e7bcc693b39d728e387083bcb981168f5498260d5604554f02",
+      "bytes": 1438116
+    },
+    "assets/art/battle-hd/niumo.webp": {
+      "sha256": "76c3573d56deb6983f02129c47b6a8ff11436dc78cc3f644b5510e91f2d50b93",
+      "bytes": 126114
+    },
+    "assets/art/battle-hd/phyrex.webp": {
+      "sha256": "a597907fb186fee2aa3e0067ed4e2498ec2916a7d9291b8390d7c00f81f4be4d",
+      "bytes": 555038
+    },
+    "assets/art/battle-hd/phyrex_x.webp": {
+      "sha256": "0e4686cb9cbccfdbf544e6f028048d58c45bee89946a665b6181e7e780a2b52f",
+      "bytes": 224476
+    },
+    "assets/art/battle-hd/sisi.webp": {
+      "sha256": "fb2d543e4aeb65f9dc99b2898995e8192b87864a4d402dbdb40874f89cae5e0c",
+      "bytes": 503862
+    },
+    "assets/art/battle-hd/tang.webp": {
+      "sha256": "d10e31abd9c73ce8a867273d7bfe1e80e31b46b635904630b3330f33f6533739",
+      "bytes": 156944
+    },
+    "assets/art/battle-hd/wujing.webp": {
+      "sha256": "0f1369eeb1bbcce5f8f4d9e317c2d221b6e85ca1742b3d392d8624bb24cd4610",
+      "bytes": 87796
+    },
+    "assets/art/battle-hd/wukong.webp": {
+      "sha256": "3fb7293b8252cb2a29bfa55a5349a2fd7c4dad95b5156cef8524b78b08b52f79",
+      "bytes": 144252
+    },
+    "assets/art/battle-hd/yuanzhang.webp": {
+      "sha256": "fe044a378c1f2b8f90376f02618074c585c1a9584e0812ebc189b7fd8b5d3ff5",
+      "bytes": 200484
+    },
+    "assets/art/bg/diaoyulao.webp": {
+      "sha256": "0317e99434d90dab4b36147996599e70db80f95414e4fc1aa1ab70ff79b58745",
+      "bytes": 428708
+    },
+    "assets/art/bg/haiteng.webp": {
+      "sha256": "3bb2687d462dbeea8d9892738edbb2ef49d5bd085eab589fd9562ceaffceff3e",
+      "bytes": 195948
+    },
+    "assets/art/bg/heyuxi.webp": {
+      "sha256": "610bd1b8011de50a36585e106c8a65968333fb54aec90dc89b3193449789760c",
+      "bytes": 364378
+    },
+    "assets/art/bg/kuanggong.webp": {
+      "sha256": "0c4d471d2e62796084498a6d3750dc19124efb23e506ccf840efe27f84c704f6",
+      "bytes": 364746
+    },
+    "assets/art/bg/laosiji.webp": {
+      "sha256": "d20b141f7d1d63ebf8bc0eb84a11625c224f4a510f06766d561d40b168d5f825",
+      "bytes": 379264
+    },
+    "assets/art/bg/martin.webp": {
+      "sha256": "b0d08bcb24985754a3731f80738f2da72cdc3cf5825d45b6e1c023bc7df785bd",
+      "bytes": 172874
+    },
+    "assets/art/bg/phyrex.webp": {
+      "sha256": "fd187ac961c99854a0f96a2d05c90452c8383dfaa6b607ebda6979f5ec474254",
+      "bytes": 401076
+    },
+    "assets/art/bg/sisi.webp": {
+      "sha256": "8452f46d3100ef16d732b993e0552e4ad430e9e9786e1c54c5192c8ca0a0bd7c",
+      "bytes": 188094
+    },
+    "assets/art/bg/yuanzhang.webp": {
+      "sha256": "8d9983a079c85d8bc046c1bb2ff355638a40eb05d4648e3a1c3e609c226e363a",
+      "bytes": 208400
+    },
+    "assets/art/bg-ink/rock_a.webp": {
+      "sha256": "292c4d04432f7c1c598b25c330fb4e995d55d541a8e07a8ffd9becc8349adf5b",
+      "bytes": 54192
+    },
+    "assets/art/bg-stage1/bg_q78.webp": {
+      "sha256": "87cbda564b27cf51db40005d8b3c57c570d79e0088c3adc072003e0aade75942",
+      "bytes": 1766876
+    },
+    "assets/art/bg-stage1/repair-central.webp": {
+      "sha256": "65af83b4bef4862acda058215572ec344b548a31f99fde019245a4c610404102",
+      "bytes": 581014
+    },
+    "assets/art/bg-stage1/repair-seam.webp": {
+      "sha256": "286cc84e7e5aa08ba86ecd861a99c1ca1ec922a65fa526462ff926a28070f6d6",
+      "bytes": 578530
+    },
+    "assets/art/frost-motion/atlas.webp": {
+      "sha256": "a38c130581a04b9a025e3b4da846bff3c7248f294f7c10bbb4767b5cdc0462e9",
+      "bytes": 769028
+    },
+    "assets/art/frost-motion/contact.webp": {
+      "sha256": "51054e57d4a1ab76882da174aa0a46e3b986c0b3af2a21039847bfa2490da106",
+      "bytes": 725128
+    },
+    "assets/art/frost-motion/rearstep.webp": {
+      "sha256": "7dbf25ec6b08363276b139ecdb8cbe5a962760d922b50cd87b04070e8d5523e8",
+      "bytes": 710670
+    },
+    "assets/art/fx-ink/fire-atlas.webp": {
+      "sha256": "f0673c3909ca63ce03a531f206f32fe7cc54027582d0e30d9018a2f61b5b7869",
+      "bytes": 440346
+    },
+    "assets/art/gacha-portraits/diaoyulao.webp": {
+      "sha256": "60958eb729e030aecee8282dd0d5c70b8c93e39ffa8e71703c17c673218835f0",
+      "bytes": 1629668
+    },
+    "assets/art/gacha-portraits/haiteng.webp": {
+      "sha256": "b599f38583d51a3ae30d9aca7fd221c0b68c9e7e8c049bbdfe596c197cb54bb1",
+      "bytes": 808608
+    },
+    "assets/art/gacha-portraits/heyuxi.webp": {
+      "sha256": "48555b66a63b891abb3fe5ce411708d9e2a89505088eb4b1d8b4a8451e4b87c7",
+      "bytes": 618888
+    },
+    "assets/art/gacha-portraits/kuanggong.webp": {
+      "sha256": "7a61363491129fbee17b44c7aae8dc9ecc6e4fc7031f5114abd19119f139e823",
+      "bytes": 1664750
+    },
+    "assets/art/gacha-portraits/laosiji.webp": {
+      "sha256": "f0e970402eb1b379a992992839f4dfcd2069726b1403e1b5cac9347868eb7a88",
+      "bytes": 1625438
+    },
+    "assets/art/gacha-portraits/martin.webp": {
+      "sha256": "5f500ecbf75878d2e851c04cb1577d59515140d3425385b2c5666e0f1593e236",
+      "bytes": 1477778
+    },
+    "assets/art/gacha-portraits/phyrex.webp": {
+      "sha256": "86b3b22756de62f0070374ef41d82681649e2a21e0728af78636f25d0e420383",
+      "bytes": 506858
+    },
+    "assets/art/gacha-portraits/sisi.webp": {
+      "sha256": "fb2d543e4aeb65f9dc99b2898995e8192b87864a4d402dbdb40874f89cae5e0c",
+      "bytes": 503862
+    },
+    "assets/art/gacha-portraits/yuanzhang.webp": {
+      "sha256": "06bac03511c839d3085075bccbf0654cd048a221e79b4fa513d8d6c2a6d477c6",
+      "bytes": 1706114
+    },
+    "assets/art/help/phyrex-stand.png": {
+      "sha256": "ea233a2cc9671c2ca3dc5c4851055b36883bf9c1a470c61f37ab578dfc0e0281",
+      "bytes": 176309
+    },
+    "assets/art/hero-cover-wild/bajie.jpg": {
+      "sha256": "d39b2eaec02d9529e8f70e89992121b770973ce6502bc34531108a0bfd3c0f23",
+      "bytes": 366201
+    },
+    "assets/art/hero-cover-wild/horse.jpg": {
+      "sha256": "1a4a9d7a5ede12cae3a68c192ed675ed415eb67f5729e7f1908ffabea10f245f",
+      "bytes": 442404
+    },
+    "assets/art/hero-cover-wild/horse_human.jpg": {
+      "sha256": "d0e94a7b5d98aff569150f59faf97811c30d99c52e7594e44b2a8ab1d91f8ad3",
+      "bytes": 642112
+    },
+    "assets/art/hero-cover-wild/tang.jpg": {
+      "sha256": "02747cf5e5ee5ba1cfa94930912dbcb045577ea20514d44ad6f0ed6b95ec8a75",
+      "bytes": 472525
+    },
+    "assets/art/hero-cover-wild/wujing.jpg": {
+      "sha256": "125ee170db7233356e0bb6a89f2f68be3a73280b4a5a5daf00c39c9633adee87",
+      "bytes": 424476
+    },
+    "assets/art/hero-cover-wild/wukong.jpg": {
+      "sha256": "1e9c6ebd1d19effd762ed42dd150c6df53c507535c749bc5104123cd80be1527",
+      "bytes": 461303
+    },
+    "assets/art/hero-ink/bajie.jpg": {
+      "sha256": "0c4c204603b567752ec1819950ba79e570ffb17180eb842f795b4ebeeb1f1dd4",
+      "bytes": 213611
+    },
+    "assets/art/hero-ink/horse.jpg": {
+      "sha256": "d31d523ed1fa2f81c27bac27cdc07b5d668315c66a16e49227d3e1dd11960357",
+      "bytes": 251690
+    },
+    "assets/art/hero-ink/tang.jpg": {
+      "sha256": "6aa8687d77c407a035e016da5c8b0b194e70e8bd5fe559bcfbb0422cd2e8ee87",
+      "bytes": 240415
+    },
+    "assets/art/hero-ink/wujing.jpg": {
+      "sha256": "8cce53c8653ebee6f51a3fe30090ae99c66fb6db5ce5705007086e258ebc5a78",
+      "bytes": 240076
+    },
+    "assets/art/hero-ink/wukong.jpg": {
+      "sha256": "1e276f005cabd3be1c17eefa086531a0d23bc890c4795f5380386f942ce03bde",
+      "bytes": 269536
+    },
+    "assets/art/item-icons/bajiaoshan.png": {
+      "sha256": "91d619c5e8e1dfaa139bee400bb11ac405d51620f3177e3ca4871a899cef78f4",
+      "bytes": 67472
+    },
+    "assets/art/item-icons/bandage.png": {
+      "sha256": "ec5ff6dace2c3b5374737fdf1f95b86a6c139f4643283fcb643b48a062d4396d",
+      "bytes": 70269
+    },
+    "assets/art/item-icons/bishui.png": {
+      "sha256": "5b450ca5f1e9a2fdddf10b3cc2e36cbdb03dafdcecc4ca8adda2af1ba5c45bae",
+      "bytes": 48577
+    },
+    "assets/art/item-icons/bowu.png": {
+      "sha256": "8db7e3bbd64c6c99382f191b50092331738cf120bb4c0bcabe2f3bb5960d45f8",
+      "bytes": 60210
+    },
+    "assets/art/item-icons/camp.png": {
+      "sha256": "d0b5ee2b818011a03acc29cbc21a0f023c6df717622000333b7bbad0ade4c4db",
+      "bytes": 98502
+    },
+    "assets/art/item-icons/chanzhang.png": {
+      "sha256": "29b56d7b63739394071386a591ded0e197c979c33bb30c8996b6752c915b1856",
+      "bytes": 30953
+    },
+    "assets/art/item-icons/dinghai.png": {
+      "sha256": "2c0ecf35d4482c527e514e21587db66cf61ca7444ec3adc0ab532f318fafa726",
+      "bytes": 96461
+    },
+    "assets/art/item-icons/huangjin.png": {
+      "sha256": "4e061c814e0947c08aab38021696009cb53781dfc7110235277b02dcf2af1279",
+      "bytes": 75648
+    },
+    "assets/art/item-icons/hulu.png": {
+      "sha256": "6f5de7c66cc71f7166aa5443b5baabaf5e2661dc80d7dfd966cdf9c4bbb624f1",
+      "bytes": 59658
+    },
+    "assets/art/item-icons/huolun.png": {
+      "sha256": "7af06360a4bb25f0217dc1a8efa82410bf4b5c32990274f6a80a6df907501a31",
+      "bytes": 108899
+    },
+    "assets/art/item-icons/huoyan.png": {
+      "sha256": "aa144bf5857c6a93df69ea353368112d7dd1f98684b85092e1524d586422d0fe",
+      "bytes": 69447
+    },
+    "assets/art/item-icons/jiasha.png": {
+      "sha256": "cb8ed7a1b7e02c2ab08496538b2e0d8cbed692b485b3f0884beb414777003017",
+      "bytes": 118630
+    },
+    "assets/art/item-icons/jinchan.png": {
+      "sha256": "f5a639fbb4275bd222de1c2e916e41bf8820595e85202b130d4ba929a5d61935",
+      "bytes": 111685
+    },
+    "assets/art/item-icons/jindouyun.png": {
+      "sha256": "fe224e3b68c592a96797f411ccecd832e11bd18fa58b8ce0f1c7278d9a21add2",
+      "bytes": 70232
+    },
+    "assets/art/item-icons/jingangzhuo.png": {
+      "sha256": "c55075926ec63daba59f0034d588652ee11755468161c9ae9db6537d305bcd5e",
+      "bytes": 45297
+    },
+    "assets/art/item-icons/jingping.png": {
+      "sha256": "d17d9af3ad4e084c643e7abc07ef377e8889f0440b6af6f581ba26834449a4f7",
+      "bytes": 49241
+    },
+    "assets/art/item-icons/jingubang.png": {
+      "sha256": "bcdf0c52380a11bffe968b70f888a1e123ebe823dc48b602d5c6fcf91f00cd5d",
+      "bytes": 37074
+    },
+    "assets/art/item-icons/jinguzhou.png": {
+      "sha256": "2cde31ff836d9959b2bbe13d578d2a444221b3dccb6fb354764932645779eb60",
+      "bytes": 35406
+    },
+    "assets/art/item-icons/jiuchi.png": {
+      "sha256": "c9f6e6ffb36b177a10b43278e60e8b9e07c1731648ed54e24f50263c454c7bbd",
+      "bytes": 35335
+    },
+    "assets/art/item-icons/lianhua.png": {
+      "sha256": "02fdcb4bebd3ec24e4f95ffc3d5aac6af36843935eede33323a8c73dc493245b",
+      "bytes": 85163
+    },
+    "assets/art/item-icons/liefeng.png": {
+      "sha256": "92db308f346434c2138eb762360d8080cdbf845b7fd1ff45420e540f5b6ca89f",
+      "bytes": 83136
+    },
+    "assets/art/item-icons/liuli.png": {
+      "sha256": "dc94c7d042f8a3bd4abbe7347f54936e1c4d7906b94ea9abe144bf720b4eecb5",
+      "bytes": 62511
+    },
+    "assets/art/item-icons/nianzhu.png": {
+      "sha256": "8e202786b43d250a5e0b7799879397abe072bb65e6e54459b94a83ceed5702ae",
+      "bytes": 45457
+    },
+    "assets/art/item-icons/panhui.png": {
+      "sha256": "d8efd552311a7157cede0277e28cfd77044edb26f1af74874e1c4c28e288a148",
+      "bytes": 77559
+    },
+    "assets/art/item-icons/pantao.png": {
+      "sha256": "6d5abec5f4e3bb44068954bd687a88e75920c35b01e41cd4ad51f295bd92895f",
+      "bytes": 60851
+    },
+    "assets/art/item-icons/qiankun.png": {
+      "sha256": "015239a74eaf83b572dba52b8b7c9be1ffaf7faba3e44fa5597f28db2ab7a967",
+      "bytes": 82305
+    },
+    "assets/art/item-icons/qishier.png": {
+      "sha256": "e1ea9d747ab32f88b49b3627f92f1a65bc70551b84b1005c9467949d37b018f0",
+      "bytes": 67701
+    },
+    "assets/art/item-icons/renshen.png": {
+      "sha256": "cc1c4d034b4fde30c8e33af3b487fb373078951b59cc34237d4759594f2822f2",
+      "bytes": 53785
+    },
+    "assets/art/item-icons/reroll.png": {
+      "sha256": "58051bddda4e7d320a02a9b5b9e28b021460f37a351bad0bf8908274d33eda85",
+      "bytes": 87210
+    },
+    "assets/art/item-icons/sanmei.png": {
+      "sha256": "525001c19ecf7e817f5113ee57406295650bf210ad5b90e64bcaed8478e3cb8a",
+      "bytes": 49907
+    },
+    "assets/art/item-icons/sheli.png": {
+      "sha256": "e42859e73ea2e1554ff60e31b77c72c5bd5f95f572b4c66fa83abee16d89cf9e",
+      "bytes": 71912
+    },
+    "assets/art/item-icons/shouhun.png": {
+      "sha256": "b29d93d2314963c8aea92fa7bc8938fde06acf06b23a1abcb63acc9d53851d19",
+      "bytes": 75768
+    },
+    "assets/art/item-icons/tianhe.png": {
+      "sha256": "c5e85a3ac949c9a755d53f51ac2e756f3fd5d66c8029897f0588e8ee69616353",
+      "bytes": 116544
+    },
+    "assets/art/item-icons/treat.png": {
+      "sha256": "40783baae061b7365241f3a0a8afde00fe186dee7f553bb8adb862b84b9fa097",
+      "bytes": 151222
+    },
+    "assets/art/item-icons/w_arrow.png": {
+      "sha256": "e068fdcca3101876e28217dea2b7c196104b5450ff4ce31bc285f2f4eb9c27e9",
+      "bytes": 128736
+    },
+    "assets/art/item-icons/w_bone.png": {
+      "sha256": "e66d0af02d2473bd69e0b7c5cffeff5114ae15850821e5fbd36db9bfce042ad7",
+      "bytes": 97713
+    },
+    "assets/art/item-icons/w_btc.png": {
+      "sha256": "e8d3dd39640840630ce54c70ed771dc35e436341ff4d7f445e7411e7f3fa8fc3",
+      "bytes": 103414
+    },
+    "assets/art/item-icons/w_flag.png": {
+      "sha256": "ff1c4bf416b655b6bc19b4970d6e909760a1a15dd4bc3578d2d2b48b3fe2c1be",
+      "bytes": 113873
+    },
+    "assets/art/item-icons/w_fo.png": {
+      "sha256": "d5c85d9ed756ffa8f74a4e7df90663e2e4fd869104696ca1c5187ecaf8e7707a",
+      "bytes": 135828
+    },
+    "assets/art/item-icons/w_hot.png": {
+      "sha256": "7703ceed13e59b21fab09e2183f14acec457892c154061207414f4dd084412ed",
+      "bytes": 78805
+    },
+    "assets/art/item-icons/w_pick.png": {
+      "sha256": "f5eceb5b6acd50cb906c9aa25f8435e171889babd9f68dcbfdc85c001aed8ab4",
+      "bytes": 78587
+    },
+    "assets/art/item-icons/w_rod.png": {
+      "sha256": "cf9ce7eda25012cd2604ab6ed5bb821b187d7b47b9a2c8b9d08113c5ed766c7a",
+      "bytes": 61408
+    },
+    "assets/art/item-icons/w_safe.png": {
+      "sha256": "78dd6ce63c96b07ee7604dbae3501a105b2f276eac10e1128d6259b49216a971",
+      "bytes": 74151
+    },
+    "assets/art/item-icons/w_sisi.png": {
+      "sha256": "a940e9fda61c899637e6605a024a82550e65c23c639847938f07a1c1bce219b6",
+      "bytes": 104064
+    },
+    "assets/art/item-icons/w_skull.png": {
+      "sha256": "a122d3537ccde220ec7fd26c0afb2aa8accee53ff74bd27720caf27bede86d73",
+      "bytes": 76412
+    },
+    "assets/art/item-icons/w_wave.png": {
+      "sha256": "1852d96b1fb83d0789b00c8d4a082a7aa332782cf9a0a4b7a85fa438802a5951",
+      "bytes": 44451
+    },
+    "assets/art/item-icons/wanzhang.png": {
+      "sha256": "9ab4adf418c35896b4061bea15f50f0393d28450d3e7aecef64ed402cb1ca23c",
+      "bytes": 104055
+    },
+    "assets/art/item-icons/ward.png": {
+      "sha256": "efdfbf0b7ef0f03337cceb70f67e1ddb6c9897e2bbb5d3625e0427b1728ceb1c",
+      "bytes": 99057
+    },
+    "assets/art/item-icons/wenxie.png": {
+      "sha256": "2f1dac4f2d579fb7cd319d131b6a935f624244b24c6a61af2e80842033105725",
+      "bytes": 80340
+    },
+    "assets/art/item-icons/xiangyao.png": {
+      "sha256": "6554745f9f5e0e29cf4a1ef3d2614dec94da715c708ee17bfa78c8c8839f6b91",
+      "bytes": 36306
+    },
+    "assets/art/item-icons/zhaoyao.png": {
+      "sha256": "4218513a81ae87ed6c81c3e1897588138e890a4acf0fa144bd333d9be643faad",
+      "bytes": 54140
+    },
+    "assets/art/kuanggong-ground/body.webp": {
+      "sha256": "73675640161397b432064612357b988c60c20f8046d134c266f56f6499f09419",
+      "bytes": 1028514
+    },
+    "assets/art/kuanggong-ground/parts.webp": {
+      "sha256": "902ef4b2c35556da569f86cdad0efe7af66ca09437ffd792cbd4067d2f0381ce",
+      "bytes": 870230
+    },
+    "assets/art/menu-poster/bajie.webp": {
+      "sha256": "cb3c664ad701cdda4c245360ce84356ffaf5d633e7562e29c48c2ab48a705902",
+      "bytes": 88338
+    },
+    "assets/art/menu-poster/diaoyulao.webp": {
+      "sha256": "4dd62febd562c883306cf8a4f7e2808a99fdd0573ed9d58bda9dcc3740ad22ae",
+      "bytes": 116438
+    },
+    "assets/art/menu-poster/haiteng.webp": {
+      "sha256": "91b2100e5910b3086b64887004dbb1fe89b1fbba46ab2759242f6ae4d45dfd0c",
+      "bytes": 113526
+    },
+    "assets/art/menu-poster/heyuxi.webp": {
+      "sha256": "bd46af081e3f87581f9828fafb1de368b4489c8bb7c277bbdc8018502f495faa",
+      "bytes": 111464
+    },
+    "assets/art/menu-poster/horse.webp": {
+      "sha256": "db8540a3ff138b498753ea27d5db816bcd66d814a5fb397734326e1a4b6ef1d7",
+      "bytes": 120562
+    },
+    "assets/art/menu-poster/kuanggong.webp": {
+      "sha256": "f5687b2bf3c7525c05907aa29c5349053292e75a4fe34cf0e5c5ea6066ec2f9c",
+      "bytes": 109348
+    },
+    "assets/art/menu-poster/laosiji.webp": {
+      "sha256": "5bc57df7609550d8e407bbbb2f16fe81bf0597fe6b25ae5e6368c8bad6f90555",
+      "bytes": 115168
+    },
+    "assets/art/menu-poster/martin.webp": {
+      "sha256": "268ba90166511ee94e071960efdfa1d9d194719c256751fb3331c77c3c45f195",
+      "bytes": 104104
+    },
+    "assets/art/menu-poster/masks.js": {
+      "sha256": "df78f5409a1d2d09e6c14e91a0bb730862dcd6839c615e69dd28d847fafbf33b",
+      "bytes": 32622
+    },
+    "assets/art/menu-poster/mon-bear.webp": {
+      "sha256": "bcc138336cf9e694df19ee7f43bd90da29fe36130f896bf00ebffb51932eb56e",
+      "bytes": 7556
+    },
+    "assets/art/menu-poster/mon-bone.webp": {
+      "sha256": "a9ad1650792a747e13b1c14885a54887cb6dc73ccce06771a83ad00e4b67a316",
+      "bytes": 9354
+    },
+    "assets/art/menu-poster/mon-elite.webp": {
+      "sha256": "ccd7e28af274e90995d699bc44dcb67bb0654b3ac71e8eb2a9d1aa2fd2d6cbff",
+      "bytes": 3742
+    },
+    "assets/art/menu-poster/mon-etower.webp": {
+      "sha256": "bc59a0f23c034a85b46b4dc6920ee75ce021828b71945fbec387fb68cdfcc3a0",
+      "bytes": 3308
+    },
+    "assets/art/menu-poster/mon-ranged.webp": {
+      "sha256": "5fa8e7eb5346ca1bc47c14b3b7b08a7c8de055613a31f03942b875bb8b91903f",
+      "bytes": 3062
+    },
+    "assets/art/menu-poster/mon-shield.webp": {
+      "sha256": "222486f8c62e0295df7911794a1be7c6abdf2ba7f4349f6809d46b3212784017",
+      "bytes": 2956
+    },
+    "assets/art/menu-poster/mon-small.webp": {
+      "sha256": "06ebe5b6b2c3e9867074f1bb04bae31a0edb81a07c8793e971b5b558e71f510c",
+      "bytes": 2950
+    },
+    "assets/art/menu-poster/mon-tank.webp": {
+      "sha256": "bd4e25bed75f5f54db048a03d1c7b4dae9bd3ca0c2b8d4d3804cc4f8340f1fa6",
+      "bytes": 3938
+    },
+    "assets/art/menu-poster/name-bajie.webp": {
+      "sha256": "9040230c1d53e0626e1f4575d186ff833d66bf4a8e277a866f30171187c6e484",
+      "bytes": 4872
+    },
+    "assets/art/menu-poster/name-diaoyulao.webp": {
+      "sha256": "067d7ca38eb35bb4935ee76e96b1045aaea01c8d24c3d0b7691986f65f5065a3",
+      "bytes": 5354
+    },
+    "assets/art/menu-poster/name-haiteng.webp": {
+      "sha256": "4e4fa85b4032e534f2cb80dbf01a3928f683368708150661472631656e2d630a",
+      "bytes": 4612
+    },
+    "assets/art/menu-poster/name-heyuxi.webp": {
+      "sha256": "b758b0e005fcf2e5e56b9507654e5c1a9c2bf70c1750de467a59a104ce732c48",
+      "bytes": 4126
+    },
+    "assets/art/menu-poster/name-horse.webp": {
+      "sha256": "ee157d62787ca20c8911074f95b097f5944dc6d5dbd8e805702711c686ed5d6c",
+      "bytes": 4408
+    },
+    "assets/art/menu-poster/name-kuanggong.webp": {
+      "sha256": "d8ce0332883b193f9eafb992f7b871633d28dd7014fe6fe38c3510848c20746b",
+      "bytes": 5778
+    },
+    "assets/art/menu-poster/name-laosiji.webp": {
+      "sha256": "a73c0d998af42544cf80c7958b13bded4efea022f0fdc43e86224b1a5cebc885",
+      "bytes": 6942
+    },
+    "assets/art/menu-poster/name-martin.webp": {
+      "sha256": "78e2fc11c4680225c18e0ffad31a8508cf4c35d52397e156e0ce4897b01093e1",
+      "bytes": 3204
+    },
+    "assets/art/menu-poster/name-phyrex.webp": {
+      "sha256": "ef68892b4d03f2972a045ced9c2f0644408cad27361e8f16d6dbfcc48a388425",
+      "bytes": 3768
+    },
+    "assets/art/menu-poster/name-sisi.webp": {
+      "sha256": "8b82938c6dc3a736f00c8b46af3f59a40840482b1532c207efcc8024d7976872",
+      "bytes": 2950
+    },
+    "assets/art/menu-poster/name-tang.webp": {
+      "sha256": "2e4dc57faccbb0e3f5a4e573c2f6196e9cf236bb038a58bfd871661591fc8b01",
+      "bytes": 4684
+    },
+    "assets/art/menu-poster/name-wujing.webp": {
+      "sha256": "d2ffbe80293a3b337a17fbd799db0856d18313d4377c013d52bc9e80a2ed5bdb",
+      "bytes": 5774
+    },
+    "assets/art/menu-poster/name-wukong.webp": {
+      "sha256": "f865bbc22acb4121132405cb669b827e302ea065fc58e5283fc77929cf366c15",
+      "bytes": 5422
+    },
+    "assets/art/menu-poster/name-yuanzhang.webp": {
+      "sha256": "0d7841836669fb4193c44fefe569b67cafb05266487f7e6954fffd6e3ddbc526",
+      "bytes": 3770
+    },
+    "assets/art/menu-poster/nameh-bajie.webp": {
+      "sha256": "154184398ff1cf19d34b05cf2dc9a30ff8ad2913072ed13a976f509ddd1295df",
+      "bytes": 4840
+    },
+    "assets/art/menu-poster/nameh-diaoyulao.webp": {
+      "sha256": "7ef407789bf44f3a4c34120eb64154a199eaa815ba1de758a755fd53eeca07e2",
+      "bytes": 5486
+    },
+    "assets/art/menu-poster/nameh-haiteng.webp": {
+      "sha256": "4daaff01c04241ea003ae3bd40c46a24c356800e84ab448666137052b6734be8",
+      "bytes": 4504
+    },
+    "assets/art/menu-poster/nameh-heyuxi.webp": {
+      "sha256": "c47d7cca694dbbc76440eda975811e7171e81ded72376f2bc8be0e442db260b8",
+      "bytes": 4144
+    },
+    "assets/art/menu-poster/nameh-horse.webp": {
+      "sha256": "cdd40a074f09964c4099744dbc5a1ae339cfe801389f2d1cd8a71c961d5adf56",
+      "bytes": 4534
+    },
+    "assets/art/menu-poster/nameh-kuanggong.webp": {
+      "sha256": "88e87d6d324adb3209e4a71cdaae4d8a84d5aa269a294497fdb247dfb8a78e02",
+      "bytes": 5672
+    },
+    "assets/art/menu-poster/nameh-laosiji.webp": {
+      "sha256": "30f8019d63b58b72b191a14b05bbd03808677b64492fa46285e1c920ced351d5",
+      "bytes": 7042
+    },
+    "assets/art/menu-poster/nameh-martin.webp": {
+      "sha256": "bbccca3d21af7c4a03c64531dfc31aa8f8d1ae55e44003ebb2c31de5dbcdfe57",
+      "bytes": 3134
+    },
+    "assets/art/menu-poster/nameh-niumo.webp": {
+      "sha256": "460b305d86d28155669915a704b22d2a5b65e0d3d0e99cbd0c1eac967195cfaa",
+      "bytes": 5246
+    },
+    "assets/art/menu-poster/nameh-phyrex.webp": {
+      "sha256": "f2328b72db91a25a7742501619a26045fe6cfc5cb25bcaf4066ce2dd05ac7ec2",
+      "bytes": 3736
+    },
+    "assets/art/menu-poster/nameh-sisi.webp": {
+      "sha256": "9e1054d6aa10caab3156b0ced898ce1175b9bd2a4b43d0f987991c17e8685fc3",
+      "bytes": 2962
+    },
+    "assets/art/menu-poster/nameh-tang.webp": {
+      "sha256": "6ff83538d2a89376f63b1872172c8bc0680d1d9b70ff6e3bcf5e3e9b97188128",
+      "bytes": 4704
+    },
+    "assets/art/menu-poster/nameh-wujing.webp": {
+      "sha256": "e0db6e34546a23f511aa16f6ebe51580cc5c3fb71d550fa71b146226ded2cdb4",
+      "bytes": 5842
+    },
+    "assets/art/menu-poster/nameh-wukong.webp": {
+      "sha256": "bd63c6adb26a59ba9dedb08c5296f4a6653d56f1aa61cb3988c6b67317cc9056",
+      "bytes": 5344
+    },
+    "assets/art/menu-poster/nameh-yuanzhang.webp": {
+      "sha256": "c03160f31cd5c67fc727ad56aed4361c104d034938ddc92ec6b599eaf8f9e49e",
+      "bytes": 3742
+    },
+    "assets/art/menu-poster/phyrex.webp": {
+      "sha256": "8edd89d05291b0afa9dec45c2b53cc94293c883607060c7a1c4c074e9c564bb2",
+      "bytes": 114058
+    },
+    "assets/art/menu-poster/sisi.webp": {
+      "sha256": "7f649a297de97c3759fbacf8eccb8d81f069cc3a314b71853842d87bf9beb7d6",
+      "bytes": 120608
+    },
+    "assets/art/menu-poster/tang.webp": {
+      "sha256": "f117eff97f491a212f42b74d32f553ff7139cd7c2f1f6a92c973bc80fafc6a81",
+      "bytes": 112888
+    },
+    "assets/art/menu-poster/wujing.webp": {
+      "sha256": "c95ff4918757f5a684cce18597d2e8e2c884755130d9578aa0fc547f492ed76e",
+      "bytes": 105882
+    },
+    "assets/art/menu-poster/wukong.webp": {
+      "sha256": "577e061deeb4f01413d4efe850854496e17055948cfcba5077a0112d66e4e8f4",
+      "bytes": 115112
+    },
+    "assets/art/menu-poster/yuanzhang.webp": {
+      "sha256": "4b3d96bed64b7f957d696fb623ea7a8e07fd3bc04b7af69c25258f8e03dd8001",
+      "bytes": 110834
+    },
+    "assets/art/menu-v5/av_ink_diaoyulao.webp": {
+      "sha256": "263027ce2745f87475abf75f82dc97dff6af0dbab01742784025e9d19db59e18",
+      "bytes": 22560
+    },
+    "assets/art/menu-v5/av_ink_haiteng.webp": {
+      "sha256": "7ed3e45ee8f13f75329c5686251a027281c46ab7a71d53e8d34c0c9ecaff7094",
+      "bytes": 15390
+    },
+    "assets/art/menu-v5/av_ink_heyuxi.webp": {
+      "sha256": "8cf03ee09ed763a4035ff986676a0db6649871f681eb74c08138517dc3ab0f53",
+      "bytes": 19814
+    },
+    "assets/art/menu-v5/av_ink_kuanggong.webp": {
+      "sha256": "691b2c5ed34a6bf49790163a0c46ccf4c4ca8ab54826782f71d562ddd8fdfbff",
+      "bytes": 18172
+    },
+    "assets/art/menu-v5/av_ink_laosiji.webp": {
+      "sha256": "9a9c37d6b8182da57aed47bb21fcce7fd20f39c15353280df32fb906b850b7ab",
+      "bytes": 14612
+    },
+    "assets/art/menu-v5/av_ink_martin.webp": {
+      "sha256": "98428d74f6b340d022461a35c0e84f39e5ad29282dc2eb2fadf97d346b57ad22",
+      "bytes": 17916
+    },
+    "assets/art/menu-v5/av_ink_phyrex.webp": {
+      "sha256": "4bb321ee0bbf173dc94cb54153b2378872b7297f70fb5dec9a15bb7c9edd698d",
+      "bytes": 16920
+    },
+    "assets/art/menu-v5/av_ink_sisi.webp": {
+      "sha256": "dd84924520a1983dc6f8bc3d6a0a9121e035ba64da9106c32f024e9806d8e126",
+      "bytes": 17890
+    },
+    "assets/art/menu-v5/av_ink_yuanzhang.webp": {
+      "sha256": "0210452a2367e27b288bb5a616319e1bcfb6f47a81a0f27eb22c3c134dae8618",
+      "bytes": 19242
+    },
+    "assets/art/menu-v5/av_mist_diaoyulao.webp": {
+      "sha256": "a2bbb04945d0637438817e290c0e6bab78e359b0cb375f92d5d84ff109b4fbd3",
+      "bytes": 24802
+    },
+    "assets/art/menu-v5/av_mist_haiteng.webp": {
+      "sha256": "70e703048f8217eb8899335c542acc8abc7b4fdde46e01e0e15bf355c85b7ac3",
+      "bytes": 15850
+    },
+    "assets/art/menu-v5/av_mist_heyuxi.webp": {
+      "sha256": "e1db701d0a2fd9119d8f502e51d0293e3dffdc02f873c7421ba7671a18625b05",
+      "bytes": 23144
+    },
+    "assets/art/menu-v5/av_mist_kuanggong.webp": {
+      "sha256": "e3ad456ce965b5e8c0b61210596674edf3cee5f3f3738f5257d27b2dac91dc1c",
+      "bytes": 19690
+    },
+    "assets/art/menu-v5/av_mist_laosiji.webp": {
+      "sha256": "01fcbbcb6432db07a3fca356307f59d3c4ca1eea5347b4d7de8baa731f3f047f",
+      "bytes": 16280
+    },
+    "assets/art/menu-v5/av_mist_martin.webp": {
+      "sha256": "321733d13aaa19d6b67e392e5c18e495289639c1e219950e4cf759d26bd1ab8f",
+      "bytes": 20094
+    },
+    "assets/art/menu-v5/av_mist_phyrex.webp": {
+      "sha256": "c496b404c76de6040bd7b6023439f8b21b4bedecfbffb5c785f049291b8a61e0",
+      "bytes": 17814
+    },
+    "assets/art/menu-v5/av_mist_sisi.webp": {
+      "sha256": "0d3acfec1590e082a2e274345f8d328c51f3c4e60b1bf2502423f6d054159ad7",
+      "bytes": 19272
+    },
+    "assets/art/menu-v5/av_mist_yuanzhang.webp": {
+      "sha256": "f43828fe90db084aff054e3600258aeb4d81a4f96a9b844ae2607484e37135b1",
+      "bytes": 20358
+    },
+    "assets/art/menu-v5/av_seal_diaoyulao.webp": {
+      "sha256": "832d96372a663992bcb267335e5443cedf7f20f10b406592922295048ee295b8",
+      "bytes": 21996
+    },
+    "assets/art/menu-v5/av_seal_haiteng.webp": {
+      "sha256": "a77bcfefed8d0cebd3abb7609d57cab1878df0c8c5486d5ba69a366a8b6a885a",
+      "bytes": 15588
+    },
+    "assets/art/menu-v5/av_seal_heyuxi.webp": {
+      "sha256": "c26a3c139e3c6d06b8af0d46a70652d42f9109e9b206bc7944c4b63d9fdfa129",
+      "bytes": 19568
+    },
+    "assets/art/menu-v5/av_seal_kuanggong.webp": {
+      "sha256": "a52eba8cc06c7ae538b55d214a66e8f080fef0920da7be82244413a3580c15e2",
+      "bytes": 17908
+    },
+    "assets/art/menu-v5/av_seal_laosiji.webp": {
+      "sha256": "1169990fbed9afef4cc203ff1b00d23a8356a744a2066efde724f787e4589b97",
+      "bytes": 14806
+    },
+    "assets/art/menu-v5/av_seal_martin.webp": {
+      "sha256": "17e544456fabe5643bef7d1fd5d42e77932c4cdae4738e5978d1390909175c8d",
+      "bytes": 18520
+    },
+    "assets/art/menu-v5/av_seal_phyrex.webp": {
+      "sha256": "fc386d000234bae5af2493a3cb13825ed8346d409450430923af2fa324a71749",
+      "bytes": 16550
+    },
+    "assets/art/menu-v5/av_seal_sisi.webp": {
+      "sha256": "2d89bc7971b1b6bae5be19a69d328b0e9454fb28222b54c89492e4139abde0b4",
+      "bytes": 17170
+    },
+    "assets/art/menu-v5/av_seal_yuanzhang.webp": {
+      "sha256": "90c473290ec6b27edf32758cd0d9be21fde4c86ad0c90958ce242075c222be30",
+      "bytes": 18954
+    },
+    "assets/art/menu-v5/bg_v1.webp": {
+      "sha256": "5ab6c28c6ebc4c1224da3246b520e583299fed904b3db545d8b3c455185a5eb2",
+      "bytes": 150490
+    },
+    "assets/art/menu-v5/bg_v2.webp": {
+      "sha256": "97ca66b5238fffcc708a2ffa0d6bef03b52495ccdafc41c9b913b4ce94af1e1d",
+      "bytes": 154306
+    },
+    "assets/art/menu-v5/bg_v2p.webp": {
+      "sha256": "b2a67f57b0fb97da8830bd60e0b1402b8376babad10bbf5c66416ad824cbcf2c",
+      "bytes": 121926
+    },
+    "assets/art/menu-v5/bg_v3.webp": {
+      "sha256": "cc06a5bd25d5f51368a394df25c9e7466c9bf163f0973b50004487477e3846cd",
+      "bytes": 204264
+    },
+    "assets/art/menu-v5/bg_v4.webp": {
+      "sha256": "77f6849f6ef2d52b321afa7470f4ece338352c5f4d1ca440a51245f11a28b000",
+      "bytes": 106766
+    },
+    "assets/art/menu-v5/fig_bajie.webp": {
+      "sha256": "b1329c964ecf2159fbda2126706917349dd8e73020ef0ea81b9e6fd5abcbdcc2",
+      "bytes": 780436
+    },
+    "assets/art/menu-v5/fig_horse.webp": {
+      "sha256": "d1e158713411cb060637e3a0837caa6fc902680623c203c730f5271ebfefb1ab",
+      "bytes": 115234
+    },
+    "assets/art/menu-v5/fig_tang.webp": {
+      "sha256": "a046e4250ff4644fa928e6b9e8acace10b8ccb2efe14a2ed15c5cf9fc36d6e31",
+      "bytes": 119922
+    },
+    "assets/art/menu-v5/fig_wujing.webp": {
+      "sha256": "56c7fb419ffc0635258a89e2938d1f3115c765f431b327d713505a37e63d0fcc",
+      "bytes": 935240
+    },
+    "assets/art/menu-v5/fig_wukong.webp": {
+      "sha256": "87d5735136bcb868538affc36f1f0c22df612ece0d491e36b96a2a7b569803b5",
+      "bytes": 856202
+    },
+    "assets/art/phyrex/stand.jpg": {
+      "sha256": "81fe359642e4d6847bddd1451f7e8898db7538123872ec68a0a495937e982ced",
+      "bytes": 120328
+    },
+    "assets/art/phyrex/stand_t.jpg": {
+      "sha256": "a458b1d8771a850af11682aab3df6a0df0594eaafdf5b32c410913052ba4c909",
+      "bytes": 95831
+    },
+    "assets/art/portrait-cut/bajie.webp": {
+      "sha256": "b53325ed687aad414f28bf6ccf1543cebcc84a5e7ea84ad5834c0ac1d14680d3",
+      "bytes": 108184
+    },
+    "assets/art/portrait-cut/tang-hd.webp": {
+      "sha256": "dde206b650b62fae76e82136a9a37e699f61212fa5e563a9b643f743ed6c6b87",
+      "bytes": 797206
+    },
+    "assets/art/portrait-cut/tang.webp": {
+      "sha256": "f5a3a4ad0e95333642412f15b41aa8f15974982aee879cbe306cf4c2aca92cc4",
+      "bytes": 107788
+    },
+    "assets/art/soldier-ink/cut2/aa_0.png": {
+      "sha256": "a5d210aa87ab12c88071f417d1b184fe20fa169823b9ed88eac4f616577b9834",
+      "bytes": 197048
+    },
+    "assets/art/soldier-ink/cut2/cannon_0.png": {
+      "sha256": "ef17f9eeb128ea80a7ae9442381fce1460576509a20bb3408f22548c3c19f7d6",
+      "bytes": 136508
+    },
+    "assets/art/soldier-ink/prepared/arrow-196ffaabee3bb096.png": {
+      "sha256": "196ffaabee3bb0965938c594deed24a54c2415487eb1962f47d02af8339a9b71",
+      "bytes": 183196
+    },
+    "assets/art/soldier-ink/prepared/cannon-f4a4236955be95e5.png": {
+      "sha256": "f4a4236955be95e5cea3f5f70fb01b1f91290042b62c8feed84b771b53381338",
+      "bytes": 261038
+    },
+    "assets/art/soldier-ink/prepared/heal-f3ec9000404fd2a3.png": {
+      "sha256": "f3ec9000404fd2a35460a630ef9476856a7cb7460f11d0215eebf7b958a67436",
+      "bytes": 266820
+    },
+    "assets/art/soldier-ink/prepared/siege-090d4793852eb5a7.png": {
+      "sha256": "090d4793852eb5a77dc970f6f87d5ff497e3a1252e66c79b298fc0edac46664f",
+      "bytes": 219342
+    },
+    "assets/art/specials-ink/reviewed/diaoyulao.json": {
+      "sha256": "220ade107107df01b91f713c7bb429780ed5cebc7e6d41cfdc50a165532db93e",
+      "bytes": 1871
+    },
+    "assets/art/specials-ink/reviewed/diaoyulao.webp": {
+      "sha256": "c20bf77701ae99717aecd6ed9ee6d2c2b5a8da2de7a4637f5387f62c50049923",
+      "bytes": 312912
+    },
+    "assets/art/specials-ink/reviewed/haiteng.json": {
+      "sha256": "02f59a329aba9648164c360c92a4d787e8d0935e230d58311b614fbb7f8efd2e",
+      "bytes": 1663
+    },
+    "assets/art/specials-ink/reviewed/haiteng.webp": {
+      "sha256": "62909124bf08f4406042e4ce7be8b92121f7e1baa248cc84dea1bf1b31adcde6",
+      "bytes": 271650
+    },
+    "assets/art/specials-ink/reviewed/heyuxi.json": {
+      "sha256": "ed9f4553ff733df2d137b53f62010719bffce4eb3dcbc1944ffb149dd8f5838c",
+      "bytes": 3395
+    },
+    "assets/art/specials-ink/reviewed/heyuxi.webp": {
+      "sha256": "dc90d3193e8b56a2eb5ed6717dffbed566e7c1da4d58eb4d6758fa0aca726027",
+      "bytes": 666326
+    },
+    "assets/art/specials-ink/reviewed/kuanggong.json": {
+      "sha256": "3e9b1843346ea70205c5a1038d527671cc52c24342e05b2401258176567c2a17",
+      "bytes": 1355
+    },
+    "assets/art/specials-ink/reviewed/kuanggong.webp": {
+      "sha256": "35fe8e096a0ab6646f3813e88a3c1c9b469ef99853806bdf6d504d7526a38fd9",
+      "bytes": 369526
+    },
+    "assets/art/specials-ink/reviewed/laosiji.json": {
+      "sha256": "43e8263bf6292ce582e77fb1538118e9add4ffbf0983a24e3b1e5d5430cbc22e",
+      "bytes": 1677
+    },
+    "assets/art/specials-ink/reviewed/laosiji.webp": {
+      "sha256": "c0b48f258dc6d3462c1c23987f25e64cca8cba26471fcd1bf47248cf7f6d7ce5",
+      "bytes": 310012
+    },
+    "assets/art/specials-ink/reviewed/martin.json": {
+      "sha256": "240c14aefd290038f74d2251c64b434038c46e7916d4bff70cf451d52c73d56c",
+      "bytes": 3274
+    },
+    "assets/art/specials-ink/reviewed/martin.webp": {
+      "sha256": "5c894902c937ec9c54863477bdc808ae8b65d7f7197e72ab8a681b45b124988b",
+      "bytes": 655916
+    },
+    "assets/art/specials-ink/reviewed/phyrex.json": {
+      "sha256": "3f193ca313a702a8f770cb897d2462c3aa512aa2840b3d9ec44b05bc9b3965db",
+      "bytes": 3274
+    },
+    "assets/art/specials-ink/reviewed/phyrex.webp": {
+      "sha256": "8c9d0266a6ed821ffae194620e4613f2523abee31a3746407db09523ff7db811",
+      "bytes": 618958
+    },
+    "assets/art/specials-ink/reviewed/sisi.json": {
+      "sha256": "f76a8985dfc5fe40dacc021a067f5bd942a9ea83a47a65dabb3de726d4bb76d5",
+      "bytes": 1864
+    },
+    "assets/art/specials-ink/reviewed/sisi.webp": {
+      "sha256": "52ddc4fd2e4c7475b959b05841442d9a6a83df74be85ac4b36e264e8e478a751",
+      "bytes": 349414
+    },
+    "assets/art/specials-ink/reviewed/yuanzhang.json": {
+      "sha256": "608ea9e6b97ff62e2327f3f9c27f8bdeadc1389b2a1a674aa9980272eab6ccb7",
+      "bytes": 3393
+    },
+    "assets/art/specials-ink/reviewed/yuanzhang.webp": {
+      "sha256": "c106497c6e827cca6cea66e2d8621f460e49c067ee82c3ce2a4430af00813bd9",
+      "bytes": 581980
+    },
+    "assets/art/ult-climax/arrow.jpg": {
+      "sha256": "1bde30e6a217fa2ea4d959148736d3d6f1f497ef99d7dd21fd2ea908a14e16e5",
+      "bytes": 572838
+    },
+    "assets/art/ult-climax/bajie.jpg": {
+      "sha256": "7857178c9ae3e35b70209ece91f0bc64431918795d1ed3df6316efc05abb41b8",
+      "bytes": 677352
+    },
+    "assets/art/ult-climax/cannon.jpg": {
+      "sha256": "464dd8d2beb5da06520f6b247b45aa655438c12539b862e5fc8e1aff8ad11b61",
+      "bytes": 614615
+    },
+    "assets/art/ult-climax/diaoyulao.jpg": {
+      "sha256": "4340fb7f0dd7ebb06ac69c6a50f47400a7281b2b82b96ca23cf81fe747a330be",
+      "bytes": 770538
+    },
+    "assets/art/ult-climax/frost.jpg": {
+      "sha256": "d7005d53e82f9800e431a73f3bb3689218dd5f65e8ee8b813dd07be44370c7d0",
+      "bytes": 622871
+    },
+    "assets/art/ult-climax/haiteng.jpg": {
+      "sha256": "063efe2fbb7235036ad853be020c905561e9e3656cc68201ef301bf0905766fe",
+      "bytes": 751563
+    },
+    "assets/art/ult-climax/heal.jpg": {
+      "sha256": "833b75cf3f65d14a7e1aa24c0d6c032905deb5034972fe8eb2a920b7255bd510",
+      "bytes": 641255
+    },
+    "assets/art/ult-climax/heyuxi.jpg": {
+      "sha256": "5fea3b7f5e5a3d912cd8d5f829740ac662b93ff8737761966ca276648f443df2",
+      "bytes": 642900
+    },
+    "assets/art/ult-climax/horse.jpg": {
+      "sha256": "e92087de48bac94ab3f190d08558c20913c1909172882e25543ca3d91494185f",
+      "bytes": 609914
+    },
+    "assets/art/ult-climax/kuanggong.jpg": {
+      "sha256": "25247517cd048bc6bb2611f0274805296aec564321067bd89d42f29f423bca51",
+      "bytes": 693688
+    },
+    "assets/art/ult-climax/laosiji.jpg": {
+      "sha256": "44cc6f6e20c345cedb2e6c7f75770ea3f6484a36973c1ca35538afb13ec50c34",
+      "bytes": 681989
+    },
+    "assets/art/ult-climax/martin.jpg": {
+      "sha256": "b400ebd4549e22ae337d1208eccf2543c57d056e28475b5d5a8b7d7bdba1bf74",
+      "bytes": 665393
+    },
+    "assets/art/ult-climax/niumo.jpg": {
+      "sha256": "3cd18781b61988c98a45fbcc8ef19f29d0be7ec8f84063b8e0c6c7581dbc4f50",
+      "bytes": 743550
+    },
+    "assets/art/ult-climax/phyrex.jpg": {
+      "sha256": "194bfaf848a4ad4bb43ca59792236f9442d5bfa3fc6a3aa4afeea75f49def48d",
+      "bytes": 729351
+    },
+    "assets/art/ult-climax/siege.jpg": {
+      "sha256": "51d527a46c9965e4aceacd4976f75a253cdace25b3d587c19a1304bb746c15e7",
+      "bytes": 737770
+    },
+    "assets/art/ult-climax/sisi.jpg": {
+      "sha256": "d6cf48e7ab417d0019de75fe79675038cd1e83584f0a0ab73f707633375fdc25",
+      "bytes": 686397
+    },
+    "assets/art/ult-climax/tang.jpg": {
+      "sha256": "ca91533372eac52baafe0e12186458e9845f721020e9057ac72c04c13f3b0d1e",
+      "bytes": 661861
+    },
+    "assets/art/ult-climax/wujing.jpg": {
+      "sha256": "8330743b11a48c335f265054892daeb13778a6c8ec878e0e5dd7bbc369edefe0",
+      "bytes": 694048
+    },
+    "assets/art/ult-climax/wukong.jpg": {
+      "sha256": "9467272cbd1473cea8850605fdf7b1d763cc22b94be6269698274d1255762f3f",
+      "bytes": 674283
+    },
+    "assets/art/ult-climax/yuanzhang.jpg": {
+      "sha256": "565eb9e42fbb13865da5b2bf51a19647b1e625a397e5e3ef1bec931498f8dfad",
+      "bytes": 775609
+    },
+    "assets/art/ult-ink/reviewed/diaoyulao.json": {
+      "sha256": "91d6b643e0a2bea48a3564789cfc5e5b9a328a6cf55068b9bbddba71d4e6e78c",
+      "bytes": 1848
+    },
+    "assets/art/ult-ink/reviewed/diaoyulao.webp": {
+      "sha256": "9f8a01dcfea9bf53274f227eaca69eff96976744ebafa1076e13a514708afeea",
+      "bytes": 280644
+    },
+    "assets/art/ult-ink/reviewed/haiteng.json": {
+      "sha256": "7043031e0a7dd241b723009d6dd22ad39a0830848ea5439293ceea37018786fc",
+      "bytes": 1836
+    },
+    "assets/art/ult-ink/reviewed/haiteng.webp": {
+      "sha256": "4cdc5f85b861e26b8a53cee0d9720f0a3f3cd7cb4f589e535487525a3541a829",
+      "bytes": 461426
+    },
+    "assets/art/ult-ink/reviewed/heyuxi.json": {
+      "sha256": "688842baa6536851f959dc920619651c023de8244c125a437206c2f823256c9e",
+      "bytes": 1832
+    },
+    "assets/art/ult-ink/reviewed/heyuxi.webp": {
+      "sha256": "b0d284f904d18fb6dc78e505e7777d418820a25b07c96091d4a65e21bbcaad4c",
+      "bytes": 630884
+    },
+    "assets/art/ult-ink/reviewed/kuanggong.json": {
+      "sha256": "8a6642af53ae31702acf468e796bc0c30eac7a59d7ed58cdff49a5442cf18866",
+      "bytes": 1840
+    },
+    "assets/art/ult-ink/reviewed/kuanggong.webp": {
+      "sha256": "c04557509c276c131e18b47c5e72a1dda3f24a26c0ec6f82cc527718152a8967",
+      "bytes": 431830
+    },
+    "assets/art/ult-ink/reviewed/laosiji.json": {
+      "sha256": "6d6bd69e9a8a2c65119fa01921720dc3a069735338aa6d02c3a96d8db79512b6",
+      "bytes": 1836
+    },
+    "assets/art/ult-ink/reviewed/laosiji.webp": {
+      "sha256": "86376a0d1ceb9bd9fa8e1eaa596f1a9a420b5e8decaf561eeba95f983478ad0f",
+      "bytes": 440336
+    },
+    "assets/art/ult-ink/reviewed/martin.json": {
+      "sha256": "f9adbdc1a29fbbfb3dd4029da9952438b62fc979625d7d68621913e5f506a32e",
+      "bytes": 1834
+    },
+    "assets/art/ult-ink/reviewed/martin.webp": {
+      "sha256": "d042891dc4c1e0856993672a9b01714bbbdc3f06c554a8644e8c14c11deae11a",
+      "bytes": 387406
+    },
+    "assets/art/ult-ink/reviewed/phyrex.json": {
+      "sha256": "60a4a855ead92fe2a7105d89ccce0eed53036c66b6729a1867fbebcf5275fc2a",
+      "bytes": 1832
+    },
+    "assets/art/ult-ink/reviewed/phyrex.webp": {
+      "sha256": "92cd3c9b6b913f8b8e4a6fe9edc46b5c0686cd863c0f5b5351ec2618497c9618",
+      "bytes": 623934
+    },
+    "assets/art/ult-ink/reviewed/sisi.json": {
+      "sha256": "71a23ffd325b7af54fd3501f7c2503b5f2041b53e31ef46a5e7f7b592d8dfe2a",
+      "bytes": 1819
+    },
+    "assets/art/ult-ink/reviewed/sisi.webp": {
+      "sha256": "793f58fb95fb45bf09b3828bab8af0002c957d9ab01256d2b2cf8de156e73c5c",
+      "bytes": 650308
+    },
+    "assets/art/ult-ink/reviewed/yuanzhang.json": {
+      "sha256": "8154495309f47c86de2bf6e2d6aec3a211fb4050a6aab5df974094832b716b1f",
+      "bytes": 1841
+    },
+    "assets/art/ult-ink/reviewed/yuanzhang.webp": {
+      "sha256": "e0968a65ef3aef6d483dba358355971b40a4e1712741e9802da5f2a37963bb73",
+      "bytes": 543948
+    },
+    "assets/art/undead-ink/atlas.webp": {
+      "sha256": "0a0c85f38f451d87c697cfb13e748a65dd9ef3f57b1dd23562306fd7443afbe4",
+      "bytes": 895060
+    },
+    "assets/art/villain-minion-motion/small_1-main.webp": {
+      "sha256": "f2bcfae227f0e55db6a2b6e932f72c555e697bcadf99b8105301e946e76fb207",
+      "bytes": 565890
+    },
+    "assets/art/villain-minion-motion/small_1-pass.webp": {
+      "sha256": "b1f4521090d7378ce04f1b9c71cf195ea47f21c8a2cc8324693de1b5f4bc9bd2",
+      "bytes": 333580
+    },
+    "assets/art/villain-minion-motion/small_2.webp": {
+      "sha256": "9d5095ffc5969e92864bd3f9badfd6a4d4d04cbba91bf99339ba657731708f82",
+      "bytes": 490906
+    },
+    "assets/art/villain-minion-motion/small_3.webp": {
+      "sha256": "a73cf2292a3b814bb9c92a67d645bf18268b695ee99b524f9c891cc53dc8a743",
+      "bytes": 505460
+    },
+    "assets/art/villain-minion-motion/small_4.webp": {
+      "sha256": "adc5962859cf663de9c28bb5d651f3cb6e72072caa210ac9f29f947ba9188e54",
+      "bytes": 645056
+    },
+    "assets/art/villain-minion-motion/small_5.webp": {
+      "sha256": "b198ad47fa1e3998139916077d7665c2991484e2bb89fd798cafd73ffe8bfd95",
+      "bytes": 676422
+    },
+    "assets/art/world-props/generation-prompt.txt": {
+      "sha256": "4d7c5e2d134b7829a704ffa8c7fbe783b53fe76742c823f145543ee47a724c71",
+      "bytes": 3595
+    },
+    "assets/art/world-props/landmarks.png": {
+      "sha256": "e333361570b2a912e2426cf15565d0dc596371f6ec6b12903e399b813d67950f",
+      "bytes": 1962230
+    },
+    "assets/art/world-props/provenance.json": {
+      "sha256": "affd61257fe278fdc0842ec0c746616c173be6b7f86612dd1d4d571b18f0f736",
+      "bytes": 1576
+    },
+    "assets/art/wujing-ground/layers.webp": {
+      "sha256": "6bcb9481bb80cd67114c65d5c2b8b05157d891c5fb235541cb6423b603ada581",
+      "bytes": 1457168
+    },
+    "assets/art/wukong-ground/layers.webp": {
+      "sha256": "8efaad9c3c55fde234dc6d2d34e44190eb099ab15b324f7951ee284296a08a27",
+      "bytes": 187652
+    },
+    "assets/art/x-avatars/diaoyulao.jpg": {
+      "sha256": "8904a96b072197ce558773cbf0d1dfe913712f83186c0d4e351a597b391ef36b",
+      "bytes": 44787
+    },
+    "assets/art/x-avatars/diaoyulao.webp": {
+      "sha256": "652dee6cca4796c7a4f1de63a76ae7ff0b350c14ad81b80dfdc780c4c8902954",
+      "bytes": 11518
+    },
+    "assets/art/x-avatars/haiteng.jpg": {
+      "sha256": "f61f9da3b8b0121d6d0bcf8e74d098872426376885e05255bae32fe64588d3f0",
+      "bytes": 23815
+    },
+    "assets/art/x-avatars/haiteng.webp": {
+      "sha256": "3b5acab0b0006ee67bd109ceeb8c0684c761a9e0e0ba69452dbb2722ffc40fb6",
+      "bytes": 6172
+    },
+    "assets/art/x-avatars/heyuxi.jpg": {
+      "sha256": "103db1550f203118371b7227a9d2c6c42175c9eb0405eeb0f69ccd250a8a0d35",
+      "bytes": 51434
+    },
+    "assets/art/x-avatars/heyuxi.webp": {
+      "sha256": "16b1f8b63ff92f3c45f2426d964eeab4a1306d5b4e77c7ddb685326a34909d95",
+      "bytes": 12484
+    },
+    "assets/art/x-avatars/kuanggong.jpg": {
+      "sha256": "b38ffbd438a7533538fc45c9913f64938163604da02d4a3e5624f26fa21f1ade",
+      "bytes": 29534
+    },
+    "assets/art/x-avatars/kuanggong.webp": {
+      "sha256": "f64c230026b55f1e12801053487f7e95400782c68eb6403c84fa2701bbfcc582",
+      "bytes": 8020
+    },
+    "assets/art/x-avatars/laosiji.jpg": {
+      "sha256": "582af8207325016f24d9154d3c1378b33c3fa8e3450b41f4e506986a37d23c1e",
+      "bytes": 6791
+    },
+    "assets/art/x-avatars/laosiji.webp": {
+      "sha256": "8e7a01d897728042ded57a544d1ae1a038260fb297e9a187eec74648db3f5942",
+      "bytes": 1222
+    },
+    "assets/art/x-avatars/martin.jpg": {
+      "sha256": "7b27fb75e8cc3928a5324b323831f038de7496b846b326ad7d28bb12cbfeba71",
+      "bytes": 31244
+    },
+    "assets/art/x-avatars/martin.webp": {
+      "sha256": "e45c2b2c3e21d9b2dcc50f6b9ec01499609b8d4bb92b8c2a8e3f1ea3fdf9f3b4",
+      "bytes": 6930
+    },
+    "assets/art/x-avatars/phyrex.jpg": {
+      "sha256": "a411c84f40ca3aa545c63d0123e603d66ae9b5bb00534025fcfd21080e3e9565",
+      "bytes": 25975
+    },
+    "assets/art/x-avatars/phyrex.webp": {
+      "sha256": "232a31b379d999c85186fa80500a9b7e0f2672188398f4c042942eee2a751adf",
+      "bytes": 6656
+    },
+    "assets/art/x-avatars/sisi.jpg": {
+      "sha256": "0516d4aa84083ee105e9aa66eebe752c51a3d48b7b6c9b6fef691b57288d907c",
+      "bytes": 25870
+    },
+    "assets/art/x-avatars/sisi.webp": {
+      "sha256": "d7d929a45ec12d78470aacc604205eef58d81677db78e442dcc3bcaffa659b36",
+      "bytes": 5640
+    },
+    "assets/art/x-avatars/yuanzhang.jpg": {
+      "sha256": "4633a7c6be7306cc2bce3b7c96773ef439da90d0eecf3d40b869dceaa5ce8250",
+      "bytes": 25634
+    },
+    "assets/art/x-avatars/yuanzhang.webp": {
+      "sha256": "9df3926941e95b8d968d08914c4b37b115c024e6b1d68b516eb8d3b544b7ec62",
+      "bytes": 6844
+    },
+    "assets/devil-kitty/animation.json": {
+      "sha256": "5f41807c030dd00af80a6dfacf785260aedc0c7d70d4350e54b284af91de0394",
+      "bytes": 1709
+    },
+    "assets/devil-kitty/art.json": {
+      "sha256": "83d2dce55a1bc67b412c33e3db773c0ec8f1616bc9c09d66e5a797710928328b",
+      "bytes": 731
+    },
+    "assets/devil-kitty/form-cut.webp": {
+      "sha256": "b08f06b820b98ee64d42c88c1c38d5ecdab046974d5ae292466d77544c089cfd",
+      "bytes": 201310
+    },
+    "assets/devil-kitty/form.mp4": {
+      "sha256": "38d5ca9455856346f0a1a98bc3fd97ed8142a5a608783807cf79f60366ce00ec",
+      "bytes": 9532964
+    },
+    "assets/devil-kitty/form.webp": {
+      "sha256": "b08f06b820b98ee64d42c88c1c38d5ecdab046974d5ae292466d77544c089cfd",
+      "bytes": 201310
+    },
+    "assets/devil-kitty/frames/frame-001.webp": {
+      "sha256": "62c5f03f7b06e4dd9fedaa0a1215663117eab35829d1ce32e5b93e9754606f3b",
+      "bytes": 148674
+    },
+    "assets/devil-kitty/frames/frame-002.webp": {
+      "sha256": "6ef89da4c0ae8933ec05e67ca93fa7e74dad651d8b6dbac9983ac898310d7135",
+      "bytes": 131494
+    },
+    "assets/devil-kitty/frames/frame-003.webp": {
+      "sha256": "4ec8e132d010f882a5a7b51b884eaee49b601e99506aba08deb7359d204dcffe",
+      "bytes": 105806
+    },
+    "assets/devil-kitty/frames/frame-004.webp": {
+      "sha256": "482beacaf8d0b697c47a331f968edb9f5b3f1e8dfe7eec72ce774db199029639",
+      "bytes": 80242
+    },
+    "assets/devil-kitty/frames/frame-005.webp": {
+      "sha256": "eb4d3739d4fcfef37c665a23552a333a9f75ae0da39059fd0654aef705069da8",
+      "bytes": 86246
+    },
+    "assets/devil-kitty/frames/frame-006.webp": {
+      "sha256": "1ee736c49e50c93a6ea6cb892b582bb0a2b0b5717c4f903189da5ed5f1e9477d",
+      "bytes": 106550
+    },
+    "assets/devil-kitty/frames/frame-007.webp": {
+      "sha256": "43db0e0b5b34c92cb0a8a63ae732019d93d8eb81b2d30f0d7271aec8b02044c9",
+      "bytes": 126422
+    },
+    "assets/devil-kitty/frames/frame-008.webp": {
+      "sha256": "d9f63330b685859745db01c5496663e495e3eec8ba2cf8c23eb152465eabb655",
+      "bytes": 146006
+    },
+    "assets/devil-kitty/frames/frame-009.webp": {
+      "sha256": "bb3a66dfedd3daee3efc0ec430b4d2851218c2de8387c1b570fd772debcc6b4e",
+      "bytes": 143010
+    },
+    "assets/devil-kitty/frames/frame-010.webp": {
+      "sha256": "599d9bd9c73e666c2fdc33fb10ad81f91f0fe8f08b20d0a52fadbe690e378764",
+      "bytes": 147608
+    },
+    "assets/devil-kitty/frames/frame-011.webp": {
+      "sha256": "60711a7c9ee49198c2b2d2d3edfb4900954ee4cd436d590a2f14384125421d99",
+      "bytes": 146620
+    },
+    "assets/devil-kitty/frames/frame-012.webp": {
+      "sha256": "338cf9fefc4bed75a34372ee4051ddab3d21ed3b6b9b8570c229696bcb50f842",
+      "bytes": 136012
+    },
+    "assets/devil-kitty/frames/frame-013.webp": {
+      "sha256": "e08c6fa81303ae07deb5e80f0e478cc72864433292f3be8632230bdb2532512b",
+      "bytes": 123920
+    },
+    "assets/devil-kitty/frames/frame-014.webp": {
+      "sha256": "23e01d792dc5f1e793b55e81d2d0859318a6c3f0ebb09d4e5f45b2a564e90bab",
+      "bytes": 113098
+    },
+    "assets/devil-kitty/frames/frame-015.webp": {
+      "sha256": "18f0fd73b1690617bfdd39c88b462c33d4331ccbc1e16bd9df2511ef16c3b148",
+      "bytes": 99478
+    },
+    "assets/devil-kitty/frames/frame-016.webp": {
+      "sha256": "5b76e27063dfa7dc586bfbbb5146d8085c0f686b1d6d633f3ac4c84c681ac721",
+      "bytes": 97016
+    },
+    "assets/devil-kitty/frames/frame-017.webp": {
+      "sha256": "6a83f5c90d78188c29f4d91d10d413fab2123d3c61d37d2ba6af3e985d95b3d6",
+      "bytes": 91582
+    },
+    "assets/devil-kitty/frames/frame-018.webp": {
+      "sha256": "e64450dda6be1a3fb7596f6c2e195a7d354b884e30006611b5901f0b39b9940c",
+      "bytes": 99134
+    },
+    "assets/devil-kitty/frames/frame-019.webp": {
+      "sha256": "2e6a64bc5aef0a1ac79e504b37c794dec9de6030d5c05a820841195f5e3517da",
+      "bytes": 109462
+    },
+    "assets/devil-kitty/frames/frame-020.webp": {
+      "sha256": "40e32d68905fb9853d297d81932a003caa970018e6bc9e30666619f9232d2117",
+      "bytes": 133334
+    },
+    "assets/devil-kitty/frames/frame-021.webp": {
+      "sha256": "e928cf526b07ebc190aea817ca34f25d5c01c088413a736d4bd9667fb8f8cc13",
+      "bytes": 156304
+    },
+    "assets/devil-kitty/frames/frame-022.webp": {
+      "sha256": "9529129a6923b09b0c6207775da690206cdd6c3de6c9973ba2c1402bde34770b",
+      "bytes": 115782
+    },
+    "assets/devil-kitty/frames/frame-023.webp": {
+      "sha256": "e6a51abcdf247e212e2c1455c998b83c8ec8b453818d9919c50f0fe4fc30026d",
+      "bytes": 118262
+    },
+    "assets/devil-kitty/frames/frame-024.webp": {
+      "sha256": "94415a84a7a3092940ce79dfa8a6cb46b26b4bf98d80038a8b69360c941989f8",
+      "bytes": 109896
+    },
+    "assets/devil-kitty/frames/frame-025.webp": {
+      "sha256": "653e10c80cada11083347dec39153446178c3f7a9fa521a9bcf6c6d05fd05379",
+      "bytes": 105316
+    },
+    "assets/devil-kitty/frames/frame-026.webp": {
+      "sha256": "6f88f94d02dc28477f2c700da7ceab1e414409069d2d576648a85084d1e84a1e",
+      "bytes": 95110
+    },
+    "assets/devil-kitty/frames/frame-027.webp": {
+      "sha256": "62febf2fdd8b3f14038ee389f724a06f3fc3e5bef5d31db6ce5657884889ae37",
+      "bytes": 94238
+    },
+    "assets/devil-kitty/frames/frame-028.webp": {
+      "sha256": "fc13ed5606784463985fc642e05a5b395e8791023e55fba1b66e7ae187c35f67",
+      "bytes": 101628
+    },
+    "assets/devil-kitty/frames/frame-029.webp": {
+      "sha256": "36ebf28ebedb918a0ec8f3c3ee37a624b36bd8c3a85fe89ab6f8c203591dda08",
+      "bytes": 92468
+    },
+    "assets/devil-kitty/frames/frame-030.webp": {
+      "sha256": "5ef7d4b541e14b93ab72e6cc0113222355d6875ae666f5c2349a86949a3f841c",
+      "bytes": 94474
+    },
+    "assets/devil-kitty/frames/frame-031.webp": {
+      "sha256": "8250367a95ed27658379043e7cef6e24dc5484d1ce0937696faf12706cc22557",
+      "bytes": 114692
+    },
+    "assets/devil-kitty/gear/cato_i.webp": {
+      "sha256": "868a2c2a5df5993cf8cb72de8457f57efded6788dd14b0513346f58a7065fd26",
+      "bytes": 79276
+    },
+    "assets/devil-kitty/gear/cato_w.webp": {
+      "sha256": "f52977837b8d4a8036e10c20e7341310c9ee582695213b49ef7768a94ab3689b",
+      "bytes": 86214
+    },
+    "assets/devil-kitty/gear/diaoyulao_i.webp": {
+      "sha256": "99494eb4b5335bf73843d33f7ffedeb2c963beb8ed0deccf6adab76d3650a80a",
+      "bytes": 81902
+    },
+    "assets/devil-kitty/gear/diaoyulao_w.webp": {
+      "sha256": "7a9eab9c2a144ba6b0b73b5ee08b6e96e3dcd1b5063182dfce508748332d4ddb",
+      "bytes": 80488
+    },
+    "assets/devil-kitty/gear/haiteng_i.webp": {
+      "sha256": "9f9f6a19cc48061d0021dfff0b59ff04b2fde94542c6d7a4efd4d5a76188e53b",
+      "bytes": 92220
+    },
+    "assets/devil-kitty/gear/haiteng_w.webp": {
+      "sha256": "4fbde5efdf62b5b6ffcd0087c7684087c2a8f63d06fc092749ebc1cb4b1b423b",
+      "bytes": 99702
+    },
+    "assets/devil-kitty/gear/heyuxi_i.webp": {
+      "sha256": "682fac9164254283652af9ef3fa48f5d948c5ef97a933347208b10fbe7991f81",
+      "bytes": 92326
+    },
+    "assets/devil-kitty/gear/heyuxi_w.webp": {
+      "sha256": "6516bfaf8f0d03bf966a1ee8448ece91bc28ec19c7dbbea8cf6675e52abc331f",
+      "bytes": 79450
+    },
+    "assets/devil-kitty/gear/kuanggong_i.webp": {
+      "sha256": "905d56dafa589bba384aecc59f4a21d710e82917ee7da8851761db8c84d18d62",
+      "bytes": 109096
+    },
+    "assets/devil-kitty/gear/kuanggong_w.webp": {
+      "sha256": "dcc16ab2ccdce7ade416f89f661cc3bb5c4f90c00b043e1c8fc42eb555c0bed9",
+      "bytes": 100878
+    },
+    "assets/devil-kitty/gear/laosiji_i.webp": {
+      "sha256": "931c9304de3de9013e7f22aa49031390f2a60261a8f898485f78f08bfa6e90c7",
+      "bytes": 70542
+    },
+    "assets/devil-kitty/gear/laosiji_w.webp": {
+      "sha256": "f2ffc06e6a844949d04abf5d39a6dba61cd399012f9a3778550441ddcc86556e",
+      "bytes": 138976
+    },
+    "assets/devil-kitty/gear/martin_i.webp": {
+      "sha256": "92136e8145650a0dbcfbd484664a87d3760573d7ae13c5545b888eca0e885b12",
+      "bytes": 71046
+    },
+    "assets/devil-kitty/gear/martin_w.webp": {
+      "sha256": "1e1ba89b8616d5b49c927fecc3563d290d47e62746299086e113efeedc431e2f",
+      "bytes": 105994
+    },
+    "assets/devil-kitty/gear/phyrex_i.webp": {
+      "sha256": "1fb0320bd8302df92a4463d4a0f73221f9b52b95ff6d296ff528ea8f40e379de",
+      "bytes": 90756
+    },
+    "assets/devil-kitty/gear/phyrex_w.webp": {
+      "sha256": "08fbd156489dfb9035ca4fb9e069823e3b4d7a99eed02560f454428094d850ff",
+      "bytes": 101604
+    },
+    "assets/devil-kitty/gear/qinba_i.webp": {
+      "sha256": "2a767f0d7045926bfbc881a1e7d44fe5dce70899c5d797bf29bb3672b595d985",
+      "bytes": 73262
+    },
+    "assets/devil-kitty/gear/qinba_w.webp": {
+      "sha256": "621534474b9dd8c5454dfc4800e63f51f0520c2a1644bb4daf7a71f84fe64f10",
+      "bytes": 83102
+    },
+    "assets/devil-kitty/gear/sisi_i.webp": {
+      "sha256": "911265aad43dad3abea7b0ed7fafc8ca8041832aec91f84d1819e11b7da57d5f",
+      "bytes": 106090
+    },
+    "assets/devil-kitty/gear/sisi_w.webp": {
+      "sha256": "12d44257ddf6773cce36b976cb3731a38aab8c780c196e1baa520d8f308870bb",
+      "bytes": 75816
+    },
+    "assets/devil-kitty/gear/traders18_i.webp": {
+      "sha256": "643c6792185d402cbdd73c677e7ef402d1e0b706d0eefd045a89d05b343166b4",
+      "bytes": 70812
+    },
+    "assets/devil-kitty/gear/traders18_w.webp": {
+      "sha256": "b8b374d7ab6d455e82aa0b5fb3c416a511c591826e2441c5a8da63a485835a43",
+      "bytes": 114496
+    },
+    "assets/devil-kitty/gear/yuanzhang_i.webp": {
+      "sha256": "0b560938e039be919590bfee8bcf3f19585118639c74b0a19462c20f795ee789",
+      "bytes": 87434
+    },
+    "assets/devil-kitty/gear/yuanzhang_w.webp": {
+      "sha256": "7abf27c88c63a37e602554f162439ed8ca96d8c89e178ebf7c466ad8dc2c701f",
+      "bytes": 117430
+    },
+    "assets/devil-kitty/heroes/qinba.webp": {
+      "sha256": "101ccbc775690cda0403adb3f5d63d17dbae370300b4f8807338d8a3e546f5ea",
+      "bytes": 172028
+    },
+    "assets/devil-kitty/heroes/traders18.webp": {
+      "sha256": "23b5bbfffae69eeb1663b35255cee69bb16fa771e474f80e83d8b61c767e120f",
+      "bytes": 132444
+    },
+    "assets/devil-kitty/intro-scene.webp": {
+      "sha256": "8489ef2df5237c216adad2ebbbc458a2042fae299702c09ba8ebc9d3040dd9f0",
+      "bytes": 332754
+    },
+    "assets/devil-kitty/obtain/cato_i.webp": {
+      "sha256": "0aa63001e3ac438e40d6843dba3a350c4d19794dffd2e3f7487a7143359f46cc",
+      "bytes": 206904
+    },
+    "assets/devil-kitty/obtain/cato_w.webp": {
+      "sha256": "112563520effaa4f5e665f0ebdf937f4a25a8339b0c6d724863410a7c2ffc99e",
+      "bytes": 109858
+    },
+    "assets/devil-kitty/obtain/diaoyulao_i.webp": {
+      "sha256": "f0dbaf7ca455476d6c887c905b120592a97e4b2eb12ccc71d2353d8bee9d173a",
+      "bytes": 103704
+    },
+    "assets/devil-kitty/obtain/diaoyulao_w.webp": {
+      "sha256": "29b68a66cb82c1590cf3f6bc33c689e91299bf54fc70135ab5fd4cb0081445c6",
+      "bytes": 129986
+    },
+    "assets/devil-kitty/obtain/haiteng_i.webp": {
+      "sha256": "b37cdfef9ffafb71419fd32faba3b3daad401750de0b661ba376eda4c1aaa0e1",
+      "bytes": 196022
+    },
+    "assets/devil-kitty/obtain/haiteng_w.webp": {
+      "sha256": "c1aeb71f9c4c9910ffd3a954941e323cc2694de9b23cfeb27b42ea2dcd5197fc",
+      "bytes": 156620
+    },
+    "assets/devil-kitty/obtain/heyuxi_i.webp": {
+      "sha256": "f4bc93ae441eb4f9c13cd9448a7a06fa76737c2cb30ae498bf5ab0da5c70bb89",
+      "bytes": 167884
+    },
+    "assets/devil-kitty/obtain/heyuxi_w.webp": {
+      "sha256": "c57d76ff795b9db283acfb3af5fcffd2afeba5057a55e085c5c7f2306451eb15",
+      "bytes": 252542
+    },
+    "assets/devil-kitty/obtain/kuanggong_i.webp": {
+      "sha256": "53b7824386d023abcc665b62102789e018dc95ad0a3a8707ebd457f66e6b7ca8",
+      "bytes": 146416
+    },
+    "assets/devil-kitty/obtain/kuanggong_w.webp": {
+      "sha256": "ddc41b483b8ce55c2111c574e8719a396d0d966648d451e3fd1f7193e79ea002",
+      "bytes": 207194
+    },
+    "assets/devil-kitty/obtain/laosiji_i.webp": {
+      "sha256": "0b20918731d4c989b4419f0a2f037eb572a13cc9e1d3f8c3bc5c4aff7c7c7629",
+      "bytes": 180072
+    },
+    "assets/devil-kitty/obtain/laosiji_w.webp": {
+      "sha256": "4f949ba5d572ae36d4953c7030c3529c7db3e37bfb24068e45942f4fc0043d9b",
+      "bytes": 215872
+    },
+    "assets/devil-kitty/obtain/martin_i.webp": {
+      "sha256": "0b64c643a5e03862943be8e416206a609bc7dff169a625b6b12e2d01f6019910",
+      "bytes": 115486
+    },
+    "assets/devil-kitty/obtain/martin_w.webp": {
+      "sha256": "196bca5b28ab4d31766e9bec860a044a4cc56a1c82fc36b4163aef82b449e830",
+      "bytes": 165350
+    },
+    "assets/devil-kitty/obtain/paper.webp": {
+      "sha256": "c48d13c8006df368bfbff08b60b641959e7c3644234ea70587f85f64e6a3347e",
+      "bytes": 71394
+    },
+    "assets/devil-kitty/obtain/phyrex_i.webp": {
+      "sha256": "dee5205dbe6d082dbd9a148fc75a4a06e857199a9f4a6178273c93c4c872ed16",
+      "bytes": 226990
+    },
+    "assets/devil-kitty/obtain/phyrex_w.webp": {
+      "sha256": "fd7b0d0f8cf84b55ea096e9ccee0002d5b23a67067fd266edc7145c5b050e559",
+      "bytes": 90934
+    },
+    "assets/devil-kitty/obtain/qinba_i.webp": {
+      "sha256": "2c8b9cf8612b72091e33fbfad946fbe28e675c6457c5ac2d1fc5b9378900cd0e",
+      "bytes": 153036
+    },
+    "assets/devil-kitty/obtain/qinba_w.webp": {
+      "sha256": "017e30487e6b976e0f4a7a662f11ffba31defd527d3f4b6830ea063346e4fffb",
+      "bytes": 160454
+    },
+    "assets/devil-kitty/obtain/sisi_i.webp": {
+      "sha256": "70c92e12f05faf8eca766e8a6d93024b7aba1dd34b218ff30d6c01a00539e4be",
+      "bytes": 197530
+    },
+    "assets/devil-kitty/obtain/sisi_w.webp": {
+      "sha256": "b2bd08af34c93eef5ac0bf9e63037b22d8ee91508522ade642004d7d40f7be29",
+      "bytes": 117682
+    },
+    "assets/devil-kitty/obtain/traders18_i.webp": {
+      "sha256": "25e9a665ee0e5c8ea80d5e75be4ec96a0071ed1308029dd7cea582e050aaf83d",
+      "bytes": 109330
+    },
+    "assets/devil-kitty/obtain/traders18_w.webp": {
+      "sha256": "50cd7669040851bc73080ea85a061ed85694ea4be8ad979e18092b302bc3ac7c",
+      "bytes": 192276
+    },
+    "assets/devil-kitty/obtain/yuanzhang_i.webp": {
+      "sha256": "f12c808e53f8755ea1a7aad0a91df99ec58ca96af1baf43bb8cd7b5e7225586d",
+      "bytes": 165086
+    },
+    "assets/devil-kitty/obtain/yuanzhang_w.webp": {
+      "sha256": "9452bf9531270a0c3730f9c7715525228af1f70266b5bac1d0cd84c00e813d82",
+      "bytes": 170870
+    },
+    "assets/devil-kitty/stage1-cut.webp": {
+      "sha256": "8f53457e9bdcbadb8503d7507e65a2c77139d0be31cdd088464e414674b83df6",
+      "bytes": 353622
+    },
+    "assets/devil-kitty/stage1.webp": {
+      "sha256": "30c7c9550a0602df961639c2a4190c0c633392177f7cbd020761550b029a9413",
+      "bytes": 395818
+    },
+    "assets/fonts/GreatVibes-Regular.ttf": {
+      "sha256": "8d509802186f1b51572531ecf313e8098f9a5bfdfaca93f0c9b34467f9982d15",
+      "bytes": 457588
+    },
+    "assets/fonts/MaShanZheng-Regular.ttf": {
+      "sha256": "6d2546bb189c732a8ca29af9e22457b152387d158aa459e4ac2ce1e51788b7fb",
+      "bytes": 5857936
+    },
+    "assets/fonts/MaShanZheng-Regular.woff2": {
+      "sha256": "31563e1b1d107037b3ba46890fd4af7d0bb06d12dc87ab87a53c9757f7cb024a",
+      "bytes": 3250464
+    },
+    "assets/fonts/OFL-GreatVibes.txt": {
+      "sha256": "61093a21f5e63dedf54222b3c09997e54c0fe43e3851d21386e02ddcbc246d49",
+      "bytes": 4399
+    },
+    "assets/fonts/OFL-MaShanZheng.txt": {
+      "sha256": "d7bdb1cee215b689e23c2f95672a6084c790542170648267a55114103d756a08",
+      "bytes": 4397
+    },
+    "assets/formshop/diag-bagua.webp": {
+      "sha256": "889432578c4e69a2263c56c83fec7dccbfde4cf4dc9cccb3a77f3e55296b5fd4",
+      "bytes": 34000
+    },
+    "assets/formshop/diag-fengshi.webp": {
+      "sha256": "649fcb8f2642eb82786d698b1a3df0cb67df55a80d82b56c6cfc522dc1e85b69",
+      "bytes": 20436
+    },
+    "assets/formshop/diag-hansuo.webp": {
+      "sha256": "1e3fea51e64b2f679d2b66a0f4531915ca0281749ba8a866e817bf033e24eac4",
+      "bytes": 29232
+    },
+    "assets/formshop/diag-huichun.webp": {
+      "sha256": "526af88ae371cebbb88a9712b44b267bd3e884c393703994fda14e4f49e42469",
+      "bytes": 30872
+    },
+    "assets/formshop/diag-jiejie.webp": {
+      "sha256": "ff01e9e730d2e9b953183be0aa2fb43c6868046c491bd3be2d5958e7f1ae3bc1",
+      "bytes": 37128
+    },
+    "assets/formshop/diag-liuhe.webp": {
+      "sha256": "785efc2af2257329c8078a12f6ae6d0b9824780a348663598f2752163bded792",
+      "bytes": 20884
+    },
+    "assets/formshop/diag-qixing.webp": {
+      "sha256": "296b42d90a1394af90684a83e263b5db062966316d1d45a12ecdfb9de76c9f73",
+      "bytes": 22876
+    },
+    "assets/formshop/diag-quexie.webp": {
+      "sha256": "6ac990cc01950b3fab9f1f44d501ebe80b3bd798ecf4cf738dbea9b1f4bace3c",
+      "bytes": 19992
+    },
+    "assets/formshop/diag-sixiang.webp": {
+      "sha256": "3769ef83f38c1fe1bb6af6446dbe233e44ab5cdd023f96a85d78e839bda890d9",
+      "bytes": 20678
+    },
+    "assets/formshop/diag-tianluo.webp": {
+      "sha256": "2dd27e383b183075fbb6058d45a23dfead90275c068cee94619992242d9fccd6",
+      "bytes": 43854
+    },
+    "assets/formshop/diag-wuxing.webp": {
+      "sha256": "29d44c78c8e28f08829e92efc9c944f36e9f8154efeb417b75a1c76044c6f9d1",
+      "bytes": 42382
+    },
+    "assets/formshop/diag-zhenyue.webp": {
+      "sha256": "8fe58bfe028a1b11d0068f3be6ab4c3b20bd897ad6786b88805b1f6015fd856b",
+      "bytes": 31038
+    },
+    "assets/formshop/diag-zhuxie.webp": {
+      "sha256": "861db20b41fe3a9ad8b1efc870096ef7a536da0568c67a847f7c70ae6a14158e",
+      "bytes": 32036
+    },
+    "assets/formshop/name-bagua.webp": {
+      "sha256": "be8e6e5a3089cd23c382a85429a7b97edd7d6d9881404e3fc577a6180903db76",
+      "bytes": 15654
+    },
+    "assets/formshop/name-fengshi.webp": {
+      "sha256": "c44683d1e10a83182436301051bcee89cdef6d280956a4678e039d3c8d3ea589",
+      "bytes": 55580
+    },
+    "assets/formshop/name-hansuo.webp": {
+      "sha256": "70659b161a2c33dd5628b014990803647a1310029394062e42661eeec3a0b0fc",
+      "bytes": 18730
+    },
+    "assets/formshop/name-huichun.webp": {
+      "sha256": "953f0411664795182e574df679d8ca56f2427f2fb95e0c27fa7b04445d609cbf",
+      "bytes": 44694
+    },
+    "assets/formshop/name-jiejie.webp": {
+      "sha256": "e8042d865b44c5bec821e5b388090e92b17c4471297018dd8f6ad7b5ebf3503b",
+      "bytes": 39600
+    },
+    "assets/formshop/name-liuhe.webp": {
+      "sha256": "bdb2c6a90ab371ffa1b1ba3577357d6d179b04d578f5a0aeadd707799c6e73fe",
+      "bytes": 17356
+    },
+    "assets/formshop/name-qixing.webp": {
+      "sha256": "18fdc360c5a45d7015419b85dee1797d811dcb73eaf7f470b736904f97fa4773",
+      "bytes": 35606
+    },
+    "assets/formshop/name-quexie.webp": {
+      "sha256": "6b587decac175c1962b2eeb5dc324b6e57a2b75ed17036b8073cf02938b7dc66",
+      "bytes": 51964
+    },
+    "assets/formshop/name-sixiang.webp": {
+      "sha256": "33f15bf2320d7e24b7eeeb6574c40643789eab8bdc1062cbb25ad2d17ec9d035",
+      "bytes": 61074
+    },
+    "assets/formshop/name-tianluo.webp": {
+      "sha256": "2f3270fcaa829c06bf21dd3b9eac181d479f793fea051af7353e3a61c5bb6f9e",
+      "bytes": 15810
+    },
+    "assets/formshop/name-wuxing.webp": {
+      "sha256": "8d0666bcb005de514c003167e446773e71236c6ffb8310284866465b1546cbe0",
+      "bytes": 39166
+    },
+    "assets/formshop/name-zhenyue.webp": {
+      "sha256": "ca26614c9c6d9adbc3583f25aa5da2fdbf5fbf278b77371adb5b5d469b538150",
+      "bytes": 14936
+    },
+    "assets/formshop/name-zhuxie.webp": {
+      "sha256": "1d31d07cee7e5d9db00dd963f99e2047cfac2451803bce7582308e769dbe9bc7",
+      "bytes": 15072
+    },
+    "assets/formshop/paper-desk.webp": {
+      "sha256": "a5aeacb30d6142a6cbd62b3b079c59035b8caef7badd0b7bf72e3a172a18266e",
+      "bytes": 131376
+    },
+    "assets/formshop/paper.webp": {
+      "sha256": "31492b2b021f185469e17b511fe9a49dc9ff4061ebaf4a94ce5c5da66474bb8e",
+      "bytes": 87874
+    },
+    "assets/formshop/seal-buy.webp": {
+      "sha256": "4899323e4e3c1f526730336d7982e47b6a08493ceb78d5944589311fbf82f889",
+      "bytes": 54302
+    },
+    "assets/formshop/seal-close.webp": {
+      "sha256": "b22974ab552f82cd55feb7d91d36b249d0c22003d4e974c8068df164fc0ba093",
+      "bytes": 33228
+    },
+    "assets/formshop/seal-up.webp": {
+      "sha256": "93cc8005446e60c9a33e17b90fc092ab8d6e13ea50373b782d52a135e5ee7254",
+      "bytes": 46998
+    },
+    "assets/formshop/title.webp": {
+      "sha256": "6674f4a70cfd109ac5dc611df33c9fd794f80aedaf733a48a99b071ea5a722dd",
+      "bytes": 59202
+    },
+    "assets/promos/xiyoux-welcome-4k.jpg": {
+      "sha256": "cf81f782bd2bdcc3478964ab08dbe3c85137bfaf4a1230d2d0d967b87f382921",
+      "bytes": 2470180
+    },
+    "assets/specials/diaoyulao.jpg": {
+      "sha256": "f596c7038aec983ef781d85dfafa3250aa07205d57cd42e91d0c3d84dda2a9b9",
+      "bytes": 61072
+    },
+    "assets/specials/haiteng.jpg": {
+      "sha256": "0282aa9877e6d50ff5fa668c0bfec42f0c34d71ccdfe9516b6afb02b09214b69",
+      "bytes": 56801
+    },
+    "assets/specials/heyuxi.jpg": {
+      "sha256": "a04da9eef8fdc50645d8e500bfe0dfa9369edf525dd217e614f577e228397c62",
+      "bytes": 45930
+    },
+    "assets/specials/kuanggong.jpg": {
+      "sha256": "0d491d400985a280b4981ff1ca95f6b83a69202e32e38dc973b628df14d64a15",
+      "bytes": 54792
+    },
+    "assets/specials/laosiji.jpg": {
+      "sha256": "9c858d50a6bec4eb7b8ddd046f498f66468c714dd9a816641f4d9f5787caae1a",
+      "bytes": 53861
+    },
+    "assets/specials/manifest.js": {
+      "sha256": "97f78f9344e3aa7a63239061ec7a528451257cb913e38e0bb51030f6d43fc890",
+      "bytes": 184
+    },
+    "assets/specials/martin.jpg": {
+      "sha256": "188cbe3213fa5c460315254f256c9cd77393ea8f85636773c72cdd71a239f1f8",
+      "bytes": 44512
+    },
+    "assets/specials/phyrex.jpg": {
+      "sha256": "65f82d598fa758fdb986ca1ef4dadc5513c268ae3b36d7ca3b5fbb9f6eef902b",
+      "bytes": 48018
+    },
+    "assets/specials/sisi.jpg": {
+      "sha256": "f045551e41b7f2eb3a0fc9d441db796f12114aa95f11059fa0f5d46ba3666e1b",
+      "bytes": 50045
+    },
+    "assets/specials/yuanzhang.jpg": {
+      "sha256": "107392cf8200f0a68ab4bb070f234acaa0e4b8d930d9be9483875429210dbfcc",
+      "bytes": 60359
+    },
+    "assets/ult/wukong-close-1.webp": {
+      "sha256": "db4f439c23178ffff13ecc5c6d2f500c45533970ba9688e0e4b76d32fa28c768",
+      "bytes": 71374
+    },
+    "assets/ult/wukong-close-2.webp": {
+      "sha256": "f4bdb44e64e3e53c2facff6096f869b67ed68e9159ccf5fb5ad24c4302d3cd16",
+      "bytes": 762284
+    },
+    "assets/ult/wukong-close-3.webp": {
+      "sha256": "7f66332b75aa763fc98a9279dd7043d05729f6e3c9521565745d6155fa382327",
+      "bytes": 868092
+    },
+    "assets/ult/wukong-close-4.webp": {
+      "sha256": "59d31fce0c5b4ef1b24140819af469902df9dcf7134464f1a0062601301a998f",
+      "bytes": 851372
+    },
+    "assets/ult/wukong-close-5.webp": {
+      "sha256": "f8ed877a8ab47f106a31331e44c139c810146c854038dddfecb098304b06e87f",
+      "bytes": 77208
+    },
+    "assets/wild/bajie-attack.webp": {
+      "sha256": "2bc1c66897b3c26a2d3beebeeae2f82d5895d630d2e7bedf9d92bb1aa2d59569",
+      "bytes": 53768
+    },
+    "assets/wild/bajie-hit.webp": {
+      "sha256": "3d75708174ad2ea017670d78d84951296c95e779edf5decd7e0fa3e568c781c0",
+      "bytes": 33148
+    },
+    "assets/wild/bajie-idle.webp": {
+      "sha256": "7a6486fd6f7df7a2daeb9b1af6d0bd676a8621fc26f556d79747cab1ac77b65f",
+      "bytes": 195182
+    },
+    "assets/wild/boss-niumo-attack.webp": {
+      "sha256": "8ffbf1707485c8a21009a28d001a00bebce42b1c7b441ee491537906eb38bc90",
+      "bytes": 1110460
+    },
+    "assets/wild/boss-niumo-hit.webp": {
+      "sha256": "cdbb6ce5a2ccc1cc39157c8290b8172815f12db201f7883c5a9082f94a592283",
+      "bytes": 690808
+    },
+    "assets/wild/boss-niumo-idle.webp": {
+      "sha256": "54b82f66910351d88495b4521fc85329dbfc909a8cc83c1e3413ba6414c01f2c",
+      "bytes": 3839660
+    },
+    "assets/wild/boss-phyrex-attack.webp": {
+      "sha256": "c5c7e21fd70c38b716d01bfea8bb7d7f59895def65fb4431133f41e2ec8aa2ac",
+      "bytes": 245122
+    },
+    "assets/wild/boss-phyrex-hit.webp": {
+      "sha256": "0034a7cd5db0514d4527e33d9ece70bfa953f610b495f1636715ca22cc71037e",
+      "bytes": 147746
+    },
+    "assets/wild/boss-phyrex-idle.webp": {
+      "sha256": "7bdfa5ff30ec4156b790afa71969cf4dac33ef9668ed8fb5e0442d72d8fe0eb5",
+      "bytes": 782328
+    },
+    "assets/wild/boss-sisi-attack.webp": {
+      "sha256": "7587680b8aad197109a859c2a5f2cf8f7ea8f33e8a07ee4a810bdc9be8e19209",
+      "bytes": 286000
+    },
+    "assets/wild/boss-sisi-hit.webp": {
+      "sha256": "1bad482bd190c43943baa0aac62d16213eb874eba9daf6d9ceb48883405c7f9e",
+      "bytes": 168308
+    },
+    "assets/wild/boss-sisi-idle.webp": {
+      "sha256": "27952dedd64eeed95967d7ada7ec36343c4bb4b38c8d9486b6375289de9106c1",
+      "bytes": 845356
+    },
+    "assets/wild/boss-wukong-attack.webp": {
+      "sha256": "1418469c1c8ea9bd9470469c88e9f54120d9ed1650aa4ae3d966a2413a5c048a",
+      "bytes": 320184
+    },
+    "assets/wild/boss-wukong-hit.webp": {
+      "sha256": "57e1e9bac0512ba5fa4c6a9527c0b5d3c82d9af90c5ea617bf46af38db44c905",
+      "bytes": 194206
+    },
+    "assets/wild/boss-wukong-idle.webp": {
+      "sha256": "240dc1f3b9aeb8661fcc9e36026b0fdca9c1f5bb5fe1a3ae0877d960311da64d",
+      "bytes": 749296
+    },
+    "assets/wild/diaoyulao-attack.webp": {
+      "sha256": "89626a83cf781d0dd48e3fa7a83f1be2b6db9eb2b80e2ffba5f0c532708921e7",
+      "bytes": 69830
+    },
+    "assets/wild/diaoyulao-hit.webp": {
+      "sha256": "a9a140d6d4bdec8bfccd2d629a59c37b2c11cb1210263109f0ba21c64a50a613",
+      "bytes": 46202
+    },
+    "assets/wild/diaoyulao-idle.webp": {
+      "sha256": "48318f3cbfda471fb25f1da4dcc3f714194886b3b8451d5b62994cbdcb4a5db7",
+      "bytes": 753288
+    },
+    "assets/wild/haiteng-attack.webp": {
+      "sha256": "ce7b90b002e61542128f342c7554a1bc78ccd8f656c39a5347ba47e6d155236e",
+      "bytes": 65666
+    },
+    "assets/wild/haiteng-hit.webp": {
+      "sha256": "49db3d5950560235056ee97e2d971352a2e6b8497afc206bf0abe8e8fb63bf73",
+      "bytes": 38822
+    },
+    "assets/wild/haiteng-idle.webp": {
+      "sha256": "740c14eee73e4bfd18fd8e9f322783d38ebffb72438f88b16ebf733515543be6",
+      "bytes": 241866
+    },
+    "assets/wild/heyuxi-attack.webp": {
+      "sha256": "2df6e6624414f8b1491a511023ee45ae07713c87eebe977a05bbdc894f12c2ab",
+      "bytes": 79576
+    },
+    "assets/wild/heyuxi-hit.webp": {
+      "sha256": "46f7dcc754f89f87611c00c936468f34d5173916328579fed618bb6f32283f9f",
+      "bytes": 45476
+    },
+    "assets/wild/heyuxi-idle.webp": {
+      "sha256": "ddfdcd8e1238d50961652394ccd37023d60e724152fdc4ac2051a83fd299a3ea",
+      "bytes": 712958
+    },
+    "assets/wild/horse-attack.webp": {
+      "sha256": "8a19b076396dcabfd0611ead30c594fb49eb57a031713e19ff9c188a6d434cd0",
+      "bytes": 71670
+    },
+    "assets/wild/horse-hit.webp": {
+      "sha256": "c37835b46676a2d9e459ee51afedeb01b26f7e5198d6815d7144658c757f0d96",
+      "bytes": 43606
+    },
+    "assets/wild/horse-idle.webp": {
+      "sha256": "3b60c9bc7f6a2018cdd28e3204cd1fd0b1b940c4b3cd7f10071052afb7652cd7",
+      "bytes": 209090
+    },
+    "assets/wild/kuanggong-attack.webp": {
+      "sha256": "3cb34cd4b89d32ad020bfb136d7507e59e52472286f6ba9db8e24c31950f490e",
+      "bytes": 67918
+    },
+    "assets/wild/kuanggong-hit.webp": {
+      "sha256": "0370197ece4c4681b563c1f15a3fbbc48280104d1ecffcfa37f8bbf993fae76f",
+      "bytes": 43162
+    },
+    "assets/wild/kuanggong-idle.webp": {
+      "sha256": "c35b746cbccb606c50025a4fd57181d08cae7e41ff5fc1ac25dd13c2afd3090c",
+      "bytes": 992942
+    },
+    "assets/wild/laosiji-attack.webp": {
+      "sha256": "b2bb64396ce9e2302cea28ccd9635e33a37dae3a93712bff419e6bd0548ae61c",
+      "bytes": 63598
+    },
+    "assets/wild/laosiji-hit.webp": {
+      "sha256": "49dfb73230bfacb5555d5f0b5aadc46265adedeae67b3beb335062599a47397e",
+      "bytes": 44402
+    },
+    "assets/wild/laosiji-idle.webp": {
+      "sha256": "f4731890feaf95d59442dc08311f1a5a6e78add7a357736c9c393e80a2f1bfda",
+      "bytes": 978584
+    },
+    "assets/wild/manifest.json": {
+      "sha256": "dcea399ab00c5b5861f8b72b20c109dce5349bda877245e980a1d57d80438217",
+      "bytes": 16723
+    },
+    "assets/wild/martin-attack.webp": {
+      "sha256": "f95cd1f4dd0c38fe861d2e10b9d2a463492462e19f3c4a7a4477e1e1c516f73e",
+      "bytes": 78366
+    },
+    "assets/wild/martin-hit.webp": {
+      "sha256": "ba97281670b16992a4ed6f677a45134ff35630755639c1c75563c22ffee593a4",
+      "bytes": 42636
+    },
+    "assets/wild/martin-idle.webp": {
+      "sha256": "55e2bbecb0b867d7deb32965565d447df0dbed929c8fd0901d457628e0eb7add",
+      "bytes": 114744
+    },
+    "assets/wild/niumo-attack.webp": {
+      "sha256": "6fb250674165d04e1dbed633712adc0be5a5d2b92ab192d580d20334f38dcf81",
+      "bytes": 87944
+    },
+    "assets/wild/niumo-hit.webp": {
+      "sha256": "b856d7c1ba1e7eb466517e96081d36c4fca12bae9ddca655a2230b9923e038f6",
+      "bytes": 111952
+    },
+    "assets/wild/niumo-idle.webp": {
+      "sha256": "e117338a88aae57fb0e5996838d3284d45be394a631210ea909977a6d49191ac",
+      "bytes": 816926
+    },
+    "assets/wild/pending.json": {
+      "sha256": "9ea6a8b06527ae91af80be02f1e0a6407c267c6cf4efb2d8e0795016d7a157d8",
+      "bytes": 194
+    },
+    "assets/wild/phyrex-attack.webp": {
+      "sha256": "995ba33f81a8b2eb3a9012db678d6bb8214ddfcb41436fda73b2d317f8125bb4",
+      "bytes": 63818
+    },
+    "assets/wild/phyrex-hit.webp": {
+      "sha256": "704f1fafaa329b29d626487779e6b2a905136efd921b1ae01b938226574314fe",
+      "bytes": 35636
+    },
+    "assets/wild/phyrex-idle.webp": {
+      "sha256": "060fc3db64fc0fefbee87c6553d8363b1d8f4886dd77cbfa8f6dfdd48f7ef59b",
+      "bytes": 166492
+    },
+    "assets/wild/phyrex_x-attack.webp": {
+      "sha256": "fc03342dcc83c7b80c1d59f74c1741622aeadb752502017b3a4e3a2f7e744a88",
+      "bytes": 74008
+    },
+    "assets/wild/phyrex_x-hit.webp": {
+      "sha256": "e34b9a0614e9e566f59ccccca8593cc7b270f023a13bfae6e43bbce96e8d998b",
+      "bytes": 41618
+    },
+    "assets/wild/phyrex_x-idle.webp": {
+      "sha256": "ad2905effc40c14d5f2728c25f5c7f0431bd525cfb2dcc9cdc8979711e308baf",
+      "bytes": 929750
+    },
+    "assets/wild/sisi-attack.webp": {
+      "sha256": "d2886451b07f74d62d88bf7ce06cc1a26aeb6127c53a47fae49b271072760cff",
+      "bytes": 74506
+    },
+    "assets/wild/sisi-hit.webp": {
+      "sha256": "c83604ab16cdb396c8453f058bbb43685fe358777d2b1a6c5ab45d3a7789f931",
+      "bytes": 45474
+    },
+    "assets/wild/sisi-idle.webp": {
+      "sha256": "58ea289e82842b384130613d099967470a199b6aa8bf394a22213fdbdebb7615",
+      "bytes": 301536
+    },
+    "assets/wild/tang-attack.webp": {
+      "sha256": "eb753e70d1ffe55217e44495bc4d52a1076543da138871c7aaf823c40bbc4f9b",
+      "bytes": 54304
+    },
+    "assets/wild/tang-hit.webp": {
+      "sha256": "d284d21d173ab1c8d9ba6248b07cb7abac50a89bebf321219533af9fda4098a3",
+      "bytes": 34372
+    },
+    "assets/wild/tang-idle.webp": {
+      "sha256": "87dabfe651fe89c5a53222cd3fa2b46f3ab659b1492d71d20549a541c9c4b0d9",
+      "bytes": 263288
+    },
+    "assets/wild/wild-anim.js": {
+      "sha256": "7c75161d0a0981b82fe9ca0d4099aed4c3cec6e54c36ee13502ab3acde6bf68d",
+      "bytes": 9777
+    },
+    "assets/wild/wujing-attack.webp": {
+      "sha256": "8ce35751983f4202c3f9c2263f14ac31b8c4b3493715bd97f8f0a314da377e75",
+      "bytes": 64922
+    },
+    "assets/wild/wujing-hit.webp": {
+      "sha256": "0c00b8b1d972511fc190c2da6c50a07db0e359828a21bff525ddf70899e527bd",
+      "bytes": 37516
+    },
+    "assets/wild/wujing-idle.webp": {
+      "sha256": "d0607bdf37e69de69f1f84609a3f9bc5822af654f7ea1e884e2b6199a98557f2",
+      "bytes": 126588
+    },
+    "assets/wild/wukong-attack.webp": {
+      "sha256": "9240a4754db35909546d5f8a3c71ebf1e76c40e05e061b519912933a8bad0e9d",
+      "bytes": 71814
+    },
+    "assets/wild/wukong-hit.webp": {
+      "sha256": "81f86c6b0b2d0cbd5515451b303ec9b102b1a72171713059989def312a1206d0",
+      "bytes": 44108
+    },
+    "assets/wild/wukong-idle.webp": {
+      "sha256": "aba4d358febea0771a8a9de724f4e38297f17a3e828da29e01f60adb31eaa2ff",
+      "bytes": 781286
+    },
+    "assets/wild/yuanzhang-attack.webp": {
+      "sha256": "0b07d07fa9a695c19ca96f5e3997d3f31f79717374f3b34c2a43aadab4936754",
+      "bytes": 66804
+    },
+    "assets/wild/yuanzhang-hit.webp": {
+      "sha256": "dfcf80c9853ff6169ecbc93fc459dcac6deb0e480c70a3dca112a0caf868fe93",
+      "bytes": 43046
+    },
+    "assets/wild/yuanzhang-idle.webp": {
+      "sha256": "a7a337848e91ac6760782f0ccba229dc4d38551c98b348ab70af5a03c5687271",
+      "bytes": 830096
+    },
+    "bossfight/assets/bg-land.webp": {
+      "sha256": "5d2e0d73a9d44645c936f5d241635973024aed57663801df198e58d0671142cc",
+      "bytes": 183750
+    },
+    "bossfight/assets/bg-port.webp": {
+      "sha256": "34d17b162ee7cb3988b36e286553c1ec86a1d98d10a1d7055cb4f77e8a78b489",
+      "bytes": 189770
+    },
+    "bossfight/assets/mink-elite.webp": {
+      "sha256": "d496b6f466eb5950c080d42e2032a25462b7a7cc6c9d0582f65cc836b7e09a22",
+      "bytes": 54646
+    },
+    "bossfight/assets/spr/bajie/attack.webp": {
+      "sha256": "6c23c6a6f88426673fcbd79f50b8eba8e4884fab8d2403e56959d1d9c03625e2",
+      "bytes": 100958
+    },
+    "bossfight/assets/spr/bajie/hit.webp": {
+      "sha256": "6417a3f71179e0d3bf42a2ddffdabc51889f4f3ee3e1d6beeb0b5a6049aa7952",
+      "bytes": 61028
+    },
+    "bossfight/assets/spr/bajie/idle.webp": {
+      "sha256": "8d14210d616448a233ace0657a5bd64198c0d12b21358b34bc754b43d89e5dd9",
+      "bytes": 82972
+    },
+    "bossfight/assets/spr/bajie/ko.webp": {
+      "sha256": "cf79c0aa416a42a7a302d1cb910a986bbbdf5babd727129486a6efd4849c95bd",
+      "bytes": 46728
+    },
+    "bossfight/assets/spr/bajie/stance.webp": {
+      "sha256": "3fa214e142a1da03a956d9a692fa870211564a886f58278f58951eac8065ff32",
+      "bytes": 96594
+    },
+    "bossfight/assets/spr/bat/attack.webp": {
+      "sha256": "3f682cee284419c1637f10b1446895e9b7a316636dce1f27c7d5fa09e601db1e",
+      "bytes": 86724
+    },
+    "bossfight/assets/spr/bat/hit.webp": {
+      "sha256": "86a64a287a7bc80cb35acb16d901e3500a624983e98903f0c53024c2d429386b",
+      "bytes": 66220
+    },
+    "bossfight/assets/spr/bat/idle.webp": {
+      "sha256": "699b65c24b694cbe54331a7ca2aadf3968cc171f4bb6cabac8747c6aa4826412",
+      "bytes": 53864
+    },
+    "bossfight/assets/spr/bat/ko.webp": {
+      "sha256": "c1ff08a163abb43c1c9390f870aac9a62fb52bcf2effb2d26ca3d3b135e17820",
+      "bytes": 28088
+    },
+    "bossfight/assets/spr/bat/stance.webp": {
+      "sha256": "2a19c769ba7c67491f5af88e3454950a646ca650a1ed719c461ab7566bbef231",
+      "bytes": 53542
+    },
+    "bossfight/assets/spr/chiyan/attack.webp": {
+      "sha256": "9315bc94ace0cf4aa436edbf8d99d012c1b3465bdab48ef34b2b4c47be8d73fa",
+      "bytes": 171404
+    },
+    "bossfight/assets/spr/chiyan/hit.webp": {
+      "sha256": "ee162163465b763470a50b1867731cf486442e008e2c82aa07121244fe232929",
+      "bytes": 131444
+    },
+    "bossfight/assets/spr/chiyan/idle.webp": {
+      "sha256": "053c398fbc276d176cea3f3baf92cbe111587497776351413f527627bd6d1906",
+      "bytes": 117300
+    },
+    "bossfight/assets/spr/chiyan/ko.webp": {
+      "sha256": "20740697c4410830dc10889f477a845f9983cd3b07c0e95ecce6356dfb544971",
+      "bytes": 75566
+    },
+    "bossfight/assets/spr/chiyan/stance.webp": {
+      "sha256": "c156fc84851bdd21985f0ac47a70cb0c1e89a0e11e148aabf14f2d8228baf7c8",
+      "bytes": 111642
+    },
+    "bossfight/assets/spr/diaoyulao/atk2.webp": {
+      "sha256": "597772be3534717a807423d5db0b4923ff826fdb7c0a577f9359009857d8e98e",
+      "bytes": 60282
+    },
+    "bossfight/assets/spr/diaoyulao/atk3.webp": {
+      "sha256": "83eb8a152806b092b23b5f1cf03ee0df2b7ea3d35a539def05303f538b588edd",
+      "bytes": 59398
+    },
+    "bossfight/assets/spr/diaoyulao/attack.webp": {
+      "sha256": "649bbe6262e9d0882ecab37b9f4dc72691e09e0e550c92e9fc79dac8053401e1",
+      "bytes": 43230
+    },
+    "bossfight/assets/spr/diaoyulao/block.webp": {
+      "sha256": "1c04cc07a0b88d2f902acefdc50244fbfb0f4e872b0b3fc45bb56bd35c55ebbf",
+      "bytes": 48214
+    },
+    "bossfight/assets/spr/diaoyulao/charge.webp": {
+      "sha256": "a184dc779233850e188941613b37c4f6c9e441d89e162b75cde0149964aeeb7e",
+      "bytes": 60362
+    },
+    "bossfight/assets/spr/diaoyulao/dodge.webp": {
+      "sha256": "f78872aa76e46ba17ad481d1c7ea46d6592cab4307a4d5ac0b2f145626c6fb00",
+      "bytes": 51308
+    },
+    "bossfight/assets/spr/diaoyulao/fly.webp": {
+      "sha256": "4c68531763c9b40abf85f04a3e9367ea069032a75d85d990ceb3fe41a4e4c01f",
+      "bytes": 60308
+    },
+    "bossfight/assets/spr/diaoyulao/hit.webp": {
+      "sha256": "9efe8aa2a632731767763058e3c2eff467647dead3b388e7c9e579dbbb1c62c1",
+      "bytes": 59438
+    },
+    "bossfight/assets/spr/diaoyulao/ko.webp": {
+      "sha256": "7b7ca7d39231cded0d7b04dbf70ddb4df8849beb13658d8d2dc1ce75cd3616d2",
+      "bytes": 49052
+    },
+    "bossfight/assets/spr/diaoyulao/leap.webp": {
+      "sha256": "cc20a0ffd19d32214ebe92519c1b0daaeb9ba1dec4cbd88741a8940306046f0a",
+      "bytes": 57842
+    },
+    "bossfight/assets/spr/diaoyulao/stance.webp": {
+      "sha256": "e695d1a7f00120e14960fb639b6cde40de0b5944abf87eafa72b42c4471c1309",
+      "bytes": 57370
+    },
+    "bossfight/assets/spr/diaoyulao/ult.webp": {
+      "sha256": "bd2715c9af474e4f20dc1846357dd36e0306949ad85cce5cd241a09b283e9e42",
+      "bytes": 49398
+    },
+    "bossfight/assets/spr/diaoyulao/win.webp": {
+      "sha256": "e599507e3989038e6df5f418d33d99bb7aef6069f741d960beeac3705de1a24c",
+      "bytes": 58140
+    },
+    "bossfight/assets/spr/dragon/attack.webp": {
+      "sha256": "6652e132492551028da91b5cc05c292053abebca40370c0fd3a03892491fa8c2",
+      "bytes": 87738
+    },
+    "bossfight/assets/spr/dragon/hit.webp": {
+      "sha256": "f44726936e186e0c9b912c04e212b2fc060e6cd04c555e36be3f58d9b7145775",
+      "bytes": 89164
+    },
+    "bossfight/assets/spr/dragon/idle.webp": {
+      "sha256": "328fb0e0f4afc79d56f7989325fc8ca4b8c576a5c88e2b777bdd950b8dc6a3e7",
+      "bytes": 86396
+    },
+    "bossfight/assets/spr/dragon/ko.webp": {
+      "sha256": "d0c15add07dcbe4827fd33b87e585a650add4c05978e79d89c2b169461ef08f7",
+      "bytes": 36100
+    },
+    "bossfight/assets/spr/dragon/stance.webp": {
+      "sha256": "eda556de1d6e5706ae1a3b0081257c09c3489351b7dee30d10df05d129088663",
+      "bytes": 83680
+    },
+    "bossfight/assets/spr/haiteng/atk2.webp": {
+      "sha256": "96c1f4c4b7fc7fee7e5065e432c7029480c6ebc6e439f7f55c1d84345732257e",
+      "bytes": 60920
+    },
+    "bossfight/assets/spr/haiteng/atk3.webp": {
+      "sha256": "6be5642639edc3be77d41b3d51858b21737fa8b062ec25b142131ae5d1b2706b",
+      "bytes": 58602
+    },
+    "bossfight/assets/spr/haiteng/attack.webp": {
+      "sha256": "7e1d27ed397035d5d9f4d50155b1b3fe67869d730f65428045ad7a9cdc32f0f7",
+      "bytes": 46806
+    },
+    "bossfight/assets/spr/haiteng/block.webp": {
+      "sha256": "504ff843e6028251be18aefb18ecefd20250084fd5a1f6348d0d00899b848448",
+      "bytes": 57720
+    },
+    "bossfight/assets/spr/haiteng/charge.webp": {
+      "sha256": "a6002731fd4b5288b55f427de8b9a2a58a35f52ffa74b02d07afeb46aedb1709",
+      "bytes": 59396
+    },
+    "bossfight/assets/spr/haiteng/dodge.webp": {
+      "sha256": "1730007a7d77b1a763c774af0fd7881976ba2a7352411a3f537361400e8bb60a",
+      "bytes": 53926
+    },
+    "bossfight/assets/spr/haiteng/fly.webp": {
+      "sha256": "54ed380085cd17158822e1b5f1423638c55c0b485e58da48cf1e792f33a7cb70",
+      "bytes": 55750
+    },
+    "bossfight/assets/spr/haiteng/hit.webp": {
+      "sha256": "47a1b4ad5a291281b31a9dfa7d71eb13bf980b25b238f5c1d8b48d36e6511040",
+      "bytes": 42806
+    },
+    "bossfight/assets/spr/haiteng/ko.webp": {
+      "sha256": "61e502696abafd59642f2246afabf6ef67d90163cfcc62495daa60a92d0fb014",
+      "bytes": 20734
+    },
+    "bossfight/assets/spr/haiteng/leap.webp": {
+      "sha256": "3c94e992cbdd76b5f32d4ca3e629a35c020754e6b7bfbb37fdfed9338a3360cc",
+      "bytes": 51628
+    },
+    "bossfight/assets/spr/haiteng/stance.webp": {
+      "sha256": "8582f2b293542e6d9b732a139265796858cf8d849c08f1fa0eadd1433728e12f",
+      "bytes": 41712
+    },
+    "bossfight/assets/spr/haiteng/ult.webp": {
+      "sha256": "19a90062a5b658282dd208c9d4ff0f376c75258384792c031fec566c108a3169",
+      "bytes": 56208
+    },
+    "bossfight/assets/spr/haiteng/win.webp": {
+      "sha256": "2dd6d40a1049cc76276f90ce03f51f458a4098ba82d0bbf83ff166d731c159d4",
+      "bytes": 56486
+    },
+    "bossfight/assets/spr/heyuxi/atk2.webp": {
+      "sha256": "029be855a73b8fc9b200d83a5265690a8341b437a429b6b4692422d77c78e7f1",
+      "bytes": 61290
+    },
+    "bossfight/assets/spr/heyuxi/atk3.webp": {
+      "sha256": "1cbe035f923318db64104e83dc210c3e0d6fb84f99bbe38790531e3ae956be99",
+      "bytes": 58320
+    },
+    "bossfight/assets/spr/heyuxi/attack.webp": {
+      "sha256": "6ba7fc1ac46e4b99bbd3794473bc359c5f7127a8329e38afba556e3943e60153",
+      "bytes": 43678
+    },
+    "bossfight/assets/spr/heyuxi/block.webp": {
+      "sha256": "2d9c9874248d7b29823d48fa907e8a0b483952dece5a3a1ef17ab901090bdd50",
+      "bytes": 54448
+    },
+    "bossfight/assets/spr/heyuxi/charge.webp": {
+      "sha256": "e4b6eec97ae00f200e58b139c5db33243fcff5d1e6c8dd8d29d1b756f21f2a85",
+      "bytes": 58264
+    },
+    "bossfight/assets/spr/heyuxi/dodge.webp": {
+      "sha256": "9bd9db2c6d460337b7f3fd486aefebf9f7ef91dd2216aeea04311da9b36657d4",
+      "bytes": 51980
+    },
+    "bossfight/assets/spr/heyuxi/fly.webp": {
+      "sha256": "c7c7f2aa438b4566baeebb12e8c1b95f23bee858ee6bb2a1382ca6bcbd1387ed",
+      "bytes": 55850
+    },
+    "bossfight/assets/spr/heyuxi/hit.webp": {
+      "sha256": "7b1447a17510665fdce0f0ded230bf6bdb2945b52e594ab1eb90772e2e6e6c7e",
+      "bytes": 48862
+    },
+    "bossfight/assets/spr/heyuxi/ko.webp": {
+      "sha256": "6ed60b4a28b3fce09d7853ea1ed34525cf95d5a673053061c41412703d4c5c07",
+      "bytes": 799940
+    },
+    "bossfight/assets/spr/heyuxi/leap.webp": {
+      "sha256": "c31fc130afd6605e867b419236e66ddc0d4537b8a7a8189ff6e0f2e45cb83232",
+      "bytes": 50624
+    },
+    "bossfight/assets/spr/heyuxi/stance.webp": {
+      "sha256": "0c5de2369e01e19d1e16c75262bb44b8536cea1d3afa16f16e7648e108f07fa8",
+      "bytes": 51426
+    },
+    "bossfight/assets/spr/heyuxi/ult.webp": {
+      "sha256": "abfe444a57b71bdca511936d2a68c7f800b9b786b0835a54cbbb77cb00fac0db",
+      "bytes": 49330
+    },
+    "bossfight/assets/spr/heyuxi/win.webp": {
+      "sha256": "e4c89566323815a8e18452f79ada803a4871637c8982812eaf502f4b7ef1ab9a",
+      "bytes": 55344
+    },
+    "bossfight/assets/spr/horse/attack.webp": {
+      "sha256": "205c0a56ca8190e9a3bc82013a7258a16aa3cb2ec095d971f61084568c00f7f8",
+      "bytes": 101840
+    },
+    "bossfight/assets/spr/horse/hit.webp": {
+      "sha256": "8e7d9788bbbee924bc51e43bf0342a199e3898661faedce0176eec49409ef7a2",
+      "bytes": 79646
+    },
+    "bossfight/assets/spr/horse/idle.webp": {
+      "sha256": "559aba909eea154985afb43a7e8b6d5b024d10a0925d19cf76799d07195b0b3e",
+      "bytes": 106148
+    },
+    "bossfight/assets/spr/horse/ko.webp": {
+      "sha256": "d81bb5bf74cdaf39032cd684e1273b03aa937e8d08ab6ba9a5b96db5c593beb3",
+      "bytes": 51616
+    },
+    "bossfight/assets/spr/horse/stance.webp": {
+      "sha256": "ff9036ba522809e76a10cd9cd0719890a98869e6d4d217663e343e3e99e384b6",
+      "bytes": 106568
+    },
+    "bossfight/assets/spr/iron/attack.webp": {
+      "sha256": "5830547b15f1ac60398258f9e9fc61c17d790edea62cdac8072ef5b6417ad650",
+      "bytes": 131454
+    },
+    "bossfight/assets/spr/iron/hit.webp": {
+      "sha256": "c857aa8ff493574b3382e199d4b2d5453e6ddf9434ebc723260a98e933bb4581",
+      "bytes": 118278
+    },
+    "bossfight/assets/spr/iron/idle.webp": {
+      "sha256": "668ece91c2ea1b747ac7548fb854ba5aed392589b9434e89a474154d9b6454ad",
+      "bytes": 129428
+    },
+    "bossfight/assets/spr/iron/ko.webp": {
+      "sha256": "d1f7349f08f5c3fc59a519d1e12a6325499adb58d49b5c74d2bd345eed8107cb",
+      "bytes": 112338
+    },
+    "bossfight/assets/spr/iron/stance.webp": {
+      "sha256": "5534f834ef2e7326569a6ce7aad9e38cfa8b1b7908545b476123539e0717d38a",
+      "bytes": 135348
+    },
+    "bossfight/assets/spr/jin/attack.webp": {
+      "sha256": "d0155f808d22e250db75634dd4d40a70badf0dba5926ed61cdb597c00d314aea",
+      "bytes": 176334
+    },
+    "bossfight/assets/spr/jin/hit.webp": {
+      "sha256": "774bc5372262235ae1c4af60fade7093e6a83e115017e594752dddab4ae594f4",
+      "bytes": 167506
+    },
+    "bossfight/assets/spr/jin/idle.webp": {
+      "sha256": "860ce70384639a47394de119b2394f694aee2c0131367b3d82baaa872a054dff",
+      "bytes": 161194
+    },
+    "bossfight/assets/spr/jin/ko.webp": {
+      "sha256": "e2bd5b61666ea115b0df7ab8aa8c9a98b935dfdf35f489da88be35e50ad0e71e",
+      "bytes": 76594
+    },
+    "bossfight/assets/spr/jin/stance.webp": {
+      "sha256": "0fb44c0c7deeb9f470c46e81a932bea5c892403e1480b179bd7003569ca1760e",
+      "bytes": 154538
+    },
+    "bossfight/assets/spr/kuanggong/atk2.webp": {
+      "sha256": "4b3e75a888c03080f0c260891d5f638f180c3314243e449ff5fc94f5996a15be",
+      "bytes": 53054
+    },
+    "bossfight/assets/spr/kuanggong/atk3.webp": {
+      "sha256": "e5c9b6d1af51fb8a46b980ba43a7015590082e26a3b4398270ff2af363dc2681",
+      "bytes": 60518
+    },
+    "bossfight/assets/spr/kuanggong/attack.webp": {
+      "sha256": "037ed8dccebe759d1f9005daa7660adbae974600a9a14044c0add8c986c3564c",
+      "bytes": 36682
+    },
+    "bossfight/assets/spr/kuanggong/block.webp": {
+      "sha256": "c47a965c69fc0a404aabeb545477ac8177998109a32519b9698c392219284fd0",
+      "bytes": 55056
+    },
+    "bossfight/assets/spr/kuanggong/charge.webp": {
+      "sha256": "949229151ac525adcab795adb0c52eb3bcd4a6c5e6f73321a779974f8baaf695",
+      "bytes": 61018
+    },
+    "bossfight/assets/spr/kuanggong/dodge.webp": {
+      "sha256": "41be4f4d3f9303c877d007c57121201d9a20b27d5f50d01629b328957ef6f132",
+      "bytes": 52802
+    },
+    "bossfight/assets/spr/kuanggong/fly.webp": {
+      "sha256": "5ba0609f5c12d5b078e6c93af82e03e9e2342ab1a90945d5e826e3032fa65819",
+      "bytes": 49396
+    },
+    "bossfight/assets/spr/kuanggong/hit.webp": {
+      "sha256": "e34da15df997b2c5dfd6e49d634140da2cdd1aa4028a59fb0d3584bc3b7a715c",
+      "bytes": 36132
+    },
+    "bossfight/assets/spr/kuanggong/ko.webp": {
+      "sha256": "496a2bda31c6e409aac62e240e1a81ce7de5b4f7a6d69bc24021a11c2c698c7a",
+      "bytes": 26608
+    },
+    "bossfight/assets/spr/kuanggong/leap.webp": {
+      "sha256": "29dc1f500732fbf833c7f9f375f284b2f70c5060b6af1adab9b85e180aa8ca28",
+      "bytes": 39568
+    },
+    "bossfight/assets/spr/kuanggong/stance.webp": {
+      "sha256": "d2e5c6e8c4541ce6e6c4538fd50d5d822e70fa772c459fe12d82c6775f35271f",
+      "bytes": 46704
+    },
+    "bossfight/assets/spr/kuanggong/ult.webp": {
+      "sha256": "2aa291579c9550ff0f4f924bcbd5d8e38162d5c048714a5f24e3eef97402c43f",
+      "bytes": 46020
+    },
+    "bossfight/assets/spr/kuanggong/win.webp": {
+      "sha256": "b0ae2aff4702e6a2df4b090add88ceac5bfc78dfb08e749a2db2cc936317d436",
+      "bytes": 56984
+    },
+    "bossfight/assets/spr/laosiji/atk2.webp": {
+      "sha256": "6814a3d979d2446cfb030e270c42f289c23a0020e48e91a47663f47159ce76b6",
+      "bytes": 55672
+    },
+    "bossfight/assets/spr/laosiji/atk2_a.webp": {
+      "sha256": "ba6b9d4138878c38d152d2ea8a861c279c515a40a0bf68181b38a51b03d28bf5",
+      "bytes": 30348
+    },
+    "bossfight/assets/spr/laosiji/atk2_b.webp": {
+      "sha256": "d4312713772468d082e4b8ce4334b198f84bd0c1bea6655c93ecd5a07c6dc51b",
+      "bytes": 33246
+    },
+    "bossfight/assets/spr/laosiji/atk2_c.webp": {
+      "sha256": "bd88e75f2a2deb96f5948a13cf1b859ee4cc1d422e418e8c1fc080a63d92a320",
+      "bytes": 33940
+    },
+    "bossfight/assets/spr/laosiji/atk3.webp": {
+      "sha256": "b0a4d48506c72b2f3a2c6c414c72b1ada2086657992c00df7053b22c7e799f1e",
+      "bytes": 56880
+    },
+    "bossfight/assets/spr/laosiji/atk3_a.webp": {
+      "sha256": "e32c9fbb5275d36ca732c5bacf2729c8de6c49868a1ceaab6a3ff72ef6929d8e",
+      "bytes": 30948
+    },
+    "bossfight/assets/spr/laosiji/atk3_b.webp": {
+      "sha256": "0aa8ed8eee8170d87c70d381bb31d88b0761288b394ab55e93c5406b73bc5ab4",
+      "bytes": 34034
+    },
+    "bossfight/assets/spr/laosiji/atk3_c.webp": {
+      "sha256": "04e78231690817298f99404ed7fed7d8823409b7b3072a8c9f18e3da7283009d",
+      "bytes": 35236
+    },
+    "bossfight/assets/spr/laosiji/attack.webp": {
+      "sha256": "66ddd87ed60539572d0b07efe69dffba6b8e14b54e363f5605f9367c7d64d366",
+      "bytes": 48510
+    },
+    "bossfight/assets/spr/laosiji/attack_a.webp": {
+      "sha256": "3bdb5795f3babb3d1da447717935c8474b185346e09d4a60816582e4a3614a2b",
+      "bytes": 29238
+    },
+    "bossfight/assets/spr/laosiji/attack_b.webp": {
+      "sha256": "4f26dc21058378992d50f7d50d9e04ae0a401eeef56d5703fb291845a5fe0162",
+      "bytes": 27404
+    },
+    "bossfight/assets/spr/laosiji/attack_c.webp": {
+      "sha256": "5460b321b12d06448a8cb542db194566b82db711803e6216dd216b31278cbda1",
+      "bytes": 27422
+    },
+    "bossfight/assets/spr/laosiji/block.webp": {
+      "sha256": "899f53d183f900f57a899a5cceb02d17fefcdf9f79f0c80d93d581d77458d06a",
+      "bytes": 56914
+    },
+    "bossfight/assets/spr/laosiji/charge.webp": {
+      "sha256": "f9961b199098e9984a12a4b9ff2439d8c6221bc015d5703a70dcd72fa47b6451",
+      "bytes": 62900
+    },
+    "bossfight/assets/spr/laosiji/dodge.webp": {
+      "sha256": "20b25a2e7e335a257f56dec7cb2d019bc47a05507fec4ae2826cd82af1a69767",
+      "bytes": 46730
+    },
+    "bossfight/assets/spr/laosiji/fly.webp": {
+      "sha256": "76b3c5b1756a142874382e56716b4eb799dd0fee5d431ac1c40e2400cb6adfed",
+      "bytes": 53818
+    },
+    "bossfight/assets/spr/laosiji/hit.webp": {
+      "sha256": "b3fd6a88581279434f18868d0d587e0317d49af5c7b31ca2f7fd0744729e0077",
+      "bytes": 44850
+    },
+    "bossfight/assets/spr/laosiji/hit_a.webp": {
+      "sha256": "3554d3664db901989acecdfe5069bc433d5082ac97943f4c04513e6a2eebdbcf",
+      "bytes": 27368
+    },
+    "bossfight/assets/spr/laosiji/idle_a.webp": {
+      "sha256": "09a22da71b517b4f224db0ec34fd7107180af6160a7dc810cfdfdf0051c0f9d3",
+      "bytes": 29446
+    },
+    "bossfight/assets/spr/laosiji/idle_b.webp": {
+      "sha256": "fa27de6caa1c810bd2cde2ec0c2cd952278e7386af97b35b56cfbd9ff0cc64ea",
+      "bytes": 29804
+    },
+    "bossfight/assets/spr/laosiji/ko.webp": {
+      "sha256": "c3aeef76fec448e8505f84caef7a55ba44d59e97b1fdbe44e966e028348e3000",
+      "bytes": 25432
+    },
+    "bossfight/assets/spr/laosiji/leap.webp": {
+      "sha256": "91fa1e448205cf09ce8d0fe501abc0acde3c95754aa0ecbd6ace0cf726fa6add",
+      "bytes": 53368
+    },
+    "bossfight/assets/spr/laosiji/stance.webp": {
+      "sha256": "71b0a1f8fcb5f4ea03dadd006cee6a086362fa610ee265d1a329ac6cdd94ccb9",
+      "bytes": 54392
+    },
+    "bossfight/assets/spr/laosiji/ult.webp": {
+      "sha256": "febc5bbd5b438415850d16a507ceda82ffd01ad069a4d9cbf154fdb72de11440",
+      "bytes": 61116
+    },
+    "bossfight/assets/spr/laosiji/win.webp": {
+      "sha256": "f18ff36b88a42d0bd04a8fe26602485f133a47c20ceb1474dbf8a3fc879065ab",
+      "bytes": 55548
+    },
+    "bossfight/assets/spr/martin/atk2.webp": {
+      "sha256": "090d7df24b2ec9926f2dfd9d0dfd6134eda7ce7e5f00f641552865cd2ab86dc9",
+      "bytes": 39230
+    },
+    "bossfight/assets/spr/martin/atk3.webp": {
+      "sha256": "73633813801357e38c4f222d27a08c3c835de423335b547fb9b810d485f67113",
+      "bytes": 40122
+    },
+    "bossfight/assets/spr/martin/attack.webp": {
+      "sha256": "288de7c0d684cf55a54a8c5fff620f4ce55da3d66a513bad9c5ec04f1a7b081f",
+      "bytes": 25504
+    },
+    "bossfight/assets/spr/martin/block.webp": {
+      "sha256": "f4dec85ffddcd7d2d5a1774e43493370eef2bd375faa83f63b9dd8bb969b9d60",
+      "bytes": 28876
+    },
+    "bossfight/assets/spr/martin/charge.webp": {
+      "sha256": "55d29c1962aa51c1ea8afc5223daa71cddf1bb5ca3ae5d53b581fe048a3f10d7",
+      "bytes": 45668
+    },
+    "bossfight/assets/spr/martin/dodge.webp": {
+      "sha256": "eeba34445124b03dcf56e805db322f406a290af2839a3a8d65c1c6b33ba75d34",
+      "bytes": 25834
+    },
+    "bossfight/assets/spr/martin/fly.webp": {
+      "sha256": "23e61a48b8e45a3b04271eee414e130bb05ca25adebc8b32f36178c88f670836",
+      "bytes": 34922
+    },
+    "bossfight/assets/spr/martin/hit.webp": {
+      "sha256": "07c9133b88072205c8f5af3f13209a3e53013240bf1c4de5c607223d33748865",
+      "bytes": 30426
+    },
+    "bossfight/assets/spr/martin/ko.webp": {
+      "sha256": "93adce6540550e38c6dafa94081a8f1723125f5dbeaebe4af39521611af09814",
+      "bytes": 25418
+    },
+    "bossfight/assets/spr/martin/leap.webp": {
+      "sha256": "1ff4dda9aab196216ad7dfbb4f8d0586a0e0f81f4721a49b88fa61c5c31ba34e",
+      "bytes": 33066
+    },
+    "bossfight/assets/spr/martin/ret0.webp": {
+      "sha256": "c383d4ce598c9ccca869c83209e2f2efa55151b7b6d94139c110f20277c700da",
+      "bytes": 17844
+    },
+    "bossfight/assets/spr/martin/ret1.webp": {
+      "sha256": "e7dc4189ea84ed28620dc582d1c3cf7fc6970bea5c1f663256ddd958719bb3e2",
+      "bytes": 18510
+    },
+    "bossfight/assets/spr/martin/ret2.webp": {
+      "sha256": "c2cd36722ac8f0d62ebe84b0ff4a7bc25dc81d07a3e9f3256817d80d692b2863",
+      "bytes": 20328
+    },
+    "bossfight/assets/spr/martin/ret3.webp": {
+      "sha256": "056a488b39925f918c7bbf1e02e75fac671a0df9a20ef41334a2d59dba414bbe",
+      "bytes": 16160
+    },
+    "bossfight/assets/spr/martin/stance.webp": {
+      "sha256": "9a27b94704938171de3fdf9ba4b51267ec171147782782af3bae166a42411ace",
+      "bytes": 28334
+    },
+    "bossfight/assets/spr/martin/ult.webp": {
+      "sha256": "26ae5bd08883d9fb40fc2e9c669aa2f576412243bdb6db28fadac4a1dac5c21d",
+      "bytes": 56994
+    },
+    "bossfight/assets/spr/martin/win.webp": {
+      "sha256": "ef057c6594cb0c1ba2b6922c4e0c8e2b68389ed458e635267b9541a97442b8a0",
+      "bytes": 34950
+    },
+    "bossfight/assets/spr/meta.json": {
+      "sha256": "88c47e259bedbb4b32384f62b12acf18a2cda45227f7e68b05b814fa5cbead9c",
+      "bytes": 10812
+    },
+    "bossfight/assets/spr/niumo/attack.webp": {
+      "sha256": "90ea3179eea2899dc494f6f47d28357ca5a11efa7dea4cb932de2cce755c54a9",
+      "bytes": 32920
+    },
+    "bossfight/assets/spr/niumo/hit.webp": {
+      "sha256": "489b687151f95671acc95509170d69efd5ef9247545449301983ce589b518bc1",
+      "bytes": 34334
+    },
+    "bossfight/assets/spr/niumo/hit_a.webp": {
+      "sha256": "7b0774086cbadd3e5b1d029b258cbc680f322c5e4ebcc037b1ac3e4bd6c91c11",
+      "bytes": 20884
+    },
+    "bossfight/assets/spr/niumo/idle2.webp": {
+      "sha256": "b0c383920d5d1d04c45ec858f600dfd2409c8a332efb9fed502778e8e6280761",
+      "bytes": 43024
+    },
+    "bossfight/assets/spr/niumo/idle_a.webp": {
+      "sha256": "69af928d67dde237bfe56bddd74090463f452590b9d024eb55bc7f2722b00b04",
+      "bytes": 23084
+    },
+    "bossfight/assets/spr/niumo/idle_b.webp": {
+      "sha256": "f4b15c2df43b4d7ce205c7a0f11e0b4ae8757da2d94b3ad64fd09d6010c29487",
+      "bytes": 22922
+    },
+    "bossfight/assets/spr/niumo/ko.webp": {
+      "sha256": "cdbf7177237ba25502e2f1552908252b141b86615cde03da576b716ad5166ff2",
+      "bytes": 19338
+    },
+    "bossfight/assets/spr/niumo/ko_a.webp": {
+      "sha256": "784778a344aae085dd914f255a4981ca7f1fb70d04cab19a7efffc7753ad7842",
+      "bytes": 19934
+    },
+    "bossfight/assets/spr/niumo/rec_a.webp": {
+      "sha256": "2f706290480b5461c5be00a14bcdf3551301f79cda6fbe3868ab1d80ec5c1433",
+      "bytes": 25786
+    },
+    "bossfight/assets/spr/niumo/roar.webp": {
+      "sha256": "f20f2a602d74e7c02c8025051754c3a7b13641fbdbc061536851fba52fc3ae43",
+      "bytes": 60860
+    },
+    "bossfight/assets/spr/niumo/roar_a.webp": {
+      "sha256": "ca99640852feba6c0376ae28c89aea17a696dfcd6eb2f993bab039772d0836f2",
+      "bytes": 33654
+    },
+    "bossfight/assets/spr/niumo/rush.webp": {
+      "sha256": "b98d1c10ff2653daba74ee9705efbc0dcfb48ed5c77675227ca6e1148a7d5d89",
+      "bytes": 46262
+    },
+    "bossfight/assets/spr/niumo/rush_a.webp": {
+      "sha256": "4e25de25fec289681b604ae15ce52e5a95f4929fcd73aaa7889335378f1d0617",
+      "bytes": 24522
+    },
+    "bossfight/assets/spr/niumo/slam.webp": {
+      "sha256": "105704b224e35548080dc79c9fb7cbc49c0208907b53dbf9013bed79ffc24923",
+      "bytes": 55152
+    },
+    "bossfight/assets/spr/niumo/slam_mid.webp": {
+      "sha256": "29c4db90b91588ade9594eec63ba22bddcd130f7e084f59c540e78c88ebc55ba",
+      "bytes": 31026
+    },
+    "bossfight/assets/spr/niumo/slam_rec.webp": {
+      "sha256": "a97ad5e7f7497f20ad08d099804c2013d36173396ca9410162d27ca6a6ededf6",
+      "bytes": 28560
+    },
+    "bossfight/assets/spr/niumo/slam_up.webp": {
+      "sha256": "28c9dc6558f738c97ae3a0646bcc5d3afe85d5a35d2558278fb68196c00f5a44",
+      "bytes": 42696
+    },
+    "bossfight/assets/spr/niumo/smash.webp": {
+      "sha256": "9003dec0a04ef23fa12b4f4e271406a7166099ec40e7228df419fb8a7c62de5f",
+      "bytes": 46108
+    },
+    "bossfight/assets/spr/niumo/smash_a.webp": {
+      "sha256": "3aade7007722fe5c7bc2537e5f819f1f8565d7161fbb3fd38e8f1209b3f64273",
+      "bytes": 28260
+    },
+    "bossfight/assets/spr/niumo/spin.webp": {
+      "sha256": "385cd67eea2a7663a8bf99da953404a794a8f078011322d1e555404eef18a744",
+      "bytes": 60384
+    },
+    "bossfight/assets/spr/niumo/stance.webp": {
+      "sha256": "2eb521cc36aa63190159679a2b4779987204a2a8ebd3b9706f3754b633f14dd9",
+      "bytes": 38034
+    },
+    "bossfight/assets/spr/niumo/swing.webp": {
+      "sha256": "4ce0ecf4bcef46f1c743b745174ae77565bb9593101155f9b2501a24464e02f8",
+      "bytes": 43822
+    },
+    "bossfight/assets/spr/niumo/swing_a.webp": {
+      "sha256": "92a459fc75ce4da4ce19aa47fe0242c5f95128788b51f8cc4ab328c77a8a5ba2",
+      "bytes": 23406
+    },
+    "bossfight/assets/spr/niumo/swing_b.webp": {
+      "sha256": "452946d4eadaffbef9acf9ff6a983eda0969a1dbbbec7968a12f9655089e032c",
+      "bytes": 25000
+    },
+    "bossfight/assets/spr/niumo/ult.webp": {
+      "sha256": "982a638619b91aa770bf962fb14196785008bbe3b9403b3590ed7f9a5e74b242",
+      "bytes": 35592
+    },
+    "bossfight/assets/spr/niumo/wind_a.webp": {
+      "sha256": "0a103368813b4c28e552963ca0f917dc17e435fbb1405e36eb23f7cb23daee63",
+      "bytes": 21760
+    },
+    "bossfight/assets/spr/niumo/wind_b.webp": {
+      "sha256": "73bc72ebf3ca72c39d2c0daef055431cfd837388a2554f17334ac881f064cdb0",
+      "bytes": 23258
+    },
+    "bossfight/assets/spr/owl/attack.webp": {
+      "sha256": "ccc011efc0d04593d5866483be367d686f0090e03fb7164997569049cafb2a16",
+      "bytes": 89972
+    },
+    "bossfight/assets/spr/owl/hit.webp": {
+      "sha256": "b3879599ee45248c5d6e46fd6b898ea50536bdb1cc0c7a2fecd383b06e5abac6",
+      "bytes": 83946
+    },
+    "bossfight/assets/spr/owl/idle.webp": {
+      "sha256": "3eed0bd3ad24e81ff82732ff8401293141959dd864c415c7d1d4c6b34cf20ff4",
+      "bytes": 66832
+    },
+    "bossfight/assets/spr/owl/ko.webp": {
+      "sha256": "c13c4d6d2b5d4d50d80038fbad1e80ea8c5bedc5fb92fff601f66e87fc91ba2c",
+      "bytes": 36886
+    },
+    "bossfight/assets/spr/owl/stance.webp": {
+      "sha256": "d93d52064ea1107461d1cafe858623d293f27ae8091a9bba3b7bc8090afcc5a3",
+      "bytes": 72094
+    },
+    "bossfight/assets/spr/phyrex/atk2.webp": {
+      "sha256": "2fa3db5ad872ecb31f48e6d12e57a764d6cf1cbe9f9e9efbccaa91c164ac4610",
+      "bytes": 50178
+    },
+    "bossfight/assets/spr/phyrex/atk3.webp": {
+      "sha256": "c678f71104990f31c9f2349a69f57860a2a44f8fdd7c5ed34a955ac4123631f2",
+      "bytes": 58152
+    },
+    "bossfight/assets/spr/phyrex/attack.webp": {
+      "sha256": "cb5fb3016e62ca5012de45b7d37aeb5d02ca8e01a8b4d55ac7a3709486339411",
+      "bytes": 40018
+    },
+    "bossfight/assets/spr/phyrex/block.webp": {
+      "sha256": "a21917c11ed1592a2e149c9edfc6e7d0ba4b58b01d591ac8fa1dee066a619c65",
+      "bytes": 54480
+    },
+    "bossfight/assets/spr/phyrex/charge.webp": {
+      "sha256": "7ed2e15fae70bbf32e192c801bcaac29742b759fcaeed91c840f9f54e02ae1de",
+      "bytes": 50114
+    },
+    "bossfight/assets/spr/phyrex/dodge.webp": {
+      "sha256": "5dae07c51b96c65a5dda630ccf226003ba64bc346a38c2ffb022092287b03418",
+      "bytes": 37330
+    },
+    "bossfight/assets/spr/phyrex/fly.webp": {
+      "sha256": "1b3a48da2044daf605849467ea8584a1906c804339887a7cbb7fccb1310e3c8e",
+      "bytes": 54582
+    },
+    "bossfight/assets/spr/phyrex/hit.webp": {
+      "sha256": "4f4cf7e8ccfaab5bbd9d71f2bc32a5d50da5826de7e6387bfc4655a08462cd4b",
+      "bytes": 37706
+    },
+    "bossfight/assets/spr/phyrex/ko.webp": {
+      "sha256": "9d62c208406832c6dee886feecf55bd94a6815508e150a222692b0452777f272",
+      "bytes": 20206
+    },
+    "bossfight/assets/spr/phyrex/leap.webp": {
+      "sha256": "ced7adf17f0dbed1f41937eb18bf9d7d3498ad0d50e0863296fd6eda5ee0dbee",
+      "bytes": 31996
+    },
+    "bossfight/assets/spr/phyrex/stance.webp": {
+      "sha256": "c1e1a7eaa421c416b5003c4ae9071d44535ca7436e78a1080073a083040cecbd",
+      "bytes": 46872
+    },
+    "bossfight/assets/spr/phyrex/ult.webp": {
+      "sha256": "8498b8b8e628dab6fb709fdbf42b95a3fe4581fe00c92946cedf89fca53f3fc2",
+      "bytes": 45606
+    },
+    "bossfight/assets/spr/phyrex/win.webp": {
+      "sha256": "098b85226b61c4fdf98742aeec84dfab5cad35701de955a053607c1e80989b8f",
+      "bytes": 43988
+    },
+    "bossfight/assets/spr/red/attack.webp": {
+      "sha256": "20b9de2f28562db5240de8fea5fc8edf305bdedd598b765c458bb0a9d172dfe4",
+      "bytes": 146814
+    },
+    "bossfight/assets/spr/red/hit.webp": {
+      "sha256": "9191524d8665e0a53529272f948cbfd08ed8190f6dfd8900525ad56d446650bb",
+      "bytes": 160208
+    },
+    "bossfight/assets/spr/red/idle.webp": {
+      "sha256": "b01ecb8734b72e3494f1599b89c1a1340313c16ad2d7c1f7dc491825902f3ee1",
+      "bytes": 151632
+    },
+    "bossfight/assets/spr/red/ko.webp": {
+      "sha256": "6fff6e48c025c842e9e333ec3883dd0bb6f7028e08d3944146aed9718f2f053a",
+      "bytes": 58812
+    },
+    "bossfight/assets/spr/red/stance.webp": {
+      "sha256": "77d4d568316c2f749b89d992b824253742c0453946f101654c58d012f3ef6fc3",
+      "bytes": 158898
+    },
+    "bossfight/assets/spr/sisi/atk2.webp": {
+      "sha256": "d923f69cd5de73d6cffc1d65b5a60c3d372a595c7a6c6add34060cee67cf3310",
+      "bytes": 59888
+    },
+    "bossfight/assets/spr/sisi/atk2_a.webp": {
+      "sha256": "80104bbdc19224e2d0ac9d8dae344b1229cc396df9da46623b4fc24a501a321c",
+      "bytes": 22446
+    },
+    "bossfight/assets/spr/sisi/atk2_b.webp": {
+      "sha256": "c5d5f7e9d95d60c89233932b66cc11d427f34022b699210234e0181295d83e15",
+      "bytes": 33992
+    },
+    "bossfight/assets/spr/sisi/atk2_c.webp": {
+      "sha256": "524199058ca8b0da53652ee16dc43c9b090db5038d2609a7bd9d283745cf5b21",
+      "bytes": 31838
+    },
+    "bossfight/assets/spr/sisi/atk3.webp": {
+      "sha256": "42d79903c35db144525e4ece8bb1a8d7fbf5e7a9676ca8cdcc88632d91abf065",
+      "bytes": 60956
+    },
+    "bossfight/assets/spr/sisi/atk3_a.webp": {
+      "sha256": "ddf06f1fea44357c7c7cb389f4f30effb3babfe036142c71e8e21f8f1a911d18",
+      "bytes": 25100
+    },
+    "bossfight/assets/spr/sisi/atk3_b.webp": {
+      "sha256": "5ce4b185327012c3b761d2a9780394f5f4b9f453938497898e8d862254e7f225",
+      "bytes": 34862
+    },
+    "bossfight/assets/spr/sisi/atk3_c.webp": {
+      "sha256": "e3574ebd9ad9bb92320101d0eba8f5f8e4855d4ab46f359ef0a03f079fd8e21c",
+      "bytes": 35530
+    },
+    "bossfight/assets/spr/sisi/attack.webp": {
+      "sha256": "2bbd22b4a5329ee16183ec3989f795ea1303b831db3b485db1f5edefc27a1e83",
+      "bytes": 36736
+    },
+    "bossfight/assets/spr/sisi/attack_a.webp": {
+      "sha256": "3a604d263544df893fb5de243e5944acdcccf049513251efb1115b93c7be7882",
+      "bytes": 20516
+    },
+    "bossfight/assets/spr/sisi/attack_b.webp": {
+      "sha256": "61b1ad5c0f70d22cc52865c7c3d1a33ca27d4dc995f1bd84284fcd08a5c69d43",
+      "bytes": 18892
+    },
+    "bossfight/assets/spr/sisi/attack_c.webp": {
+      "sha256": "ecc34dc16d05ec61faff5d11db060404a1c8a21da68d359c909aac563e510376",
+      "bytes": 19694
+    },
+    "bossfight/assets/spr/sisi/block.webp": {
+      "sha256": "56bf1926dd793b1314026c040017197c63f2bac8f3f12969ff535d613153de23",
+      "bytes": 50472
+    },
+    "bossfight/assets/spr/sisi/charge.webp": {
+      "sha256": "5a00caa308fb1b348e29282e0506693867fce45aa528d07954fec8e7b066aad7",
+      "bytes": 56136
+    },
+    "bossfight/assets/spr/sisi/dodge.webp": {
+      "sha256": "d91f1d3d0001870fea361696d28c3ed9d725757173d728b735888084046cd4a9",
+      "bytes": 41928
+    },
+    "bossfight/assets/spr/sisi/fly.webp": {
+      "sha256": "791f8aa2fce139b5d18ed284ecd19078c871c8f1e49ae2f927fd69466cd1718f",
+      "bytes": 47452
+    },
+    "bossfight/assets/spr/sisi/hit.webp": {
+      "sha256": "ec9cc0646450a7059051a8f89ad27de9f0fa4cb67d69f0e4f1a4dcb0b58fdd1c",
+      "bytes": 41712
+    },
+    "bossfight/assets/spr/sisi/hit_a.webp": {
+      "sha256": "c6f64035bc96770e7acf9554c113bbb842e6c44ee9cef045f3142d1a90a18c15",
+      "bytes": 23442
+    },
+    "bossfight/assets/spr/sisi/idle_a.webp": {
+      "sha256": "263c06bf0b8d8771b72bcdd8731628adde04e647bdba81bc7a7e4bf96a95973a",
+      "bytes": 21802
+    },
+    "bossfight/assets/spr/sisi/idle_b.webp": {
+      "sha256": "f91e7fe99b9f31f15779c6fbe480988fc4cf70580491113cabe897d6e0a52976",
+      "bytes": 22148
+    },
+    "bossfight/assets/spr/sisi/ko.webp": {
+      "sha256": "398e536df8afc38308e04fcca95a9551711aeffdbecf66fcb9fc30d3f032a570",
+      "bytes": 558562
+    },
+    "bossfight/assets/spr/sisi/leap.webp": {
+      "sha256": "5a1561a61887fbe89dd8a66e6f38dc6930494bba137462ddc0def1193f98c847",
+      "bytes": 45098
+    },
+    "bossfight/assets/spr/sisi/stance.webp": {
+      "sha256": "48e790daf40c80d17f9b97ceedcc4862eafe3608b18c4373c8158a726ad4376d",
+      "bytes": 39718
+    },
+    "bossfight/assets/spr/sisi/ult.webp": {
+      "sha256": "0b912ce3c30ec4eee7851838eeb2844177817cf127ef2eb0f318992f8810b1a1",
+      "bytes": 53644
+    },
+    "bossfight/assets/spr/sisi/win.webp": {
+      "sha256": "0418ec73924612a4ef8e0dd70bfbaf3afd679809490c8e9306c4189493706dde",
+      "bytes": 47028
+    },
+    "bossfight/assets/spr/tang/attack.webp": {
+      "sha256": "fe9b3ae559e6729290e9ecc946900c28b1cfcc55120f10105bb610ac21d24e7d",
+      "bytes": 108998
+    },
+    "bossfight/assets/spr/tang/hit.webp": {
+      "sha256": "654dc87a71ece794d8a95f2bf050c4cb3c4aceeb2cfc5a16ac947b6a839de0a1",
+      "bytes": 101712
+    },
+    "bossfight/assets/spr/tang/idle.webp": {
+      "sha256": "5b4eb5cb11e2989ba0b30b4f906411f5eaa0431940668ec80406fabb36a78b4f",
+      "bytes": 94098
+    },
+    "bossfight/assets/spr/tang/ko.webp": {
+      "sha256": "7dada31e1b727a8a575264e8e9a3bf3fd907eb5a766f135be4fe497e67813de9",
+      "bytes": 42590
+    },
+    "bossfight/assets/spr/tang/stance.webp": {
+      "sha256": "60643547846b0b8d4426667c55086b640b0fe1f9fbb9096df71ba6b9109a7df4",
+      "bytes": 103804
+    },
+    "bossfight/assets/spr/wujing/attack.webp": {
+      "sha256": "27ddb56a1eab24c53c89d73b7a40403b5c67742d1ce7f5cf7915780810bb8dcd",
+      "bytes": 107086
+    },
+    "bossfight/assets/spr/wujing/hit.webp": {
+      "sha256": "ae44cd716a1664d086be962fb0cddfd2e163ea9c4fd606a50ef9d86821b61974",
+      "bytes": 91734
+    },
+    "bossfight/assets/spr/wujing/idle.webp": {
+      "sha256": "f7841da8993f6ad886b290fb8ef66dc520e8aa2e6ecb1329d18e9975d78aff8e",
+      "bytes": 101396
+    },
+    "bossfight/assets/spr/wujing/ko.webp": {
+      "sha256": "17817b4225c8171f90a9af3f849139e472b6b29124bc2cd871e8efe2c3eaf2d7",
+      "bytes": 619782
+    },
+    "bossfight/assets/spr/wujing/stance.webp": {
+      "sha256": "e013452203728048295ed7d8113bf1db347094050bbf51ec332c8d007fb64af8",
+      "bytes": 100430
+    },
+    "bossfight/assets/spr/wukong/atk2.webp": {
+      "sha256": "6933e43ef678c4a6c807c3e9614266fa34d7a1cb10de03c64ebd7ab7acb25210",
+      "bytes": 52942
+    },
+    "bossfight/assets/spr/wukong/atk2_a.webp": {
+      "sha256": "09f656ea28a572bb09fa42d5207df3bcffabe559ee73fb16de44683a258df23f",
+      "bytes": 25856
+    },
+    "bossfight/assets/spr/wukong/atk2_b.webp": {
+      "sha256": "6d1a310c958a3a7794dd07cf91376c0e508727543bb8026425decc34c7a58d55",
+      "bytes": 28586
+    },
+    "bossfight/assets/spr/wukong/atk2_c.webp": {
+      "sha256": "07985b40d5fe657bc83cd38d1402f5571603338a4d168357c6011eb242bce6dd",
+      "bytes": 28030
+    },
+    "bossfight/assets/spr/wukong/atk3.webp": {
+      "sha256": "d2a356dd6fa343361c8c5276b2804cfa5190644d8c7be972a07ee931b2c43fd5",
+      "bytes": 60574
+    },
+    "bossfight/assets/spr/wukong/atk3_a.webp": {
+      "sha256": "32ac1e404733bad82cd6c4ba139e31c239e704e3084b96e40237615d47ef314e",
+      "bytes": 26546
+    },
+    "bossfight/assets/spr/wukong/atk3_b.webp": {
+      "sha256": "c5bbf7a5527e916406fb7d6ecefffb64a872057ebcfa48108a17e84d2dcd6e3d",
+      "bytes": 31602
+    },
+    "bossfight/assets/spr/wukong/atk3_c.webp": {
+      "sha256": "e67e8cd6e3caf3f98fcff5bd65401de7fefc33cbf185744bb7e931f1e47ec0b3",
+      "bytes": 31406
+    },
+    "bossfight/assets/spr/wukong/attack.webp": {
+      "sha256": "4e06949afac91dfcb909a2ce3851ee375268d669457484432532e5b7cbefa79f",
+      "bytes": 42908
+    },
+    "bossfight/assets/spr/wukong/attack_a.webp": {
+      "sha256": "27e7ab9f92b16a2ff29e8d7f39ada33315d7c4ece743e78e7d6214425fc93bed",
+      "bytes": 24720
+    },
+    "bossfight/assets/spr/wukong/attack_b.webp": {
+      "sha256": "c220f4fc5df1881d6da61e75f3671e46792c217ed24124e49cc1e5e64924acfb",
+      "bytes": 22942
+    },
+    "bossfight/assets/spr/wukong/attack_c.webp": {
+      "sha256": "b3bc8b37f78c51d2a4999c629248911c9f68ab3a8d3d53943e6269621f5f4a52",
+      "bytes": 23356
+    },
+    "bossfight/assets/spr/wukong/block.webp": {
+      "sha256": "914c6c95a7c52c4910f9d29e16cadba49198d8f45b7324ed62975b3081b38024",
+      "bytes": 52766
+    },
+    "bossfight/assets/spr/wukong/charge.webp": {
+      "sha256": "33cbc0e2290fcac5b2f75feac666983e30017e346bff508efbc1a4a003649625",
+      "bytes": 59960
+    },
+    "bossfight/assets/spr/wukong/dodge.webp": {
+      "sha256": "8c1d7c49d6eed5aebb7c43e109c1c113f25906340aed1a0847f2b9e724edb26e",
+      "bytes": 51742
+    },
+    "bossfight/assets/spr/wukong/fly.webp": {
+      "sha256": "70940a66cd5c72cf78160ee267b556e41e6e4faa2200f9ae91ad86fb867a1187",
+      "bytes": 55116
+    },
+    "bossfight/assets/spr/wukong/hit.webp": {
+      "sha256": "dc5572758663c74d4a002cfe5df9b8ab49d7557b04f1ec9ec7645cc04675c43f",
+      "bytes": 50220
+    },
+    "bossfight/assets/spr/wukong/hit_a.webp": {
+      "sha256": "a5bd9b09d310b27f8077e9ce9b8b7a1f513310b30451571df7060c1c97dbba5d",
+      "bytes": 28510
+    },
+    "bossfight/assets/spr/wukong/idle_a.webp": {
+      "sha256": "48880e42b0b59ea7907159e2d38e020df5bee9991c649b4185c44b645c5887b7",
+      "bytes": 26474
+    },
+    "bossfight/assets/spr/wukong/idle_b.webp": {
+      "sha256": "c87248ce356210cd693d60aa0897b83430f25ccebd82067c4abb19b5774a244e",
+      "bytes": 25462
+    },
+    "bossfight/assets/spr/wukong/ko.webp": {
+      "sha256": "3e560301870d0efe9896a272ae8a5a67a5f6097a1f72872e1681b03e08929e88",
+      "bytes": 24790
+    },
+    "bossfight/assets/spr/wukong/leap.webp": {
+      "sha256": "24043ad373b3e08ddef58d33331150dc6489ff392a96cb7b6d19649c9f6f22c9",
+      "bytes": 45564
+    },
+    "bossfight/assets/spr/wukong/stance.webp": {
+      "sha256": "c4646bcbfc5817a0ce9dba189832f11ebde945eac23fb886106a80e3fd88e2fc",
+      "bytes": 45912
+    },
+    "bossfight/assets/spr/wukong/ult.webp": {
+      "sha256": "382ea61b946d9a80a2145a38cd95da5f840311dfdb21a598ba1ecc79fab7576c",
+      "bytes": 49794
+    },
+    "bossfight/assets/spr/wukong/win.webp": {
+      "sha256": "4c849c1bf1efd1ed803b74e1dca606491371845d53aabbe42269eede83ad43c1",
+      "bytes": 60688
+    },
+    "bossfight/assets/spr/yellow/attack.webp": {
+      "sha256": "677a13d0eac65e1e45eeae829629862856858f8b0193c6ab4c3cf6c413e7ec60",
+      "bytes": 162686
+    },
+    "bossfight/assets/spr/yellow/hit.webp": {
+      "sha256": "4d6d3320cdfbad12f01b3c0fea73c8f9a4275b5adb9ce183019d2ccc0c645158",
+      "bytes": 138702
+    },
+    "bossfight/assets/spr/yellow/idle.webp": {
+      "sha256": "775fd13b1e899b1880123ea89ba3a238d8d44404239a215b9fe272d81aa1b818",
+      "bytes": 166390
+    },
+    "bossfight/assets/spr/yellow/ko.webp": {
+      "sha256": "3cc181b21cc4d151437bde932039f58c8cc2386bba1ba701c9c1423a6c0dbc71",
+      "bytes": 105242
+    },
+    "bossfight/assets/spr/yellow/stance.webp": {
+      "sha256": "61df152a127b7387540199b8400e8a835a83e7f566603d5f88670ae519106502",
+      "bytes": 161778
+    },
+    "bossfight/assets/spr/yuanzhang/atk2.webp": {
+      "sha256": "1b3fbf1028e5f6318ae4d18eddcd9a597f77307c5564bace7829c8fa1deb297b",
+      "bytes": 55928
+    },
+    "bossfight/assets/spr/yuanzhang/atk2_a.webp": {
+      "sha256": "87f61f392314fe4ee6e0df541a7d43285420995c727d46e6bd6edcb488a929a0",
+      "bytes": 24134
+    },
+    "bossfight/assets/spr/yuanzhang/atk2_b.webp": {
+      "sha256": "0e22c4c730e441d12b75c0e9c9eec592ebf1ab7849537a435781b1728179705c",
+      "bytes": 37066
+    },
+    "bossfight/assets/spr/yuanzhang/atk2_c.webp": {
+      "sha256": "e43b084ab5019356b6c9a9e12662f928fbaa664f4b31628526c1e6d8c48c345d",
+      "bytes": 35188
+    },
+    "bossfight/assets/spr/yuanzhang/atk3.webp": {
+      "sha256": "a3481a4329e5ef36f1a3537c97e4f5a366a763425e0260eb2d5e46a266d35be2",
+      "bytes": 54830
+    },
+    "bossfight/assets/spr/yuanzhang/atk3_a.webp": {
+      "sha256": "55fbdd97f0c36c41483b0d0c0858b59b93be5d98ba13ac1f9a2dfab41521b939",
+      "bytes": 27618
+    },
+    "bossfight/assets/spr/yuanzhang/atk3_b.webp": {
+      "sha256": "f318b1ae58afa4c7d7cf61d9518b534f6019fc49b5626d7cc2ec81d355d8f53e",
+      "bytes": 36206
+    },
+    "bossfight/assets/spr/yuanzhang/atk3_c.webp": {
+      "sha256": "f17fe781da6e6f0fd047641ea2632b49aaf041255b14cc49c53d08ed34d7a03e",
+      "bytes": 35406
+    },
+    "bossfight/assets/spr/yuanzhang/attack.webp": {
+      "sha256": "de1e3366b3e6dc933af7c21cd86318f58d3909d0eabed6d4405873a744890355",
+      "bytes": 38142
+    },
+    "bossfight/assets/spr/yuanzhang/attack_a.webp": {
+      "sha256": "6736d3dbeb4d63f63c69ff9d4e50ccc82ee0bc62901bcf5b8b450d255ecb909f",
+      "bytes": 23580
+    },
+    "bossfight/assets/spr/yuanzhang/attack_b.webp": {
+      "sha256": "1a8124dfc754af264f93aa8b80f76b550592654817cfd4a125cc9a51d87758e9",
+      "bytes": 22984
+    },
+    "bossfight/assets/spr/yuanzhang/attack_c.webp": {
+      "sha256": "345a50a731c0cd465779d56eaef2bfc06542e8c5f58bbe7f02c1b45185642926",
+      "bytes": 22478
+    },
+    "bossfight/assets/spr/yuanzhang/block.webp": {
+      "sha256": "7527892b393bfb32fb1801cf7daa84fdacd81deb0df3a83daa1285bfe663e978",
+      "bytes": 52730
+    },
+    "bossfight/assets/spr/yuanzhang/charge.webp": {
+      "sha256": "69f76375a1abbb159eb5881f507527cc0c3bc4ec9b3974df630f8aabd2aeb613",
+      "bytes": 57380
+    },
+    "bossfight/assets/spr/yuanzhang/dodge.webp": {
+      "sha256": "9412030955bce45f9c3fae9407ef071aa24cfeac14929dd0cf10506431bceab6",
+      "bytes": 43150
+    },
+    "bossfight/assets/spr/yuanzhang/fly.webp": {
+      "sha256": "89c4e05cf35780e329499204488852f8b39bf5e5bdc7f3c60c535cafd5457fa8",
+      "bytes": 51726
+    },
+    "bossfight/assets/spr/yuanzhang/hit.webp": {
+      "sha256": "1f5d7b460f1a9bbab27a26a2172cc344df5f8096a41f16a61f8be247bfbe46e1",
+      "bytes": 51158
+    },
+    "bossfight/assets/spr/yuanzhang/hit_a.webp": {
+      "sha256": "cbbeceef7a8716b538b2377d7f49c2a7148670922751f1323f3a683d05de3a16",
+      "bytes": 29446
+    },
+    "bossfight/assets/spr/yuanzhang/idle_a.webp": {
+      "sha256": "a47481283fd44383fcef64c0247c7381af1c4120a4510ef38b4e25966ad0d405",
+      "bytes": 25336
+    },
+    "bossfight/assets/spr/yuanzhang/idle_b.webp": {
+      "sha256": "ad515a85d535e0b99e57ccc33617f58766da9f2cc05905627f6c3d5a7c723ba3",
+      "bytes": 25408
+    },
+    "bossfight/assets/spr/yuanzhang/ko.webp": {
+      "sha256": "d795b022db9d43a5175d2598312d61834a573b66461971eef2a6d886ad5607bd",
+      "bytes": 44108
+    },
+    "bossfight/assets/spr/yuanzhang/leap.webp": {
+      "sha256": "6603f42af2043ab9c0a6d5484af1eae20efec2cc359c984f05b8601fa096c360",
+      "bytes": 42082
+    },
+    "bossfight/assets/spr/yuanzhang/ret0.webp": {
+      "sha256": "a16495935e071e1e337bfa093c03bc852c976e6826ae34369a696a2e7981a38c",
+      "bytes": 11980
+    },
+    "bossfight/assets/spr/yuanzhang/ret1.webp": {
+      "sha256": "28269fe069cb2963b8ab0458bb7aca3db01c145cf342664f2009fc2d0bb0d6f5",
+      "bytes": 24376
+    },
+    "bossfight/assets/spr/yuanzhang/ret2.webp": {
+      "sha256": "86ac3e09a8da32a1b397801745c02384fa0433c449d4985fff9f69e80282db16",
+      "bytes": 19570
+    },
+    "bossfight/assets/spr/yuanzhang/ret3.webp": {
+      "sha256": "02dbfc017c5d3151a6aa0f79032727252c87597bd419679d2375a577f7dd292a",
+      "bytes": 22344
+    },
+    "bossfight/assets/spr/yuanzhang/stance.webp": {
+      "sha256": "664b2514e11633e5bbb3c5e9279e1cd981ac5aa407db484743d48624a956ec9c",
+      "bytes": 42130
+    },
+    "bossfight/assets/spr/yuanzhang/ult.webp": {
+      "sha256": "8fb37cd16940c6fd14291bd23da506ccd911d5e98dab8df340a3267ad3ecedc1",
+      "bytes": 60848
+    },
+    "bossfight/assets/spr/yuanzhang/win.webp": {
+      "sha256": "e8f6c5da0b977ec88c27a01a12aec3ce890f907ee9d669b039093e47975c0f4d",
+      "bytes": 44242
+    },
+    "bossfight/assets/spr/yumian/attack.webp": {
+      "sha256": "8ffc5bfbdbf64b08947801b43fa0ea958767b1120013bced25a56db6f078fb9e",
+      "bytes": 125988
+    },
+    "bossfight/assets/spr/yumian/hit.webp": {
+      "sha256": "9b562965241fb4c1a84e5235eed7420e56a5261fd7c37512b1de57d93f1a92a6",
+      "bytes": 108220
+    },
+    "bossfight/assets/spr/yumian/idle.webp": {
+      "sha256": "b20f51ae2926adf37b5873efe84aa4fa6066cda55a88c19fee8e423432cbe59f",
+      "bytes": 111420
+    },
+    "bossfight/assets/spr/yumian/ko.webp": {
+      "sha256": "18467918f7ce27e0a64960aa69ea04310c6e11345bce1dc878ba6f4d886a5fa8",
+      "bytes": 71706
+    },
+    "bossfight/assets/spr/yumian/stance.webp": {
+      "sha256": "5bd80aaa42e9a1e629bd037ed2ff30a0ba5022a60a726daa763547adbafa92f6",
+      "bytes": 126330
+    },
+    "bossfight/assets/xav/diaoyulao.webp": {
+      "sha256": "7229843e101485bd3b006607deb7ff6452ca6858960a17242f3605c31fa25906",
+      "bytes": 8692
+    },
+    "bossfight/assets/xav/haiteng.webp": {
+      "sha256": "b7a916bc350e2551b25651e69de8855bdcbf894108d7e9ebe9f997871b476bba",
+      "bytes": 5126
+    },
+    "bossfight/assets/xav/heyuxi.webp": {
+      "sha256": "c2e5ffbdd8b5d58b02fe57df1fea1950d88aff17ecb1a6c5c957e9d9c378f9e3",
+      "bytes": 11162
+    },
+    "bossfight/assets/xav/kuanggong.webp": {
+      "sha256": "ecf03becbf7007c035f545cb17700ac7f3c81d97470ed14c1d6bfd23fbfffa4f",
+      "bytes": 7812
+    },
+    "bossfight/assets/xav/laosiji.webp": {
+      "sha256": "08635114e8343ef27c97d8d69cb1bacbeb5d46e44e6c74959a8e96e24ee0da56",
+      "bytes": 2322
+    },
+    "bossfight/assets/xav/martin.webp": {
+      "sha256": "b117a9844bdf17322676b0f314cacaa254a926f3b04d364a1cb80585857848f9",
+      "bytes": 7604
+    },
+    "bossfight/assets/xav/niumo.webp": {
+      "sha256": "dfbf862fefd18c63533658dc0a5b907cc5fb2809387f7c1496030429d3ded693",
+      "bytes": 8078
+    },
+    "bossfight/assets/xav/phyrex.webp": {
+      "sha256": "955d40ce32b065fac275d29aa3ebc03156fb207aae95760fe7131ef325ea53cb",
+      "bytes": 6258
+    },
+    "bossfight/assets/xav/sisi.webp": {
+      "sha256": "c28f90d36e45a59283bf06bf16f62a3327fd02c8f4e37109dec358fe7a12b6ab",
+      "bytes": 7076
+    },
+    "bossfight/assets/xav/wukong.webp": {
+      "sha256": "76895d1eda582443ccee0d7bce5c93f7f526dddb68d761e8d883d06a97bcc012",
+      "bytes": 9824
+    },
+    "bossfight/assets/xav/yuanzhang.webp": {
+      "sha256": "39c1d1e2fe30f56e157d3d7e4a6914375f28ea5fba9150a871dc23ce737a01dc",
+      "bytes": 6650
+    },
+    "bossfight/index.html": {
+      "sha256": "cc9c04eb17b16d58dbcfb1b664747271f2d2e772eacc2576bcb8668ff039eb31",
+      "bytes": 25089
+    },
+    "bossfight/meta.js": {
+      "sha256": "fbfa214b2a1a2f607314dafd11ba934ac7063cf4e78249efd7ce63b397091e9d",
+      "bytes": 11275
+    },
+    "bossfight/sim.js": {
+      "sha256": "4cb0f643cccfc2107cad746126a401f48af694e1105c14587c9af2fe1f86d14c",
+      "bytes": 31240
+    },
+    "bossfight/ui.js": {
+      "sha256": "3d7541f918182b1c42da78b0dc6899783d0270542b016c9f2c6ed90c63097974",
+      "bytes": 133100
+    },
+    "chunks/core-71f4c25bbfc6.js": {
+      "sha256": "cc9075cc5330ef1c0c8ef5783f7876a915c5aacccb0b337a5b833e3f188cc079",
+      "bytes": 1724480
+    },
+    "chunks/special_diaoyulao-8b9911a91fab.js": {
+      "sha256": "42326324991965aa9afc3b282ed80ab4460436137deef84f96f0dbc49abdbff6",
+      "bytes": 859356
+    },
+    "chunks/special_haiteng-6f5d79accb17.js": {
+      "sha256": "8779bd42a8841110ebb55dafa2acd2d72fd80bf42fea87bc665719e52cb21d09",
+      "bytes": 1030279
+    },
+    "chunks/special_heyuxi-2d57c8202cf1.js": {
+      "sha256": "c34c5c27b77a1741effbf82821fd98d6636613eea9591f0af38c45d1034dbeba",
+      "bytes": 1798394
+    },
+    "chunks/special_kuanggong-ed7e422919bb.js": {
+      "sha256": "4d3938c0f1951ef71718d4e2d5b9d433a560ddda49ded75231ec2aa98f65b326",
+      "bytes": 1125844
+    },
+    "chunks/special_laosiji-fb85f1044b74.js": {
+      "sha256": "b53758e81a7d1dd9fb32e1e1ceb77380818048d9e34ae7778cb7dcdc4a57d6d9",
+      "bytes": 1062094
+    },
+    "chunks/special_martin-0e07bac92442.js": {
+      "sha256": "bc15635871db64c47355b80b719a05351d49ba36802923964cc0a8f48f799b63",
+      "bytes": 1489250
+    },
+    "chunks/special_phyrex-371e2c428b5d.js": {
+      "sha256": "9d3dd50c2c4c2512125ede1ee18ece9089db90b5bb8f8128c15fde64285c5627",
+      "bytes": 1891675
+    },
+    "chunks/special_sisi-b3c84eb48975.js": {
+      "sha256": "4062f0a3dc0de69ea865075b4fd85c9bca652992f7ca74b54440bbcec4d38a9b",
+      "bytes": 1392507
+    },
+    "chunks/special_yuanzhang-fb41f6feeed4.js": {
+      "sha256": "527a3d2d52c99629575ade48d181038c380e3a487aafbdbd81525cb22b6b04a2",
+      "bytes": 1555178
+    },
+    "chunks/ui-2a9eaa702de4.js": {
+      "sha256": "b6b1adc423989bd2af8c68275e71ba2939c558d479e6c28cb7a2ada9a96e0014",
+      "bytes": 557339
+    },
+    "chunks/world-2934ec371364.js": {
+      "sha256": "af14077fd9af81fe3176ffe2f4c941a39e19904d2a51578262b35eaf791adcdc",
+      "bytes": 1406284
+    },
+    "chunks/xchar-f8dda037eca2.js": {
+      "sha256": "e89e7104ab832014f9beda07bd305355dda1a19c698d87ea0c3f0aab75e99aba",
+      "bytes": 585309
+    },
+    "index-full.html": {
+      "sha256": "8b059cc7daa205b5a5c716de9544981637aa6720de007bbb66ad53af06f395e7",
+      "bytes": 31528491
+    },
+    "index-split.html": {
+      "sha256": "a27f8770426ddff870d0ec0e97110fa8450e9700ec0f7d0737083a27069e7699",
+      "bytes": 3047810
+    },
+    "index.html": {
+      "sha256": "a27f8770426ddff870d0ec0e97110fa8450e9700ec0f7d0737083a27069e7699",
+      "bytes": 3047810
+    },
+    "js/clear_portraits.js": {
+      "sha256": "8aa2ff1f5f8ae27909fb23abdde549e0a4b524c082023879b0c53466d401f116",
+      "bytes": 5570
+    },
+    "js/devil_kitty_logic.js": {
+      "sha256": "d5f394a487697db8c3eb4e789f13960f30125ebb82d6950377efecf99c9999c5",
+      "bytes": 20198
+    },
+    "js/devil_kitty_ui.js": {
+      "sha256": "30c62231bd86ec1939b1130a7b1aedd81ed6cc697d021dbbae744a97eb3fa0ed",
+      "bytes": 122077
+    },
+    "js/final3.js": {
+      "sha256": "351f0a5e534b322692f3785ca36205aea694f348f1a3cfb86d0df6ae0ed538b2",
+      "bytes": 21180
+    },
+    "js/tdline-rules.js": {
+      "sha256": "2021f27d15f84b085de4869f1f7373cd1a9c0f21175913fcb5ad9dec4489994d",
+      "bytes": 15277
+    },
+    "js/tdline.js": {
+      "sha256": "584d50f1ac1cb9f033693690d975a0fbdd3bc906967d4409d35786d152e340a8",
+      "bytes": 159586
+    },
+    "js/ult_climax.js": {
+      "sha256": "61d9223e37a39828aa9e07dac09185ddf0c35ca03f9a76feb297ff37eccf7400",
+      "bytes": 8314
+    },
+    "js/xav_icon.js": {
+      "sha256": "48ef5972794029e92240fb853a7b2d6774751223b04bb70e5cffd74e5c47e319",
+      "bytes": 9582
+    },
+    "privacy.html": {
+      "sha256": "47d18417472bf9ebd2d592e29deef2ba47132d787c2c9e6c32e1928103ecc165",
+      "bytes": 2362
+    },
+    "split-manifest.json": {
+      "sha256": "957f902a895ca36b327ac7e6c2262eca916c84f8b8b1ed02e7866838418e4682",
+      "bytes": 6395
+    },
+    "villain/evo/bear_0.webp": {
+      "sha256": "0d3a8364a8415a60d5b88bcbaf3951f7cadb4ea9049770429524da183606f97a",
+      "bytes": 36880
+    },
+    "villain/evo/bear_1.webp": {
+      "sha256": "d24efc280380ce2cee6d6d1110d82f421c8ddd87bb534b01158f77d1b03f0798",
+      "bytes": 23714
+    },
+    "villain/evo/bear_2.webp": {
+      "sha256": "0800eabb1752a843076975306e5464933fc1437325b43ad976047e4aa1693795",
+      "bytes": 27636
+    },
+    "villain/evo/bear_3.webp": {
+      "sha256": "c514ab6c6280748a675e484e7dc1005b77a42c2ab2b8f1d4cb83ea848d1c15fb",
+      "bytes": 32428
+    },
+    "villain/evo/bear_4.webp": {
+      "sha256": "4c8d3fc7b8e43aefd4bfa2c7add778d94359e1c00abdec1fb2bf73c8046190d2",
+      "bytes": 34080
+    },
+    "villain/evo/bear_5.webp": {
+      "sha256": "af32c5340f447b1b3bc288e00d561b0c0628b2a4407e130219c6f6549e1ca9cb",
+      "bytes": 36736
+    },
+    "villain/evo/bone_0.webp": {
+      "sha256": "2d78c668b49094e7bf2ab7d1fa98631be9537a3ebf46c433d211e44cc09bc1f2",
+      "bytes": 57734
+    },
+    "villain/evo/bone_1.webp": {
+      "sha256": "713bdb6bae94989f633d0e839cb0bad9554bafef8aa31e38f72af34d51a4b8b6",
+      "bytes": 30380
+    },
+    "villain/evo/bone_2.webp": {
+      "sha256": "1e9fea7ef9994b723716b978f163e172e9baf8eb86940f6588968f9515130bb9",
+      "bytes": 41498
+    },
+    "villain/evo/bone_3.webp": {
+      "sha256": "cba6efb556937c411bfa68c3c73fb4ad38601d5ed72efe36fe33427f6dcc61ef",
+      "bytes": 38324
+    },
+    "villain/evo/bone_4.webp": {
+      "sha256": "09870e4fb406303108238b2733571e103f925edca2ca8706a3708fa2fd30ab1a",
+      "bytes": 40598
+    },
+    "villain/evo/bone_5.webp": {
+      "sha256": "b1fe7900822797de6c9772835f8d65047d8d12bde21533fb37869e07a4f76265",
+      "bytes": 34246
+    },
+    "villain/evo/elite_0.webp": {
+      "sha256": "1a4ab450c962cd0351fe314c596513660f50fd369d401ab319ce1ca95fd5c8e3",
+      "bytes": 46104
+    },
+    "villain/evo/elite_1.webp": {
+      "sha256": "4eb72a9f431aab0011267ee0871b3b62f6668623999d459860e59f80585dd964",
+      "bytes": 28638
+    },
+    "villain/evo/elite_2.webp": {
+      "sha256": "24e8fa9c677fcd1a46168b3cd6244b6ac6444884d61e46c81e48cc5569e052d8",
+      "bytes": 32430
+    },
+    "villain/evo/elite_3.webp": {
+      "sha256": "a7fe86f51b24afe44505b794d15a48b11dd93d051d2a223053c57c31e62e8c62",
+      "bytes": 40172
+    },
+    "villain/evo/elite_4.webp": {
+      "sha256": "6a788d2882df659fc64c6a66b0b0c2ebad2dd0da923c84f67ce31602fed13147",
+      "bytes": 34252
+    },
+    "villain/evo/elite_5.webp": {
+      "sha256": "b7b3282f81314b88d7dcf62ff1e5c0e94e5eee238860ead912e1d7ff4469c6ee",
+      "bytes": 29612
+    },
+    "villain/evo/niutou_0.webp": {
+      "sha256": "9211e05b816542f54ea453449a3fa10fb35ea752647d4499033a197d7bf77914",
+      "bytes": 46656
+    },
+    "villain/evo/niutou_1.webp": {
+      "sha256": "4eb72a9f431aab0011267ee0871b3b62f6668623999d459860e59f80585dd964",
+      "bytes": 28638
+    },
+    "villain/evo/niutou_2.webp": {
+      "sha256": "24e8fa9c677fcd1a46168b3cd6244b6ac6444884d61e46c81e48cc5569e052d8",
+      "bytes": 32430
+    },
+    "villain/evo/niutou_3.webp": {
+      "sha256": "a7fe86f51b24afe44505b794d15a48b11dd93d051d2a223053c57c31e62e8c62",
+      "bytes": 40172
+    },
+    "villain/evo/niutou_4.webp": {
+      "sha256": "6a788d2882df659fc64c6a66b0b0c2ebad2dd0da923c84f67ce31602fed13147",
+      "bytes": 34252
+    },
+    "villain/evo/niutou_5.webp": {
+      "sha256": "b7b3282f81314b88d7dcf62ff1e5c0e94e5eee238860ead912e1d7ff4469c6ee",
+      "bytes": 29612
+    },
+    "villain/evo/ranged_0.webp": {
+      "sha256": "d72b59bd980be07b7a24d8bfba04b635480e540150a0f5d8e98a6cb01df2f38b",
+      "bytes": 51800
+    },
+    "villain/evo/ranged_1.webp": {
+      "sha256": "598d447f4a99e5796c93c4ce12c494cc140ceb98f842bd03f260b5a301595119",
+      "bytes": 32102
+    },
+    "villain/evo/ranged_2.webp": {
+      "sha256": "d5dafd4f70c00196a16b4face113e2a5edd165277110eb7fd4a9764162493f8b",
+      "bytes": 38514
+    },
+    "villain/evo/ranged_3.webp": {
+      "sha256": "94a20c4453fe200b035e3a19c85f57cbf3301914b3d6d3f2aff54cc09732623f",
+      "bytes": 44882
+    },
+    "villain/evo/ranged_4.webp": {
+      "sha256": "6eee26978b4b99509428e0e22ab4559e0814d05f8ab01cdb980ecc1de75672a6",
+      "bytes": 36156
+    },
+    "villain/evo/ranged_5.webp": {
+      "sha256": "231b01a07457325aedd0bc922855212ff0991e05bfe495e56003e492a0e1a40f",
+      "bytes": 48484
+    },
+    "villain/evo/shield_0.webp": {
+      "sha256": "848bf3f9df38e4810d1ca53952cf57c6a7e0d8cc045bfabf3995adb1568d5092",
+      "bytes": 48582
+    },
+    "villain/evo/shield_1.webp": {
+      "sha256": "caf4f9b02b669be7954cbbac2e0fb308e0d1fa7fea8910d4bf390e33890d006a",
+      "bytes": 25550
+    },
+    "villain/evo/shield_2.webp": {
+      "sha256": "5dc6388e77195ab018073cd725603e8a04373d80d5b9b9a30647d24f7918721e",
+      "bytes": 24180
+    },
+    "villain/evo/shield_3.webp": {
+      "sha256": "05bece3862fc9307854a3d826c37b03280f16a5eeb092cfaf07188adcbdb6d03",
+      "bytes": 34232
+    },
+    "villain/evo/shield_4.webp": {
+      "sha256": "8cb228a53103e22bd8893d9a460e097e201a2338ccf3235c243329fceb58ede2",
+      "bytes": 32502
+    },
+    "villain/evo/shield_5.webp": {
+      "sha256": "08a644e6cbbc64baf9f69dd10cf603b836082c5830ee5738f1b6f776479aec18",
+      "bytes": 36350
+    },
+    "villain/evo/small_0.webp": {
+      "sha256": "dee460db61233659e7bc11abe89f4f67d200627334f8001af8410a87ab754fae",
+      "bytes": 45004
+    },
+    "villain/evo/small_1.webp": {
+      "sha256": "db13e95cd27f3255a5a762c93e0d54cc86f2d1cac57b59e2b567ab6593810298",
+      "bytes": 26026
+    },
+    "villain/evo/small_2.webp": {
+      "sha256": "cc352739b03dec9657076d0f0f0bc5dd2c26b1fb0e6d2184c4d31d3fdf11ffe1",
+      "bytes": 27408
+    },
+    "villain/evo/small_3.webp": {
+      "sha256": "681a93202c1efcc9deefbad54e1da9b6eed3dda40153bb19623ffd8b4c4f0da4",
+      "bytes": 41226
+    },
+    "villain/evo/small_4.webp": {
+      "sha256": "a29dcfbe2a0c24df94b9d8d3ae27e262f1bdc50bbed1363527e07a9ed012311b",
+      "bytes": 36744
+    },
+    "villain/evo/small_5.webp": {
+      "sha256": "696c5577584a019440a6a4e2c773021b80f4acc6f273724a7a1f4a24292404d5",
+      "bytes": 39172
+    },
+    "villain/evo/tank_0.webp": {
+      "sha256": "6e7438a13a5ea8dd3155eeeab95d835b6e9eba4f94d334b06003a083968fe269",
+      "bytes": 43690
+    },
+    "villain/evo/tank_1.webp": {
+      "sha256": "a34105b0489339def457a59a08efc5505c8e89e7b9fd6978b6a24ccfa8d0f142",
+      "bytes": 24274
+    },
+    "villain/evo/tank_2.webp": {
+      "sha256": "1ab449c5c265e42d2d9f87434e45fdb8e763887c0088696ce56a44f0f831b5a2",
+      "bytes": 29552
+    },
+    "villain/evo/tank_3.webp": {
+      "sha256": "f3e52e96250cc525807d37a76a209ce6a2bf62c80f6e7e5c97e47175befb1e57",
+      "bytes": 31106
+    },
+    "villain/evo/tank_4.webp": {
+      "sha256": "474a54d773bf2f9acac6316ae1044a1c6026966865d0222d92b9a88b7a30a5c7",
+      "bytes": 31890
+    },
+    "villain/evo/tank_5.webp": {
+      "sha256": "2eb343644dc8b08b162e061ad2c6f72fb5d1a4172074253dad5d46c00a156912",
+      "bytes": 32678
+    },
+    "villain/evo/yaota_0.webp": {
+      "sha256": "94eb0f4fada69961a121127095e8f9ab3f13c38821d10d77769603f1dcc75436",
+      "bytes": 44266
+    },
+    "villain/evo/yaota_1.webp": {
+      "sha256": "8a0792639acf45c69939a6b110321ebc53ad4e14795b1e69fc1166426de2a495",
+      "bytes": 26314
+    },
+    "villain/evo/yaota_2.webp": {
+      "sha256": "b1450b758896dbd79d648c62b10d135970e920ac6cba32a23e79f1c4ad3108b8",
+      "bytes": 25712
+    },
+    "villain/evo/yaota_3.webp": {
+      "sha256": "7292cade7b56eaef7a678332ae7c8b91d61cc3a0da6e4aae54af847a62348999",
+      "bytes": 33568
+    },
+    "villain/evo/yaota_4.webp": {
+      "sha256": "c685a1165d3402eed961b7d95d3b2945a54bb54bbd6dbc679f715c7e4410be5b",
+      "bytes": 34502
+    },
+    "villain/evo/yaota_5.webp": {
+      "sha256": "740b7ef35277eec570331e63b7b1d04b6d9c45fddcbac9066497256321474b3e",
+      "bytes": 36228
+    },
+    "villain/icons/charge.png": {
+      "sha256": "0ed9b58cc4d837202b0503decd4c7f9a20d6ed0ca828da9da9b340b9220b4145",
+      "bytes": 21099
+    },
+    "villain/icons/fan.png": {
+      "sha256": "81048c903ac2f69c49b6750620cae28b0af6f16399ac4848bc607c0a0a2f58e7",
+      "bytes": 22097
+    },
+    "villain/icons/mat_dunpian.png": {
+      "sha256": "81eeb0c42b0bcf30ce36e555a7426f3dbd54a3edc670da35d6d2794ff99d52b8",
+      "bytes": 23410
+    },
+    "villain/icons/mat_fuyi.png": {
+      "sha256": "ca4ad0c192c418564b1f7fa10e1b600239d8f92c9333f8b42ea53d1916c8b8ca",
+      "bytes": 18311
+    },
+    "villain/icons/mat_gufu.png": {
+      "sha256": "09dc977cac04d0c17329f5dd0ba596312355fd369cb9b0b64922f2d7c2589624",
+      "bytes": 22725
+    },
+    "villain/icons/mat_jianyu.png": {
+      "sha256": "5071914566144e7bcadf6150e42ebfad7ee174187aae861a059e4aaa50c3ff14",
+      "bytes": 22304
+    },
+    "villain/icons/mat_niujiao.png": {
+      "sha256": "f5a9b0d7c4c5f168603005fd1361b1e69493631c507691647c329c05144636b1",
+      "bytes": 13455
+    },
+    "villain/icons/mat_shanyan.png": {
+      "sha256": "d44bea0bc1aaa33afa09cfb522dbbeb82e50abdcc9187d4cfe8734d4eb3c7009",
+      "bytes": 21594
+    },
+    "villain/icons/mat_xiongdan.png": {
+      "sha256": "538ed1b9759f1fb0a1f768271ab368ce23d1997110b110b2b1701a2a719641a6",
+      "bytes": 20685
+    },
+    "villain/icons/mat_yaogu.png": {
+      "sha256": "f798ba8efa35dc644ad52e1780acc71a5929295573d74d802107c705b4f6675c",
+      "bytes": 20403
+    },
+    "villain/icons/summon.png": {
+      "sha256": "1928c1058321ef58b371efed9bf9dedb845a10157aee8f44152727ca7d9ee6e6",
+      "bytes": 20571
+    },
+    "villain/ui/niumo.webp": {
+      "sha256": "f381d13ad7ebb6ba2c6bf7b007599b1407e89c00b2efc7edc2f9a6f9d50f83e5",
+      "bytes": 82146
+    },
+    "xiyou-survivors.html": {
+      "sha256": "a27f8770426ddff870d0ec0e97110fa8450e9700ec0f7d0737083a27069e7699",
+      "bytes": 3047810
+    }
+  }
+}
