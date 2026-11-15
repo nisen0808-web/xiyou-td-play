@@ -1,0 +1,39 @@
+{
+  "parts": [
+    {
+      "path": ".release-parts/full-00.gzpart",
+      "bytes": 5000000,
+      "sha": "cfb8cd198d5b71a88321fadf758e37618fc7f5e0",
+      "sha256": "45426eab06bd79f1cdcc1a374fd80ff431e4e7dd2a7ffedf15749e128f8f4e75"
+    },
+    {
+      "path": ".release-parts/full-01.gzpart",
+      "bytes": 5000000,
+      "sha": "55132f16881aa65a4957cafc8488fe9fe010f85d",
+      "sha256": "8e7911f9992a0f713509920f673ae01453684255fb771128b22595bf22b623ea"
+    },
+    {
+      "path": ".release-parts/full-02.gzpart",
+      "bytes": 5000000,
+      "sha": "7c22953282c75f3dc37f2153ceba100f1f1b7ede",
+      "sha256": "e43d26ba5325670c9d1693302d0852da3485f141632bce567a3b2b2e3edf75f4"
+    },
+    {
+      "path": ".release-parts/full-03.gzpart",
+      "bytes": 5000000,
+      "sha": "404600358b599d70f38d4a1a14ceba6d79e58f9a",
+      "sha256": "bfc7b78a166c1544c6cc0372a2a5795fc634c7f1e66297d75523dd3b8f082281"
+    },
+    {
+      "path": ".release-parts/full-04.gzpart",
+      "bytes": 2674217,
+      "sha": "a9301027428598f350ed336bf6d7fff8dbfe116f",
+      "sha256": "9950278a1d61d95197189ee5fbf396a680eac2b9a5cb9a9c23e0b674ed91a6d1"
+    }
+  ],
+  "gzipBytes": 22674217,
+  "gzipSHA256": "aa4f7dcd759d48f5354c2dea950ec9824a752303ce8c31c6ed55cecbc34098a9",
+  "fullBytes": 31528491,
+  "fullSHA256": "8b059cc7daa205b5a5c716de9544981637aa6720de007bbb66ad53af06f395e7",
+  "fullGitBlob": "e30cb0ae5a1c00abf0c60334e589523dc617933d"
+}
