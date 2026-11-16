@@ -29,6 +29,10 @@
     PLAYER_DODGE: { window: 0.45, move: 0.30, distance: 110, cooldown: 3.2 },
     ARENA: 1000
   };
+  // 五档难度（凡/灵/仙/神/圣）：主游戏打开本页时在地址里带 diff=1..5；仙(3) = 原样。回合只有 99 秒，所以这里的倍率比主线温和。
+  var DIFF_HP = [1, 0.75, 0.88, 1, 1.15, 1.3], DIFF_DMG = [1, 0.7, 0.85, 1, 1.12, 1.25];
+  K.DIFF = 3;
+  try { var dq = typeof location !== 'undefined' && /[?&]diff=([1-5])(?:&|$)/.exec(location.search || ''); if (dq) { K.DIFF = +dq[1]; K.BOSS_HP = Math.round(K.BOSS_HP * DIFF_HP[K.DIFF]); K.BOSS_DMG *= DIFF_DMG[K.DIFF]; } } catch (e) { }
   var BOSS = { name: '牛魔王', elem: 'earth', pdef: 0.2, mdef: 0.1, dtype: 'phys', speed: 58 * 2.4, r: 56, dmg: 20, meleeIv: 1.15, bt0: 1.6, cd1: 4.6, cd2: 3.2 };
   var ELEM_BEATS = { metal: 'wood', wood: 'earth', earth: 'water', water: 'fire', fire: 'metal' };
   function elemMul(a, b) { if (!a || !b) return 1; if (a === b) return 0.85; if (ELEM_BEATS[a] === b) return 1.35; if (ELEM_BEATS[b] === a) return 0.75; return 1; }

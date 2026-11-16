@@ -8,9 +8,10 @@
     "index-split.html",
     "xiyou-survivors.html"
   ],
-  "review_manifest_sha256": "eca97cad49fa178ccd93dd002b7e510f4493b2690866ea011074e2abf79f9a58",
-  "review_source_head": "22fda8085dfd668aaf289f9a3fa7e072ddf1e4d1",
-  "review_source_inputs_sha256": "aab32ef922470c83849ba6a2fa265ff4ddfb33d5ec7280d6fbfb4d665c3ea022",
+  "review_manifest_sha256": "e2c12c550c8ebd369518bc4b4ef04f59099c4348489bed4fe459e5de9b0e693e",
+  "review_source_head": "53d9637ce88c892740a5c8fb3894fa58420373a7",
+  "review_source_dirty": false,
+  "review_source_inputs_sha256": "5fc3b6cb67239119d7f1a13e7eb72ac827174fffd09071d3deab01c5c679ee0a",
   "resource_baseline_commit": "75c4c78e8ebd2cf4101e477f3a5941d6fc484ff8",
   "omitted_retired_intro_media": [
     "assets/art/storyboard-v5/3d/r2/staff_flicker.mp4",
@@ -3442,7 +3443,7 @@
       "bytes": 6650
     },
     "bossfight/index.html": {
-      "sha256": "cc9c04eb17b16d58dbcfb1b664747271f2d2e772eacc2576bcb8668ff039eb31",
+      "sha256": "6004a6485856b28ebd1fb867eadee6b54f4378a8540bcc15c8b86911279e965d",
       "bytes": 25089
     },
     "bossfight/meta.js": {
@@ -3450,8 +3451,8 @@
       "bytes": 11275
     },
     "bossfight/sim.js": {
-      "sha256": "4cb0f643cccfc2107cad746126a401f48af694e1105c14587c9af2fe1f86d14c",
-      "bytes": 31240
+      "sha256": "bc70ff0f684d987df7272fb0c7c99d10640f90106e36f154cf540e140f1115f7",
+      "bytes": 31757
     },
     "bossfight/ui.js": {
       "sha256": "3d7541f918182b1c42da78b0dc6899783d0270542b016c9f2c6ed90c63097974",
@@ -3510,16 +3511,16 @@
       "bytes": 585309
     },
     "index-full.html": {
-      "sha256": "8b059cc7daa205b5a5c716de9544981637aa6720de007bbb66ad53af06f395e7",
-      "bytes": 31528491
+      "sha256": "aa2705e1b81e9136e57defb1539be4fc8a5b63d2f4b3e4d97192c516e3d8e99a",
+      "bytes": 31553636
     },
     "index-split.html": {
-      "sha256": "a27f8770426ddff870d0ec0e97110fa8450e9700ec0f7d0737083a27069e7699",
-      "bytes": 3047810
+      "sha256": "a9d1774b0f58736960336ae36fc07dfaba692ad1c09e4862f89ea938de21074a",
+      "bytes": 3072955
     },
     "index.html": {
-      "sha256": "a27f8770426ddff870d0ec0e97110fa8450e9700ec0f7d0737083a27069e7699",
-      "bytes": 3047810
+      "sha256": "a9d1774b0f58736960336ae36fc07dfaba692ad1c09e4862f89ea938de21074a",
+      "bytes": 3072955
     },
     "js/clear_portraits.js": {
       "sha256": "8aa2ff1f5f8ae27909fb23abdde549e0a4b524c082023879b0c53466d401f116",
@@ -3534,8 +3535,8 @@
       "bytes": 122077
     },
     "js/final3.js": {
-      "sha256": "351f0a5e534b322692f3785ca36205aea694f348f1a3cfb86d0df6ae0ed538b2",
-      "bytes": 21180
+      "sha256": "47c9bab29fd1642acab241358852a7fb0e02f6dd8a235e40e08fb6fd14ec3aa4",
+      "bytes": 21588
     },
     "js/tdline-rules.js": {
       "sha256": "2021f27d15f84b085de4869f1f7373cd1a9c0f21175913fcb5ad9dec4489994d",
@@ -3546,8 +3547,8 @@
       "bytes": 159586
     },
     "js/ult_climax.js": {
-      "sha256": "61d9223e37a39828aa9e07dac09185ddf0c35ca03f9a76feb297ff37eccf7400",
-      "bytes": 8314
+      "sha256": "810acdf58d7f9eaaf69210cf61d75d3097b5f5275dfa76746d5c4f7d4c802a1a",
+      "bytes": 8728
     },
     "js/xav_icon.js": {
       "sha256": "48ef5972794029e92240fb853a7b2d6774751223b04bb70e5cffd74e5c47e319",
@@ -3826,8 +3827,8 @@
       "bytes": 82146
     },
     "xiyou-survivors.html": {
-      "sha256": "a27f8770426ddff870d0ec0e97110fa8450e9700ec0f7d0737083a27069e7699",
-      "bytes": 3047810
+      "sha256": "a9d1774b0f58736960336ae36fc07dfaba692ad1c09e4862f89ea938de21074a",
+      "bytes": 3072955
     }
   }
 }
