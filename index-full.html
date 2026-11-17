@@ -11,7 +11,7 @@
 <link rel="preload" as="script" href="js/devil_kitty_ui.js?xyrev=30c62231bd86ec19">
 <link rel="preload" as="script" href="js/tdline-rules.js?xyrev=2021f27d15f84b08">
 <link rel="preload" as="script" href="js/tdline.js?xyrev=584d50f1ac1cb9f0">
-<link rel="preload" as="script" href="js/final3.js?xyrev=47c9bab29fd1642a">
+<link rel="preload" as="script" href="js/final3.js?xyrev=79ec73f50c21fd39">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="mobile-web-app-capable" content="yes">
@@ -4202,7 +4202,7 @@ XY.TRAITS = {
     if (id === 'p_camp') G.camp.hp = Math.min(G.camp.maxHp, G.camp.hp + 300);
   };
   // 大招冷却（算上全队法力和英雄自己的技能）
-  XY.ultCdOf = function (G, h) { return h.def.ultCd * G.P.ultMul * h.mod.ultCd; };
+  XY.ultCdOf = function (G, h) { return h.def.ultCd * G.P.ultMul * h.mod.ultCd * (XY.diff && XY.diff.ultCdMul ? XY.diff.ultCdMul(G, h) : 1); };      // 全屏必杀按难度档位拉长冷却（difficulty.js）
 
   /* ================= 提示 / 飘字 / 特效 ================= */
   // v0.7.0l 通知队列：banner / toast 统一进一条队列，同一时刻最多显示 1 条。G.banner / G.toast 仍然是“当前显示的这一条”的镜像（旧代码和测试照常读），
@@ -7729,7 +7729,7 @@ XY.TRAITS = {
     } else {
       list.push({ id: 'main', kind: 'main', name: d.weapon, short: wshort, color: d.color, rem: Math.max(0, h.atkT), max: h.atkMax || 1, tip: d.wdesc });
     }
-    list.push({ id: 'ult', kind: 'ult', name: d.ult, short: '招', color: '#d9534f', rem: Math.max(0, h.ultCd), max: Math.max(1, XY.ultCdOf(G, h)), tip: d.udesc });
+    list.push({ id: 'ult', kind: 'ult', name: d.ult, short: '招', color: '#d9534f', rem: Math.max(0, h.ultCd), max: Math.max(1, XY.ultCdOf(G, h)), tip: d.udesc + (XY.diff && XY.diff.ultCdMul && XY.diff.ultCdMul(G, h) > 1 ? '（全屏必杀：冷却 ' + Math.round(XY.ultCdOf(G, h)) + ' 秒，难度越高越长）' : '') });
     for (i = 0; i < SUP_IDS.length; i++) {
       id = SUP_IDS[i]; lv = XY.skLv(h, id); if (lv <= 0) continue;
       var sd = XY.supDef(h.id, id); if (!sd) continue;
@@ -9739,7 +9739,7 @@ XY.TRAITS = {
     tt.t += dt;
     if (st.wait) {
       if (tt.done || st.wait(G, tt)) { tt.done = true; tt.ok += dt; if (tt.ok >= 0.7) XY.tutNext(G); }
-      else if (st.back && st.back(G, tt)) { tt.i = Math.max(0, tt.i - 1); tt.entered = -1; }
+      else if (st.back && tt.byHand !== tt.i && st.back(G, tt)) { tt.i = Math.max(0, tt.i - 1); tt.entered = -1; }      // 玩家点「继续」跳进来的这一步不往回弹：不然没选天兵就点继续，会在「选一个 / 放下去」两步之间来回跳，继续键像坏了一样
     }
   };
   XY.tutBlocks = function (G, h) {
@@ -31381,15 +31381,25 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
   var XY = window.XY, D = XY.diff = {};
   // hp/dmg：小怪血、怪伤倍率；boss：洞主血倍率；restSafe：休息时师父不会被打；revive：徒弟倒地后几秒回来（0 = 本关不回来）；
   // follow：没被操控的徒弟每升一级各自白拿几点修行（0 = 全队共用一个点数池）
+  // ultCd：全屏必杀（清掉整个视野的大招）的冷却倍率——最低一档就是两倍，档位越高越长
   // lingshi：通关灵石倍率；fbUp：选法宝时多升一重的几率；spFirst / spAgain：该档首通送几张角色卡 / 再次通关送卡几率；mat：守洞高级材料与妖金倍率
   D.TIERS = [null,
-    { id: 1, name: '凡', hp: 0.7, dmg: 0.6, boss: 0.7, restSafe: true, revive: 15, follow: 1, tangGuard: 2, lingshi: 0.6, fbUp: 0, spFirst: 0, spAgain: 0, mat: 0.7, note: '怪弱三成，师父有 2 次护体金光，休息时无敌，徒弟倒下 15 秒回来' },
-    { id: 2, name: '灵', hp: 0.85, dmg: 0.8, boss: 0.85, restSafe: true, revive: 22, follow: 1, tangGuard: 1, lingshi: 0.8, fbUp: 0, spFirst: 0, spAgain: 0, mat: 0.85, note: '怪稍弱，师父有 1 次护体金光，休息时无敌，徒弟倒下 22 秒回来' },
-    { id: 3, name: '仙', hp: 1, dmg: 1, boss: 1, restSafe: false, revive: 0, follow: 0, lingshi: 1, fbUp: 0, spFirst: 0, spAgain: 0, mat: 1, note: '标准难度：徒弟倒下本关不回来，修行点全队共用' },
-    { id: 4, name: '神', hp: 1.25, dmg: 1.2, boss: 1.3, restSafe: false, revive: 0, follow: 0, lingshi: 1.5, fbUp: 0.3, spFirst: 1, spAgain: 0.15, mat: 1.5, note: '怪血 +25%、伤害 +20%、洞主血 +30%' },
-    { id: 5, name: '圣', hp: 1.6, dmg: 1.45, boss: 1.7, restSafe: false, revive: 0, follow: 0, lingshi: 2.2, fbUp: 0.6, spFirst: 2, spAgain: 0.3, mat: 2.2, note: '怪血 +60%、伤害 +45%、洞主血 +70%' }
+    { id: 1, name: '凡', hp: 0.7, dmg: 0.6, boss: 0.7, restSafe: true, revive: 15, follow: 1, tangGuard: 2, ultCd: 2, lingshi: 0.6, fbUp: 0, spFirst: 0, spAgain: 0, mat: 0.7, note: '怪弱三成，师父有 2 次护体金光，休息时无敌，徒弟倒下 15 秒回来' },
+    { id: 2, name: '灵', hp: 0.85, dmg: 0.8, boss: 0.85, restSafe: true, revive: 22, follow: 1, tangGuard: 1, ultCd: 2.25, lingshi: 0.8, fbUp: 0, spFirst: 0, spAgain: 0, mat: 0.85, note: '怪稍弱，师父有 1 次护体金光，休息时无敌，徒弟倒下 22 秒回来' },
+    { id: 3, name: '仙', hp: 1, dmg: 1, boss: 1, restSafe: false, revive: 0, follow: 0, ultCd: 2.5, lingshi: 1, fbUp: 0, spFirst: 0, spAgain: 0, mat: 1, note: '标准难度：徒弟倒下本关不回来，修行点全队共用' },
+    { id: 4, name: '神', hp: 1.25, dmg: 1.2, boss: 1.3, restSafe: false, revive: 0, follow: 0, ultCd: 2.75, lingshi: 1.5, fbUp: 0.3, spFirst: 1, spAgain: 0.15, mat: 1.5, note: '怪血 +25%、伤害 +20%、洞主血 +30%' },
+    { id: 5, name: '圣', hp: 1.6, dmg: 1.45, boss: 1.7, restSafe: false, revive: 0, follow: 0, ultCd: 3, lingshi: 2.2, fbUp: 0.6, spFirst: 2, spAgain: 0.3, mat: 2.2, note: '怪血 +60%、伤害 +45%、洞主血 +70%' }
   ];
   D.MAX = 5; D.BASE = 3; D.NEW_DEFAULT = 2;
+  // 全屏必杀：大招走 XY.clearArea 且覆盖整个视野的角色（sp12.js / phyrex.js）。只清一条横带的 qinba、五位取经人的范围招不算。
+  // 自建角色用的是这些人的招式模板（h.id 就是模板 id），所以一并算。test/difficulty-unit.js 会拿源码里的 shape 核对这张表。
+  D.SCREEN_ULT = { phyrex: 1, sisi: 1, laosiji: 1, kuanggong: 1, cato: 1, haiteng: 1, yuanzhang: 1, heyuxi: 1, diaoyulao: 1, martin: 1, traders18: 1 };
+  D.isScreenUlt = function (h) { return !!(h && h.sp && D.SCREEN_ULT[h.id]); };
+  // 这一局里某个角色的大招冷却倍率：不是全屏必杀 = 1；没有档位的局（玩法包 / 我的洞府验关）按仙档算
+  D.ultCdMul = function (G, h) {
+    if (!D.isScreenUlt(h) || (G && G.villain)) return 1;
+    var m = G && G.diff && G.diff.ultCd; return m > 0 ? m : D.TIERS[D.BASE].ultCd;
+  };
   D.tier = function (t) { return D.TIERS[Math.max(1, Math.min(D.MAX, t | 0))] || D.TIERS[D.BASE]; };
   D.rewardText = function (t, key) {
     var T = D.tier(t), p = [];
@@ -31528,8 +31538,9 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
   }
 
   // 选档条下面那行说明：现在哪一档、掉落、怎么开下一档
-  D.lineText = function (key) {
+  D.lineText = function (key, brief) {
     var t = D.selected(key), top = D.maxOpen(key), s = D.tier(t).name + '档 · ' + D.rewardText(t, key);
+    if (brief) return s;      // 窄屏只写这一档的掉落；怎么开下一档，点灰色的档会提示
     if (top < D.MAX) s += ' · 通关「' + D.tier(top).name + '」档后开「' + D.tier(top + 1).name + '」档';
     else s += ' · 五档全开';
     return s;
@@ -32487,13 +32498,14 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
     var contentTop = land ? (narrowLand ? 64 : 72) : 112, footerY = ch - 66;
     // Reserve a full-height portrait beside the briefing on desktop. The bottom
     // roster and the complete companion summary have their own vertical space.
-    var desktopPortrait = land && cw >= 1200 && ch >= 720 && items.length <= 12;
+    var desktopPortrait = land && cw >= 1280 && ch >= 720 && items.length <= 12;      // 1280 以下右边留不出立绘栏：难度条挤不进标题行，详情会被切成很多页，改走普通横屏排版
     var desktopRosterY = ch - 74 - 10 - 128;
     var desktopArtX = cw - mg - 320;
     var listW = desktopPortrait ? 360 : land ? (narrowLand ? Math.max(192, Math.min(236, cw * 0.4)) : Math.min(420, Math.max(282, cw * 0.36))) : cw - mg * 2;
-    var listX = mg, cardGap = 8, listCols = compactPortrait || items.length > 8 ? 3 : 2,      // 目的地超过 8 个：排三列
+    var shortPortrait = !land && items.length > 8 && ch < 720;      // 竖屏又不够高（手机浏览器带着地址栏时很常见）：目的地卡片压矮、详情用紧凑字号，把地方让给说明
+    var listX = mg, cardGap = 8, listCols = items.length > 8 ? (land ? 3 : 4) : compactPortrait ? 3 : 2,      // 目的地超过 8 个：横屏排三列，竖屏排四列（竖屏要给下面的详情留地方）
        cardW = (listW - cardGap * (listCols - 1)) / listCols;
-    var cardH = compactPortrait ? 44 : land ? Math.max(44, Math.min(88, (ch - 74 - contentTop - 25 - cardGap * (Math.max(3, Math.ceil(items.length / listCols)) - 1) - 12) / Math.max(3, Math.ceil(items.length / listCols)))) : (ch < 700 ? 48 : 58);
+    var cardH = shortPortrait ? 40 : compactPortrait ? 44 : land ? Math.max(44, Math.min(88, (ch - 74 - contentTop - 25 - cardGap * (Math.max(3, Math.ceil(items.length / listCols)) - 1) - 12) / Math.max(3, Math.ceil(items.length / listCols)))) : (ch < 700 || items.length > 8 ? 48 : 58);
     if (desktopPortrait) { var listRows = Math.max(3, Math.ceil(items.length / listCols)); cardH = Math.min(cardH, (3 * 88 + 2 * cardGap - (listRows - 1) * cardGap) / listRows); }      // 目的地多于 6 个：卡片压矮，不挤到下面的同行说明
     var listY = contentTop + 25, listBottom = listY + Math.ceil(items.length / listCols) * (cardH + cardGap) - cardGap;
     function text(s0, x, y, sz, col, maxW, bold) {
@@ -32582,7 +32594,7 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
       var sealW = tightCard ? 0 : short || !land ? 27 : 34, sx = x + 11, sy = desktopPortrait && cardH >= 80 ? y + 12 : y + (cardH - sealW) / 2;
       if (sealW) VU.drawSeal(c, sx, sy, sealW, sealW, itemSeal(it), { style: on ? 'solid' : 'line', col: it.unl ? it.col : '#91836b', sz: sealW * 0.57, stack: false, rot: 0 });
       var nameX = tightCard ? x + 9 : sx + sealW + 10, nameW = tightCard ? cardW - 18 : cardW - sealW - 31;
-      text(it.name, nameX, y + cardH * 0.36, compactCards ? 17 : tightCard ? 19 : land && !short ? 23 : 19, it.unl ? INK : SOFT, nameW);
+      text(it.name, nameX, y + cardH * 0.36, compactCards || shortPortrait ? 17 : tightCard ? 19 : land && !short ? 23 : 19, it.unl ? INK : SOFT, nameW);
       var state = it.cleared ? '已通关' : it.unl ? (it.k === 'level' ? '主线 · ' + it.sub : it.k === 'dungeon' ? '洞府副本' : '独立 Boss 战') : '未解锁';
       if (tightCard && it.unl && !it.cleared) state = it.k === 'level' ? '主线' : it.k === 'dungeon' ? '洞府副本' : 'Boss 战';
       text(state, desktopPortrait && cardH >= 80 ? x + 11 : nameX, y + cardH * 0.73, land && !short ? 14 : 12, it.cleared ? '#397c49' : it.unl ? BROWN : '#8c7f69', desktopPortrait && cardH >= 80 ? cardW - 22 : nameW, false);
@@ -32595,9 +32607,9 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
     var dx = land ? listX + listW + (narrowLand ? 16 : 20) : mg, dy = land ? (short ? contentTop : listY) : listBottom + 14;
     var dw = desktopPortrait ? desktopArtX - 20 - dx : land ? cw - mg - dx : cw - mg * 2;
     if (land && !short && !noticeInHeading) text('关卡详情', dx + 2, contentTop + 8, 16, BROWN, dw);
-    var dh = Math.max(92, (desktopPortrait ? desktopRosterY - 128 : land ? footerY - 16 : ch - 142) - dy);
-    var tight = short || dh < 235 || dw < 340, pad = compactCards ? 10 : tight ? 12 : 20, bodyW = dw - pad * 2;
-    var titleSz = tight ? 23 : 28, bodySz = tight ? 14 : 17, rowGap = narrowLand ? 4 : compactPortrait ? 5 : tight ? 6 : 13, lineH = bodySz * 1.4, labelW = narrowLand ? 34 : 46;
+    var dh = Math.max(92, (desktopPortrait ? desktopRosterY - 100 : land ? footerY - 16 : ch - 142) - dy);      // 桌面：同行说明压成两行，省下的高度给关卡详情
+    var tight = short || shortPortrait || dh < (!land && items.length > 8 ? 400 : 235) || dw < 340, pad = compactCards ? 10 : tight ? 12 : 20, bodyW = dw - pad * 2;
+    var titleSz = tight ? 23 : 28, bodySz = tight ? 14 : 17, rowGap = narrowLand ? 4 : compactPortrait ? 5 : tight ? 6 : !land && items.length > 8 ? 8 : desktopPortrait ? 9 : 13, lineH = bodySz * 1.4, labelW = narrowLand ? 34 : 46;
     var yy = dy + pad + titleSz * 0.5, go, rows0 = [], subtitle = '';
     var title = current.k === 'level' ? '第' + (NUM[current.id] || current.id) + '关 · ' + current.name : (current.k === 'dungeon' ? '洞府 · ' : 'Boss 战 · ') + current.name;
     if (current.k === 'level') {
@@ -32660,16 +32672,18 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
     if (diffKey) {
       c.save(); c.font = R.font(titleSz, true); var titleW0 = c.measureText(title).width; c.restore();
       pickInline = bodyW - titleW0 - 14 >= 5 * 36 + 4 * 4 + XY.diff.LABEL_W; if (!pickInline) pickH = XY.diff.PICK_H + rowGap;
-      rows0.unshift(['掉落', XY.diff.lineText(diffKey), BROWN]);
+      rows0.unshift(['掉落', XY.diff.lineText(diffKey, bodyW - labelW < 330), BROWN]);
     }
     var naturalH = pad * 2 + titleSz * 1.2 + 12 + pickH + (tight ? 0 : measureRows(subtitle, bodyW, 2) * lineH + rowGap);
     rows0.forEach(function (r0) { naturalH += measureRows(r0[1], bodyW - labelW, rowCap(r0)) * lineH + rowGap; });
-    var briefingPages = null, briefingPage = 0, briefingNavY = 0;
+    var briefingPages = null, briefingPage = 0, briefingNavY = 0, navInTitle = false, NAV_INLINE_W = 44 + 36 + 44;
     // Dungeon reset rules must be readable before entry, including on short
     // screens. Keep each rule together; split only a rule larger than one page.
-    if ((current.k === 'dungeon' || current.k === 'boss' || desktopPortrait || noticeInBriefing) && naturalH > dh) {
+    if ((current.k === 'dungeon' || current.k === 'boss' || desktopPortrait || noticeInBriefing || !land) && naturalH > dh) {      // 竖屏：主线关放不下也翻页，不让字画出框
       var headH = pad + titleSz * 1.2 + 12 + pickH + (tight ? 0 : measureRows(subtitle, bodyW, 2) * lineH + rowGap);
-      var room = dh - headH - pad - 44, linesPerPage = Math.max(1, Math.floor(room / (lineH + rowGap)));
+      c.save(); c.font = R.font(titleSz, true); var titleWNav = c.measureText(title).width; c.restore();
+      navInTitle = !land && !pickInline && bodyW - titleWNav * 0.85 - 10 >= NAV_INLINE_W;      // 竖屏：翻页放到标题右边，不占一整行
+      var room = dh - headH - pad - (navInTitle ? 0 : 44), linesPerPage = Math.max(1, Math.floor(room / (lineH + rowGap)));
       var completeLines = [], groups = [];
       c.font = R.font(bodySz, false);
       rows0.forEach(function (r0) {
@@ -32699,12 +32713,12 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
       briefingPage = Math.max(0, Math.min(briefingPages.length - 1, DP.briefingPage || 0));
       DP.briefingPage = briefingPage;
       rows0 = briefingPages[briefingPage];
-      briefingNavY = dy + dh - pad - 44;
+      briefingNavY = navInTitle ? Math.max(dy + 1, yy - 22) : dy + dh - pad - 44;
     }
     dh = Math.min(dh, naturalH);
     paper(dx, dy, dw, dh, false);
     geo.detail = { x: dx, y: dy, w: dw, h: dh };
-    text(title, dx + pad, yy, titleSz, INK, pickInline ? bodyW - (5 * 36 + 4 * 4 + XY.diff.LABEL_W) - 14 : bodyW);
+    text(title, dx + pad, yy, titleSz, INK, pickInline ? bodyW - (5 * 36 + 4 * 4 + XY.diff.LABEL_W) - 14 : navInTitle ? bodyW - NAV_INLINE_W - 10 : bodyW);
     if (diffKey && pickInline) { var pkW = Math.min(5 * 56 + 4 * 6 + XY.diff.LABEL_W, bodyW - titleW0 - 14), pkX = dx + dw - pad - pkW; XY.diff.drawPicker(c, st, diffKey, pkX, yy - XY.diff.PICK_H / 2, pkW, true); geo.btns.push({ act: 'diffSel', x: pkX, y: yy - XY.diff.PICK_H / 2, w: pkW, h: XY.diff.PICK_H }); }
     yy += titleSz * 0.7 + 12;
     if (!tight) { yy += VU.wrap(c, subtitle, dx + pad, yy, bodyW, lineH, bodySz, RED, false, 2) + rowGap; }
@@ -32718,7 +32732,18 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
       usedRows.push({ label: r0[0], text: r0[1], x: tx, y: yy, w: avail, h: used });
       yy += used + rowGap;
     });
-    if (briefingPages) {
+    if (briefingPages && navInTitle) {
+      var inX = dx + dw - pad - NAV_INLINE_W;
+      var pagerChip = function (x, label, act, on) {      // 小方印：和难度档位的印一个样子；点按区域仍是 44×44
+        c.save(); R.rrect(c, x + 2, briefingNavY + 7, 40, 30, 6); c.fillStyle = on ? 'rgba(253,249,238,0.96)' : 'rgba(214,205,186,0.35)'; c.fill();
+        c.lineWidth = 1; c.strokeStyle = on ? 'rgba(112,91,59,0.55)' : 'rgba(112,91,59,0.2)'; c.stroke(); c.restore();
+        kt(c, label, x + 22, briefingNavY + 23, 14, on ? INK : '#a39681', 'center', 36, true);
+        if (on) { st.hit(x, briefingNavY, 44, 44, act); geo.btns.push({ act: act, x: x, y: briefingNavY, w: 44, h: 44 }); }
+      };
+      pagerChip(inX, '上页', 'dpBriefPrev', briefingPage > 0);
+      pagerChip(inX + 80, '下页', 'dpBriefNext', briefingPage + 1 < briefingPages.length);
+      kt(c, (briefingPage + 1) + '/' + briefingPages.length, inX + 62, briefingNavY + 23, 13, SOFT, 'center', 34, false);
+    } else if (briefingPages) {
       var navW = Math.min(72, (bodyW - 52) / 2), navRight = dx + dw - pad - navW;
       if (briefingPage > 0) button(dx + pad, briefingNavY, navW, 44, '上一页', 'dpBriefPrev', { sz: 14 });
       else text('上一页', dx + pad + 5, briefingNavY + 22, 14, '#a39681', navW - 10, false);
@@ -32728,7 +32753,7 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
     }
     if (noticeInBriefing) geo.feedback = { owner: 'briefing-row', text: menuNotice.text, bad: menuNotice.bad, rows: usedRows.filter(function (r0) { return r0.label === '提示'; }), page: briefingPage, pages: briefingPages ? briefingPages.length : 1, fontSize: bodySz };
     geo.briefing = { title: title, subtitle: subtitle, rows: usedRows, bottom: yy, panelBottom: dy + dh, fontSize: bodySz, page: briefingPage, pages: briefingPages ? briefingPages.length : 1, navigationY: briefingPages ? briefingNavY : null };
-    DP.detFit = { fz: bodySz, fit: yy <= dy + dh + 1, drawn: rows0.length, n: rows0.length };
+    DP.detFit = { fz: bodySz, fit: yy <= dy + dh + 1, drawn: rows0.length, n: rows0.length, pages: briefingPages ? briefingPages.length : 1 };
     // Fixed action rail: overlay-owned activity labels use these same boxes.
     var railH = land ? 74 : 138;
     var carry = S.carryId(), carryDef = carry && (XY.SP_BY[carry] || (XY.xchar && XY.xchar.get(carry)));
@@ -32795,12 +32820,13 @@ window.XY_MENU_STAGE = {"fig":{"tang":{"src":"data:image/webp;base64,UklGRrKVAQB
         } else geo.departPortrait = XY.gacha10.drawPortrait(c, carry, artX, artTop, artW, artH);
         if (desktopPortrait) {
           var summaryX = mg + 18, summaryW = desktopArtX - 20 - summaryX;
-          var summaryY = Math.min(ry - 110, Math.max(listBottom, dy + dh) + 18);
+          var summaryY = Math.min(ry - 82, Math.max(listBottom, dy + dh) + 14);
           text('同行 · ' + carryName, summaryX, summaryY + 24, 28, INK, 350);
           text('Lv' + S.spLevel(carry) + ' · ' + (carryDef.handle || ''), summaryX + 370, summaryY + 24, 16, BROWN, summaryW - 370, false);
-          VU.wrap(c, carryDef.role, summaryX, summaryY + 54, summaryW, 23, 17, SOFT, false);
-          VU.wrap(c, '必杀 · ' + carryDef.ult, summaryX, summaryY + 82, summaryW, 23, 17, BROWN, false);
-          geo.partnerSummary = { id: carry, x: summaryX, y: summaryY, w: summaryW, h: 100, role: carryDef.role, ult: carryDef.ult };
+          var roleW = Math.min(summaryW * 0.5, 17 * String(carryDef.role).length + 8);      // 定位和必杀并成一行
+          text(carryDef.role, summaryX, summaryY + 56, 17, SOFT, roleW, false);
+          text('必杀 · ' + carryDef.ult, summaryX + roleW + 18, summaryY + 56, 17, BROWN, summaryW - roleW - 18, false);
+          geo.partnerSummary = { id: carry, x: summaryX, y: summaryY, w: summaryW, h: 72, role: carryDef.role, ult: carryDef.ult };
         } else {
           var infoY = artTop + Math.max(24, (artH - 190) / 2);
           text('同行 · ' + carryName, mg + 18, infoY, 28, INK, listW - 36);
@@ -33345,7 +33371,7 @@ V.end=function(c,G,a,win){
     var lines=[];
     if(!has)lines.push('本局未产生结算收益');
     else if(!win){lines.push('败局不发妖金');if(G.ending&&G.ending.reason)lines.push(G.ending.reason);}
-    else{lines.push('守洞收益 '+XY.fmtNum(base));if(r.daily)lines.push('守洞收益已含今日首通 '+D.STAGE.dailyK+' 倍');if(first)lines.push('总额已含首次通关奖励 '+XY.fmtNum(first));}
+    else{var vd=G.runReport&&G.runReport.diff,vdn=(r.diff&&r.diff.name)||(vd&&vd.name);lines.push('守洞收益 '+XY.fmtNum(base)+(vdn?' · 难度「'+vdn+'」'+(r.diff&&r.diff.mat!==1?' ×'+r.diff.mat:'')+(vd&&vd.opened?' · 已开放「'+vd.opened+'」档':''):''));if(r.daily)lines.push('守洞收益已含今日首通 '+D.STAGE.dailyK+' 倍');if(first)lines.push('总额已含首次通关奖励 '+XY.fmtNum(first));}
     var yy=y+(wide?100:80),body=wide?17:14,lineH=wide?24:20;
     lines.forEach(function(s,i){yy=K.lines(s,x,yy,w,body,lineH,i===0?T.ink:T.inkSoft,0,false);});
     var sy=compact?Math.max(yy+12,by-38):yy+14;
@@ -35245,7 +35271,7 @@ X.step=function(g,dt){if(!g._simRandom)return step.apply(this,arguments);var sel
         case 'skinSet': var sr = XY.save.setSkin(h.hero, h.skin); if (!sr.ok) msg(sr.reason, true); else if (app.menuMsg && app.menuMsg.bad && (app.menuMsg.text === '还没解锁这套皮肤' || app.menuMsg.text === '还没解锁小白龙')) app.menuMsg = null; break;
         case 'variantSet': var vr = XY.save.setHorseForm(h.form); if (!vr.ok) msg(vr.reason, true); else if (app.menuMsg && app.menuMsg.bad && (app.menuMsg.text === '还没解锁这套皮肤' || app.menuMsg.text === '还没解锁小白龙')) app.menuMsg = null; break;
         case 'tutSkip': XY.tutFinish(G, true); break;
-        case 'tutNext': XY.tutNext(G); break;
+        case 'tutNext': XY.tutNext(G); if (G && G.tut) G.tut.byHand = G.tut.i; break;      // 记下这一步是玩家自己点「继续」进来的（tutorial.js 的回退要看它）
         case 'tutExplain': XY.tutExplain(G); break;
         case 'esc': doEsc(); break;
         case 'menuTutorial': XY.tutForce = true; startGame(1); break;
@@ -36496,6 +36522,6 @@ X.step=function(g,dt){if(!g._simRandom)return step.apply(this,arguments);var sel
 <script src="js/devil_kitty_ui.js?xyrev=30c62231bd86ec19"></script>
 <script src="js/tdline-rules.js?xyrev=2021f27d15f84b08"></script>
 <script src="js/tdline.js?xyrev=584d50f1ac1cb9f0"></script>
-<script src="js/final3.js?xyrev=47c9bab29fd1642a"></script>
+<script src="js/final3.js?xyrev=79ec73f50c21fd39"></script>
 </body>
 </html>
