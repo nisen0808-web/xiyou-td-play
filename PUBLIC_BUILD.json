@@ -8,10 +8,10 @@
     "index-split.html",
     "xiyou-survivors.html"
   ],
-  "review_manifest_sha256": "6afeeed3a708fae3a200378c11cb063e9fcf1ad4511052c262597ffb75da3c86",
-  "review_source_head": "5723930e4455955a201454c8754a9d86a36f6492",
+  "review_manifest_sha256": "2bf1d7a311fddf1a8455329d31b234f721c4575872517a9dc05f8268aaef1729",
+  "review_source_head": "502f8eea4b8c4b6d0cc1532964fd6ea2ec1ad138",
   "review_source_dirty": false,
-  "review_source_inputs_sha256": "874944d338f3512b0fc7b4834981361091b09c0fc78d4ab3336e32ff12748104",
+  "review_source_inputs_sha256": "a0e0397a23347c08eff87a9e6f44e4dd81ac55373c27d71021ac0bf309d99bf9",
   "resource_baseline_commit": "75c4c78e8ebd2cf4101e477f3a5941d6fc484ff8",
   "omitted_retired_intro_media": [
     "assets/art/storyboard-v5/3d/r2/staff_flicker.mp4",
@@ -3511,16 +3511,16 @@
       "bytes": 585309
     },
     "index-full.html": {
-      "sha256": "8cfda58d057034122684cec427c48deb4760c5b85053b5d3f5aee862a9c1e7d8",
-      "bytes": 31566699
+      "sha256": "0dd8815c7648faf1c9a79cbfeccc06112e1c73e4961363ee0306c19c1c22e193",
+      "bytes": 31584107
     },
     "index-split.html": {
-      "sha256": "82d681e50e55afb066e85974f9fa71bccf1d9cf7fb37ac4e9573d8dc3eafded3",
-      "bytes": 3086018
+      "sha256": "1d8aac6db953063eca26fda08324965a05d31b28ef30f8a4e931a16171ec4cd3",
+      "bytes": 3103426
     },
     "index.html": {
-      "sha256": "82d681e50e55afb066e85974f9fa71bccf1d9cf7fb37ac4e9573d8dc3eafded3",
-      "bytes": 3086018
+      "sha256": "1d8aac6db953063eca26fda08324965a05d31b28ef30f8a4e931a16171ec4cd3",
+      "bytes": 3103426
     },
     "js/clear_portraits.js": {
       "sha256": "8aa2ff1f5f8ae27909fb23abdde549e0a4b524c082023879b0c53466d401f116",
@@ -3555,8 +3555,8 @@
       "bytes": 9582
     },
     "privacy.html": {
-      "sha256": "47d18417472bf9ebd2d592e29deef2ba47132d787c2c9e6c32e1928103ecc165",
-      "bytes": 2362
+      "sha256": "1ae01b59bc1f89e3c017c30951e8a9c5c58a92bd0cdedeaeb4120820c9297718",
+      "bytes": 5861
     },
     "split-manifest.json": {
       "sha256": "957f902a895ca36b327ac7e6c2262eca916c84f8b8b1ed02e7866838418e4682",
@@ -3827,8 +3827,8 @@
       "bytes": 82146
     },
     "xiyou-survivors.html": {
-      "sha256": "82d681e50e55afb066e85974f9fa71bccf1d9cf7fb37ac4e9573d8dc3eafded3",
-      "bytes": 3086018
+      "sha256": "1d8aac6db953063eca26fda08324965a05d31b28ef30f8a4e931a16171ec4cd3",
+      "bytes": 3103426
     }
   }
 }
