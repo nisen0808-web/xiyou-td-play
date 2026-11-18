@@ -2,9 +2,9 @@
 <html lang="zh-CN">
 <head>
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; media-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://cdn.jsdelivr.net https://ftorjdmbbagzwojamtnj.supabase.co wss://ftorjdmbbagzwojamtnj.supabase.co; frame-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self' https://accounts.google.com https://ftorjdmbbagzwojamtnj.supabase.co">
-<script>window.XY_BOSS_ENTRY_REV="6004a6485856b28e";</script>
+<script>window.XY_BOSS_ENTRY_REV="c1c10153f98d8854";</script>
 <link rel="preload" as="script" href="assets/wild/wild-anim.js?xyrev=7c75161d0a0981b8">
-<link rel="preload" as="script" href="js/xav_icon.js?xyrev=48ef5972794029e9">
+<link rel="preload" as="script" href="js/xav_icon.js?xyrev=236db594f64e87e8">
 <link rel="preload" as="script" href="js/ult_climax.js?xyrev=810acdf58d7f9eaa">
 <link rel="preload" as="script" href="js/clear_portraits.js?xyrev=8aa2ff1f5f8ae279">
 <link rel="preload" as="script" href="js/devil_kitty_logic.js?xyrev=d5f394a487697db8">
@@ -24114,7 +24114,7 @@ XY.chibi.portrait = function (c, id, x, foot, h, alpha) {
       rrect(c, x, cy + 40, sw, 126, 10); c.fillStyle = sl ? '#cfeccb' : (owned ? (hv ? '#fff3d6' : '#fffdf6') : '#ebe8df'); c.fill();
       c.lineWidth = sl ? 3.5 : 1.8; c.strokeStyle = sl ? '#43a047' : (owned ? d.frame : '#c9c4b4'); c.stroke();
       var av = XY.xAvIcon && XY.xAvIcon.draw(c, id, x + sw / 2 - 24.2, cy + 74 - 24.2, 48.4, 48.4, { locked: !owned });
-      if (!av) { c.save(); if (!owned) c.filter = 'grayscale(1)'; XY.R4.avatarDisc(c, XY.specialDef(id, Math.max(1, lv)), x + sw / 2, cy + 74, 22, rt); c.restore(); }
+      if (!av) { c.save(); XY.R4.avatarDisc(c, XY.specialDef(id, Math.max(1, lv)), x + sw / 2, cy + 74, 22, rt); c.restore(); if (!owned && XY.xAvIcon && XY.xAvIcon.lockMark) XY.xAvIcon.lockMark(c, x + sw / 2 - 24.2, cy + 74 - 24.2, 48.4, 48.4); }
       txt(c, d.name, x + sw / 2, cy + 112, d.name.length > 5 ? 11.5 : 13.5, owned ? T.ink : '#8a8576', 'center', true);
       txt(c, owned ? (XY.ROLE_TAG[d.roleKey] || '') + ' · ' + ELN(d.elem) : '未获得', x + sw / 2, cy + 130, 11.5, owned ? ELC(d.elem) : '#9a9586', 'center', true);
       txt(c, owned ? 'Lv' + lv + ' · ' + nc + ' 张' + (nx ? ' / ' + nx.need : ' 满') : nc + ' / ' + XY.SP_LV_AT[0] + ' 张', x + sw / 2, cy + 148, 10.5, owned ? '#a8700a' : T.inkSoft, 'center', false);
@@ -26370,7 +26370,7 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
       K.rr(x, y, tw, th, 10); c.fillStyle = sl ? '#cfeccb' : (owned ? (hv ? '#fff3d6' : '#fffdf6') : '#ebe8df'); c.fill(); c.lineWidth = sl ? 3 : 1.6; c.strokeStyle = sl ? '#43a047' : (owned ? d.frame : '#c9c4b4'); c.stroke();
       var ar = Math.min(16, th * 0.18), ax = x + tw / 2, ay = y + 6 + ar;
       var av = XY.xAvIcon && XY.xAvIcon.draw(c, id, ax - ar * 1.1, ay - ar * 1.1, ar * 2.2, ar * 2.2, { locked: !owned });
-      if (!av) { c.save(); if (!owned) c.filter = 'grayscale(1)'; XY.R4.avatarDisc(c, XY.specialDef(id, Math.max(1, lv)), ax, ay, ar, rt); c.restore(); }
+      if (!av) { c.save(); XY.R4.avatarDisc(c, XY.specialDef(id, Math.max(1, lv)), ax, ay, ar, rt); c.restore(); if (!owned && XY.xAvIcon && XY.xAvIcon.lockMark) XY.xAvIcon.lockMark(c, ax - ar * 1.1, ay - ar * 1.1, ar * 2.2, ar * 2.2); }
       K.tf(d.name, x + tw / 2, y + th - 24, tw - 4, 12.5, owned ? T.ink : '#8a8576', 'center', true, 9);
       K.tf(owned ? (tl.xc ? '自建' : 'Lv' + lv) : S.spCards(id) + '/' + XY.SP_LV_AT[0] + ' 张', x + tw / 2, y + th - 11, tw - 6, 11.5, owned ? '#a8700a' : '#9a9586', 'center', false, 10.5);
       K.hit(x, y, tw, th, owned ? 'carryPick' : 'dpCarryInspect', { id: id });
@@ -31763,7 +31763,7 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
     var owned = xcLock ? false : (tl.xc ? true : S.spOwned(id));
     var name = tl.xc ? ((tl.rec && tl.rec.name) || '自建') : ((def && def.name) || '');
     var have = tl.xc ? null : S.spCards(id), need = tl.xc ? null : XY.SP_LV_AT[0];
-    tileGeo.owned = owned; tileGeo.cards = have; tileGeo.required = need; tileGeo.grayscale = !owned; tileGeo.face = { x: x, y: y, w: d, h: d };
+    tileGeo.owned = owned; tileGeo.cards = have; tileGeo.required = need; tileGeo.qmark = !owned; tileGeo.face = { x: x, y: y, w: d, h: d };
     c.save();
     var drew = XY.xAvIcon && XY.xAvIcon.isSpecial && XY.xAvIcon.isSpecial(id) && XY.xAvIcon.draw(c, id, x, y, d, d, { locked: !owned });
     if (!drew) inkDisk(owned ? 'rgba(92,74,56,0.16)' : 'rgba(92,74,56,0.1)', null);
@@ -32751,7 +32751,7 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
       DP.rosterPage = Math.max(0, Math.min(rosterPages - 1, DP.rosterPage || 0));
       var visibleTiles = publicTiles.slice(DP.rosterPage * rosterCols, (DP.rosterPage + 1) * rosterCols);
       paper(mg, ry, rw, rosterH, false);
-      text('同行搭档 · 灰色未解锁', mg + 14, ry + 17, 15, BROWN, rw - 100);
+      text('同行搭档 · 带「？」的未解锁', mg + 14, ry + 17, 15, BROWN, rw - 100);
       var gridX = mg + 10 + pageRoom / 2, gridW = rw - 20 - pageRoom, slotW = gridW / rosterCols;
       var faceD = Math.min(56 + 16 * tallK, rosterH - 70, slotW - 12), faceY = ry + 30;
       var avatarRows = [];
@@ -32767,7 +32767,7 @@ window.XY_MENU_STAGE = {"fig":{},"name":{"bajie":{"h":{"src":"data:image/webp;ba
         kt(c, on ? '同行中' : owned ? '可同行' : t.xc ? '未开放' : '未解锁 ' + have + '/' + need, cx, faceY + faceD + 29 + tallK, 11 + tallK, on ? RED : SOFT, 'center', slotW - 8, false);
         var act = !owned ? (t.xc ? 'xcharLocked' : 'dpCarryInspect') : 'carryPick';
         st.hit(x + 2, faceY - 5, slotW - 4, rosterH - 31, act, { id: t.id });
-        avatarRows.push({ id: t.id, owned: owned, cards: have, required: need, grayscale: !owned, act: act, face: { x: cx - faceD / 2, y: faceY, w: faceD, h: faceD }, selected: on, drawn: !!drawn, x: x + 2, y: faceY - 5, w: slotW - 4, h: rosterH - 31 });
+        avatarRows.push({ id: t.id, owned: owned, cards: have, required: need, qmark: !owned, act: act, face: { x: cx - faceD / 2, y: faceY, w: faceD, h: faceD }, selected: on, drawn: !!drawn, x: x + 2, y: faceY - 5, w: slotW - 4, h: rosterH - 31 });
       });
       if (rosterPages > 1) {
         button(mg + 2, ry + 36, 44, 48, '‹', 'dpRosterPrev', { sz: 28 });
@@ -36829,7 +36829,7 @@ window.XY_LAZY_CHUNKS = [{"id": "ui", "src": "chunks/ui-2a9eaa702de4.js", "bytes
 
 </script>
 
-<script src="js/xav_icon.js?xyrev=48ef5972794029e9"></script>
+<script src="js/xav_icon.js?xyrev=236db594f64e87e8"></script>
 <script src="js/ult_climax.js?xyrev=810acdf58d7f9eaa"></script>
 <script src="js/clear_portraits.js?xyrev=8aa2ff1f5f8ae279"></script>
 <script src="js/devil_kitty_logic.js?xyrev=d5f394a487697db8"></script>

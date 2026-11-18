@@ -8,10 +8,10 @@
     "index-split.html",
     "xiyou-survivors.html"
   ],
-  "review_manifest_sha256": "2bf1d7a311fddf1a8455329d31b234f721c4575872517a9dc05f8268aaef1729",
-  "review_source_head": "502f8eea4b8c4b6d0cc1532964fd6ea2ec1ad138",
+  "review_manifest_sha256": "e4bf11687642176a5b3c813dcb82dad2156f0f6ceb649c31114866afae62d7c0",
+  "review_source_head": "f9dfa808131322b60bdf642942a3904174a7dd96",
   "review_source_dirty": false,
-  "review_source_inputs_sha256": "a0e0397a23347c08eff87a9e6f44e4dd81ac55373c27d71021ac0bf309d99bf9",
+  "review_source_inputs_sha256": "a6b34aeb4a2dc6dcfe007c88b2faa7a347624128399520a0e0c57ef7581a516d",
   "resource_baseline_commit": "75c4c78e8ebd2cf4101e477f3a5941d6fc484ff8",
   "omitted_retired_intro_media": [
     "assets/art/storyboard-v5/3d/r2/staff_flicker.mp4",
@@ -3443,7 +3443,7 @@
       "bytes": 6650
     },
     "bossfight/index.html": {
-      "sha256": "6004a6485856b28ebd1fb867eadee6b54f4378a8540bcc15c8b86911279e965d",
+      "sha256": "c1c10153f98d8854253d3efe3d9345fff0f8cb6c45c4b0a908cfc7b662a9e18c",
       "bytes": 25089
     },
     "bossfight/meta.js": {
@@ -3511,16 +3511,16 @@
       "bytes": 585309
     },
     "index-full.html": {
-      "sha256": "0dd8815c7648faf1c9a79cbfeccc06112e1c73e4961363ee0306c19c1c22e193",
-      "bytes": 31584107
+      "sha256": "febd548dce81b435c830018be0f311ba6ce579bae45a5cf76ea96171a7d33f29",
+      "bytes": 31584273
     },
     "index-split.html": {
-      "sha256": "1d8aac6db953063eca26fda08324965a05d31b28ef30f8a4e931a16171ec4cd3",
-      "bytes": 3103426
+      "sha256": "5510115336dc4be7843ca6ff22b3f95c8f0349214fc4b014d587748524a62337",
+      "bytes": 3103592
     },
     "index.html": {
-      "sha256": "1d8aac6db953063eca26fda08324965a05d31b28ef30f8a4e931a16171ec4cd3",
-      "bytes": 3103426
+      "sha256": "5510115336dc4be7843ca6ff22b3f95c8f0349214fc4b014d587748524a62337",
+      "bytes": 3103592
     },
     "js/clear_portraits.js": {
       "sha256": "8aa2ff1f5f8ae27909fb23abdde549e0a4b524c082023879b0c53466d401f116",
@@ -3551,8 +3551,8 @@
       "bytes": 8728
     },
     "js/xav_icon.js": {
-      "sha256": "48ef5972794029e92240fb853a7b2d6774751223b04bb70e5cffd74e5c47e319",
-      "bytes": 9582
+      "sha256": "236db594f64e87e8ed14f2a9f73193cf0e57e9f7932ce9acf6f0639cc8abe3f5",
+      "bytes": 8806
     },
     "privacy.html": {
       "sha256": "1ae01b59bc1f89e3c017c30951e8a9c5c58a92bd0cdedeaeb4120820c9297718",
@@ -3827,8 +3827,8 @@
       "bytes": 82146
     },
     "xiyou-survivors.html": {
-      "sha256": "1d8aac6db953063eca26fda08324965a05d31b28ef30f8a4e931a16171ec4cd3",
-      "bytes": 3103426
+      "sha256": "5510115336dc4be7843ca6ff22b3f95c8f0349214fc4b014d587748524a62337",
+      "bytes": 3103592
     }
   }
 }
